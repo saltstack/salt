@@ -4,10 +4,10 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import datetime
 import os
-import time
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -294,7 +294,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'seconds': 60}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
 
@@ -305,9 +305,9 @@ class ScheduleTestCase(TestCase):
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update(
             {'schedule': {'testjob': {'function': 'test.true', 'seconds': 60, 'splay': 5}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > 60)
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > datetime.timedelta(seconds=60))
 
     @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
     def test_eval_schedule_cron(self):
@@ -316,7 +316,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *'}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
 

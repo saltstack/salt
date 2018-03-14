@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -226,7 +226,7 @@ class MockState(object):
             '''
                 Mock compile_low_chunks method
             '''
-            return True
+            return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             '''
@@ -610,6 +610,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(state.show_state_usage(), "A")
 
+    def test_show_states(self):
+        '''
+            Test to display the low data from a specific sls
+        '''
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock):
+
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), ['abc'])
+
     def test_sls_id(self):
         '''
             Test to call a single ID from the
@@ -687,6 +697,49 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                         MockState.State.flag = False
                         self.assertListEqual(state.show_sls("foo"),
                                              ['a', 'b'])
+
+    def test_sls_exists(self):
+        '''
+            Test of sls_exists
+        '''
+        test_state = {}
+        test_missing_state = []
+
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertTrue(state.sls_exists("state_name"))
+        mock = MagicMock(return_value=test_missing_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertFalse(state.sls_exists("missing_state"))
+
+    def test_id_exists(self):
+        '''
+            Test of id_exists
+        '''
+        test_state = [{
+                        "key1": "value1",
+                        "name": "value1",
+                        "state": "file",
+                        "fun": "test",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10000,
+                        "__id__": "state_id1"
+                    },
+                    {
+                        "key2": "value2",
+                        "name": "value2",
+                        "state": "file",
+                        "fun": "directory",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10001,
+                        "__id__": "state_id2"
+                    }]
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_low_sls', mock):
+            self.assertTrue(state.id_exists("state_id1,state_id2", "test-sls"))
+            self.assertFalse(state.id_exists("invalid", "state_name"))
 
     def test_top(self):
         '''

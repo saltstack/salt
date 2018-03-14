@@ -4,7 +4,7 @@ the locale utils used by salt
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import sys
 
 # Import Salt libs
@@ -50,7 +50,7 @@ def sdecode(string_):
                 # Make sure unicode string ops work
                 u' ' + decoded  # pylint: disable=W0104
             return decoded
-        except UnicodeDecodeError:
+        except (TypeError, UnicodeDecodeError):
             continue
     return string_
 

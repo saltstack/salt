@@ -4,7 +4,7 @@ Module for working with the Glassfish/Payara 4.x management API
 .. versionadded:: Carbon
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:  # python2
     from urllib import quote, unquote

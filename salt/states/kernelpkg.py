@@ -31,7 +31,7 @@ Example state chaining the install and reboot operations:
         - onchanges:
           - kernel: install-latest-kernel
 
-Chaining can also be acheived using wait/listen requisites:
+Chaining can also be achieved using wait/listen requisites:
 
 .. code-block:: yaml
 
@@ -44,7 +44,7 @@ Chaining can also be acheived using wait/listen requisites:
         - listen:
           - kernel: install-latest-kernel
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)

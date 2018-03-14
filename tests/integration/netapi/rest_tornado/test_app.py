@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import threading
 
@@ -18,12 +18,8 @@ from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 from salt.ext import six
-try:
-    import zmq
-    from zmq.eventloop.ioloop import ZMQIOLoop
-    HAS_ZMQ_IOLOOP = True
-except ImportError:
-    HAS_ZMQ_IOLOOP = False
+from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
+HAS_ZMQ_IOLOOP = bool(zmq)
 
 
 class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
@@ -178,7 +174,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(ret), 1)
         self.assertIn('jid', ret[0])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
 
     def test_multi_local_async_post(self):
         low = [{'client': 'local_async',
@@ -204,8 +200,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(len(ret), 2)
         self.assertIn('jid', ret[0])
         self.assertIn('jid', ret[1])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
 
     def test_multi_local_async_post_multitoken(self):
         low = [{'client': 'local_async',
@@ -238,9 +234,9 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(len(ret), 3)  # make sure we got 3 responses
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
         self.assertIn('jid', ret[1])
-        self.assertIn('Failed to authenticate', ret[2])  # bad auth
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertIn('Authentication error occurred.', ret[2])  # bad auth
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
 
     def test_simple_local_async_post_no_tgt(self):
         low = [{'client': 'local_async',
@@ -271,7 +267,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
-        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
+        self.assertEqual(set(response_obj['return'][0]), set(['localhost', 'minion', 'sub_minion']))
 
     # runner_async tests
     def test_simple_local_runner_async_post(self):
@@ -333,7 +329,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj['return'][0]['minion']['id'], 'minion')
 
     def test_post(self):
-        low = [{'tgt': '*',
+        low = [{'tgt': '*minion',
                 'fun': 'test.ping',
                 }]
         response = self.fetch('/minions',
@@ -355,7 +351,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def test_post_with_client(self):
         # get a token for this test
         low = [{'client': 'local_async',
-                'tgt': '*',
+                'tgt': '*minion',
                 'fun': 'test.ping',
                 }]
         response = self.fetch('/minions',

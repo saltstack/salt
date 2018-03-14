@@ -9,6 +9,7 @@ from tests.support.unit import skipIf, TestCase
 
 # Import 3rd party libs
 import jinja2
+import yaml as _yaml  # future lint: disable=blacklisted-import
 from salt.ext import six
 
 # Import salt libs
@@ -48,8 +49,13 @@ class TestSerializers(TestCase):
             "foo": "bar",
             "encrypted_data": EncryptedString("foo")
         }
+        # The C dumper produces unquoted strings when serializing an
+        # EncryptedString, while the non-C dumper produces quoted strings.
+        expected = '{encrypted_data: !encrypted foo, foo: bar}' \
+            if hasattr(_yaml, 'CSafeDumper') \
+            else "{encrypted_data: !encrypted 'foo', foo: bar}"
         serialized = yaml.serialize(data)
-        assert serialized == '{encrypted_data: !encrypted foo, foo: bar}', serialized
+        assert serialized == expected, serialized
 
         deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
@@ -338,7 +344,7 @@ class TestSerializers(TestCase):
     def test_serialize_python(self):
         data = {'foo': 'bar'}
         serialized = python.serialize(data)
-        expected = "{u'foo': u'bar'}" if six.PY2 else "{'foo': 'bar'}"
+        expected = repr({'foo': 'bar'})
         assert serialized == expected, serialized
 
     @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')

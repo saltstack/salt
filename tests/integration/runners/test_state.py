@@ -11,7 +11,6 @@ import shutil
 import signal
 import tempfile
 import textwrap
-import yaml
 import threading
 from salt.ext.six.moves import queue
 
@@ -19,6 +18,7 @@ from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import TMP
+from tests.support.helpers import flaky
 
 # Import Salt Libs
 import salt.utils.platform
@@ -26,6 +26,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,6 +45,7 @@ class StateRunnerTest(ShellCase):
         q.put(ret)
         q.task_done()
 
+    @flaky
     def test_orchestrate_output(self):
         '''
         Ensure the orchestrate runner outputs useful state data.
@@ -169,7 +171,7 @@ class StateRunnerTest(ShellCase):
         '''
         self.run_run('saltutil.sync_runners')
         self.run_run('saltutil.sync_wheel')
-        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode', timeout=120))
 
         for result in ('          ID: test_runner_success\n'
                        '    Function: salt.runner\n'
@@ -275,7 +277,7 @@ class OrchEventTest(ShellCase):
         '''
         Dump the config dict to the conf file
         '''
-        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
     def test_jid_in_ret_event(self):

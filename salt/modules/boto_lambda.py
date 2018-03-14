@@ -80,7 +80,7 @@ The dependencies listed above can be installed via package or pip.
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 import random
@@ -90,7 +90,7 @@ from salt.ext import six
 import salt.utils.compat
 import salt.utils.files
 import salt.utils.json
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -119,27 +119,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.5'
-    required_botocore_version = '1.5.2'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     # botocore version >= 1.5.2 is required due to lambda environment variables
-    if not HAS_BOTO:
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'botocore version {0} or later must be installed.'.format(required_botocore_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.2.5',
+        botocore_ver='1.5.2'
+    )
 
 
 def __init__(opts):
@@ -300,8 +288,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             else:
                 break
         if func:
-            log.info('The newly created function name is {0}'.format(
-                func['FunctionName']))
+            log.info('The newly created function name is %s', func['FunctionName'])
 
             return {'created': True, 'name': func['FunctionName']}
         else:
@@ -519,9 +506,9 @@ def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
         kwargs = {}
         for key in ('SourceArn', 'SourceAccount', 'Qualifier'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
         conn.add_permission(FunctionName=FunctionName, StatementId=StatementId,
-                            Action=Action, Principal=str(Principal),
+                            Action=Action, Principal=str(Principal),  # future lint: disable=blacklisted-function
                             **kwargs)
         return {'updated': True}
     except ClientError as e:
@@ -681,8 +668,7 @@ def create_alias(FunctionName, Name, FunctionVersion, Description="",
         alias = conn.create_alias(FunctionName=FunctionName, Name=Name,
                                   FunctionVersion=FunctionVersion, Description=Description)
         if alias:
-            log.info(
-                'The newly created alias name is {0}'.format(alias['Name']))
+            log.info('The newly created alias name is %s', alias['Name'])
 
             return {'created': True, 'name': alias['Name']}
         else:
@@ -846,8 +832,7 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
                                                BatchSize=BatchSize,
                                                StartingPosition=StartingPosition)
         if obj:
-            log.info(
-                'The newly created event source mapping ID is {0}'.format(obj['UUID']))
+            log.info('The newly created event source mapping ID is %s', obj['UUID'])
 
             return {'created': True, 'id': obj['UUID']}
         else:

@@ -6,6 +6,8 @@ Kapacitor execution module.
     parameters or as configuration settings in /etc/salt/minion on the relevant
     minions::
 
+        kapacitor.unsafe_ssl: 'false'
+        kapacitor.protocol: 'http'
         kapacitor.host: 'localhost'
         kapacitor.port: 9092
 
@@ -14,16 +16,15 @@ Kapacitor execution module.
 
 .. versionadded:: 2016.11.0
 '''
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
-import logging
-
+# Import Salt lobs
+from salt.ext import six
 import salt.utils.http
 import salt.utils.json
 import salt.utils.path
 from salt.utils.decorators import memoize
-
-LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -37,8 +38,19 @@ def version():
     '''
     version = __salt__['pkg.version']('kapacitor')
     if not version:
-        version = str(__salt__['config.option']('kapacitor.version', 'latest'))
+        version = six.string_types(__salt__['config.option']('kapacitor.version', 'latest'))
     return version
+
+
+def _get_url():
+    '''
+    Get the kapacitor URL.
+    '''
+    protocol = __salt__['config.option']('kapacitor.protocol', 'http')
+    host = __salt__['config.option']('kapacitor.host', 'localhost')
+    port = __salt__['config.option']('kapacitor.port', 9092)
+
+    return '{0}://{1}:{2}'.format(protocol, host, port)
 
 
 def get_task(name):
@@ -54,15 +66,14 @@ def get_task(name):
 
         salt '*' kapacitor.get_task cpu
     '''
-    host = __salt__['config.option']('kapacitor.host', 'localhost')
-    port = __salt__['config.option']('kapacitor.port', 9092)
+    url = _get_url()
 
     if version() < '0.13':
-        url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
+        task_url = '{0}/task?name={1}'.format(url, name)
     else:
-        url = 'http://{0}:{1}/kapacitor/v1/tasks/{2}?skip-format=true'.format(host, port, name)
+        task_url = '{0}/kapacitor/v1/tasks/{1}?skip-format=true'.format(url, name)
 
-    response = salt.utils.http.query(url, status=True)
+    response = salt.utils.http.query(task_url, status=True)
 
     if response['status'] == 404:
         return None
@@ -90,7 +101,11 @@ def _run_cmd(cmd):
     Run a Kapacitor task and return a dictionary of info.
     '''
     ret = {}
-    result = __salt__['cmd.run_all'](cmd)
+    env_vars = {
+        'KAPACITOR_URL': _get_url(),
+        'KAPACITOR_UNSAFE_SSL': __salt__['config.option']('kapacitor.unsafe_ssl', 'false'),
+    }
+    result = __salt__['cmd.run_all'](cmd, env=env_vars)
 
     if result.get('stdout'):
         ret['stdout'] = result['stdout']
@@ -105,7 +120,8 @@ def define_task(name,
                 tick_script,
                 task_type='stream',
                 database=None,
-                retention_policy='default'):
+                retention_policy='default',
+                dbrps=None):
     '''
     Define a task. Serves as both create/update.
 
@@ -117,6 +133,13 @@ def define_task(name,
 
     task_type
         Task type. Defaults to 'stream'
+
+    dbrps
+        A list of databases and retention policies in "dbname"."rpname" format
+        to fetch data from. For backward compatibility, the value of
+        'database' and 'retention_policy' will be merged as part of dbrps.
+
+        .. versionadded:: Fluorine
 
     database
         Which database to fetch data from. Defaults to None, which will use the
@@ -144,8 +167,16 @@ def define_task(name,
     if task_type:
         cmd += ' -type {0}'.format(task_type)
 
+    if not dbrps:
+        dbrps = []
+
     if database and retention_policy:
-        cmd += ' -dbrp {0}.{1}'.format(database, retention_policy)
+        dbrp = '{0}.{1}'.format(database, retention_policy)
+        dbrps.append(dbrp)
+
+    if dbrps:
+        for dbrp in dbrps:
+            cmd += ' -dbrp {0}'.format(dbrp)
 
     return _run_cmd(cmd)
 

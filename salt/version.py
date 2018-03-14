@@ -7,7 +7,6 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
-import locale
 import platform
 
 # linux_distribution depreacted in py3.7
@@ -98,7 +97,7 @@ class SaltStackVersion(object):
         'Boron'         : (2016, 3),
         'Carbon'        : (2016, 11),
         'Nitrogen'      : (2017, 7),
-        'Oxygen'        : (MAX_SIZE - 101, 0),
+        'Oxygen'        : (2018, 3),
         'Fluorine'      : (MAX_SIZE - 100, 0),
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
@@ -506,6 +505,9 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        if six.PY3:
+            out = out.decode()
+            err = err.decode()
         out = out.strip()
         err = err.strip()
 
@@ -671,7 +673,7 @@ def system_information():
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
-        ('locale', locale.getpreferredencoding()),
+        ('locale', __salt_system_encoding__),
     ]
 
     for name, attr in system:

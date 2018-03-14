@@ -8,7 +8,7 @@ data, modify the ACL of files/directories
             - win32con
             - salt.utils.win_dacl
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -253,8 +253,8 @@ def gid_to_group(gid):
     '''
     func_name = '{0}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
-                 'see function docs for details.'.format(func_name))
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     return uid_to_user(gid)
 
@@ -285,8 +285,8 @@ def group_to_gid(group):
     '''
     func_name = '{0}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
-                 'see function docs for details.'.format(func_name))
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     if group is None:
         return ''
@@ -408,9 +408,9 @@ def get_gid(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is the '
-                 'uid.'.format(func_name))
+                 'uid.', func_name)
 
     return get_uid(path, follow_symlinks)
 
@@ -452,9 +452,9 @@ def get_group(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is the '
-                 'user (owner).'.format(func_name))
+                 'user (owner).', func_name)
 
     return get_user(path, follow_symlinks)
 
@@ -606,9 +606,9 @@ def get_mode(path):
 
     func_name = '{0}.get_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is '
-                 'always None.'.format(func_name))
+                 'always None.', func_name)
 
     return None
 
@@ -652,11 +652,11 @@ def lchown(path, user, group=None, pgroup=None):
     if group:
         func_name = '{0}.lchown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using {0} on '
-                     'Windows systems; see function docs for details.'
-                     ''.format(func_name))
-        log.debug('win_file.py {0} Ignoring the group parameter for {1}'
-                  ''.format(func_name, path))
+            log.info('The group parameter has no effect when using %s on '
+                     'Windows systems; see function docs for details.',
+                     func_name)
+        log.debug('win_file.py %s Ignoring the group parameter for %s',
+                  func_name, path)
         group = None
 
     return chown(path, user, group, pgroup, follow_symlinks=False)
@@ -700,11 +700,11 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if group is not None:
         func_name = '{0}.chown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using {0} on '
-                     'Windows systems; see function docs for details.'
-                     ''.format(func_name))
-        log.debug('win_file.py {0} Ignoring the group parameter for {1}'
-                  ''.format(func_name, path))
+            log.info('The group parameter has no effect when using %s on '
+                     'Windows systems; see function docs for details.',
+                     func_name)
+        log.debug('win_file.py %s Ignoring the group parameter for %s',
+                  func_name, path)
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
@@ -783,9 +783,9 @@ def chgrp(path, group):
     '''
     func_name = '{0}.chgrp'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; see '
-                 'function docs for details.'.format(func_name))
-    log.debug('win_file.py {0} Doing nothing for {1}'.format(func_name, path))
+        log.info('The function %s should not be used on Windows systems; see '
+                 'function docs for details.', func_name)
+    log.debug('win_file.py %s Doing nothing for %s', func_name, path)
 
     return None
 
@@ -845,7 +845,7 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
@@ -1029,9 +1029,9 @@ def set_mode(path, mode):
     '''
     func_name = '{0}.set_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is '
-                 'always None. Use set_perms instead.'.format(func_name))
+                 'always None. Use set_perms instead.', func_name)
 
     return get_mode(path)
 
@@ -1270,7 +1270,7 @@ def mkdir(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1383,7 +1383,7 @@ def makedirs_(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1505,7 +1505,7 @@ def makedirs_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful, otherwise raises an error
@@ -1605,7 +1605,7 @@ def check_perms(path,
             ``True``.
 
         reset (bool):
-            ``True`` wil show what permisisons will be removed by resetting the
+            ``True`` will show what permisisons will be removed by resetting the
             DACL. ``False`` will do nothing. Default is ``False``.
 
     Returns:
@@ -2028,7 +2028,7 @@ def set_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -2073,7 +2073,8 @@ def set_perms(path,
             try:
                 user_name = salt.utils.win_dacl.get_name(user)
             except CommandExecutionError:
-                log.debug('Deny Perms: User "{0}" missing from Target System'.format(user))
+                log.debug('Deny Perms: User "%s" missing from Target System',
+                          user)
                 continue
 
             # Get applies_to
@@ -2106,7 +2107,8 @@ def set_perms(path,
             try:
                 user_name = salt.utils.win_dacl.get_name(user)
             except CommandExecutionError:
-                log.debug('Grant Perms: User "{0}" missing from Target System'.format(user))
+                log.debug('Grant Perms: User "%s" missing from Target System',
+                          user)
                 continue
 
             # Get applies_to

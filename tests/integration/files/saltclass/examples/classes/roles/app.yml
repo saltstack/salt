@@ -17,5 +17,5 @@ pillars:
       - app-backend
 # Safe minion_id matching
 {% if minion_id == 'zrh.node3' %}
-  safe_pillar: '_only_ zrh.node3 will see this pillar and this cannot be overriden like grains'
+  safe_pillar: '_only_ zrh.node3 will see this pillar and this cannot be overridden like grains'
 {% endif %}

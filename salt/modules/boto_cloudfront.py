@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CloudFront
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: boto3
 
@@ -51,14 +51,13 @@ Connection module for Amazon CloudFront
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
-
-import yaml
+import salt.utils.versions
 
 # Import third party libs
 try:
@@ -78,11 +77,10 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        msg = 'The boto_cloudfront module could not be loaded: {}.'
-        return (False, msg.format('boto3 libraries not found'))
-    __utils__['boto3.assign_funcs'](__name__, 'cloudfront')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'cloudfront')
+    return has_boto_reqs
 
 
 def _list_distributions(
@@ -113,9 +111,7 @@ def _list_distributions(
 
             id_ = partial_dist['Id']
             if 'Name' not in tags:
-                log.warning(
-                    'CloudFront distribution {0} has no Name tag.'.format(id_),
-                )
+                log.warning('CloudFront distribution %s has no Name tag.', id_)
                 continue
             distribution_name = tags.pop('Name', None)
             if name is not None and distribution_name != name:
@@ -273,8 +269,8 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
         # as opposed to being called from execution or state modules
         raise err
 
-    dumper = __utils__['yamldumper.get_dumper']('IndentedSafeOrderedDumper')
-    return yaml.dump(
+    dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+    return __utils__['yaml.dump'](
         results,
         default_flow_style=False,
         Dumper=dumper,

@@ -26,7 +26,7 @@ The following options can be set in the :ref:`minion config
            - "-A CATTLE_POSTROUTING"
            - "-A FORWARD"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -160,8 +160,8 @@ def _regex_iptables_save(cmd_output, filters=None):
                 __context__['iptables.save_filters']\
                     .append(re.compile(pattern))
             except re.error as e:
-                log.warning('Skipping regex rule: \'{0}\': {1}'
-                            .format(pattern, e))
+                log.warning('Skipping regex rule: \'%s\': %s',
+                            pattern, e)
                 continue
 
     if len(__context__['iptables.save_filters']) > 0:
@@ -658,7 +658,7 @@ def save(filename=None, family='ipv4'):
     if _conf() and not filename:
         filename = _conf(family)
 
-    log.debug('Saving rules to {0}'.format(filename))
+    log.debug('Saving rules to %s', filename)
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
@@ -987,6 +987,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
     table = ''
     parser = _parser()
     for line in rules.splitlines():
+        line = salt.utils.stringutils.to_unicode(line)
         if line.startswith('*'):
             table = line.replace('*', '')
             ret[table] = {}
@@ -1092,6 +1093,8 @@ def _parser():
     add_arg('--ahres', dest='ahres', action='append')
     ## bpf
     add_arg('--bytecode', dest='bytecode', action='append')
+    ## cgroup
+    add_arg('--cgroup', dest='cgroup', action='append')
     ## cluster
     add_arg('--cluster-total-nodes',
             dest='cluster-total-nodes',

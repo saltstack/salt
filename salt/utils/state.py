@@ -2,11 +2,11 @@
 '''
 Utility functions for state functions
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 
 # Import Salt libs
@@ -242,7 +242,7 @@ def get_sls_opts(opts, **kwargs):
     if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
         pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
         if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(pillarenv)
+            opts['pillarenv'] = six.text_type(pillarenv)
         else:
             opts['pillarenv'] = pillarenv
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.json
@@ -14,6 +14,10 @@ from tests.support.mock import Mock, patch
 
 
 class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
+    env = {
+        'KAPACITOR_UNSAFE_SSL': 'false',
+        'KAPACITOR_URL': 'http://localhost:9092'
+    }
 
     def setup_loader_modules(self):
         return {
@@ -51,22 +55,22 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kapacitor.__salt__, {'cmd.run_all': cmd_mock}):
             kapacitor.define_task('taskname', '/tmp/script.tick')
         cmd_mock.assert_called_once_with('kapacitor define taskname '
-            '-tick /tmp/script.tick -type stream')
+            '-tick /tmp/script.tick -type stream', env=self.__class__.env)
 
     def test_enable_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})
         with patch.dict(kapacitor.__salt__, {'cmd.run_all': cmd_mock}):
             kapacitor.enable_task('taskname')
-        cmd_mock.assert_called_once_with('kapacitor enable taskname')
+        cmd_mock.assert_called_once_with('kapacitor enable taskname', env=self.__class__.env)
 
     def test_disable_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})
         with patch.dict(kapacitor.__salt__, {'cmd.run_all': cmd_mock}):
             kapacitor.disable_task('taskname')
-        cmd_mock.assert_called_once_with('kapacitor disable taskname')
+        cmd_mock.assert_called_once_with('kapacitor disable taskname', env=self.__class__.env)
 
     def test_delete_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})
         with patch.dict(kapacitor.__salt__, {'cmd.run_all': cmd_mock}):
             kapacitor.delete_task('taskname')
-        cmd_mock.assert_called_once_with('kapacitor delete tasks taskname')
+        cmd_mock.assert_called_once_with('kapacitor delete tasks taskname', env=self.__class__.env)

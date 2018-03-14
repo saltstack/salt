@@ -11,14 +11,13 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import random
 import logging
 import operator
 import collections
 import math
-import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import Salt libs
@@ -28,7 +27,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
-import salt.utils.yamldumper
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext.six.moves import range
@@ -273,8 +272,8 @@ def setvals(grains, destructive=False):
     if os.path.isfile(gfn):
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                grains = yaml.safe_load(fp_.read())
-            except yaml.YAMLError as exc:
+                grains = salt.utils.yaml.safe_load(fp_)
+            except salt.utils.yaml.YAMLError as exc:
                 return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
             grains = {}
@@ -287,20 +286,23 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.files.fopen(gfn, 'w+') as fp_:
-            fp_.write(cstr)
+            salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
     except (IOError, OSError):
-        msg = 'Unable to write to grains file at {0}. Check permissions.'
-        log.error(msg.format(gfn))
+        log.error(
+            'Unable to write to grains file at %s. Check permissions.',
+            gfn
+        )
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.files.flopen(fn_, 'w+') as fp_:
-            fp_.write('')
+        with salt.utils.files.flopen(fn_, 'w+'):
+            pass
     except (IOError, OSError):
-        msg = 'Unable to write to cache file {0}. Check permissions.'
-        log.error(msg.format(fn_))
+        log.error(
+            'Unable to write to cache file %s. Check permissions.',
+            fn_
+        )
     if not __opts__.get('local', False):
         # Refresh the grains
         __salt__['saltutil.refresh_grains']()
@@ -725,13 +727,17 @@ def set(key,
 
     if _existing_value is not None and not force:
         if _existing_value_type == 'complex':
-            ret['comment'] = 'The key \'{0}\' exists but is a dict or a list. '.format(key) \
-                 + 'Use \'force=True\' to overwrite.'
+            ret['comment'] = (
+                'The key \'{0}\' exists but is a dict or a list. '
+                'Use \'force=True\' to overwrite.'.format(key)
+            )
             ret['result'] = False
             return ret
         elif _new_value_type == 'complex' and _existing_value_type is not None:
-            ret['comment'] = 'The key \'{0}\' exists and the given value is a '.format(key) \
-                 + 'dict or a list. Use \'force=True\' to overwrite.'
+            ret['comment'] = (
+                'The key \'{0}\' exists and the given value is a dict or a '
+                'list. Use \'force=True\' to overwrite.'.format(key)
+            )
             ret['result'] = False
             return ret
         else:
@@ -763,9 +769,11 @@ def set(key,
         elif _existing_value == rest or force:
             _existing_value = {rest: _value}
         else:
-            ret['comment'] = 'The key \'{0}\' value is \'{1}\', '.format(key, _existing_value) \
-                 + 'which is different from the provided key \'{0}\'. '.format(rest) \
-                 + 'Use \'force=True\' to overwrite.'
+            ret['comment'] = (
+                'The key \'{0}\' value is \'{1}\', which is different from '
+                'the provided key \'{2}\'. Use \'force=True\' to overwrite.'
+                .format(key, _existing_value, rest)
+            )
             ret['result'] = False
             return ret
         _value = _existing_value
@@ -794,7 +802,7 @@ def equals(key, value):
         salt '*' grains.equals fqdn <expected_fqdn>
         salt '*' grains.equals systemd:version 219
     '''
-    return str(value) == str(get(key))
+    return six.text_type(value) == six.text_type(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

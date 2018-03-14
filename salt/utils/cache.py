@@ -3,7 +3,7 @@
 In-memory caching used by Salt
 '''
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import time
@@ -17,16 +17,13 @@ except ImportError:
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 
 # Import third party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +34,7 @@ class CacheFactory(object):
     '''
     @classmethod
     def factory(cls, backend, ttl, *args, **kwargs):
-        log.info('Factory backend: {0}'.format(backend))
+        log.info('Factory backend: %s', backend)
         if backend == 'memory':
             return CacheDict(ttl, *args, **kwargs)
         elif backend == 'disk':
@@ -142,7 +139,7 @@ class CacheDisk(CacheDict):
         if not HAS_MSGPACK or not os.path.exists(self._path):
             return
         with salt.utils.files.fopen(self._path, 'rb') as fp_:
-            cache = msgpack.load(fp_, encoding=__salt_system_encoding__)
+            cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -152,7 +149,7 @@ class CacheDisk(CacheDict):
             for key in self._dict:
                 self._key_cache_time[key] = timestamp
         if log.isEnabledFor(logging.DEBUG):
-            log.debug('Disk cache retrieved: {0}'.format(cache))
+            log.debug('Disk cache retrieved: %s', cache)
 
     def _write(self):
         '''
@@ -295,7 +292,7 @@ class ContextCache(object):
         Retrieve a context cache from disk
         '''
         with salt.utils.files.fopen(self.cache_path, 'rb') as cache:
-            return self.serial.load(cache)
+            return salt.utils.data.decode(self.serial.load(cache))
 
 
 def context_cache(func):

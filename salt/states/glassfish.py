@@ -14,7 +14,7 @@ You can setup connection parameters like this
       - user: admin
       - password: changeit
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import salt.utils.json
@@ -43,7 +43,7 @@ def _json_to_unicode(data):
             if isinstance(value, dict):
                 ret[key] = _json_to_unicode(value)
             else:
-                ret[key] = six.u(str(value).lower())
+                ret[key] = six.text_type(value).lower()
         else:
             ret[key] = value
     return ret
@@ -56,13 +56,14 @@ def _is_updated(old_conf, new_conf):
     changed = {}
 
     # Dirty json hacking to get parameters in the same format
-    new_conf = _json_to_unicode(salt.utils.json.loads(salt.utils.json.dumps(new_conf, ensure_ascii=False)))
+    new_conf = _json_to_unicode(salt.utils.json.loads(
+        salt.utils.json.dumps(new_conf, ensure_ascii=False)))
     old_conf = salt.utils.json.loads(salt.utils.json.dumps(old_conf, ensure_ascii=False))
 
     for key, value in old_conf.items():
-        oldval = str(value).lower()
+        oldval = six.text_type(value).lower()
         if key in new_conf:
-            newval = str(new_conf[key]).lower()
+            newval = six.text_type(new_conf[key]).lower()
         if oldval == 'null' or oldval == 'none':
             oldval = ''
         if key in new_conf and newval != oldval:

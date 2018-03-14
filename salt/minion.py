@@ -31,23 +31,11 @@ if six.PY3:
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
-try:
-    import zmq
-    # TODO: cleanup
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
-
 HAS_RANGE = False
 try:
     import seco.range
@@ -660,7 +648,7 @@ class MinionBase(object):
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
                 else:
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
 
@@ -690,7 +678,7 @@ class MinionBase(object):
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
                         for trans in ('zeromq', 'tcp'):
-                            if trans == 'zeromq' and not HAS_ZMQ:
+                            if trans == 'zeromq' and not zmq:
                                 continue
                             self.opts['transport'] = trans
                             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
@@ -702,7 +690,7 @@ class MinionBase(object):
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                         yield pub_channel.connect()
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
                 except SaltClientError as exc:
@@ -734,12 +722,12 @@ class MinionBase(object):
                     break
 
             if masters:
-                policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
+                policy = self.opts.get('discovery', {}).get('match', 'any')
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
                               'Should be "any" or "all"'.format(policy))
                 else:
-                    mapping = self.opts[u'discovery'].get(u'mapping', {})
+                    mapping = self.opts['discovery'].get('mapping', {})
                     for addr, mappings in masters.items():
                         for proto_data in mappings:
                             cnt = len([key for key, value in mapping.items()
@@ -786,16 +774,15 @@ class SMinion(MinionBase):
     '''
     def __init__(self, opts):
         # Late setup of the opts grains, so we can log from the grains module
+        import salt.loader
         opts['grains'] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if self.opts['transport'] == 'zeromq' and HAS_ZMQ:
-                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-            else:
-                io_loop = LOOP_CLASS.current()
+            install_zmq()
+            io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
@@ -803,8 +790,7 @@ class SMinion(MinionBase):
 
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
-            import yaml
-            from salt.utils.yamldumper import SafeOrderedDumper
+            import salt.utils.yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -815,21 +801,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        cache_top,
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(cache_top, fp_)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        self.opts['pillar'],
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -882,7 +858,11 @@ class MasterMinion(object):
             matcher=True,
             whitelist=None,
             ignore_config_errors=True):
-        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
+        self.opts = salt.config.minion_config(
+            opts['conf_file'],
+            ignore_config_errors=ignore_config_errors,
+            role='master'
+        )
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
@@ -937,9 +917,8 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS.current()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
 
@@ -1092,23 +1071,14 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ:
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]  # pylint: disable=no-member
-                )
-            if zmq_version_info < (3, 2):
+        if zmq:
+            if ZMQ_VERSION_INFO < (3, 2):
                 log.warning(
                     'You have a version of ZMQ less than ZMQ 3.2! There are '
                     'known connection keep-alive issues with ZMQ < 3.2 which '
@@ -1443,6 +1413,9 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        # Ensure payload is unicode. Disregard failure to decode binary blobs.
+        if six.PY2:
+            data = salt.utils.data.decode(data, keep=True)
         if 'user' in data:
             log.info(
                 'User %s Executing command %s with jid %s',
@@ -1921,7 +1894,9 @@ class Minion(MinionBase):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
-            salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
+            if ret['jid'] == 'req':
+                ret['jid'] = salt.utils.jid.gen_jid(self.opts)
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         if not self.opts['pub_ret']:
             return ''
@@ -2010,7 +1985,7 @@ class Minion(MinionBase):
                 salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
 
         load = {'cmd': ret_cmd,
-                'load': jids.values()}
+                'load': list(six.itervalues(jids))}
 
         def timeout_handler(*_):
             log.warning(
@@ -2079,14 +2054,16 @@ class Minion(MinionBase):
 
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        # dup name spaced event
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to False in Neon Salt release
+            self._fire_master(
+                'Minion {0} started at {1}'.format(
+                self.opts['id'],
+                time.asctime()
+                ),
+                'minion_start'
+            )
+        # send name spaced event
         self._fire_master(
             'Minion {0} started at {1}'.format(
             self.opts['id'],
@@ -2162,6 +2139,8 @@ class Minion(MinionBase):
             self.schedule.disable_job(name, persist)
         elif func == 'postpone_job':
             self.schedule.postpone_job(name, data)
+        elif func == 'skip_job':
+            self.schedule.skip_job(name, data)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
@@ -2779,14 +2758,16 @@ class Syndic(Minion):
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-                self.opts['id'],
-                time.asctime()
-            ),
-            'syndic_start',
-            sync=False,
-        )
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to false in Neon Salt release.
+            self._fire_master(
+                'Syndic {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                ),
+                'syndic_start',
+                sync=False,
+            )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
                 self.opts['id'],
@@ -2890,9 +2871,8 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -3182,7 +3162,7 @@ class SyndicManager(MinionBase):
             if res:
                 self.delayed = []
         for master in list(six.iterkeys(self.job_rets)):
-            values = self.job_rets[master].values()
+            values = list(six.itervalues(self.job_rets[master]))
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]

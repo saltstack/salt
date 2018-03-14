@@ -3,7 +3,7 @@
 The service module for macOS
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -148,6 +148,37 @@ def _get_service(name):
 
     # Could not find service
     raise CommandExecutionError('Service not found: {0}'.format(name))
+
+
+def _always_running_service(name):
+    '''
+    Check if the service should always be running based on the KeepAlive Key
+    in the service plist.
+
+    :param str name: Service label, file name, or full path
+
+    :return: True if the KeepAlive key is set to True, False if set to False or
+        not set in the plist at all.
+
+    :rtype: bool
+
+    .. versionadded:: Fluorine
+    '''
+
+    # get all the info from the launchctl service
+    service_info = show(name)
+
+    # get the value for the KeepAlive key in service plist
+    try:
+        keep_alive = service_info['plist']['KeepAlive']
+    except KeyError:
+        return False
+
+    # check if KeepAlive is True and not just set.
+    if keep_alive is True:
+        return True
+
+    return False
 
 
 def show(name):
@@ -403,7 +434,9 @@ def status(name, sig=None, runas=None):
 
     :param str runas: User to run launchctl commands
 
-    :return: The PID for the service if it is running, otherwise an empty string
+    :return: The PID for the service if it is running, or 'loaded' if the
+        service should not always have a PID, or otherwise an empty string
+
     :rtype: str
 
     CLI Example:
@@ -416,6 +449,12 @@ def status(name, sig=None, runas=None):
     if sig:
         return __salt__['status.pid'](sig)
 
+    # mac services are a little different than other platforms as they may be
+    # set to run on intervals and may not always active with a PID. This will
+    # return a string 'loaded' if it shouldn't always be running and is enabled.
+    if not _always_running_service(name) and enabled(name):
+        return 'loaded'
+
     output = list_(runas=runas)
 
     # Used a string here instead of a list because that's what the linux version
@@ -424,7 +463,7 @@ def status(name, sig=None, runas=None):
     for line in output.splitlines():
         if 'PID' in line:
             continue
-        if re.search(name, line):
+        if re.search(name, line.split()[-1]):
             if line.split()[0].isdigit():
                 if pids:
                     pids += '\n'

@@ -6,7 +6,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -109,8 +109,8 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
-            ofile.write('')
+        with salt.utils.files.fopen(mod_file, 'a'):
+            pass
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
        os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
@@ -588,7 +588,7 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
 
 def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync Thorium modules from ``salt://_thorium`` to the minion
 
@@ -732,6 +732,45 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
         salt '*' saltutil.sync_utils saltenv=base,dev
     '''
     ret = _sync('utils', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
+def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Sync serializers from ``salt://_serializers`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for serializer modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new serializer modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_serializers
+        salt '*' saltutil.sync_serializers saltenv=dev
+        salt '*' saltutil.sync_serializers saltenv=base,dev
+    '''
+    ret = _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
@@ -904,6 +943,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['serializers'] = sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
@@ -1033,7 +1073,10 @@ def clear_cache():
             try:
                 os.remove(os.path.join(root, name))
             except OSError as exc:
-                log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                log.error(
+                    'Attempt to clear cache with saltutil.clear_cache '
+                    'FAILED with: %s', exc
+                )
                 return False
     return True
 
@@ -1042,7 +1085,7 @@ def clear_job_cache(hours=24):
     '''
     Forcibly removes job cache folders and files on a minion.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     WARNING: The safest way to clear a minion cache is by first stopping
     the minion and then deleting the cache files before restarting it.
@@ -1133,7 +1176,7 @@ def find_cached_job(jid):
     '''
     serial = salt.payload.Serial(__opts__)
     proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
-    job_dir = os.path.join(proc_dir, str(jid))
+    job_dir = os.path.join(proc_dir, six.text_type(jid))
     if not os.path.isdir(job_dir):
         if not __opts__.get('cache_jobs'):
             return ('Local jobs cache directory not found; you may need to'
@@ -1143,19 +1186,17 @@ def find_cached_job(jid):
     path = os.path.join(job_dir, 'return.p')
     with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
-        fp_.close()
-        if buf:
-            try:
-                data = serial.loads(buf)
-            except NameError:
-                # msgpack error in salt-ssh
-                return
+    if buf:
+        try:
+            data = serial.loads(buf)
+        except NameError:
+            # msgpack error in salt-ssh
+            pass
         else:
-            return
-    if not isinstance(data, dict):
-        # Invalid serial object
-        return
-    return data
+            if isinstance(data, dict):
+                # if not a dict, this was an invalid serialized object
+                return data
+    return None
 
 
 def signal_job(jid, sig):
@@ -1188,7 +1229,7 @@ def signal_job(jid, sig):
                         data['pid']
                         )
             except OSError:
-                path = os.path.join(__opts__['cachedir'], 'proc', str(jid))
+                path = os.path.join(__opts__['cachedir'], 'proc', six.text_type(jid))
                 if os.path.isfile(path):
                     os.remove(path)
                 return ('Job {0} was not running and job data has been '
@@ -1304,7 +1345,7 @@ def revoke_auth(preserve_minion_cache=False):
 
     for master in masters:
         channel = salt.transport.Channel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token('salt')
+        tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],
                 'tok': tok,

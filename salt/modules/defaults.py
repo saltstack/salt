@@ -4,11 +4,10 @@ Module to work with salt formula defaults files
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
-import yaml
 
 import salt.fileclient
 import salt.utils.data
@@ -16,10 +15,9 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.json
 import salt.utils.url
-
+import salt.utils.yaml
 
 __virtualname__ = 'defaults'
-
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +55,7 @@ def _load(formula):
 
         suffix = file_.rsplit('.', 1)[-1]
         if suffix == 'yaml':
-            loader = yaml.safe_load
+            loader = salt.utils.yaml.safe_load
         elif suffix == 'json':
             loader = salt.utils.json.load
         else:

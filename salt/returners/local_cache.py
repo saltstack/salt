@@ -26,7 +26,7 @@ import salt.exceptions
 # Import 3rd-party libs
 import msgpack
 from salt.ext import six
-
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +72,11 @@ def _walk_through(job_dir):
                 continue
 
             with salt.utils.files.fopen(load_path, 'rb') as rfh:
-                job = serial.load(rfh)
+                try:
+                    job = serial.load(rfh)
+                except Exception:
+                    log.exception('Failed to deserialize %s', load_path)
+                    continue
                 jid = job['jid']
                 yield jid, job, t_path, final
 
@@ -292,8 +296,19 @@ def get_load(jid):
         return {}
     serial = salt.payload.Serial(__opts__)
     ret = {}
-    with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
-        ret = serial.load(rfh)
+    load_p = os.path.join(jid_dir, LOAD_P)
+    num_tries = 5
+    for index in range(1, num_tries + 1):
+        with salt.utils.files.fopen(load_p, 'rb') as rfh:
+            try:
+                ret = serial.load(rfh)
+                break
+            except Exception as exc:
+                if index == num_tries:
+                    time.sleep(0.25)
+    else:
+        log.critical('Failed to unpack %s', load_p)
+        raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
@@ -420,16 +435,16 @@ def clean_old_jobs():
             for final in t_path_dirs:
                 f_path = os.path.join(t_path, final)
                 jid_file = os.path.join(f_path, 'jid')
-                if not os.path.isfile(jid_file) and os.path.exists(t_path):
+                if not os.path.isfile(jid_file) and os.path.exists(f_path):
                     # No jid file means corrupted cache entry, scrub it
-                    # by removing the entire t_path directory
-                    shutil.rmtree(t_path)
+                    # by removing the entire f_path directory
+                    shutil.rmtree(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
                     hours_difference = (time.time()- jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
-                        # Remove the entire t_path from the original JID dir
-                        shutil.rmtree(t_path)
+                        # Remove the entire f_path from the original JID dir
+                        shutil.rmtree(f_path)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
