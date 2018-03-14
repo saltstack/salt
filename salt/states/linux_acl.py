@@ -153,11 +153,11 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
 
                 if __opts__['test']:
                     ret.update({'comment': 'Updated permissions will be applied for '
-                                '{0}: {1} -> {2}'.format(
-                                    acl_name,
-                                    six.text_type(user[_search_name]['octal']),
-                                    perms),
-                                'result': None, 'pchanges': changes})
+                                           '{0}: {1} -> {2}'.format(
+                        acl_name,
+                        six.text_type(user[_search_name]['octal']),
+                        perms),
+                        'result': None, 'pchanges': changes})
                     return ret
                 try:
                     if force:
@@ -374,39 +374,6 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
         if users:
             changes = {}
             for count, search_name in enumerate(_search_names):
-<<<<<<< HEAD
-            if users[search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
-                ret['comment'] = 'Permissions are in the desired state'
-            else:
-                changes .update({'new_{}'.format(count): {'acl_name': ', '.join(acl_names),
-                                   'acl_type': acl_type,
-                                   'perms': _octal_perms},
-                           'old_{}'.format(count): {'acl_name': ', '.join(acl_names),
-                                   'acl_type': acl_type,
-                                   'perms': six.text_type(users[search_name]['octal'])}})
-                if __opts__['test']:
-                    ret.update({'comment': 'Updated permissions will be applied for '
-                                           '{0}: {1} -> {2}'.format(
-                                                acl_names,
-                                                six.text_type(users[_search_names]['octal']),
-                                                perms),
-                                'result': None, 'pchanges': changes})
-                    return ret
-                try:
-                    if force:
-                        __salt__['acl.wipefacls'](name, recursive=recurse, raise_err=True)
-
-                    for acl_name in acl_names:
-                        __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
-                                                recursive=recurse, raise_err=True)
-                    ret.update({'comment': 'Updated permissions for '
-                                           '{0}'.format(acl_names),
-                                'result': True, 'changes': changes})
-                except CommandExecutionError as exc:
-                    ret.update({'comment': 'Error updating permissions for '
-                                           '{0}: {1}'.format(acl_names, exc.strerror),
-                                'result': False})
-=======
                 if users[search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
                     ret['comment'] = 'Permissions are in the desired state'
                 else:
@@ -438,7 +405,6 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                         ret.update({'comment': 'Error updating permissions for '
                                                '{0}: {1}'.format(acl_names, exc.strerror),
                                     'result': False})
->>>>>>> small fix in update msg
         else:
             changes = {'new': {'acl_name': acl_names,
                                'acl_type': acl_type,
