@@ -225,11 +225,11 @@ orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='master'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='master'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
