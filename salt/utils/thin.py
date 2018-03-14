@@ -236,8 +236,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         if overwrite:
             try:
                 os.remove(thintar)
-            except OSError:
-                pass
+            except OSError as exc:
+                log.error('Error while removing %s file: %s', thintar, exc)
+                if os.path.exists(thintar):
+                    raise salt.exceptions.SaltSystemExit('Unable to remove %s file. See logs for details.', thintar)
         else:
             return thintar
     if _six.PY3:
