@@ -18,7 +18,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.returners.highstate_return as highstate
 
 log = logging.getLogger(__name__)
@@ -110,5 +110,5 @@ class HighstateReturnerTestCase(TestCase, LoaderModuleMockMixin):
             }
         ]
         highstate.returner(ret)
-        with salt.utils.fopen(self.output_file) as fh_:
+        with salt.utils.files.fopen(self.output_file) as fh_:
             self.assertEqual(json.load(fh_), expected)
