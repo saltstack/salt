@@ -1172,7 +1172,7 @@ def request_instance(vm_):
                 if win_installer:
                     os_type = 'Windows'
                 else:
-                    os_type = 'Linux
+                    os_type = 'Linux'
         else:
             source_image = None
             img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
