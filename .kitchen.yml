@@ -213,7 +213,6 @@ suites:
 verifier:
   name: runtests
   sudo: true
-  verbose: true
   run_destructive: true
   transport: zeromq
   types:
