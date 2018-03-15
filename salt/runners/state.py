@@ -225,6 +225,7 @@ orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_
 
 
 def event(tagmatch='*',
+        tagrematch=None,
         count=-1,
         quiet=False,
         sock_dir=None,
@@ -242,8 +243,12 @@ def event(tagmatch='*',
 
     :param tagmatch: the event is written to stdout for each tag that matches
         this pattern; uses the same matching semantics as Salt's Reactor.
+    :param tagrematch: the event is written to stdout for each tag that matches
+        this regular expression; if both ``tagmatch`` and ``tagrematch``
+        are defined, ``tagrematch`` takes precedence.
     :param count: this number is decremented for each event that matches the
-        ``tagmatch`` parameter; pass ``-1`` to listen forever.
+        ``tagmatch`` or ``tagrematch`` parameter; pass ``-1``, which is also
+        the default value, to listen forever.
     :param quiet: do not print to stdout; just block
     :param sock_dir: path to the Salt master's event socket file.
     :param pretty: Output the JSON all on a single line if ``False`` (useful
@@ -280,6 +285,7 @@ def event(tagmatch='*',
 
     return statemod['state.event'](
             tagmatch=tagmatch,
+            tagrematch=tagrematch,
             count=count,
             quiet=quiet,
             sock_dir=sock_dir,

@@ -16,6 +16,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
+import re
 import shutil
 import sys
 import tarfile
@@ -2290,6 +2291,7 @@ def _disabled(funs):
 
 
 def event(tagmatch='*',
+        tagrematch=None,
         count=-1,
         quiet=False,
         sock_dir=None,
@@ -2307,8 +2309,12 @@ def event(tagmatch='*',
 
     :param tagmatch: the event is written to stdout for each tag that matches
         this pattern; uses the same matching semantics as Salt's Reactor.
+    :param tagrematch: the event is written to stdout for each tag that matches
+        this regular expression; if both ``tagmatch`` and ``tagrematch``
+        are defined, ``tagrematch`` takes precedence.
     :param count: this number is decremented for each event that matches the
-        ``tagmatch`` parameter; pass ``-1`` to listen forever.
+        ``tagmatch`` or ``tagrematch`` parameter; pass ``-1``, which is also
+        the default value, to listen forever.
     :param quiet: do not print to stdout; just block
     :param sock_dir: path to the Salt master's event socket file.
     :param pretty: Output the JSON all on a single line if ``False`` (useful
@@ -2328,12 +2334,17 @@ def event(tagmatch='*',
             opts=__opts__,
             listen=True)
 
+    if tagrematch is not None:
+      tagmatch_fun = lambda tag, pat = re.compile(tagrematch): pat.search(tag)
+    else:
+      tagmatch_fun = lambda tag: fnmatch.fnmatch(tag, tagmatch)
+
     while True:
         ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
+        if tagmatch_fun(ret['tag']):
             if not quiet:
                 salt.utils.stringutils.print_cli(
                     str('{0}\t{1}').format(  # future lint: blacklisted-function
