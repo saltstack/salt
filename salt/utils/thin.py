@@ -75,7 +75,7 @@ import salt.version
 log = logging.getLogger(__name__)
 
 
-def _get_salt_call(dirs=None):
+def _get_salt_call(*dirs, **namespaces):
     '''
     Return salt-call source, based on configuration.
     This will include additional namespaces for another versions of Salt,
@@ -287,7 +287,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
-        fp_.write(_get_salt_call(['pyall']))
+        fp_.write(_get_salt_call('pyall', **_get_ext_namespaces(extended_cfg)))
+
     if os.path.isfile(thintar):
         if not overwrite:
             if os.path.isfile(thinver):
@@ -469,7 +470,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
     pyminver = os.path.join(mindir, '.min-gen-py-version')
     salt_call = os.path.join(mindir, 'salt-call')
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
-        fp_.write(_get_salt_call(has_common=False))
+        fp_.write(_get_salt_call())
     if os.path.isfile(mintar):
         if not overwrite:
             if os.path.isfile(minver):
