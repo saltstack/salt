@@ -53,7 +53,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
 try:
@@ -470,6 +470,18 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log.debug('Install saltwinshell to manage Windows servers.')
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': 'Install saltwinshell to manage Windows servers.',
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,
