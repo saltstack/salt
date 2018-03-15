@@ -45,7 +45,7 @@ class FibreChannelGrainsTestCase(TestCase):
 
         files = ['file1', 'file2']
         with patch('glob.glob', MagicMock(return_value=files)):
-            with patch('salt.utils.files.fopen', multi_mock_open(u'0x500143802426baf4', u'0x500143802426baf5')):
+            with patch('salt.utils.files.fopen', multi_mock_open('0x500143802426baf4', '0x500143802426baf5')):
                 ret = fibre_channel._linux_wwns()
 
         self.assertEqual(ret, ['500143802426baf4', '500143802426baf5'])
