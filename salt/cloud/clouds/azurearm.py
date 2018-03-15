@@ -1031,6 +1031,9 @@ def request_instance(vm_):
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
     )
+    os_type = config.get_cloud_config_value(
+        'os_type', vm_, __opts__, search_global=True
+    )
     if not win_installer and ssh_publickeyfile_contents is not None:
         sshpublickey = SshPublicKey(
             key_data=ssh_publickeyfile_contents,
@@ -1164,6 +1167,12 @@ def request_instance(vm_):
         if vm_['image'].startswith('http'):
             source_image = VirtualHardDisk(vm_['image'])
             img_ref = None
+            if not os_type:
+                log.debug("os_type not specified")
+                if win_installer:
+                    os_type = 'Windows'
+                else:
+                    os_type = 'Linux'
         else:
             source_image = None
             img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
@@ -1173,10 +1182,6 @@ def request_instance(vm_):
                 sku=img_sku,
                 version=img_ver,
             )
-        if win_installer:
-            os_type = 'Windows'
-        else:
-            os_type = 'Linux'
         os_disk = OSDisk(
             caching=CachingTypes.none,
             create_option=DiskCreateOptionTypes.from_image,
