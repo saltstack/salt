@@ -6748,7 +6748,7 @@ def sls_build(repository,
         .. versionadded:: 2018.3.0
 
     dryrun: False
-        when set to True the container will not be commited at the end of
+        when set to True the container will not be committed at the end of
         the build. The dryrun succeed also when the state contains errors.
 
     **RETURN DATA**
