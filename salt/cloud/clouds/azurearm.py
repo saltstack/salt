@@ -1168,9 +1168,11 @@ def request_instance(vm_):
             source_image = VirtualHardDisk(vm_['image'])
             img_ref = None
             if not os_type:
-                raise SaltCloudSystemExit(
-                'os_type must be specified in case of custom image'
-                )
+                log.debug("os_type not specified")
+                if win_installer:
+                    os_type = 'Windows'
+                else:
+                    os_type = 'Linux
         else:
             source_image = None
             img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
