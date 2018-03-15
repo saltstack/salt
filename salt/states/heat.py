@@ -49,6 +49,7 @@ import salt.exceptions
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.yaml
 
 # Import 3rd-party libs
@@ -136,7 +137,7 @@ def deployed(name, template=None, environment=None, params=None, poll=5,
 
     '''
     if environment is None and 'enviroment' in connection_args:
-        salt.utils.warn_until('Neon', (
+        salt.utils.versions.warn_until('Neon', (
             "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
             "parameter which will be removed in Salt Neon."
         ))

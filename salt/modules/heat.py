@@ -51,6 +51,7 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.yaml
 
 # pylint: disable=import-error
@@ -476,7 +477,7 @@ def create_stack(name=None, template_file=None, environment=None,
 
     '''
     if environment is None and enviroment is not None:
-        salt.utils.warn_until('Neon', (
+        salt.utils.versions.warn_until('Neon', (
             "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
             "parameter which will be removed in Salt Neon."
         ))
@@ -671,7 +672,7 @@ def update_stack(name=None, template_file=None, environment=None,
 
     '''
     if environment is None and enviroment is not None:
-        salt.utils.warn_until('Neon', (
+        salt.utils.versions.warn_until('Neon', (
             "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
             "parameter which will be removed in Salt Neon."
         ))
