@@ -47,6 +47,7 @@ IP4_ADD2 = '10.0.0.2'
 IP6_LOCAL = '::1'
 IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
+IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 
 
@@ -895,15 +896,18 @@ SwapTotal:       4789244 kB'''
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
                    [ipaddress.IPv4Address(IP4_ADD1),
-                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                    ipaddress.IPv6Address(IP6_ADD1),
+                    IP6_ADD_SCOPE], 'ip4_nameservers':
                    [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1),
+                    IP6_ADD_SCOPE], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
-                       [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
+                       [IP4_ADD1, IP6_ADD1,
+                        IP6_ADD_SCOPE], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],
-                       'ip6_nameservers': [IP6_ADD1], 'options':
-                       []}}
+                       'ip6_nameservers': [IP6_ADD1, IP6_ADD_SCOPE],
+                       'options': []}}
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 

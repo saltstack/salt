@@ -632,7 +632,7 @@ Changes:
   * 3072576 Merge pull request `#42629`_ from xiaoanyunfei/tornadoapi
   * 1e13383 tornado api
 
-- **PR** `#42655`_: (*whiteinge*) Reenable cpstats for rest_cherrypy
+- **PR** `#42655`_: (*whiteinge*) Re-enable cpstats for rest_cherrypy
   @ *2017-08-03T20:44:10Z*
 
   - **PR** `#33806`_: (*cachedout*) Work around upstream cherrypy bug
@@ -640,7 +640,7 @@ Changes:
   * f0f00fc Merge pull request `#42655`_ from whiteinge/rest_cherrypy-reenable-stats
   * deb6316 Fix lint errors
 
-  * 6bd91c8 Reenable cpstats for rest_cherrypy
+  * 6bd91c8 Re-enable cpstats for rest_cherrypy
 
 - **PR** `#42693`_: (*gilbsgilbs*) Fix RabbitMQ tags not properly set.
   @ *2017-08-03T20:23:08Z*
@@ -847,11 +847,11 @@ Changes:
   * 42bb1a6 Merge pull request `#42350`_ from twangboy/win_fix_ver_grains_2016.11
   * 8c04840 Detect Server OS with a desktop release name
 
-- **PR** `#42356`_: (*meaksh*) Allow to check whether a function is available on the AliasesLoader wrapper
+- **PR** `#42356`_: (*meaksh*) Allow checking whether a function is available on the AliasesLoader wrapper
   @ *2017-07-19T16:56:41Z*
 
   * 0a72e56 Merge pull request `#42356`_ from meaksh/2016.11-AliasesLoader-wrapper-fix
-  * 915d942 Allow to check whether a function is available on the AliasesLoader wrapper
+  * 915d942 Allow checking whether a function is available on the AliasesLoader wrapper
 
 - **PR** `#42368`_: (*twangboy*) Remove build and dist directories before install (2016.11)
   @ *2017-07-19T16:47:28Z*
@@ -1392,7 +1392,7 @@ Changes:
 
   * 7f69613 test and lint fixes
 
-  * 8ee4843 Suppress output of crypt context and be more specifc with whitespace vs. serial
+  * 8ee4843 Suppress output of crypt context and be more specific with whitespace vs. serial
 
   * 61f817d Match serials based on output position (fix for non-English languages)
 
