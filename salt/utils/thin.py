@@ -89,18 +89,34 @@ def _get_salt_call(*dirs, **namespaces):
 import os
 import sys
 
-if __name__ == '__main__':
-    # Add own modules path to the system path
-    for base in [%dirs%'py{0[0]}'.format(sys.version_info)]:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), base))
+# Namespaces is a map: {namespace: major/minor version}, like {'2016.11.4': [2, 6]}
+# Appears only when configured in Master configuration.
+namespaces = %namespaces%
 
+# Default system paths alongside the namespaces
+syspaths = %dirs%
+
+curr_ver = (sys.version_info.major, sys.version_info.minor,)
+
+for namespace in namespaces:
+    if curr_ver == tuple(namespaces[namespace]):
+        syspaths.append(namespace)
+        break
+else:
+    syspaths.append('py{0}'.format(sys.version_info.major))
+
+for base in syspaths:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), base))
+
+if __name__ == '__main__':
     from salt.scripts import salt_call
     salt_call()
 '''
 
-    dirs = ', '.join(["'{}'".format(name) for name in dirs or []])
-    return salt.utils.stringutils.to_bytes(template.replace(
-        '%dirs%', dirs + (dirs and ', ' or '')))
+    for tgt, cnt in [('%dirs%', dirs), ('%namespaces%', namespaces)]:
+        template = template.replace(tgt, salt.utils.json.dumps(cnt))
+
+    return salt.utils.stringutils.to_bytes(template)
 
 
 def thin_path(cachedir):
