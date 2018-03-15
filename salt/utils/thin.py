@@ -77,8 +77,12 @@ log = logging.getLogger(__name__)
 
 def _get_salt_call(dirs=None):
     '''
-    Return salt-call source.
+    Return salt-call source, based on configuration.
+    This will include additional namespaces for another versions of Salt,
+    if needed (e.g. older interpreters etc).
 
+    :dirs: List of directories to include in the system path
+    :namespaces: Dictionary of namespace
     :return:
     '''
     template = '''# -*- coding: utf-8 -*-
