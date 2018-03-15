@@ -43,7 +43,8 @@ def _linux_wwns():
     ret = []
     for fc_file in glob.glob('/sys/class/fc_host/*/port_name'):
         with salt.utils.files.fopen(fc_file, 'r') as _wwn:
-            for line in _wwn:
+            content = _wwn.read()
+            for line in content.splitlines():
                 ret.append(line.rstrip()[2:])
     return ret
 
