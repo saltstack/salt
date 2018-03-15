@@ -31,9 +31,9 @@ class IscsiGrainsTestCase(TestCase):
                                     'iqn.1991-05.com.microsoft:simon-x1\n'}
         )
         _grains = {}
-        with patch('salt.utils.path.which', MagicMock(return_value=True)) and \
-                patch('salt.modules.cmdmod.run_all', cmd_run_mock):
-            _grains['iscsi_iqn'] = iscsi._windows_iqn()
+        with patch('salt.utils.path.which', MagicMock(return_value=True)):
+            with patch('salt.modules.cmdmod.run_all', cmd_run_mock):
+                _grains['iscsi_iqn'] = iscsi._windows_iqn()
 
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1991-05.com.microsoft:simon-x1'])
