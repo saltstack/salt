@@ -192,6 +192,29 @@ def get_ext_tops(config):
     return alternatives
 
 
+def _get_ext_namespaces(config):
+    '''
+    Get namespaces from the existing configuration.
+
+    :param config:
+    :return:
+    '''
+    namespaces = {}
+    if not config:
+        return namespaces
+
+    for ext_version in config:
+        for ns in ext_version:
+            constraint_version = tuple(ext_version[ns].get('py-version', []))
+            if not constraint_version:
+                raise salt.exceptions.SaltSystemExit("An alternative version is configured, but not defined "
+                                                     "to what Python's major/minor version it is constained.")
+            else:
+                namespaces[ns] = constraint_version
+
+    return namespaces
+
+
 def get_tops(extra_mods='', so_mods=''):
     '''
     Get top directories for the dependencies, based on Python interpreter.
