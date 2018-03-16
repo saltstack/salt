@@ -443,6 +443,37 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             if tempdir is not None:
                 shutil.rmtree(tempdir)
                 tempdir = None
+
+
+    # Pack alternative data
+    if extended_cfg:
+        log.debug('Packing libraries based on alternative Salt versions')
+    for ns, cfg in _six.iteritems(get_ext_tops(extended_cfg)):
+        tops = [cfg.get('path')] + cfg.get('dependencies')
+        py_ver_major, py_ver_minor = cfg.get('py-version')
+        for top in tops:
+            base, top_dirname = os.path.basename(top), os.path.dirname(top)
+            os.chdir(top_dirname)
+            site_pkg_dir = _is_shareable(base) and 'pyall' or 'py{0}{1}'.format(py_ver_major, py_ver_minor)
+            log.debug('Packing alternative "%s" to "%s/%s" destination', base, ns, site_pkg_dir)
+            if not os.path.isdir(top):
+                # top is a single file module
+                if os.path.exists(os.path.join(top_dirname, base)):
+                    tfp.add(base, arcname=os.path.join(ns, site_pkg_dir, base))
+                continue
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
+                for name in files:
+                    if not name.endswith(('.pyc', '.pyo')):
+                        arcname = os.path.join(ns, site_pkg_dir, root, name)
+                        if hasattr(tfp, 'getinfo'):
+                            try:
+                                tfp.getinfo(os.path.join(site_pkg_dir, root, name))
+                                arcname = None
+                            except KeyError:
+                                log.debug('ZIP: Unable to add "%s" with "getinfo"', arcname)
+                        if arcname:
+                            tfp.add(os.path.join(root, name), arcname=arcname)
+
     os.chdir(thindir)
     tfp.add('salt-call')
     with salt.utils.files.fopen(thinver, 'w+') as fp_:
