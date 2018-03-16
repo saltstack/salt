@@ -75,6 +75,7 @@ import salt.payload
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -1018,12 +1019,9 @@ class AsyncEventPublisher(object):
         )
 
         log.info('Starting pull socket on {0}'.format(epull_uri))
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
-        finally:
-            os.umask(old_umask)
 
     def handle_publish(self, package, _):
         '''
@@ -1106,8 +1104,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             # Start the master event publisher
-            old_umask = os.umask(0o177)
-            try:
+            with salt.utils.files.set_umask(0o177):
                 self.publisher.start()
                 self.puller.start()
                 if (self.opts['ipc_mode'] != 'tcp' and (
@@ -1115,8 +1112,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
-            finally:
-                os.umask(old_umask)
 
             # Make sure the IO loop and respective sockets are closed and
             # destroyed
