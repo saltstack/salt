@@ -397,6 +397,30 @@ class InstallPyWin32Wheel(Command):
             call_subprocess(call_arguments)
 
 
+class InstallM2CryptoWindows(Command):
+
+    description = 'Install M2CryptoWindows'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if getattr(self.distribution, 'salt_installing_m2crypto_windows', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+        import platform
+        from pip.utils import call_subprocess
+        from pip.utils.logging import indent_log
+        platform_bits, _ = platform.architecture()
+        with indent_log():
+            call_subprocess(
+                ['pip', 'install', '--egg', 'M2CryptoWin{0}'.format(platform_bits[:2])]
+            )
+
+
 def uri_to_resource(resource_file):
     # ## Returns the URI for a resource
     # The basic case is that the resource is on saltstack.com
