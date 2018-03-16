@@ -399,6 +399,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     except OSError:
         start_dir = None
     tempdir = None
+
+    # Pack default data
+    log.debug('Packing default libraries based on current Salt version')
     for py_ver, tops in _six.iteritems(tops_py_version_mapping):
         for top in tops:
             if absonly and not os.path.isabs(top):
@@ -417,12 +420,12 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
 
             site_pkg_dir = _is_shareable(base) and 'pyall' or 'py{}'.format(py_ver)
 
+            log.debug('Packing "%s" to "%s" destination', base, site_pkg_dir)
             if not os.path.isdir(top):
                 # top is a single file module
                 if os.path.exists(os.path.join(top_dirname, base)):
                     tfp.add(base, arcname=os.path.join(site_pkg_dir, base))
                 continue
-            log.debug('Packing "%s" to "%s" destination', base, site_pkg_dir)
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
