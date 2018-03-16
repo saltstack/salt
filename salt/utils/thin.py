@@ -95,18 +95,19 @@ namespaces = %namespaces%
 
 # Default system paths alongside the namespaces
 syspaths = %dirs%
+syspaths.append('py{0}'.format(sys.version_info.major))
 
 curr_ver = (sys.version_info.major, sys.version_info.minor,)
 
-for namespace in namespaces:
-    if curr_ver == tuple(namespaces[namespace]):
-        syspaths.append(namespace)
+namespace = ''
+for ns in namespaces:
+    if curr_ver == tuple(namespaces[ns]):
+        namespace = ns
         break
-else:
-    syspaths.append('py{0}'.format(sys.version_info.major))
 
 for base in syspaths:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), base))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                                    namespace and os.path.join(namespace, base) or base))
 
 if __name__ == '__main__':
     from salt.scripts import salt_call
