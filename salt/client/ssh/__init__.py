@@ -473,10 +473,11 @@ class SSH(object):
                 if self.targets[host].get('winrm') and not HAS_WINSHELL:
                     returned.add(host)
                     rets.add(host)
-                    log.debug('Install saltwinshell to manage Windows servers.')
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
                     no_ret = {'fun_args': [],
                               'jid': None,
-                              'return': 'Install saltwinshell to manage Windows servers.',
+                              'return': log_msg,
                               'retcode': 1,
                               'fun': '',
                               'id': host}
