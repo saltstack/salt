@@ -503,7 +503,7 @@ setting a ``port`` option under the Master's ``discovery`` configuration:
 
 .. note::
     When using a port number other than the default, the Minion's ``discovery``
-    configuraton must *also* have a port specified, otherwise the Minion will
+    configuration must *also* have a port specified, otherwise the Minion will
     still attempt to contact the Master on port ``4520``.
 
 **Minion configuration**
@@ -528,7 +528,7 @@ Connection to a type instead of DNS
 By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
 also to connect to a _type_ of a Master. For example, in a network there are three different
 Masters, each corresponds for a particular niche or environment or specific role etc. The Minion
-is supposed to connect only to one of those Masters that is described approriately.
+is supposed to connect only to one of those Masters that is described appropriately.
 
 To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
 which should have a `mapping` element with arbitrary key/value pairs. The same configuration should
@@ -701,7 +701,7 @@ The generated grain information will appear similar to:
         provider: my_ec2:ec2
         profile: ec2-web
 
-The generation of salt-cloud grains can be surpressed by the
+The generation of salt-cloud grains can be suppressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
 Upgraded Saltify Driver
@@ -766,7 +766,7 @@ Terms usable in yaml files  Description
 ==========================  ===========
 classes                     A list of classes that will be processed in order
 states                      A list of states that will be returned by master_tops function
-pillars                     A yaml dictionnary that will be returned by the ext_pillar function
+pillars                     A yaml dictionary that will be returned by the ext_pillar function
 environment                 Node saltenv that will be used by master_tops
 ==========================  ===========
 

@@ -252,7 +252,7 @@ VALID_OPTS = {
     # Force the minion into a single environment when it fetches files from the master
     'saltenv': (type(None), six.string_types),
 
-    # Prevent saltenv from being overriden on the command line
+    # Prevent saltenv from being overridden on the command line
     'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
@@ -432,6 +432,9 @@ VALID_OPTS = {
 
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
+
+    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
     'test': bool,
@@ -1360,6 +1363,7 @@ DEFAULT_MINION_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
+    'enable_legacy_startup_events': True,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -2316,7 +2320,7 @@ def prepend_root_dir(opts, path_options):
                 # drive is not prefixed on a config option
                 pass
             elif os.path.isabs(path):
-                # Absolute path (not default or overriden root_dir)
+                # Absolute path (not default or overridden root_dir)
                 # No prepending required
                 continue
             # Prepending the root dir

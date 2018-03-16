@@ -1093,6 +1093,8 @@ def _parser():
     add_arg('--ahres', dest='ahres', action='append')
     ## bpf
     add_arg('--bytecode', dest='bytecode', action='append')
+    ## cgroup
+    add_arg('--cgroup', dest='cgroup', action='append')
     ## cluster
     add_arg('--cluster-total-nodes',
             dest='cluster-total-nodes',
