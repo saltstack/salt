@@ -1031,6 +1031,12 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
     CLI Example:
 
     .. code-block:: bash
