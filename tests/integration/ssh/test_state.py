@@ -28,15 +28,14 @@ class SSHStateTest(SSHCase):
     testing the state system with salt-ssh
     '''
     def _check_dict_ret(self, ret, val, exp_ret):
-        self.assertTrue(isinstance(ret, dict),
-                'ret is not dict\nret: {0}'.format(ret))
+        self.assertIsInstance(ret, dict)
         for key, value in ret.items():
             self.assertEqual(value[val], exp_ret)
 
     def _check_request(self, empty=False):
         check = self.run_function('state.check_request', wipe=False)
         if empty:
-            self.assertFalse(bool(check))
+            self.assertFalse(bool(check), 'bool({0}) is not False'.format(check))
         else:
             self._check_dict_ret(ret=check['default']['test_run']['local']['return'],
                        val='__sls__', exp_ret=SSH_SLS)
@@ -75,7 +74,7 @@ class SSHStateTest(SSHCase):
         '''
         test state.show_top with salt-ssh
         '''
-        ret = self.run_function('state.show_top', timeout=180)
+        ret = self.run_function('state.show_top')
         self.assertEqual(ret, {'base': ['core', 'master_tops_test']})
 
     def test_state_single(self):
@@ -89,8 +88,7 @@ class SSHStateTest(SSHCase):
         single = self.run_function('state.single',
                                    ['test.succeed_with_changes name=itworked'])
 
-        self.assertTrue(isinstance(single, dict),
-                'single is not dict\nsingle: {0}'.format(single))
+        self.assertIsInstance(single, dict)
         for key, value in six.iteritems(single):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -102,8 +100,8 @@ class SSHStateTest(SSHCase):
         '''
         high = self.run_function('state.show_highstate')
         destpath = os.path.join(TMP, 'testfile')
-        self.assertTrue(isinstance(high, dict))
-        self.assertTrue(destpath in high)
+        self.assertIsInstance(high, dict)
+        self.assertIn(destpath, high)
         self.assertEqual(high[destpath]['__env__'], 'base')
 
     def test_state_high(self):
@@ -114,10 +112,10 @@ class SSHStateTest(SSHCase):
                    'result': True,
                    'comment': 'Success!'}
 
-        high = self.run_function('state.high', ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
+        high = self.run_function('state.high',
+                                 ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
 
-        self.assertTrue(isinstance(high, dict),
-                'high is not dict\nhigh: {0}'.format(high))
+        self.assertIsInstance(high, dict)
         for key, value in six.iteritems(high):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -128,10 +126,8 @@ class SSHStateTest(SSHCase):
         state.show_lowstate with salt-ssh
         '''
         low = self.run_function('state.show_lowstate')
-        self.assertTrue(isinstance(low, list))
-        self.assertTrue(isinstance(low[0], dict),
-                'low[0] is not a dict\nlow: {0}'.format(low)
-                )
+        self.assertIsInstance(low, list)
+        self.assertIsInstance(low[0], dict)
 
     def test_state_low(self):
         '''
@@ -141,10 +137,11 @@ class SSHStateTest(SSHCase):
                    'result': True,
                    'comment': 'Success!'}
 
-        low = self.run_function('state.low', ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
+        low = self.run_function(
+                'state.low',
+                ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
 
-        self.assertTrue(isinstance(low, dict),
-                'low is not dict\nlow: {0}'.format(low))
+        self.assertIsInstance(low, dict)
         for key, value in six.iteritems(low):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -193,11 +190,7 @@ class SSHStateTest(SSHCase):
             time.sleep(5)
             get_sls = self.run_function('state.running', wipe=False)
             state_ret.append(get_sls)
-            try:
-                self.assertIn(expected, ' '.join(get_sls))
-            except AssertionError:
-                pass
-            else:
+            if expected in ' '.join(get_sls):
                 # We found the expected return
                 break
         else:
@@ -208,10 +201,10 @@ class SSHStateTest(SSHCase):
         # make sure we wait until the earlier state is complete
         future = time.time() + 120
         while True:
-            if time.time() > future:
-                break
             if expected not in ' '.join(self.run_function('state.running', wipe=False)):
                 break
+            if time.time() > future:
+                self.fail('state.pkg is still running overtime. Test did not clean up correctly.')
 
     def tearDown(self):
         '''
