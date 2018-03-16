@@ -178,6 +178,7 @@ def get_ext_tops(config):
     alternatives = {}
     required = ['jinja2', 'yaml', 'tornado', 'msgpack']
     for alt in config or []:
+        tops = []
         for ns, cfg in salt.ext.six.iteritems(alt):
             alternatives[ns] = cfg
             if cfg.get('dependencies') == 'inherit':
@@ -185,7 +186,6 @@ def get_ext_tops(config):
             else:
                 for dep in cfg.get('dependencies'):
                     mod = cfg['dependencies'][dep] or ''
-
                     if not mod:
                         log.warning('Module %s has missing configuration', mod)
                         continue
@@ -195,6 +195,7 @@ def get_ext_tops(config):
                     elif not mod.endswith('.py') and not os.path.isfile(os.path.join(mod, '__init__.py')):
                         log.warning('Module %s is not a Python importable module', mod)
                         continue
+                    tops.append(mod)
 
                     if dep in required:
                         required.pop(required.index(dep))
@@ -205,6 +206,7 @@ def get_ext_tops(config):
                           ' in the external configuration: {}'.format(required)
                     log.error(msg)
                     raise salt.exceptions.SaltSystemExit(msg)
+            alternatives[ns]['dependencies'] = tops
     return alternatives
 
 
