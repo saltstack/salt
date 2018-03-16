@@ -22,7 +22,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 
-__proxyenabled__ = ['iscsi']
 __virtualname__ = 'iscsi'
 
 # Get logging started

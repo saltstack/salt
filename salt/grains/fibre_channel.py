@@ -22,7 +22,6 @@ import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.files
 
-__proxyenabled__ = ['fibre_channel']
 __virtualname__ = 'fibre_channel'
 
 # Get logging started

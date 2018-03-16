@@ -521,6 +521,8 @@ In addition to the ``mapping`` and ``port`` options, the following additional op
   match a given Master. If set to ``any`` (the default), then any match to a
   key/value mapping will constitute a match.
 - ``pause`` - The interval in seconds between attempts (default: 5).
+- ``fibre_channel_grains`` - Enables the ``fc_wwn`` grain. (Default: False)
+- ``iscsi_grains`` - Enables the ``iscsi_iqn`` grain. (Default: False)
 
 Connection to a type instead of DNS
 ===================================
