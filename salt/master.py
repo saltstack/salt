@@ -578,9 +578,8 @@ class Master(SMaster):
         # Check to see if we need to create a pillar cache dir
         if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
             try:
-                prev_umask = os.umask(0o077)
-                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
-                os.umask(prev_umask)
+                with salt.utils.files.set_umask(0o077):
+                    os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
             except OSError:
                 pass
 

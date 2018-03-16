@@ -715,9 +715,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # verify the default
             if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                 # Logfile is not using Syslog, verify
-                current_umask = os.umask(0o027)
-                verify_files([logfile], self.config['user'])
-                os.umask(current_umask)
+                with salt.utils.files.set_umask(0o027):
+                    verify_files([logfile], self.config['user'])
 
         if logfile is None:
             # Use the default setting if the logfile wasn't explicity set

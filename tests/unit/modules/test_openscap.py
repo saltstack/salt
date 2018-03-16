@@ -28,8 +28,10 @@ class OpenscapTestCase(TestCase):
     policy_file = '/usr/share/openscap/policy-file-xccdf.xml'
 
     def setUp(self):
+        import salt.modules.openscap
+        salt.modules.openscap.__salt__ = MagicMock()
         patchers = [
-            patch('salt.modules.openscap.Caller', MagicMock()),
+            patch('salt.modules.openscap.__salt__', MagicMock()),
             patch('salt.modules.openscap.shutil.rmtree', Mock()),
             patch(
                 'salt.modules.openscap.tempfile.mkdtemp',
@@ -68,8 +70,7 @@ class OpenscapTestCase(TestCase):
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
                 stdout=PIPE)
-            openscap.Caller().cmd.assert_called_once_with(
-                'cp.push_dir', self.random_temp_dir)
+            openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
             self.assertEqual(openscap.shutil.rmtree.call_count, 1)
             self.assertEqual(
                 response,
@@ -106,8 +107,7 @@ class OpenscapTestCase(TestCase):
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
                 stdout=PIPE)
-            openscap.Caller().cmd.assert_called_once_with(
-                'cp.push_dir', self.random_temp_dir)
+            openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
             self.assertEqual(openscap.shutil.rmtree.call_count, 1)
             self.assertEqual(
                 response,

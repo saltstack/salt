@@ -71,7 +71,7 @@ The generated grain information will appear similar to:
         provider: my_ec2:ec2
         profile: ec2-web
 
-The generation of the salt-cloud grain can be surpressed by the
+The generation of the salt-cloud grain can be suppressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
 Cloud Configuration Syntax
@@ -344,7 +344,35 @@ be set in the configuration file to enable interfacing with GoGrid:
 OpenStack
 ---------
 
-.. automodule:: salt.cloud.clouds.openstack
+Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
+openstack-infra team.  
+
+This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
+`os-client-config <https://docs.openstack.org/os-client-config/latest/>`
+
+.. code-block:: yaml
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      cloud: mycloud
+
+Or by just configuring the same auth block directly in the cloud provider config.
+
+.. code-block:: yaml
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      auth:
+        username: 'demo'
+        password: secret
+        project_name: 'demo'
+        auth_url: 'http://openstack/identity'
+
+Both of these methods support using the
+`vendor <https://docs.openstack.org/os-client-config/latest/user/vendor-support.html>`
+options.
+
+For more information, look at :mod:`Openstack Cloud Driver Docs <salt.cloud.clouds.openstack>`
 
 DigitalOcean
 ------------
