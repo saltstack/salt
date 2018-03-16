@@ -1402,7 +1402,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '-a', '--action',
             default=None,
-            help='Perform an action that may be specific to this cloud '
+            help='Perform a action that may be specific to this cloud '
                  'provider. This argument requires one or more instance '
                  'names to be specified.'
         )
@@ -1411,7 +1411,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             nargs=2,
             default=None,
             metavar='<FUNC-NAME> <PROVIDER>',
-            help='Perform an function that may be specific to this cloud '
+            help='Perform a function that may be specific to this cloud '
                  'provider, that does not apply to an instance. This '
                  'argument requires a provider to be specified (i.e.: nova).'
         )
