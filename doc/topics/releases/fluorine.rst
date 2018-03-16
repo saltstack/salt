@@ -84,11 +84,3 @@ instead:
   files to use the ``kubernetes.node_label_present`` function instead.
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
-
-The ``mongodb_user`` state has been removed. The following functions should be
-used instead:
-
-- The ``mongodb_user.present`` function was removed. Please update applicable SLS
-  files to use the ``mongodb.user_present`` function instead.
-- The ``mongodb_user.absent`` function was removed. Please update applicable SLS
-  files to use the ``mongodb.user_absent`` function instead.
