@@ -37,7 +37,6 @@ try:
     import win32gui
     import win32api
     import win32con
-    import pywintypes
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -177,7 +176,7 @@ def key_exists(hive, key, use_32bit_registry=False):
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
         win32api.RegCloseKey(handle)
         return True
-    except WindowsError:  # pylint: disable=E0602
+    except Exception:  # pylint: disable=E0602
         return False
 
 
@@ -248,7 +247,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         handle.Close()
 
-    except pywintypes.error:  # pylint: disable=E0602
+    except Exception:  # pylint: disable=E0602
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
 
@@ -315,7 +314,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             else:
                 value['vdata'] = vdata
             values.append(value)
-    except pywintypes.error as exc:  # pylint: disable=E0602
+    except Exception as exc:  # pylint: disable=E0602
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
     finally:
@@ -398,17 +397,18 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                     ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
-        except WindowsError:  # pylint: disable=E0602
-            ret['vdata'] = ('(value not set)')
-            ret['vtype'] = 'REG_SZ'
-        except pywintypes.error as exc:  # pylint: disable=E0602
-            msg = 'Cannot find {0} in {1}\\{2}' \
-                  ''.format(local_vname, local_hive, local_key)
-            log.trace(exc)
-            log.trace(msg)
-            ret['comment'] = msg
-            ret['success'] = False
-    except pywintypes.error as exc:  # pylint: disable=E0602
+        except Exception as exc:
+            if exc.winerror == 2 and vname is None:
+                ret['vdata'] = ('(value not set)')
+                ret['vtype'] = 'REG_SZ'
+            else:
+                msg = 'Cannot find {0} in {1}\\{2}' \
+                      ''.format(local_vname, local_hive, local_key)
+                log.trace(exc)
+                log.trace(msg)
+                ret['comment'] = msg
+                ret['success'] = False
+    except Exception as exc:  # pylint: disable=E0602
         msg = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
         log.trace(exc)
         log.trace(msg)
@@ -626,7 +626,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
                 subkey = win32api.RegEnumKey(_key, i)
                 yield subkey
                 i += 1
-            except pywintypes.error:  # pylint: disable=E0602
+            except Exception:  # pylint: disable=E0602
                 break
 
     def _traverse_registry_tree(_hkey, _keypath, _ret, _access_mask):
@@ -684,7 +684,8 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
     :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
         64bit installations. On 32bit machines this is ignored.
 
-    :return: Returns True if successful, False if not
+    :return: Returns True if successful, None if the value didn't exist, and
+        False if unsuccessful
     :rtype: bool
 
     CLI Example:
@@ -707,10 +708,13 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         win32api.RegCloseKey(handle)
         broadcast_change()
         return True
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc, exc_info=True)
-        log.error('Hive: %s', local_hive)
-        log.error('Key: %s', local_key)
-        log.error('ValueName: %s', local_vname)
-        log.error('32bit Reg: %s', use_32bit_registry)
-        return False
+    except Exception as exc:  # pylint: disable=E0602
+        if exc.winerror == 2:
+            return None
+        else:
+            log.error(exc, exc_info=True)
+            log.error('Hive: %s', local_hive)
+            log.error('Key: %s', local_key)
+            log.error('ValueName: %s', local_vname)
+            log.error('32bit Reg: %s', use_32bit_registry)
+            return False
