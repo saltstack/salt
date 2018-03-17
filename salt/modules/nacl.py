@@ -154,7 +154,6 @@ Optional small program to encrypt data without needing salt modules.
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import os
-import sys
 
 # Import Salt libs
 from salt.ext import six
