@@ -975,7 +975,6 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
-
     for command in failed_commands:
         log.info(
             "Although '%s' was found in path, the current user "
