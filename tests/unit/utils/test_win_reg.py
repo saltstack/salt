@@ -19,6 +19,19 @@ class WinFunctionsTestCase(TestCase):
     '''
     Test cases for salt.utils.win_reg
     '''
+    def test_broadcast_change_success(self):
+        '''
+        Tests the broadcast_change function
+        '''
+        with patch('win32gui.SendMessageTimeout', return_value=('', 0)):
+            self.assertEqual(win_reg.broadcast_change(), True)
+
+    def test_broadcast_change_fail(self):
+        '''
+        Tests the broadcast_change function failure
+        '''
+        with patch('win32gui.SendMessageTimeout', return_value=('', 1)):
+            self.assertEqual(win_reg.broadcast_change(), False)
 
     def test_key_exists_existing(self):
         '''
@@ -43,20 +56,6 @@ class WinFunctionsTestCase(TestCase):
             ),
             False
         )
-
-    def test_broadcast_change_success(self):
-        '''
-        Tests the broadcast_change function
-        '''
-        with patch('win32gui.SendMessageTimeout', return_value=('', 0)):
-            self.assertEqual(win_reg.broadcast_change(), True)
-
-    def test_broadcast_change_fail(self):
-        '''
-        Tests the broadcast_change function failure
-        '''
-        with patch('win32gui.SendMessageTimeout', return_value=('', 1)):
-            self.assertEqual(win_reg.broadcast_change(), False)
 
     def test_list_keys_existing(self):
         '''
@@ -110,7 +109,7 @@ class WinFunctionsTestCase(TestCase):
 
     def test_read_value_existing(self):
         '''
-        Test the list_values function using a well known registry key
+        Test the read_value function using a well known registry value
         '''
         ret = win_reg.read_value(
             hive='HKLM',
@@ -131,7 +130,7 @@ class WinFunctionsTestCase(TestCase):
 
     def test_read_value_non_existing(self):
         '''
-        Test the list_values function using a non existing registry key
+        Test the read_value function using a non existing value pair
         '''
         expected = {
             'comment': 'Cannot find fake_name in HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
@@ -152,7 +151,7 @@ class WinFunctionsTestCase(TestCase):
 
     def test_read_value_non_existing_key(self):
         '''
-        Test the list_values function using a non existing registry key
+        Test the read_value function using a non existing registry key
         '''
         expected = {
             'comment': 'Cannot find key: HKLM\\SOFTWARE\\Salt\\fake_key',
@@ -218,7 +217,7 @@ class WinFunctionsTestCase(TestCase):
     @destructiveTest
     def test_set_value_default(self):
         '''
-        Test the set_value function
+        Test the set_value function on the default value
         '''
         self.assertTrue(
             win_reg.set_value(
@@ -294,7 +293,7 @@ class WinFunctionsTestCase(TestCase):
 
     def test_delete_value_non_existing(self):
         '''
-        Test the delete_value function
+        Test the delete_value function on non existing value
         '''
         self.assertEqual(
             win_reg.delete_value(
