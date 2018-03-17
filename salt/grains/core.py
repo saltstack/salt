@@ -1929,7 +1929,7 @@ def fqdns():
             socket.gaierror, socket.timeout) as e:
             log.error("Exception during resolving address: " + str(e))
 
-    grains['fqdns'] = list(fqdns)
+    grains['fqdns'] = sorted(list(fqdns))
     return grains
 
 

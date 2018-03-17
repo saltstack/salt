@@ -27,6 +27,14 @@ syndic respects :conf_minion:`enable_legacy_startup_events` as well.
 Deprecations
 ------------
 
+Pillar Deprecations
+===================
+
+The ``vault`` pillar had the following changes:
+
+- Support for the ``profile`` argument was removed. Any options passed up until
+  and following the first ``path=`` are discarded.
+
 Roster Deprecations
 ===================
 
@@ -37,3 +45,16 @@ The ``cache`` roster had the following changes:
 - The ``roster_order`` option now includes IPv6 in addition to IPv4 for the
   ``private``, ``public``, ``global`` or ``local`` settings. The syntax for these
   settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.
+
+State Deprecations
+==================
+
+The ``k8s`` state has been removed. The following functions should be used
+instead:
+
+- The ``k8s.label_absent`` function was removed. Please update applicable SLS
+  files to use the ``kubernetes.node_label_absent`` function instead.
+- The ``k8s.label_present`` function was removed. Please updated applicable SLS
+  files to use the ``kubernetes.node_label_present`` function instead.
+- The ``k8s.label_folder_absent`` function was removed. Please update applicable
+  SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
