@@ -984,6 +984,7 @@ def _virtual(osdata):
         )
     return grains
 
+
 def _virtual_hv(osdata):
     '''
     Returns detailed hypervisor information from sysfs
@@ -998,9 +999,9 @@ def _virtual_hv(osdata):
     # Try to get the exact hypervisor version from sysfs
     try:
         version = {}
-        for file in ('major', 'minor', 'extra'):
-            with salt.utils.fopen('/sys/hypervisor/version/{}'.format(file), 'r') as fhr:
-                version[file] = fhr.read().strip()
+        for fn in ('major', 'minor', 'extra'):
+            with salt.utils.files.fopen('/sys/hypervisor/version/{}'.format(fn), 'r') as fhr:
+                version[fn] = fhr.read().strip()
         grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
         grains['virtual_hv_version_info'] = (version['major'], version['minor'], version['extra'])
     except:
@@ -1024,7 +1025,7 @@ def _virtual_hv(osdata):
                         13: 'memory_op_vnode_supported',
                         14: 'ARM_SMCCC_supported'}
     try:
-        with salt.utils.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
+        with salt.utils.files.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
             features = fhr.read().strip()
         enabled_features = []
         for bit, feat in xen_feature_table.items():
