@@ -809,7 +809,7 @@ disabled by default.
 Default: ``False``
 
 The ``iscsi_grains`` setting will enable the ``iscsi_iqn`` grain on the
-minion. Since this grain is expensivem it is disabled by default.
+minion. Since this grain is expensive, it is disabled by default.
 
 .. code-block:: yaml
 
