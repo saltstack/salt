@@ -15,7 +15,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import socket
 import sys
-import glob
 import re
 import platform
 import logging
@@ -64,7 +63,6 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
-    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
@@ -2451,123 +2449,3 @@ def default_gateway():
         except Exception:
             continue
     return grains
-
-
-def fc_wwn():
-    '''
-    Return list of fiber channel HBA WWNs
-    '''
-    grains = {}
-    grains['fc_wwn'] = False
-    if salt.utils.platform.is_linux():
-        grains['fc_wwn'] = _linux_wwns()
-    elif salt.utils.platform.is_windows():
-        grains['fc_wwn'] = _windows_wwns()
-    return grains
-
-
-def iscsi_iqn():
-    '''
-    Return iSCSI IQN
-    '''
-    grains = {}
-    grains['iscsi_iqn'] = False
-    if salt.utils.platform.is_linux():
-        grains['iscsi_iqn'] = _linux_iqn()
-    elif salt.utils.platform.is_windows():
-        grains['iscsi_iqn'] = _windows_iqn()
-    elif salt.utils.platform.is_aix():
-        grains['iscsi_iqn'] = _aix_iqn()
-    return grains
-
-
-def _linux_iqn():
-    '''
-    Return iSCSI IQN from a Linux host.
-    '''
-    ret = []
-
-    initiator = '/etc/iscsi/initiatorname.iscsi'
-    try:
-        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
-            for line in _iscsi:
-                line = line.strip()
-                if line.startswith('InitiatorName='):
-                    ret.append(line.split('=', 1)[1])
-    except IOError as ex:
-        if ex.errno != os.errno.ENOENT:
-            log.debug("Error while accessing '%s': %s", initiator, ex)
-
-    return ret
-
-
-def _aix_iqn():
-    '''
-    Return iSCSI IQN from an AIX host.
-    '''
-    ret = []
-
-    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
-
-    aixret = __salt__['cmd.run'](aixcmd)
-    if aixret[0].isalpha():
-        try:
-            ret.append(aixret.split()[1].rstrip())
-        except IndexError:
-            pass
-    return ret
-
-
-def _linux_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Linux host.
-    '''
-    ret = []
-
-    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
-        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
-            for line in _wwn:
-                ret.append(line.rstrip()[2:])
-    return ret
-
-
-def _windows_iqn():
-    '''
-    Return iSCSI IQN from a Windows host.
-    '''
-    ret = []
-
-    wmic = salt.utils.path.which('wmic')
-
-    if not wmic:
-        return ret
-
-    namespace = r'\\root\WMI'
-    mspath = 'MSiSCSIInitiator_MethodClass'
-    get = 'iSCSINodeName'
-
-    cmdret = __salt__['cmd.run_all'](
-        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
-            wmic, namespace, mspath, get))
-
-    for line in cmdret['stdout'].splitlines():
-        if line.startswith('iqn.'):
-            line = line.rstrip()
-            ret.append(line.rstrip())
-    return ret
-
-
-def _windows_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Windows host.
-    '''
-    ps_cmd = r'Get-WmiObject -ErrorAction Stop -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
-
-    ret = []
-
-    cmdret = __salt__['cmd.run_ps'](ps_cmd)
-
-    for line in cmdret:
-        ret.append(line.rstrip())
-
-    return ret
