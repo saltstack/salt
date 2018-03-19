@@ -30,6 +30,15 @@ Deprecations
 Module Deprecations
 ===================
 
+The ``trafficserver`` module had the following changes:
+
+- Support for the ``match_var`` function was removed. Please use the
+  ``match_metric`` function instead.
+- Support for the ``read_var`` function was removed. Please use the
+  ``read_config`` function instead.
+- Support for the ``set_var`` function was removed. Please use the
+  ``set_config`` function instead.
+
 The ``win_update`` module has been removed. It has been replaced by ``win_wua``
 module.
 
@@ -79,5 +88,10 @@ instead:
   files to use the ``kubernetes.node_label_present`` function instead.
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
+
+The ``trafficserver`` state had the following changes:
+
+- Support for the ``set_var`` function was removed. Please use the ``config``
+  function instead.
 
 The ``win_update`` state has been removed. Please use the ``win_wua`` state instead.
