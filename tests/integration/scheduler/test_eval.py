@@ -368,3 +368,33 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_run_on_start(self):
+        '''
+        verify that scheduled job is run when minion starts
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'hours': '1',
+              'run_on_start': True
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 3:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
