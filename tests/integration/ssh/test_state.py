@@ -30,6 +30,7 @@ class SSHStateTest(SSHCase):
     def _check_dict_ret(self, ret, val, exp_ret):
         self.assertIsInstance(ret, dict)
         for key, value in ret.items():
+            self.assertIsInstance(value, dict)
             self.assertEqual(value[val], exp_ret)
 
     def _check_request(self, empty=False):
@@ -90,6 +91,7 @@ class SSHStateTest(SSHCase):
 
         self.assertIsInstance(single, dict)
         for key, value in six.iteritems(single):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -117,6 +119,7 @@ class SSHStateTest(SSHCase):
 
         self.assertIsInstance(high, dict)
         for key, value in six.iteritems(high):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -143,6 +146,7 @@ class SSHStateTest(SSHCase):
 
         self.assertIsInstance(low, dict)
         for key, value in six.iteritems(low):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -211,7 +215,7 @@ class SSHStateTest(SSHCase):
         make sure to clean up any old ssh directories
         '''
         salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
-        log.debug('tearDown: config path type/value: %s:%s', type(salt_dir), salt_dir)
+        self.assertIsInstance(salt_dir, six.string_types)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 
