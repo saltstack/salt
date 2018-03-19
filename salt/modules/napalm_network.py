@@ -19,17 +19,16 @@ Dependencies
 .. versionchanged:: 2017.7.0
 '''
 
+# Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
-
-# Import Python lib
 import logging
+
 log = logging.getLogger(__name__)
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six

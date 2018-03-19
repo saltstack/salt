@@ -18,14 +18,14 @@ Dependencies
 .. versionadded:: 2017.7.0
 '''
 
+# Import Salt libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+
 log = logging.getLogger(__name__)
 
-# import NAPALM utils
+# import Salt libs
 import salt.utils.napalm
-import salt.utils.versions
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
