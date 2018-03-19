@@ -81,7 +81,7 @@ def start(host='127.0.0.1',
                 continue
 
             jevent = salt.utils.json.dumps(event)
-            sender.send(message_observed(msg_length=len(jevent), tag=event['tag'], ts=TimestampProvider.get_now()))
+            _notify_message_observed(event, jevent, sender)
 
             if _is_jobcompletion(event):
                 _process_job_completion(event, sender)
@@ -90,11 +90,27 @@ def start(host='127.0.0.1',
                 _process_job_return(event, sender)
 
             if _is_performance(event):
-                sender.send(_extract_data(event))
+                _recend_performance_data(event, sender)
 
     finally:
         sender.close()
         log.debug("ZMQ relay engine has stopped")
+
+
+def _notify_message_observed(event, json_str, sender):
+    msg_length = len(json_str)
+
+    sender.send(message_observed(master_id=_get_master_id(),
+                                 msg_length=msg_length,
+                                 tag=event['tag'],
+                                 ts=TimestampProvider.get_now()))
+
+
+def _recend_performance_data(event, sender):
+    data = _extract_data(event)
+    # [KN] Let's forcibly add the current master_id (given that in raas environment there can be a number of them).
+    data['meta']['master_id'] = _get_master_id()
+    sender.send(data)
 
 
 def _is_performance(event):
@@ -162,4 +178,3 @@ def _process_job_return(event, sender):
     minion_id = data['id']
     master_id = _get_master_id()
     sender.send(job_return(jid, master_id, minion_id, TimestampProvider.get_now()))
-

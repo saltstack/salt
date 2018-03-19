@@ -35,6 +35,6 @@ def job_return(jid, master_id, minion_id, ts):
                 meta=dict(jid=jid, master_id=master_id, minion_id=minion_id))
 
 
-def message_observed(msg_length, tag, ts):
+def message_observed(master_id, msg_length, tag, ts):
     return dict(message_type="message_observed_in_queue", ts=ts,
-                meta=dict(length=msg_length, tag=tag))
+                meta=dict(length=msg_length, tag=tag, master_id=master_id))
