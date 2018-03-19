@@ -190,7 +190,7 @@ class SSHStateTest(SSHCase):
 
         expected = 'The function "state.pkg" is running as'
         state_ret = []
-        for _ in range(3):
+        for _ in range(30):
             time.sleep(5)
             get_sls = self.run_function('state.running', wipe=False)
             state_ret.append(get_sls)
