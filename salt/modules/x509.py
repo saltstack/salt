@@ -131,6 +131,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
 
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_bytes(name)
+    value = salt.utils.stringutils.to_bytes(value)
+
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
@@ -316,7 +320,7 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_unicode(fp_.read())
+            return salt.utils.stringutils.to_bytes(fp_.read())
     else:
         return input_
 
@@ -493,7 +497,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return ret.encode('ascii')
 
 
 def get_pem_entries(glob_path):
