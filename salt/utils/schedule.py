@@ -1474,7 +1474,7 @@ class Schedule(object):
 
                 # If there is no job specific skip_during_range available,
                 # grab the global which defaults to None.
-                if 'skip_during_range' not in data:
+                if 'skip_during_range' not in data and self.skip_during_range:
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:
