@@ -302,7 +302,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
         if HAS_M2:
-            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+            aes = key.private_decrypt(ret['key'], RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             aes = cipher.decrypt(ret['key'])

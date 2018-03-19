@@ -1270,7 +1270,7 @@ def mkdir(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1383,7 +1383,7 @@ def makedirs_(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1505,7 +1505,7 @@ def makedirs_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful, otherwise raises an error
@@ -1605,7 +1605,7 @@ def check_perms(path,
             ``True``.
 
         reset (bool):
-            ``True`` wil show what permisisons will be removed by resetting the
+            ``True`` will show what permisisons will be removed by resetting the
             DACL. ``False`` will do nothing. Default is ``False``.
 
     Returns:
@@ -2028,7 +2028,7 @@ def set_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful

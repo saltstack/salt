@@ -1379,6 +1379,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
+    def test_onchanges_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        the state will not run but results will include duration
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # Then, test the result of the state run when changes are not expected to happen
+        # and ensure duration is included in the results
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
+
     # onfail tests
 
     def test_onfail_requisite(self):
@@ -1449,6 +1463,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
+
+    def test_onfail_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
 
     # listen tests
 

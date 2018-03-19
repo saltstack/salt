@@ -15,9 +15,16 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
-* `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
-* `AutoRest swagger generator Python client runtime (Azure-specific module) <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4
+* `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
+* `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
+* `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
+* `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
+* `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
+* `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
+* `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
+* `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
+* `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
+* `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 
@@ -314,6 +321,18 @@ userdata_file
 Optional. The path to a file to be read and submitted to Azure as user data.
 How this is used depends on the operating system that is being deployed. If
 used, any ``userdata`` setting will be ignored.
+
+userdata_sendkeys
+-------------
+Optional. Set to ``True`` in order to generate salt minion keys and provide
+them as variables to the userdata script when running it through the template
+renderer. The keys can be referenced as ``{{opts['priv_key']}}`` and
+``{{opts['pub_key']}}``.
+
+userdata_template
+-------------
+Optional. Enter the renderer, such as ``jinja``, to be used for the userdata
+script template.
 
 wait_for_ip_timeout
 -------------------

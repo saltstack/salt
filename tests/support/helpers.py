@@ -24,6 +24,7 @@ import signal
 import socket
 import string
 import sys
+import tempfile
 import threading
 import time
 import tornado.ioloop
@@ -50,7 +51,7 @@ except ImportError:
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
-from tests.support.paths import FILES
+from tests.support.paths import FILES, TMP
 
 log = logging.getLogger(__name__)
 
@@ -954,6 +955,24 @@ def with_system_user_and_group(username, group,
     return decorator
 
 
+def with_tempfile(func):
+    '''
+    Generates a tempfile and cleans it up when test completes.
+    '''
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        fd_, name = tempfile.mkstemp(prefix='__salt.test.', dir=TMP)
+        os.close(fd_)
+        del fd_
+        ret = func(self, name, *args, **kwargs)
+        try:
+            os.remove(name)
+        except Exception:
+            pass
+        return ret
+    return wrapper
+
+
 def requires_system_grains(func):
     '''
     Function decorator which loads and passes the system's grains to the test
@@ -1344,7 +1363,7 @@ def generate_random_name(prefix, size=6):
     Generates a random name by combining the provided prefix with a randomly generated
     ascii string.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     prefix
         The string to prefix onto the randomly generated ascii string.
