@@ -1402,7 +1402,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '-a', '--action',
             default=None,
-            help='Perform a action that may be specific to this cloud '
+            help='Perform an action that may be specific to this cloud '
                  'provider. This argument requires one or more instance '
                  'names to be specified.'
         )
