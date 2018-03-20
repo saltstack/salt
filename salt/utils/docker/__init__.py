@@ -10,7 +10,6 @@ input as formatted by states.
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
-import os
 
 # Import Salt libs
 import salt.utils.args

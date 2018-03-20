@@ -720,8 +720,12 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar:
+        if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
+        else:
+            # Compile pillar data
+            self.opts['pillar'] = self._gather_pillar()
+            # Reapply overrides on top of compiled pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
                     self.opts['pillar'],
@@ -729,8 +733,6 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
-        else:
-            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -3919,24 +3921,23 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                self.state.functions['cmd.run'](
-                    ['attrib', '-R', cfn],
-                    python_shell=False,
-                    output_loglevel='quiet')
-            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-                try:
-                    self.serial.dump(high, fp_)
-                except TypeError:
-                    # Can't serialize pydsl
-                    pass
-        except (IOError, OSError):
-            log.error('Unable to write to "state.highstate" cache file %s', cfn)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    self.state.functions['cmd.run'](
+                        ['attrib', '-R', cfn],
+                        python_shell=False,
+                        output_loglevel='quiet')
+                with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        self.serial.dump(high, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                log.error('Unable to write to "state.highstate" cache file %s', cfn)
 
-        os.umask(cumask)
         return self.state.call_high(high, orchestration_jid)
 
     def compile_highstate(self):
