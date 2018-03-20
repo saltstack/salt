@@ -399,7 +399,10 @@ def _file_lists(load, form):
                         # (i.e. the "path" variable)
                         ret['links'][rel_path] = link_dest
 
-        for path in __opts__['file_roots'][load['saltenv']]:
+        paths = __opts__['file_roots'][load['saltenv']]
+        if not isinstance(paths, list):
+            paths = [paths]
+        for path in paths:
             for root, dirs, files in os.walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):

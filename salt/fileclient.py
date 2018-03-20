@@ -863,7 +863,10 @@ class LocalClient(Client):
         if saltenv not in self.opts['file_roots']:
             return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        paths = self.opts['file_roots'][saltenv]
+        if not isinstance(paths, list):
+            paths = [paths]
+        for path in paths:
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
