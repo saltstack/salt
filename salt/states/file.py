@@ -263,6 +263,7 @@ For example:
 
 # Import python libs
 from __future__ import absolute_import
+import collections
 import difflib
 import itertools
 import logging
@@ -607,29 +608,34 @@ def _check_file(name):
     return ret, msg
 
 
+def _find_keep_files(root, keep):
+    '''
+    Compile a list of valid keep files (and directories).
+    '''
+    real_keep = set()
+    real_keep.add(root)
+    if isinstance(keep, collections.Iterable):
+        for fn_ in keep:
+            if not os.path.isabs(fn_):
+                continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
+            real_keep.add(fn_)
+            while True:
+                fn_ = os.path.abspath(os.path.dirname(fn_))
+                real_keep.add(fn_)
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
+                    break
+    return real_keep
+
+
 def _clean_dir(root, keep, exclude_pat):
     '''
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    real_keep = _find_keep_files_old(root, keep)
     removed = set()
-    real_keep = set()
-    real_keep.add(root)
-    if isinstance(keep, list):
-        for fn_ in keep:
-            if not os.path.isabs(fn_):
-                continue
-            real_keep.add(fn_)
-            while True:
-                fn_ = os.path.dirname(fn_)
-                real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
-                    break
-
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
