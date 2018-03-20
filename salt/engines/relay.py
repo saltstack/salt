@@ -113,11 +113,12 @@ class MessageProcessor(object):
                                          ))
 
     def _extract_jid_completion(self, event):
-        return re.match(self._get_completion_tag_regex(), event['tag']).group(1)
+        tag = event['tag']
+        return self._extract(tag, self._get_completion_tag_regex)
 
     def _is_jobcompletion(self, event):
         tag = event['tag']
-        return re.match(self._get_completion_tag_regex(), tag)
+        return self._match(tag, self._get_completion_tag_regex)
 
     def _get_completion_tag_regex(self):
         return r'^salt/job/([^/]*)/complete'
@@ -133,16 +134,29 @@ class MessageProcessor(object):
 
     def _is_job_return(self, event):
         tag = event['tag']
-        return re.match(self._get_return_tag_regex(), tag)
+        return self._match(tag, self._get_return_tag_regex)
 
     def _get_return_tag_regex(self):
         return r'^salt/job/(.*)/ret/.*$'
 
     def _extract_jid_return(self, event):
-        return re.match(self._get_return_tag_regex(), event['tag']).group(1)
+        return self._extract(event['tag'], self._get_return_tag_regex)
 
     def _process_job_return(self, event):
         data = self._extract_data(event)
         jid = self._extract_jid_return(event)
         minion_id = data['id']
         self.sender.send(job_return(jid, self.master_id, minion_id, TimestampProvider.get_now()))
+
+    def _extract(self, tag, fn):
+        """
+        :param tag: The tag to match against the regex
+        :param fn: Provides a regex which has at least 1 group
+        :return: Extracted value
+        """
+        return self._match(tag, fn).group(1)
+
+
+    def _match(self, tag, fn):
+        regex = fn()
+        return re.match(regex, tag)
