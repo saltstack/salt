@@ -305,11 +305,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     thindir = os.path.join(cachedir, 'thin')
     if not os.path.isdir(thindir):
         os.makedirs(thindir)
-    if compress == 'gzip':
-        thin_ext = 'tgz'
-    elif compress == 'zip':
-        thin_ext = 'zip'
-    thintar = os.path.join(thindir, 'thin.' + thin_ext)
+    thintar = os.path.join(thindir, 'thin.' + (compress == 'gzip' and 'tgz' or 'zip'))
     thinver = os.path.join(thindir, 'version')
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
