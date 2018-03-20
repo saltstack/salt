@@ -424,9 +424,9 @@ def _run(cmd,
             marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
-                'sys.stdout.write(\"' + marker + '\\n\"); '
+                'sys.stdout.write(\"' + marker + '\"); '
                 'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items()))); '
-                'sys.stdout.write(\"\\n' + marker + '\\n\");'
+                'sys.stdout.write(\"' + marker + '\");'
             )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
@@ -440,47 +440,32 @@ def _run(cmd,
                 env_cmd = ('su', '-', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_encoded = subprocess.Popen(
+            env_encoded, env_encoded_err = subprocess.Popen(
                 env_cmd,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE
             ).communicate(py_code.encode(__salt_system_encoding__))
-            env_encoded_err = env_encoded[1]
-            env_encoded = env_encoded[0]
-            if isinstance(env_encoded_err, str):
-                env_encoded_err = env_encoded_err.encode(__salt_system_encoding__)
-            if isinstance(env_encoded, str):
-                env_encoded = env_encoded.encode(__salt_system_encoding__)
-            env_encoded_org = env_encoded
-            env_mark = env_encoded.find(marker_b + b'\n')
-            first_marker_found = False
-            if env_mark >= 0:
-                # strip first marker line plus newline
-                env_encoded = env_encoded[env_mark + len(marker) + 1:]
-                first_marker_found = True
-            env_mark = env_encoded.find(b'\n' + marker_b + b'\n')
-            second_marker_found = False
-            if env_mark >= 0:
-                # strip second marker line plus leading newline
-                env_encoded = env_encoded[0:env_mark]
-                second_marker_found = True
-            if first_marker_found == second_marker_found:
-                if not first_marker_found:
-                    log.error('Unable to retrieve environment for \'%s\': err=%s out=%s',
-                              runas,
-                              repr(env_encoded_err),
-                              repr(env_encoded_org)
-                    )
-            else:
-                raise CommandExecutionError(
-                    'Environment could not be retrieved for User \'{0}\':'
-                    ' missing a marker, got err={1} out={2}'.format(
-                        runas,
-                        repr(env_encoded_err),
-                        repr(env_encoded_org)
-                    )
+            marker_count = env_encoded.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_encoded
                 )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_encoded = b''
+            elif marker_count != 2:
+                raise CommandExecutionError(
+                    'Environment could not be retrieved for user \'{0}\'',
+                    info={'stderr': repr(env_encoded_err),
+                          'stdout': repr(env_encoded)}
+                )
+            else:
+                # Strip the marker
+                env_encoded = env_encoded.split(marker_b)[1]
 
             if six.PY2:
                 import itertools
