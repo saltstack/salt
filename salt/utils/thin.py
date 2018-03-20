@@ -329,6 +329,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
 
         if overwrite:
             try:
+                log.debug('Removing %s archive file', thintar)
                 os.remove(thintar)
             except OSError as exc:
                 log.error('Error while removing %s file: %s', thintar, exc)
