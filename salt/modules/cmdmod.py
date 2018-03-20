@@ -475,7 +475,7 @@ def _run(cmd,
             else:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\':'
-                    ' missing a marker, got err={1!r} out={2!r}'.format(
+                    ' missing a marker, got err={1} out={2}'.format(
                         runas,
                         repr(env_encoded_err),
                         repr(env_encoded_org)
