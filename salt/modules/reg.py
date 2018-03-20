@@ -48,7 +48,7 @@ def __virtual__():
         return (False, 'reg execution module failed to load: '
                        'The module will only run on Windows systems')
 
-    if not 'reg.read_value' in __utils__:
+    if 'reg.read_value' not in __utils__:
         return (False, 'reg execution module failed to load: '
                        'The reg salt util is unavailable')
 
