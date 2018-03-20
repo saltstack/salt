@@ -39,10 +39,10 @@ def __virtual__():
     '''
     Only load when the platform has zfs support
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
-        return (False, "The zfs module cannot be loaded: zfs not supported")
+        return False, "The zfs module cannot be loaded: zfs not supported"
 
 
 def exists(name, **kwargs):
