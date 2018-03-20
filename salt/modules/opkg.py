@@ -22,6 +22,7 @@ import copy
 import os
 import re
 import logging
+import errno
 
 # Import salt libs
 import salt.utils.args
@@ -55,12 +56,62 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
+NILRT_MODULE_STATE_PATH = '/var/lib/salt/kernel_module_state'
+
+
+def _update_nilrt_module_dep_info():
+    '''
+    Update modules.dep timestamp & checksum.
+
+    NILRT systems determine whether to reboot after kernel module install/
+    removals/etc by checking modules.dep which gets modified/touched by
+    each kernel module on-target dkms-like compilation. This function
+    updates the module.dep data after each opkg kernel module operation
+    which needs a reboot as detected by the salt checkrestart module.
+    '''
+    __salt__['cmd.shell']('stat -c %Y /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.timestamp'
+                          .format(NILRT_MODULE_STATE_PATH))
+    __salt__['cmd.shell']('md5sum /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.md5sum'
+                          .format(NILRT_MODULE_STATE_PATH))
+
+
+def _get_restartcheck_result(errors):
+    '''
+    Return restartcheck result and append errors (if any) to ``errors``
+    '''
+    rs_result = __salt__['restartcheck.restartcheck'](verbose=False)
+    if isinstance(rs_result, dict) and 'comment' in rs_result:
+        errors.append(rs_result['comment'])
+    return rs_result
+
+
+def _is_nilrt_restart_required(rs_result):
+    '''
+    Check if a restart was requested based on the output of restartcheck.
+    If a restart was requested, update the NILRT kernel module state data.
+
+    Return: True/False depending if a restart is required
+    '''
+    if any('System restart required' in s for s in rs_result):
+        _update_nilrt_module_dep_info()
+        return True
+    return False
+
 
 def __virtual__():
     '''
     Confirm this module is on a nilrt based system
     '''
-    if os.path.isdir(OPKG_CONFDIR):
+    if __grains__.get('os_family') == 'NILinuxRT':
+        if not (os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.timestamp')) and
+                os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.md5sum'))):
+            try:
+                os.makedirs(NILRT_MODULE_STATE_PATH)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    msg = 'Error creating {0} (-{1}): {2}'.format(NILRT_MODULE_STATE_PATH, exc.errno, exc.strerror)
+                    return (False, msg)
+            _update_nilrt_module_dep_info()
         return __virtualname__
     return False, "Module opkg only works on OpenEmbedded based systems"
 
@@ -412,11 +463,16 @@ def install(name=None,
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    if _is_nilrt_restart_required(rs_result):
+        __salt__['system.set_reboot_required_witnessed']()
 
     return ret
 
@@ -475,11 +531,16 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered removing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    if _is_nilrt_restart_required(rs_result):
+        __salt__['system.set_reboot_required_witnessed']()
 
     return ret
 
@@ -536,6 +597,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
            'comment': '',
            }
 
+    errors = []
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -550,10 +612,18 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
+        errors.append(result)
+
+    rs_result = _get_restartcheck_result(errors)
+
+    if errors:
         raise CommandExecutionError(
             'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            info={'errors': errors, 'changes': ret}
         )
+
+    if _is_nilrt_restart_required(rs_result):
+        __salt__['system.set_reboot_required_witnessed']()
 
     return ret
 
