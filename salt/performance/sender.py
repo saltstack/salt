@@ -1,5 +1,6 @@
 import logging
 
+import time
 import zmq
 
 from salt.utils import json
