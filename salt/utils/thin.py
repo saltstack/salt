@@ -23,6 +23,11 @@ import msgpack
 import salt.ext.six as _six
 import tornado
 
+try:
+    import zlib
+except ImportError:
+    zlib = None
+
 # pylint: disable=import-error,no-name-in-module
 try:
     import certifi
@@ -392,7 +397,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if compress == 'gzip':
         tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     elif compress == 'zip':
-        tfp = zipfile.ZipFile(thintar, 'w')
+        tfp = zipfile.ZipFile(thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
         tfp.add = tfp.write
 
     try:  # cwd may not exist if it was removed but salt was run from it
