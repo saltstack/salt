@@ -298,6 +298,13 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
+def _is_older_nilrt():
+    '''
+    If this is an older version of NILinuxRT, return True. Otherwise, return False.
+    '''
+    return bool(os.path.exists('/usr/local/natinst/bin/nisafemodeversion'))
+
+
 def _kernel_versions_nilrt():
     '''
     Last installed kernel name, for Debian based systems.
@@ -307,9 +314,22 @@ def _kernel_versions_nilrt():
             as they are probably interpreted in output of `uname -a` command.
     '''
     kernel_versions = []
-    kernel = os.readlink('/boot/bzImage')
-    kernel = os.path.basename(kernel)
-    kernel = kernel.strip('bzImage-')
+
+    if __grains__.get('os_family') == 'NILinuxRT' and _is_older_nilrt():
+        # bzImage is copied in the rootfs without any package management or
+        # version info. We also can't depend on kernel headers like
+        # include/generated/uapi/linux/version.h being installed. Even if
+        # we fix this in newer versions of "old NILRT" we still need to be
+        # backwards compatible so it'll just get more complicated.
+        kpath = '/boot/runmode/bzImage'
+        kvregex = r'[0-9]+\.[0-9]+\.[0-9]+-rt'
+        kernel = __salt__['cmd.shell']('strings {0} | awk \'$1 ~ /{1}/ {{print $1}}\''
+                                       .format(kpath, kvregex))
+    else:
+        kernel = os.readlink('/boot/bzImage')
+        kernel = os.path.basename(kernel)
+        kernel = kernel.strip('bzImage-')
+
     kernel_versions.append(kernel)
 
     return kernel_versions
