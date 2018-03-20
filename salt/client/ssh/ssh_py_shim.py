@@ -230,6 +230,7 @@ def get_executable():
 
     sys.exit(EX_THIN_PYTHON_INVALID)
 
+
 def main(argv):  # pylint: disable=W0613
     '''
     Main program body
@@ -345,6 +346,7 @@ def main(argv):  # pylint: disable=W0613
         subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)  # pylint: disable=blacklisted-function
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
