@@ -98,7 +98,6 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
                             'changes': {name: 'Absent'}})
                 self.assertDictEqual(mongodb_user.absent(name), ret)
 
-            comt = ('User {0} is not present, so it cannot be removed'
-                    .format(name))
+            comt = 'User {0} is not present'.format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(mongodb_user.absent(name), ret)
