@@ -454,29 +454,33 @@ def _run(cmd,
                 env_encoded = env_encoded.encode(__salt_system_encoding__)
             env_encoded_org = env_encoded
             env_mark = env_encoded.find(marker_b + b'\n')
-            if env_mark < 0:
-                raise CommandExecutionError(
-                    'Environment could not be retrieved for User \'{0}\':'
-                    ' missing first marker, got err={1} out={2}'.format(
-                        runas,
-                        repr(env_encoded_err),
-                        repr(env_encoded_org)
-                    )
-                )
-            # strip first marker line plus newline
-            env_encoded = env_encoded[env_mark + len(marker) + 1:]
+            first_marker_found = False
+            if env_mark >= 0:
+                # strip first marker line plus newline
+                env_encoded = env_encoded[env_mark + len(marker) + 1:]
+                first_marker_found = True
             env_mark = env_encoded.find(b'\n' + marker_b + b'\n')
-            if env_mark < 0:
+            second_marker_found = False
+            if env_mark >= 0:
+                # strip second marker line plus leading newline
+                env_encoded = env_encoded[0:env_mark]
+                second_marker_found = True
+            if first_marker_found == second_marker_found:
+                if not first_marker_found:
+                    log.error('Unable to retrieve environment for \'%s\': err=%s out=%s',
+                              runas,
+                              repr(env_encoded_err),
+                              repr(env_encoded_org)
+                    )
+            else:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\':'
-                    ' second marker, got err={1} out={2}'.format(
+                    ' missing a marker, got err={1!r} out={2!r}'.format(
                         runas,
                         repr(env_encoded_err),
                         repr(env_encoded_org)
                     )
                 )
-            # strip second marker line plus leading newline
-            env_encoded = env_encoded[0:env_mark]
 
             if six.PY2:
                 import itertools
