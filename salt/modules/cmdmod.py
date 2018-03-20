@@ -446,7 +446,18 @@ def _run(cmd,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE
             ).communicate(py_code.encode(__salt_system_encoding__))
-            if env_encoded.count(marker_b) != 2:
+            marker_count = env_encoded.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_encoded
+                )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_encoded = b''
+            elif marker_count != 2:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for user \'{0}\'',
                     info={'stderr': repr(env_encoded_err),
