@@ -38,7 +38,12 @@ def valid_certificate(
            'comment': ''}
 
     now = time.time()
-    cert_info = __salt__['tls.cert_info'](name)
+    try:
+        cert_info = __salt__['tls.cert_info'](name)
+    except IOError as exc:
+        ret['comment'] = '{}'.format(exc)
+        ret['result'] = False
+        return ret
 
     # verify that the cert is valid *now*
     if now < cert_info['not_before']:
