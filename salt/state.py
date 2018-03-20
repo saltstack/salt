@@ -2207,7 +2207,8 @@ class State(object):
                 if r_state == 'prereq' and not run_dict[tag]['result'] is None:
                     fun_stats.add('pre')
                 else:
-                    fun_stats.add('met')
+                    if run_dict[tag].get('__state_ran__', True):
+                        fun_stats.add('met')
 
         if 'unmet' in fun_stats:
             status = 'unmet'
@@ -2462,6 +2463,7 @@ class State(object):
                             'duration': duration,
                             'start_time': start_time,
                             'comment': 'State was not run because onfail req did not change',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -2472,6 +2474,7 @@ class State(object):
                             'duration': duration,
                             'start_time': start_time,
                             'comment': 'State was not run because none of the onchanges reqs changed',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1

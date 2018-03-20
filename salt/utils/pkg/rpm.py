@@ -11,7 +11,6 @@ import subprocess
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -112,10 +111,10 @@ def combine_comments(comments):
     '''
     if not isinstance(comments, list):
         comments = [comments]
-    for idx in range(len(comments)):
-        if not isinstance(comments[idx], six.string_types):
-            comments[idx] = str(comments[idx])
-        comments[idx] = comments[idx].strip()
-        if not comments[idx].startswith('#'):
-            comments[idx] = '#' + comments[idx]
-    return '\n'.join(comments)
+    ret = []
+    for comment in comments:
+        if not isinstance(comment, six.string_types):
+            comment = str(comment)
+        # Normalize for any spaces (or lack thereof) after the #
+        ret.append('# {0}\n'.format(comment.lstrip('#').lstrip()))
+    return ''.join(ret)
