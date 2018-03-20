@@ -345,6 +345,36 @@ def _check_timeout(start_time, timeout):
         raise salt.exceptions.TimeoutError('Timeout expired.')
 
 
+def _kernel_modules_changed_nilrt(kernelversion):
+    '''
+    Once a NILRT kernel module is inserted, it can't be rmmod so systems need
+    rebooting (some modules explicitely ask for reboots even on first install),
+    hence this functionality of determining if the module state got modified by
+    testing if depmod was run.
+
+    Returns:
+             - True/False depending if modules.dep got modified/touched
+    '''
+    depmodpath_base = '/lib/modules/{0}/modules.dep'.format(kernelversion)
+    depmodpath_timestamp = "/var/lib/salt/kernel_module_state/modules.dep.timestamp"
+    depmodpath_md5sum = "/var/lib/salt/kernel_module_state/modules.dep.md5sum"
+
+    # nothing can be detected without these dependencies
+    if (kernelversion is None or
+            not os.path.exists(depmodpath_timestamp) or
+            not os.path.exists(depmodpath_md5sum)):
+        return False
+
+    prev_timestamp = __salt__['file.read'](depmodpath_timestamp).rstrip()
+    # need timestamp in seconds so floor it using int()
+    cur_timestamp = str(int(os.path.getmtime(depmodpath_base)))
+
+    if prev_timestamp != cur_timestamp:
+        return True
+
+    return bool(__salt__['cmd.retcode']('md5sum -cs {0}'.format(depmodpath_md5sum), output_loglevel="quiet"))
+
+
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     '''
@@ -396,8 +426,14 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     for kernel in kernel_versions:
         _check_timeout(start_time, timeout)
         if kernel in kernel_current:
-            kernel_restart = False
-            break
+            if __grains__.get('os_family') == 'NILinuxRT':
+                # Check kernel modules for version changes
+                if not _kernel_modules_changed_nilrt(kernel):
+                    kernel_restart = False
+                    break
+            else:
+                kernel_restart = False
+                break
 
     packages = {}
     running_services = {}
