@@ -2177,10 +2177,6 @@ def detached(name,
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
 
-    ref
-        .. deprecated:: 2017.7.0
-            Use ``rev`` instead.
-
     target
         Name of the target directory where repository is about to be cloned.
 
@@ -2271,22 +2267,12 @@ def detached(name,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
             salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if ref is not None:
-        rev = ref
-        deprecation_msg = (
-            'The \'ref\' argument has been renamed to \'rev\' for '
-            'consistency. Please update your SLS to reflect this.'
-        )
-        ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2576,7 +2562,7 @@ def detached(name,
                     'refs'.format(remote)
                 )
 
-    #get refs and checkout
+    # get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
         if __salt__['git.describe'](
