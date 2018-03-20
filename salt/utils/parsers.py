@@ -1411,7 +1411,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             nargs=2,
             default=None,
             metavar='<FUNC-NAME> <PROVIDER>',
-            help='Perform an function that may be specific to this cloud '
+            help='Perform a function that may be specific to this cloud '
                  'provider, that does not apply to an instance. This '
                  'argument requires a provider to be specified (i.e.: nova).'
         )

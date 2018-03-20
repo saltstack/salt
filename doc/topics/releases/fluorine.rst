@@ -27,6 +27,35 @@ syndic respects :conf_minion:`enable_legacy_startup_events` as well.
 Deprecations
 ------------
 
+Module Deprecations
+===================
+
+The ``win_update`` module has been removed. It has been replaced by ``win_wua``
+module.
+
+The ``win_wua`` module had the following changes:
+
+- Support for the ``download_update`` function has been removed. Please use the
+  ``download`` function instead.
+- Support for the ``download_updates`` function has been removed. Please use the
+  ``download`` function instead.
+- Support for the ``install_update`` function has been removed. Please use the
+  ``install`` function instead.
+- Support for the ``install_updates`` function has been removed. Please use the
+  ``install`` function instead.
+- Support for the ``list_update`` function has been removed. Please use the
+  ``get`` function instead.
+- Support for the ``list_updates`` function has been removed. Please use the
+  ``list`` function instead.
+
+Pillar Deprecations
+===================
+
+The ``vault`` pillar had the following changes:
+
+- Support for the ``profile`` argument was removed. Any options passed up until
+  and following the first ``path=`` are discarded.
+
 Roster Deprecations
 ===================
 
@@ -84,3 +113,5 @@ instead:
   files to use the ``kubernetes.node_label_present`` function instead.
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
+
+The ``win_update`` state has been removed. Please use the ``win_wua`` state instead.
