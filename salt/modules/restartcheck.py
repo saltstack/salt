@@ -28,6 +28,8 @@ import salt.utils.path
 # Import 3rd partylibs
 from salt.ext import six
 
+NILRT_FAMILY_NAME = 'NILinuxRT'
+
 HAS_PSUTIL = False
 try:
     import psutil
@@ -297,6 +299,13 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
+def _is_older_nilrt():
+    '''
+    If this is an older version of NILinuxRT, return True. Otherwise, return False.
+    '''
+    return os.path.exists('/usr/local/natinst/bin/nisafemodeversion')
+
+
 def _kernel_versions_nilrt():
     '''
     Last installed kernel name, for Debian based systems.
@@ -306,10 +315,20 @@ def _kernel_versions_nilrt():
             as they are probably interpreted in output of `uname -a` command.
     '''
     kernel_versions = []
-    kernel = os.readlink('/boot/bzImage')
-    kernel = os.path.basename(kernel)
-    kernel = kernel.strip('bzImage-')
-    kernel_versions.append(kernel)
+
+    if __grains__.get('os_family') == NILRT_FAMILY_NAME and _is_older_nilrt():
+        # bzImage is copied in the rootfs without any package management or
+        # version info. We also can't depend on kernel headers like
+        # include/generated/uapi/linux/version.h being installed. Even if
+        # we fix this in newer versions of "old NILRT" we still need to be
+        # backwards compatible so it'll just get more complicated.
+        kpath = '/boot/runmode/bzImage'
+        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kpath))
+        re_result = re.search(r'[0-9]+\.[0-9]+\.[0-9]+-rt.*(?=\s\()', kernel_strings)
+        if re_result is not None:
+            kernel_versions.append(re_result.group(0))
+    else:
+        kernel_versions.append(os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-'))
 
     return kernel_versions
 
@@ -365,7 +384,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         systemd_folder = '/usr/lib/systemd/system/'
         systemd = '/usr/bin/systemctl'
         kernel_versions = _kernel_versions_redhat()
-    elif __grains__.get('os_family') == 'NILinuxRT':
+    elif __grains__.get('os_family') == NILRT_FAMILY_NAME:
         cmd_pkg_query = 'opkg files '
         systemd = ''
         kernel_versions = _kernel_versions_nilrt()
