@@ -298,6 +298,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     '''
     if sys.version_info < (2, 6):
         raise salt.exceptions.SaltSystemExit('The minimum required python version to run salt-ssh is "2.6".')
+    if compress not in ['gzip', 'zip']:
+        log.warning('Unknown compression type: "%s". Falling back to "gzip" compression.', compress)
+        compress = 'gzip'
 
     thindir = os.path.join(cachedir, 'thin')
     if not os.path.isdir(thindir):
@@ -389,10 +392,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         else:
             log.error(tops_failure_msg, 'collecting', python2_bin)
             log.debug(stderr)
-
-    if compress not in ['gzip', 'zip']:
-        compress = 'gzip'
-        log.warning('Unknown compression type: "%s". Falling back to "gzip" compression.', compress)
 
     if compress == 'gzip':
         tfp = tarfile.open(thintar, 'w:gz', dereference=True)
