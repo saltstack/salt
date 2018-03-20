@@ -470,3 +470,19 @@ It is also possible to use several alternative versions of Salt. You can for ins
 a minimal tarball using runners and include that. But this is only possible, when such specific
 Salt version is also available on the Master machine, although does not need to be directly
 installed together with the older Python interpreter.
+
+========================
+Salt-Cloud major updates
+========================
+
+
+Dependency Deprecations
+=======================
+
+Salt-Cloud has been updated to use the ``pypsexec`` python library instead of the
+``winexe`` executable. Both ``winexe`` and ``pypsexec`` run remote commands
+against Windows OSes. Since ``winexe`` is not packaged for every system, it has
+been deprecated in favor of ``pypsexec``.
+
+Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
+This changes was made because ``impacket`` is not compatible with python 3.

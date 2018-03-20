@@ -47,7 +47,7 @@ Installation Prerequisites
 :requires: purestorage
 :platform: all
 
-.. versionadded::  Flourine
+.. versionadded::  Fluorine
 
 '''
 
@@ -170,7 +170,7 @@ def snap_create(name, suffix=None):
 
     Will return False if filesystem selected to snap does not exist.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem to snapshot
@@ -211,7 +211,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     Will return False if selected snapshot does not exist.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem
@@ -255,7 +255,7 @@ def snap_eradicate(name, suffix=None):
 
     Will return False if snapshot is not in a deleted state.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem
@@ -288,7 +288,7 @@ def fs_create(name, size=None, proto='NFS', nfs_rules='*(rw,no_root_squash)', sn
 
     Will return False if filesystem already exists.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem (truncated to 63 characters)
@@ -359,7 +359,7 @@ def fs_delete(name, eradicate=False):
 
     Will return False if filesystem doesn't exist or is already in a deleted state.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem
@@ -403,7 +403,7 @@ def fs_eradicate(name):
 
     Will return False is filesystem is not in a deleted state.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem
@@ -433,7 +433,7 @@ def fs_extend(name, size):
 
     Will return False if new size is less than or equal to existing size.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem
@@ -474,7 +474,7 @@ def fs_update(name, rules, snapshot=False):
     Allows for change of NFS export rules and enabling/disabled
     of snapshotting capability.
 
-    .. versionadded::  Flourine
+    .. versionadded::  Fluorine
 
     name : string
         name of filesystem

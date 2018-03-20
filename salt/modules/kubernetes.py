@@ -28,7 +28,7 @@ provided `kubeconfig` entry is preferred.
 
 .. warning::
 
-    Configuration options changed in Flourine. The following configuration options have been removed:
+    Configuration options changed in Fluorine. The following configuration options have been removed:
 
     - kubernetes.user
     - kubernetes.password
