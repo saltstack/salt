@@ -587,7 +587,7 @@ FunctionEnd
 #   Push "this is some string"
 #   Push "some"
 #   Call StrStr
-#   Pop $0 ; "some string"
+#   Pop $0 # "some string"
 #------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
@@ -693,7 +693,7 @@ Function AddToPath
 
     # Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
-        DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
+        DetailPrint "AddToPath Failed: new length $2 > ${NSIS_MAX_STRLEN}"
         MessageBox MB_OK \
             "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
             /SD IDOK
