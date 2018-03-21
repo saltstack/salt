@@ -187,6 +187,16 @@ def get_ext_tops(config):
         tops = []
         for ns, cfg in salt.ext.six.iteritems(alt):
             alternatives[ns] = cfg
+            locked_py_version = cfg.get('py-version')
+            err_msg = None
+            if not locked_py_version:
+                err_msg = 'Alternative Salt library: missing specific locked Python version'
+            elif not isinstance(locked_py_version, (tuple, list)):
+                err_msg = ('Alternative Salt library: specific locked Python version '
+                           'should be a list of major/minor version')
+            if err_msg:
+                raise salt.exceptions.SaltSystemExit(err_msg)
+
             if cfg.get('dependencies') == 'inherit':
                 # TODO: implement inheritance of the modules from _here_
                 raise NotImplementedError('This feature is not yet implemented')
