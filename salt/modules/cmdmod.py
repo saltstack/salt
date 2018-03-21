@@ -12,6 +12,7 @@ import functools
 import glob
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -3344,9 +3345,14 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd += ' | ConvertTo-JSON'
-    if depth is not None:
-        cmd += ' -Depth {0}'.format(depth)
+    # ConvertTo-JSON is only available on Versions of Windows greater than
+    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
+    # because this function is called by `salt/grains/core.py` before
+    # `__grains__` is populated
+    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+        cmd += ' | ConvertTo-JSON'
+        if depth is not None:
+            cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -3363,7 +3369,7 @@ def powershell(cmd,
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+    cmd = 'try {' + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
