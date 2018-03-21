@@ -24,6 +24,7 @@ import signal
 import socket
 import string
 import sys
+import tempfile
 import threading
 import time
 import tornado.ioloop
@@ -50,7 +51,7 @@ except ImportError:
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
-from tests.support.paths import FILES
+from tests.support.paths import FILES, TMP
 
 log = logging.getLogger(__name__)
 
@@ -952,6 +953,24 @@ def with_system_user_and_group(username, group,
                     six.reraise(failure[0], failure[1], failure[2])
         return wrap
     return decorator
+
+
+def with_tempfile(func):
+    '''
+    Generates a tempfile and cleans it up when test completes.
+    '''
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        fd_, name = tempfile.mkstemp(prefix='__salt.test.', dir=TMP)
+        os.close(fd_)
+        del fd_
+        ret = func(self, name, *args, **kwargs)
+        try:
+            os.remove(name)
+        except Exception:
+            pass
+        return ret
+    return wrapper
 
 
 def requires_system_grains(func):
