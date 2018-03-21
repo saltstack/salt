@@ -82,3 +82,25 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert 'specific locked Python version should be a list of major/minor version' in str(err)
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    def test_get_ext_tops_cfg_interpreter(self):
+        '''
+        Test thin.get_ext_tops interpreter configuration.
+
+        :return:
+        '''
+        cfg = [
+            {'namespace': {'path': '/foo',
+                           'py-version': [2, 6],
+                           'dependencies': {'jinja2': '',
+                                            'yaml': '',
+                                            'tornado': '',
+                                            'msgpack': ''}}},
+        ]
+        with pytest.raises(salt.exceptions.SaltSystemExit) as err:
+            thin.get_ext_tops(cfg)
+        assert len(thin.log.warning.mock_calls) == 4
+        assert sorted([x[1][1] for x in thin.log.warning.mock_calls]) == ['jinja2', 'msgpack', 'tornado', 'yaml']
+        assert 'Module test has missing configuration' == thin.log.warning.mock_calls[0][1][0] % 'test'
