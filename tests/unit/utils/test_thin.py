@@ -65,3 +65,20 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert 'missing specific locked Python version' in str(err)
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    def test_get_ext_tops_cfg_wrong_interpreter(self):
+        '''
+        Test thin.get_ext_tops contains correct interpreter configuration.
+
+        :return:
+        '''
+        cfg = [
+            {'namespace': {'path': '/foo',
+                           'py-version': 2,
+                           'dependencies': []}},
+        ]
+        with pytest.raises(salt.exceptions.SaltSystemExit) as err:
+            thin.get_ext_tops(cfg)
+        assert 'specific locked Python version should be a list of major/minor version' in str(err)
