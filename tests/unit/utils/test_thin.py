@@ -49,3 +49,19 @@ class SSHThinTestCase(TestCase):
         assert thin.log.error.called
         assert 'Missing dependencies' in thin.log.error.call_args[0][0]
         assert 'jinja2, yaml, tornado, msgpack' in thin.log.error.call_args[0][0]
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    def test_get_ext_tops_cfg_missing_interpreter(self):
+        '''
+        Test thin.get_ext_tops contains interpreter configuration.
+
+        :return:
+        '''
+        cfg = [
+            {'namespace': {'path': '/foo',
+                           'dependencies': []}},
+        ]
+        with pytest.raises(salt.exceptions.SaltSystemExit) as err:
+            thin.get_ext_tops(cfg)
+        assert 'missing specific locked Python version' in str(err)
