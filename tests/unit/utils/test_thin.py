@@ -191,3 +191,11 @@ class SSHThinTestCase(TestCase):
             if line.startswith('syspaths = '):
                 data = json.loads(line.replace('syspaths = ', ''))
                 assert data == ['foo', 'bar']
+
+    def test_get_ext_namespaces_empty(self):
+        '''
+        Test thin._get_ext_namespaces function returns an empty dictionary on nothing
+        :return:
+        '''
+        for obj in [None, {}, []]:
+            assert thin._get_ext_namespaces(obj) == {}
