@@ -217,3 +217,29 @@ class SSHThinTestCase(TestCase):
         '''
         with pytest.raises(salt.exceptions.SaltSystemExit):
             thin._get_ext_namespaces({'ns': {}})
+
+    @patch('salt.utils.thin.salt', type(str('salt'), (), {'__file__': '/site-packages/salt'}))
+    @patch('salt.utils.thin.jinja2', type(str('jinja2'), (), {'__file__': '/site-packages/jinja2'}))
+    @patch('salt.utils.thin.yaml', type(str('yaml'), (), {'__file__': '/site-packages/yaml'}))
+    @patch('salt.utils.thin.tornado', type(str('tornado'), (), {'__file__': '/site-packages/tornado'}))
+    @patch('salt.utils.thin.msgpack', type(str('msgpack'), (), {'__file__': '/site-packages/msgpack'}))
+    @patch('salt.utils.thin.certifi', type(str('certifi'), (), {'__file__': '/site-packages/certifi'}))
+    @patch('salt.utils.thin.singledispatch', type(str('singledispatch'), (), {'__file__': '/site-packages/sdp'}))
+    @patch('salt.utils.thin.singledispatch_helpers', type(str('singledispatch_helpers'), (), {'__file__': '/site-packages/sdp_hlp'}))
+    @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
+    @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
+    @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.log', MagicMock())
+    def test_get_tops(self):
+        '''
+        Test thin.get_tops to get top directories, based on the interpreter.
+        :return:
+        '''
+        base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
+                     '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
+                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
+                     '/site-packages/markupsafe', '/site-packages/backports_abc']
+
+        tops = thin.get_tops()
+        assert len(tops) == len(base_tops)
+        assert sorted(tops) == sorted(base_tops)
