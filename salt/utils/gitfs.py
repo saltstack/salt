@@ -492,7 +492,7 @@ class GitProvider(object):
     @classmethod
     def add_conf_overlay(cls, name):
         '''
-        Programatically determine config value based on the desired saltenv
+        Programmatically determine config value based on the desired saltenv
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \

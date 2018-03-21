@@ -230,12 +230,11 @@ def verify_env(
             continue
         if not os.path.isdir(dir_):
             try:
-                cumask = os.umask(18)  # 077
-                os.makedirs(dir_)
+                with salt.utils.files.set_umask(0o022):
+                    os.makedirs(dir_)
                 # If starting the process as root, chown the new dirs
                 if os.getuid() == 0:
                     os.chown(dir_, uid, gid)
-                os.umask(cumask)
             except OSError as err:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, err))

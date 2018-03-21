@@ -21,6 +21,7 @@ import errno
 import salt.crypt
 import salt.utils.async
 import salt.utils.event
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -1386,11 +1387,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Securely create socket
         log.info('Starting the Salt Puller on %s', pull_uri)
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             pull_sock.start()
-        finally:
-            os.umask(old_umask)
 
         # run forever
         try:
