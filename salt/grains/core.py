@@ -1919,10 +1919,9 @@ def fqdns():
     fqdns = set()
 
     addresses = salt.utils.network.ip_addrs(include_loopback=False,
-        interface_data=_INTERFACES)
+                                            interface_data=_INTERFACES)
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-        interface_data=_INTERFACES))
-
+                                                  interface_data=_INTERFACES))
     for ip in addresses:
         try:
             fqdns.add(socket.gethostbyaddr(ip)[0])
