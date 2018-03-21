@@ -34,6 +34,7 @@ class SSHThinTestCase(TestCase):
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
     def test_get_ext_tops_cfg_missing_dependencies(self):
         '''
         Test thin.get_ext_tops contains all required dependencies.
@@ -52,6 +53,7 @@ class SSHThinTestCase(TestCase):
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
     def test_get_ext_tops_cfg_missing_interpreter(self):
         '''
         Test thin.get_ext_tops contains interpreter configuration.
@@ -68,6 +70,7 @@ class SSHThinTestCase(TestCase):
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
     def test_get_ext_tops_cfg_wrong_interpreter(self):
         '''
         Test thin.get_ext_tops contains correct interpreter configuration.
@@ -85,6 +88,7 @@ class SSHThinTestCase(TestCase):
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
     def test_get_ext_tops_cfg_interpreter(self):
         '''
         Test thin.get_ext_tops interpreter configuration.
