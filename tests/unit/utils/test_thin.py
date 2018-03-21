@@ -165,3 +165,11 @@ class SSHThinTestCase(TestCase):
             thin._add_dependency(container, type(str('obj'), (), {'__file__': pth})())
         assert '__init__' not in container[1]
         assert container == ['/foo/bar.py', '/something/else']
+
+    def test_thin_path(self):
+        '''
+        Test thin.thin_path returns the expected path.
+
+        :return:
+        '''
+        assert thin.thin_path('/path/to') == '/path/to/thin/thin.tgz'
