@@ -10,6 +10,7 @@ Unit tests for the Default Job Cache (local_cache).
 from __future__ import absolute_import
 import os
 import shutil
+import time
 import logging
 import tempfile
 
@@ -75,6 +76,11 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # Assert that the JID dir was removed
@@ -138,6 +144,11 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # Assert that the JID dir was removed
