@@ -829,6 +829,7 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
     while True:
         try:
             asgs = conn.get_all_groups(names=[name])
+            break
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
