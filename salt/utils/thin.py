@@ -204,7 +204,7 @@ def get_ext_tops(config):
                 for dep in cfg.get('dependencies'):
                     mod = cfg['dependencies'][dep] or ''
                     if not mod:
-                        log.warning('Module %s has missing configuration', mod)
+                        log.warning('Module %s has missing configuration', dep)
                         continue
                     elif mod.endswith('.py') and not os.path.isfile(mod):
                         log.warning('Module %s is not a file or does not exist', mod)
