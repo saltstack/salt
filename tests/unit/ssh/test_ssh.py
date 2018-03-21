@@ -14,10 +14,12 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libs
 import salt.config
+import salt.utils.path
 from salt.client import ssh
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.path.which('ssh'), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
     def test_password_failure(self):
         '''

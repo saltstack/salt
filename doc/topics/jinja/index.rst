@@ -153,7 +153,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows to raise custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` jinja function.
 
 .. code-block:: jinja
 
@@ -1122,7 +1122,7 @@ Returns:
     'body': '{
       "userId": 1,
       "id": 1,
-      "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+      "title": "sunt aut facere repellat provident occaecati excepturi option reprehenderit",
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }

@@ -426,23 +426,27 @@ class Schedule(object):
 
         # Grab run, assume True
         run = data.get('run', True)
+        run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
         if run:
-            multiprocessing_enabled = self.opts.get('multiprocessing', True)
-            if multiprocessing_enabled:
-                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-            else:
-                thread_cls = threading.Thread
+            if run_schedule_jobs_in_background:
+                multiprocessing_enabled = self.opts.get('multiprocessing', True)
+                if multiprocessing_enabled:
+                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                else:
+                    thread_cls = threading.Thread
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                if multiprocessing_enabled:
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                    proc.join()
+                else:
                     proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
                     proc.start()
-                proc.join()
             else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
+                func(data)
 
     def enable_schedule(self):
         '''
@@ -1474,7 +1478,7 @@ class Schedule(object):
 
                 # If there is no job specific skip_during_range available,
                 # grab the global which defaults to None.
-                if 'skip_during_range' not in data:
+                if 'skip_during_range' not in data and self.skip_during_range:
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:

@@ -363,58 +363,56 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(TMP, 'issue-14979')
-        current_umask = os.umask(0o077)
-        try:
-            # Let's create an initial output file with some data
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat1 = os.stat(output_file)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                # Let's create an initial output file with some data
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} -g'.format(
+                        self.get_config_dir(),
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                stat1 = os.stat(output_file)
 
-            # Let's change umask
-            os.umask(0o777)
+                # Let's change umask
+                os.umask(0o777)  # pylint: disable=blacklisted-function
 
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} --output-file-append -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat2 = os.stat(output_file)
-            self.assertEqual(stat1.st_mode, stat2.st_mode)
-            # Data was appeneded to file
-            self.assertTrue(stat1.st_size < stat2.st_size)
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} --output-file-append -g'.format(
+                        self.get_config_dir(),
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                stat2 = os.stat(output_file)
+                self.assertEqual(stat1.st_mode, stat2.st_mode)
+                # Data was appeneded to file
+                self.assertTrue(stat1.st_size < stat2.st_size)
 
-            # Let's remove the output file
-            os.unlink(output_file)
-
-            # Not appending data
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat3 = os.stat(output_file)
-            # Mode must have changed since we're creating a new log file
-            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
-        finally:
-            if os.path.exists(output_file):
+                # Let's remove the output file
                 os.unlink(output_file)
-            # Restore umask
-            os.umask(current_umask)
+
+                # Not appending data
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} -g'.format(
+                        self.get_config_dir(),
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                stat3 = os.stat(output_file)
+                # Mode must have changed since we're creating a new log file
+                self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            finally:
+                if os.path.exists(output_file):
+                    os.unlink(output_file)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_42116_cli_pillar_override(self):
