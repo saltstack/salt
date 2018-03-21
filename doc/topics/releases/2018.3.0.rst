@@ -4,6 +4,14 @@
 Salt 2018.3.0 Release Notes - Codename Oxygen
 =============================================
 
+Unicode/Python 3 Compatibility Improvements
+-------------------------------------------
+
+Support for Unicode has been greatly improved, and many Python 3 compatibility
+fixes have been made. We continue to work toward improving both, and welcome
+any feedback.
+
+
 Lots of Docker Improvements
 ---------------------------
 
