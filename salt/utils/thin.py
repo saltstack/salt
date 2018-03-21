@@ -207,10 +207,10 @@ def get_ext_tops(config):
                         log.warning('Module %s has missing configuration', dep)
                         continue
                     elif mod.endswith('.py') and not os.path.isfile(mod):
-                        log.warning('Module %s is not a file or does not exist', mod)
+                        log.warning('Module %s configured with not a file or does not exist: %s', dep, mod)
                         continue
                     elif not mod.endswith('.py') and not os.path.isfile(os.path.join(mod, '__init__.py')):
-                        log.warning('Module %s is not a Python importable module', mod)
+                        log.warning('Module %s is not a Python importable module with %s', dep, mod)
                         continue
                     tops.append(mod)
 
