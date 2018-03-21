@@ -346,9 +346,9 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         verbose: boolean, enables extensive output
 
     Returns:
-        True if no packages for restart found.
-        False on failure.
-        String with checkrestart output if some package seems to need to be restarted.
+        Dict on error: { 'result': False, 'comment': '<reason>' }
+        String with checkrestart output if some package seems to need to be restarted or
+        if no packages need restarting.
 
     .. versionadded:: 2015.8.3
 
