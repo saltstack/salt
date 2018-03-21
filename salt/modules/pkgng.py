@@ -317,7 +317,7 @@ def latest_version(*names, **kwargs):
             name,
             sorted(
                 __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace').splitlines(),
-                reverse=True
+                reverse=False
             ).pop(0)
         )
 
