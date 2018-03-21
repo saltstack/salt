@@ -135,3 +135,20 @@ class SSHThinTestCase(TestCase):
         for mod in ['tornado', 'yaml', 'msgpack']:
             assert 'not a Python importable module' in messages[mod]
         assert 'configured with not a file or does not exist' in messages['jinja2']
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=True))
+    def test_get_ext_tops_config_pass(self):
+        '''
+        Test thin.get_ext_tops configuration
+
+        :return:
+        '''
+        cfg = {'namespace': {'path': '/foo',
+                             'py-version': [2, 6],
+                             'dependencies': {'jinja2': '/jinja/foo.py',
+                                              'yaml': '/yaml/',
+                                              'tornado': '/tornado/tornado.py',
+                                              'msgpack': 'msgpack.py'}}}
+        assert cfg == thin.get_ext_tops(cfg)
