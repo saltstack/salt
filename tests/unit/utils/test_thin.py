@@ -12,7 +12,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from salt.ext.six.moves import zip
 from salt.ext import six
 
 import salt.exceptions
@@ -108,3 +107,31 @@ class SSHThinTestCase(TestCase):
         assert len(thin.log.warning.mock_calls) == 4
         assert sorted([x[1][1] for x in thin.log.warning.mock_calls]) == ['jinja2', 'msgpack', 'tornado', 'yaml']
         assert 'Module test has missing configuration' == thin.log.warning.mock_calls[0][1][0] % 'test'
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
+    def test_get_ext_tops_dependency_config_check(self):
+        '''
+        Test thin.get_ext_tops dependencies are importable
+
+        :return:
+        '''
+        cfg = [
+            {'namespace': {'path': '/foo',
+                           'py-version': [2, 6],
+                           'dependencies': {'jinja2': '/jinja/foo.py',
+                                            'yaml': '/yaml/',
+                                            'tornado': '/tornado/wrong.rb',
+                                            'msgpack': 'msgpack.sh'}}},
+        ]
+        with pytest.raises(salt.exceptions.SaltSystemExit) as err:
+            thin.get_ext_tops(cfg)
+        assert 'Missing dependencies for the alternative version in the external configuration' in str(err)
+
+        messages = {}
+        for cl in thin.log.warning.mock_calls:
+            messages[cl[1][1]] = cl[1][0] % (cl[1][1], cl[1][2])
+        for mod in ['tornado', 'yaml', 'msgpack']:
+            assert 'not a Python importable module' in messages[mod]
+        assert 'configured with not a file or does not exist' in messages['jinja2']
