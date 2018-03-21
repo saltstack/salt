@@ -208,3 +208,12 @@ class SSHThinTestCase(TestCase):
         cfg = {'ns': {'py-version': [2, 7]}}
         assert thin._get_ext_namespaces(cfg).get('ns') == (2, 7,)
         assert isinstance(thin._get_ext_namespaces(cfg).get('ns'), tuple)
+
+    def test_get_ext_namespaces_failure(self):
+        '''
+        Test thin._get_ext_namespaces function raises an exception
+        if python major/minor version is not configured.
+        :return:
+        '''
+        with pytest.raises(salt.exceptions.SaltSystemExit):
+            thin._get_ext_namespaces({'ns': {}})
