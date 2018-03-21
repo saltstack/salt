@@ -338,8 +338,8 @@ Given the above setup, the orchestration will be carried out as follows:
 
 .. _orchestrate-runner-parsing-results-programatically:
 
-Parsing Results Programatically
--------------------------------
+Parsing Results Programmatically
+--------------------------------
 
 Orchestration jobs return output in a specific data structure. That data
 structure is represented differently depending on the outputter used. With the
