@@ -188,7 +188,8 @@ def get_ext_tops(config):
         for ns, cfg in salt.ext.six.iteritems(alt):
             alternatives[ns] = cfg
             if cfg.get('dependencies') == 'inherit':
-                pass  # TODO: implement inheritance of the modules from _here_
+                # TODO: implement inheritance of the modules from _here_
+                raise NotImplementedError('This feature is not yet implemented')
             else:
                 for dep in cfg.get('dependencies'):
                     mod = cfg['dependencies'][dep] or ''
