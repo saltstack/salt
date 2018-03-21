@@ -128,7 +128,7 @@ def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None)
     raise Exception("Need smb lib")
 
 
-def _put_str_impocket(content, path, share='C$', conn=None, host=None, username=None, password=None):
+def _put_str_impacket(content, path, share='C$', conn=None, host=None, username=None, password=None):
     if conn is None:
         conn = get_conn(host, username, password)
 
@@ -205,4 +205,52 @@ def put_file(local_path, path, share='C$', conn=None, host=None, username=None, 
         return _put_file_pysmb(host, username, password)
     elif HAS_IMPACKET:
         return _put_file_impacket(host, username, password)
+    raise Exception("Need smb lib")
+
+
+def _delete_file_impacket(path, share='C$', conn=None, host=None, username=None, password=None):
+    if conn is None:
+        conn = get_conn(host, username, password)
+    if conn is False:
+        return False
+    conn.deleteFile(share, path)
+
+
+def _delete_file_pysmb(path, share='C$', conn=None, host=None, username=None, password=None):
+    if conn is None:
+        conn = get_conn(host, username, password)
+    if conn is False:
+        return False
+    # deleteFiles accepts a glob, we are passing the full file path
+    conn.deleteFiles(share, path)
+
+
+def delete_file(path, share='C$', conn=None, host=None, username=None, password=None):
+    if HAS_PYSMB:
+        return _put_file_pysmb(host, username, password)
+    elif HAS_IMPACKET:
+        return _put_file_impacket(host, username, password)
+    raise Exception("Need smb lib")
+
+
+def _delete_directory_impacket(path, share='C$', conn=None, host=None, username=None, password=None):
+    if conn is None:
+        conn = get_conn(host, username, password)
+    if conn is False:
+        return False
+    conn.deleteDirectory(share, path)
+
+
+def _delete_directory_pysmb(path, share='C$', conn=None, host=None, username=None, password=None):
+    if conn is None:
+        conn = get_conn(host, username, password)
+    if conn is False:
+        return False
+    conn.deleteDirectory(share, path)
+
+def delete_directory(path, share='C$', conn=None, host=None, username=None, password=None):
+    if HAS_PYSMB:
+        return delete_directoy_pysmb(host, username, password)
+    elif HAS_IMPACKET:
+        return _delete_directoy_impacket(host, username, password)
     raise Exception("Need smb lib")

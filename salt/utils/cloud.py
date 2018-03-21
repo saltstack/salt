@@ -1133,8 +1133,8 @@ def deploy_windows(host,
             if use_winrm:
                 winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
             else:
-                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-                smb_conn.deleteDirectory('C$', 'salttemp')
+                salt.utils.delete_file('C$', 'salttemp/{0}'.format(installer), smb_conn)
+                salt.utils.delete_directory('C$', 'salttemp', smb_conn)
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
