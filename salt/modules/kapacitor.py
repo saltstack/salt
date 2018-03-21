@@ -6,15 +6,21 @@ Kapacitor execution module.
     parameters or as configuration settings in /etc/salt/minion on the relevant
     minions::
 
-        kapacitor.unsafe_ssl: 'false'
-        kapacitor.protocol: 'http'
         kapacitor.host: 'localhost'
         kapacitor.port: 9092
+
+    .. versionadded:: 2016.11.0
+
+    Also protocol and ssl settings could be configured::
+
+        kapacitor.unsafe_ssl: 'false'
+        kapacitor.protocol: 'http'
+
+    .. versionadded:: Fluorine
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-.. versionadded:: 2016.11.0
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
