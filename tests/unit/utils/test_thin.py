@@ -3,7 +3,6 @@
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-import datetime
 
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -11,8 +10,6 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     MagicMock,
     patch)
-
-from salt.ext import six
 
 import salt.exceptions
 from salt.utils import thin
@@ -40,9 +37,8 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        cfg = [
-            {'namespace': {'py-version': [0, 0], 'path': '/foo', 'dependencies': []}},
-        ]
+        cfg = {'namespace': {'py-version': [0, 0], 'path': '/foo', 'dependencies': []}}
+
         with pytest.raises(Exception) as err:
             thin.get_ext_tops(cfg)
         assert 'Missing dependencies' in str(err)
@@ -59,10 +55,8 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        cfg = [
-            {'namespace': {'path': '/foo',
-                           'dependencies': []}},
-        ]
+        cfg = {'namespace': {'path': '/foo',
+                             'dependencies': []}}
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert 'missing specific locked Python version' in str(err)
@@ -76,11 +70,10 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        cfg = [
-            {'namespace': {'path': '/foo',
-                           'py-version': 2,
-                           'dependencies': []}},
-        ]
+        cfg = {'namespace': {'path': '/foo',
+                             'py-version': 2,
+                             'dependencies': []}}
+
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert 'specific locked Python version should be a list of major/minor version' in str(err)
@@ -94,14 +87,13 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        cfg = [
-            {'namespace': {'path': '/foo',
-                           'py-version': [2, 6],
-                           'dependencies': {'jinja2': '',
-                                            'yaml': '',
-                                            'tornado': '',
-                                            'msgpack': ''}}},
-        ]
+        cfg = {'namespace': {'path': '/foo',
+                             'py-version': [2, 6],
+                             'dependencies': {'jinja2': '',
+                                              'yaml': '',
+                                              'tornado': '',
+                                              'msgpack': ''}}}
+
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert len(thin.log.warning.mock_calls) == 4
@@ -117,14 +109,13 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        cfg = [
-            {'namespace': {'path': '/foo',
-                           'py-version': [2, 6],
-                           'dependencies': {'jinja2': '/jinja/foo.py',
-                                            'yaml': '/yaml/',
-                                            'tornado': '/tornado/wrong.rb',
-                                            'msgpack': 'msgpack.sh'}}},
-        ]
+        cfg = {'namespace': {'path': '/foo',
+                             'py-version': [2, 6],
+                             'dependencies': {'jinja2': '/jinja/foo.py',
+                                              'yaml': '/yaml/',
+                                              'tornado': '/tornado/wrong.rb',
+                                              'msgpack': 'msgpack.sh'}}}
+
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         assert 'Missing dependencies for the alternative version in the external configuration' in str(err)
