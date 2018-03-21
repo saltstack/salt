@@ -154,3 +154,14 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         assert json.loads(thin.gte()).get('foo') == 'bar'
+
+    def test_add_dep_path(self):
+        '''
+        Test thin._add_dependency function to setup dependency paths
+        :return:
+        '''
+        container = []
+        for pth in ['/foo/bar.py', '/something/else/__init__.py']:
+            thin._add_dependency(container, type(str('obj'), (), {'__file__': pth})())
+        assert '__init__' not in container[1]
+        assert container == ['/foo/bar.py', '/something/else']
