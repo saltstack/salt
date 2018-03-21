@@ -4,6 +4,7 @@
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     NO_MOCK,
@@ -173,3 +174,20 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         assert thin.thin_path('/path/to') == '/path/to/thin/thin.tgz'
+
+    def test_get_salt_call_script(self):
+        '''
+        Test get salt-call script rendered.
+
+        :return:
+        '''
+        out = thin._get_salt_call('foo', 'bar', py26=[2, 6], py27=[2, 7], py34=[3, 4])
+        for line in salt.utils.stringutils.to_str(out).split(os.linesep):
+            if line.startswith('namespaces = {'):
+                data = json.loads(line.replace('namespaces = ', '').strip())
+                assert data.get('py26') == [2, 6]
+                assert data.get('py27') == [2, 7]
+                assert data.get('py34') == [3, 4]
+            if line.startswith('syspaths = '):
+                data = json.loads(line.replace('syspaths = ', ''))
+                assert data == ['foo', 'bar']
