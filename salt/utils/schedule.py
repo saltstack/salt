@@ -1125,8 +1125,8 @@ class Schedule(object):
                 return data
             else:
                 if isinstance(data['skip_during_range'], dict):
-                    start = dateutil_parser.parse(data['skip_during_range']['start'])
-                    end = dateutil_parser.parse(data['skip_during_range']['end'])
+                    start = data['skip_during_range']['start']
+                    end = data['skip_during_range']['end']
                     if not isinstance(start, datetime.datetime):
                         try:
                             start = dateutil_parser.parse(start)
@@ -1255,7 +1255,7 @@ class Schedule(object):
             else:
                 after = data['after']
                 if not isinstance(after, datetime.datetime):
-                    after = dateutil_parser.parse('after')
+                    after = dateutil_parser.parse(after)
 
                 if after >= now:
                     log.debug(
@@ -1281,7 +1281,7 @@ class Schedule(object):
             else:
                 until = data['until']
                 if not isinstance(until, datetime.datetime):
-                    until = dateutil_parser.parse('until')
+                    until = dateutil_parser.parse(until)
 
                 if until <= now:
                     log.debug(
