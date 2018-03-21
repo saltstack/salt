@@ -152,8 +152,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: True']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -171,7 +171,7 @@ class StateRunnerTest(ShellCase):
         '''
         self.run_run('saltutil.sync_runners')
         self.run_run('saltutil.sync_wheel')
-        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode', timeout=120))
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
 
         for result in ('          ID: test_runner_success\n'
                        '    Function: salt.runner\n'
