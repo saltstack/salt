@@ -183,47 +183,46 @@ def get_ext_tops(config):
     '''
     alternatives = {}
     required = ['jinja2', 'yaml', 'tornado', 'msgpack']
-    for alt in config or []:
-        tops = []
-        for ns, cfg in salt.ext.six.iteritems(alt):
-            alternatives[ns] = cfg
-            locked_py_version = cfg.get('py-version')
-            err_msg = None
-            if not locked_py_version:
-                err_msg = 'Alternative Salt library: missing specific locked Python version'
-            elif not isinstance(locked_py_version, (tuple, list)):
-                err_msg = ('Alternative Salt library: specific locked Python version '
-                           'should be a list of major/minor version')
-            if err_msg:
-                raise salt.exceptions.SaltSystemExit(err_msg)
+    tops = []
+    for ns, cfg in salt.ext.six.iteritems(config or {}):
+        alternatives[ns] = cfg
+        locked_py_version = cfg.get('py-version')
+        err_msg = None
+        if not locked_py_version:
+            err_msg = 'Alternative Salt library: missing specific locked Python version'
+        elif not isinstance(locked_py_version, (tuple, list)):
+            err_msg = ('Alternative Salt library: specific locked Python version '
+                       'should be a list of major/minor version')
+        if err_msg:
+            raise salt.exceptions.SaltSystemExit(err_msg)
 
-            if cfg.get('dependencies') == 'inherit':
-                # TODO: implement inheritance of the modules from _here_
-                raise NotImplementedError('This feature is not yet implemented')
-            else:
-                for dep in cfg.get('dependencies'):
-                    mod = cfg['dependencies'][dep] or ''
-                    if not mod:
-                        log.warning('Module %s has missing configuration', dep)
-                        continue
-                    elif mod.endswith('.py') and not os.path.isfile(mod):
-                        log.warning('Module %s configured with not a file or does not exist: %s', dep, mod)
-                        continue
-                    elif not mod.endswith('.py') and not os.path.isfile(os.path.join(mod, '__init__.py')):
-                        log.warning('Module %s is not a Python importable module with %s', dep, mod)
-                        continue
-                    tops.append(mod)
+        if cfg.get('dependencies') == 'inherit':
+            # TODO: implement inheritance of the modules from _here_
+            raise NotImplementedError('This feature is not yet implemented')
+        else:
+            for dep in cfg.get('dependencies'):
+                mod = cfg['dependencies'][dep] or ''
+                if not mod:
+                    log.warning('Module %s has missing configuration', dep)
+                    continue
+                elif mod.endswith('.py') and not os.path.isfile(mod):
+                    log.warning('Module %s configured with not a file or does not exist: %s', dep, mod)
+                    continue
+                elif not mod.endswith('.py') and not os.path.isfile(os.path.join(mod, '__init__.py')):
+                    log.warning('Module %s is not a Python importable module with %s', dep, mod)
+                    continue
+                tops.append(mod)
 
-                    if dep in required:
-                        required.pop(required.index(dep))
+                if dep in required:
+                    required.pop(required.index(dep))
 
-                required = ', '.join(required)
-                if required:
-                    msg = 'Missing dependencies for the alternative version' \
-                          ' in the external configuration: {}'.format(required)
-                    log.error(msg)
-                    raise salt.exceptions.SaltSystemExit(msg)
-            alternatives[ns]['dependencies'] = tops
+            required = ', '.join(required)
+            if required:
+                msg = 'Missing dependencies for the alternative version' \
+                      ' in the external configuration: {}'.format(required)
+                log.error(msg)
+                raise salt.exceptions.SaltSystemExit(msg)
+        alternatives[ns]['dependencies'] = tops
     return alternatives
 
 
@@ -238,14 +237,13 @@ def _get_ext_namespaces(config):
     if not config:
         return namespaces
 
-    for ext_version in config:
-        for ns in ext_version:
-            constraint_version = tuple(ext_version[ns].get('py-version', []))
-            if not constraint_version:
-                raise salt.exceptions.SaltSystemExit("An alternative version is configured, but not defined "
-                                                     "to what Python's major/minor version it should be constained.")
-            else:
-                namespaces[ns] = constraint_version
+    for ns in config:
+        constraint_version = tuple(config[ns].get('py-version', []))
+        if not constraint_version:
+            raise salt.exceptions.SaltSystemExit("An alternative version is configured, but not defined "
+                                                 "to what Python's major/minor version it should be constained.")
+        else:
+            namespaces[ns] = constraint_version
 
     return namespaces
 
