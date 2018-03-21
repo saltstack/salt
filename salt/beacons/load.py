@@ -119,7 +119,7 @@ def beacon(config):
             for k in ['1m', '5m', '15m']:
                 LAST_STATUS[k] = avg_dict[k]
             if not config['emitatstartup']:
-                log.debug('Dont emit because emitatstartup is False')
+                log.debug("Don't emit because emitatstartup is False")
                 return ret
 
     send_beacon = False

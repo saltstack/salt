@@ -33,9 +33,11 @@ from tests.support.helpers import (
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 
 HAS_PWD = True
 try:
@@ -2592,13 +2594,13 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
 
     @staticmethod
     def _write(dest, content):
-        with salt.utils.fopen(dest, 'wb') as fp_:
-            fp_.write(salt.utils.to_bytes(content))
+        with salt.utils.files.fopen(dest, 'wb') as fp_:
+            fp_.write(salt.utils.stringutils.to_bytes(content))
 
     @staticmethod
     def _read(src):
-        with salt.utils.fopen(src, 'rb') as fp_:
-            return salt.utils.to_unicode(fp_.read())
+        with salt.utils.files.fopen(src, 'rb') as fp_:
+            return salt.utils.stringutils.to_unicode(fp_.read())
 
     @with_tempfile
     def test_prepend(self, name):

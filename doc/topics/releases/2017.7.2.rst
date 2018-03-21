@@ -962,7 +962,7 @@ Changes
 - **PR** `#42884`_: (*Giandom*) Convert to dict type the pillar string value passed from slack
   @ *2017-08-16T22:30:43Z*
 
-  - **ISSUE** `#42842`_: (*Giandom*) retreive kwargs passed with slack engine
+  - **ISSUE** `#42842`_: (*Giandom*) retrieve kwargs passed with slack engine
     | refs: `#42884`_
   * 82be9dceb6 Merge pull request `#42884`_ from Giandom/2017.7.1-fix-slack-engine-pillar-args
   * 80fd733c99 Update slack.py
@@ -1235,13 +1235,13 @@ Changes
   * 4ce96eb1a1 Merge pull request `#42778`_ from gtmanfred/spm
   * 7ef691e8da make sure to use the correct out_file
 
-- **PR** `#42857`_: (*gtmanfred*) use older name if _create_unverified_context is unvailable
+- **PR** `#42857`_: (*gtmanfred*) use older name if _create_unverified_context is unavailable
   @ *2017-08-11T13:37:59Z*
 
   - **ISSUE** `#480`_: (*zyluo*) PEP8 types clean-up
     | refs: `#42857`_
   * 3d05d89e09 Merge pull request `#42857`_ from gtmanfred/vmware
-  * c1f673eca4 use older name if _create_unverified_context is unvailable
+  * c1f673eca4 use older name if _create_unverified_context is unavailable
 
 - **PR** `#42866`_: (*twangboy*) Change to GitPython version 2.1.1
   @ *2017-08-11T13:23:52Z*
@@ -1448,7 +1448,7 @@ Changes
     | refs: `#42574`_
   - **PR** `#42693`_: (*gilbsgilbs*) Fix RabbitMQ tags not properly set.
   - **PR** `#42669`_: (*garethgreenaway*)  [2016.11] Fixes to augeas module
-  - **PR** `#42655`_: (*whiteinge*) Reenable cpstats for rest_cherrypy
+  - **PR** `#42655`_: (*whiteinge*) Re-enable cpstats for rest_cherrypy
   - **PR** `#42629`_: (*xiaoanyunfei*) tornado api
   - **PR** `#42623`_: (*terminalmage*) Fix unicode constructor in custom YAML loader
   - **PR** `#42574`_: (*sbojarski*) Fixed error reporting in "boto_cfn.present" function.
@@ -1469,7 +1469,7 @@ Changes
 
       * deb6316d67 Fix lint errors
 
-      * 6bd91c8b03 Reenable cpstats for rest_cherrypy
+      * 6bd91c8b03 Re-enable cpstats for rest_cherrypy
 
     * 21cf15f9c3 Merge pull request `#42693`_ from gilbsgilbs/fix-rabbitmq-tags
 
@@ -2031,7 +2031,7 @@ Changes
   - **PR** `#42368`_: (*twangboy*) Remove build and dist directories before install (2016.11)
   - **PR** `#42360`_: (*Ch3LL*) [2016.11] Update version numbers in doc config for 2017.7.0 release
   - **PR** `#42359`_: (*Ch3LL*) [2016.3] Update version numbers in doc config for 2017.7.0 release
-  - **PR** `#42356`_: (*meaksh*) Allow to check whether a function is available on the AliasesLoader wrapper
+  - **PR** `#42356`_: (*meaksh*) Allow checking whether a function is available on the AliasesLoader wrapper
   - **PR** `#42352`_: (*CorvinM*) Multiple documentation fixes
   - **PR** `#42350`_: (*twangboy*) Fixes problem with Version and OS Release related grains on certain versions of Python (2016.11)
   - **PR** `#42319`_: (*rallytime*) Add more documentation for config options that are missing from master/minion docs
@@ -2046,7 +2046,7 @@ Changes
 
     * 0a72e56f6b Merge pull request `#42356`_ from meaksh/2016.11-AliasesLoader-wrapper-fix
 
-      * 915d94219e Allow to check whether a function is available on the AliasesLoader wrapper
+      * 915d94219e Allow checking whether a function is available on the AliasesLoader wrapper
 
     * 10eb7b7a79 Merge pull request `#42368`_ from twangboy/win_fix_build_2016.11
 
