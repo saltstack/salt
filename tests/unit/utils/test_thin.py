@@ -13,6 +13,7 @@ from tests.support.mock import (
 
 import salt.exceptions
 from salt.utils import thin
+from salt.utils import json
 import salt.utils.stringutils
 
 try:
@@ -143,3 +144,13 @@ class SSHThinTestCase(TestCase):
                                               'tornado': '/tornado/tornado.py',
                                               'msgpack': 'msgpack.py'}}}
         assert cfg == thin.get_ext_tops(cfg)
+
+    @patch('salt.utils.thin.sys.argv', [None, '{"foo": "bar"}'])
+    @patch('salt.utils.thin.get_tops', lambda **kw: kw)
+    def test_gte(self):
+        '''
+        Test thin.gte external call for processing the info about tops per interpreter.
+
+        :return:
+        '''
+        assert json.loads(thin.gte()).get('foo') == 'bar'
