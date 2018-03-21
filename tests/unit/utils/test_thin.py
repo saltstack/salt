@@ -199,3 +199,12 @@ class SSHThinTestCase(TestCase):
         '''
         for obj in [None, {}, []]:
             assert thin._get_ext_namespaces(obj) == {}
+
+    def test_get_ext_namespaces(self):
+        '''
+        Test thin._get_ext_namespaces function returns namespaces properly out of the config.
+        :return:
+        '''
+        cfg = {'ns': {'py-version': [2, 7]}}
+        assert thin._get_ext_namespaces(cfg).get('ns') == (2, 7,)
+        assert isinstance(thin._get_ext_namespaces(cfg).get('ns'), tuple)
