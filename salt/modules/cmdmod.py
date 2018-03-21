@@ -1038,6 +1038,8 @@ def run(cmd,
         the newlines as-is. This should be used when you are supplying data
         using ``stdin`` that should not be modified.
 
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1271,6 +1273,15 @@ def shell(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1477,6 +1488,15 @@ def run_stdout(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1666,6 +1686,15 @@ def run_stderr(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1879,6 +1908,15 @@ def run_all(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2059,6 +2097,15 @@ def retcode(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2298,6 +2345,15 @@ def script(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2532,6 +2588,15 @@ def script_retcode(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -3330,6 +3395,14 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -3628,6 +3701,14 @@ def powershell_all(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     :return: A dictionary with the following entries:
 
         result
@@ -3876,6 +3957,14 @@ def run_bg(cmd,
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
 
       .. versionadded:: Fluorine
 
