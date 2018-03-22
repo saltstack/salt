@@ -335,7 +335,7 @@ class SSHThinTestCase(TestCase):
         assert path == '/path/to/thin/min.tgz'
         assert form == 'sha256'
 
-    @patch('salt.utils.thin.sys.version_info', MagicMock(return_value=(2, 5)))
+    @patch('salt.utils.thin.sys.version_info', (2, 5))
     @patch('salt.exceptions.SaltSystemExit', Exception)
     def test_gen_thin_fails_ancient_python_version(self):
         '''
@@ -345,6 +345,7 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
+            thin.sys.exc_clear = lambda: None
             thin.gen_thin('')
         assert 'The minimum required python version to run salt-ssh is "2.6"' in str(err)
 
