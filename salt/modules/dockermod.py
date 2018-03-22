@@ -1369,7 +1369,7 @@ def login(*registries):
     # information is added to the config.json, since docker-py isn't designed
     # to do so.
     registry_auth = __pillar__.get('docker-registries', {})
-    ret = {}
+    ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
         errors.append('\'docker-registries\' Pillar value must be a dictionary')
@@ -1427,6 +1427,8 @@ def login(*registries):
                     errors.append(login_cmd['stderr'])
                 elif login_cmd['stdout']:
                     errors.append(login_cmd['stdout'])
+    if errors:
+        ret['retcode'] = 1
     return ret
 
 
@@ -4505,7 +4507,7 @@ def pull(image,
 
     time_started = time.time()
     response = _client_wrapper('pull', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4538,6 +4540,7 @@ def pull(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4600,7 +4603,7 @@ def push(image,
 
     time_started = time.time()
     response = _client_wrapper('push', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4632,6 +4635,7 @@ def push(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4703,9 +4707,11 @@ def rmi(*names, **kwargs):
 
     _clear_context()
     ret = {'Layers': [x for x in pre_images if x not in images(all=True)],
-           'Tags': [x for x in pre_tags if x not in list_tags()]}
+           'Tags': [x for x in pre_tags if x not in list_tags()],
+           'retcode': 0}
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
