@@ -624,7 +624,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         while True:
             try:
                 subkey = win32api.RegEnumKey(_key, i)
-                yield subkey
+                yield _to_mbcs(subkey)
                 i += 1
             except Exception:  # pylint: disable=E0602
                 break
@@ -635,7 +635,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         '''
         _key = win32api.RegOpenKeyEx(_hkey, _keypath, 0, _access_mask)
         for subkeyname in _subkeys(_key):
-            subkeypath = r'{0}\{1}'.format(_keypath, subkeyname)
+            subkeypath = '{0}\\{1}'.format(_keypath, subkeyname)
             _ret = _traverse_registry_tree(_hkey, subkeypath, _ret, access_mask)
             _ret.append(subkeypath)
         return _ret

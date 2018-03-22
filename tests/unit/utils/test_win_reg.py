@@ -4,13 +4,18 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, generate_random_name
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
+
+UNICODE_KEY = 'Unicode Key \N{TRADE MARK SIGN}'
+UNICODE_VALUE = 'Unicode Value ' \
+                '\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}'
+FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -52,7 +57,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertEqual(
             win_reg.key_exists(
                 hive='HKLM',
-                key='SOFTWARE\\Salt\\fake_key'
+                key=FAKE_KEY
             ),
             False
         )
@@ -73,11 +78,12 @@ class WinFunctionsTestCase(TestCase):
         '''
         Test the list_keys function using a non existing registry key
         '''
-        expected = (False, 'Cannot find key: HKLM\\SOFTWARE\\Salt\\fake_key')
+        expected = (False, 'Cannot find key: HKLM\\{0}'.format(FAKE_KEY))
         self.assertEqual(
             win_reg.list_keys(
                 hive='HKLM',
-                key='SOFTWARE\\Salt\\fake_key'),
+                key=FAKE_KEY
+            ),
             expected
         )
 
@@ -98,11 +104,11 @@ class WinFunctionsTestCase(TestCase):
         '''
         Test the list_values function using a non existing registry key
         '''
-        expected = (False, 'Cannot find key: HKLM\\SOFTWARE\\Salt\\fake_key')
+        expected = (False, 'Cannot find key: HKLM\\{0}'.format(FAKE_KEY))
         self.assertEqual(
             win_reg.list_values(
                 hive='HKLM',
-                key='SOFTWARE\\Salt\\fake_key'
+                key=FAKE_KEY
             ),
             expected
         )
@@ -120,7 +126,8 @@ class WinFunctionsTestCase(TestCase):
 
     def test_read_value_default(self):
         '''
-        Test the read_value function reading the default value
+        Test the read_value function reading the default value using a well
+        known registry key
         '''
         ret = win_reg.read_value(
             hive='HKLM',
@@ -154,17 +161,17 @@ class WinFunctionsTestCase(TestCase):
         Test the read_value function using a non existing registry key
         '''
         expected = {
-            'comment': 'Cannot find key: HKLM\\SOFTWARE\\Salt\\fake_key',
+            'comment': 'Cannot find key: HKLM\\{0}'.format(FAKE_KEY),
             'vdata': None,
             'vname': 'fake_name',
             'success': False,
             'hive': 'HKLM',
-            'key': 'SOFTWARE\\Salt\\fake_key'
+            'key': FAKE_KEY
         }
         self.assertEqual(
             win_reg.read_value(
                 hive='HKLM',
-                key='SOFTWARE\\Salt\\fake_key',
+                key=FAKE_KEY,
                 vname='fake_name'
             ),
             expected
@@ -175,121 +182,154 @@ class WinFunctionsTestCase(TestCase):
         '''
         Test the set_value function
         '''
-        self.assertTrue(
-            win_reg.set_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-                vname='fake_name',
-                vdata='fake_data'
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name',
+                    vdata='fake_data'
+                )
             )
-        )
-        expected = {
-            'hive': 'HKLM',
-            'key': 'SOFTWARE\\Salt\\Test\\',
-            'success': True,
-            'vdata': 'fake_data',
-            'vname': 'fake_name',
-            'vtype': 'REG_SZ'
-        }
-        self.assertEqual(
-            win_reg.read_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-                vname='fake_name'
-            ),
-            expected
-        )
-        expected = {
-            'Deleted': [
-                'HKLM\\SOFTWARE\\Salt\\Test',
-                'HKLM\\SOFTWARE\\Salt'
-            ],
-            'Failed': []
-        }
-        self.assertEqual(
-            win_reg.delete_key_recursive(
-                hive='HKLM',
-                key='SOFTWARE\\Salt'
-            ),
-            expected
-        )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': 'fake_data',
+                'vname': 'fake_name',
+                'vtype': 'REG_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name'
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     @destructiveTest
     def test_set_value_default(self):
         '''
         Test the set_value function on the default value
         '''
-        self.assertTrue(
-            win_reg.set_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-                vdata='fake_default_data'
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vdata='fake_default_data'
+                )
             )
-        )
-        expected = {
-            'hive': 'HKLM',
-            'key': 'SOFTWARE\\Salt\\Test\\',
-            'success': True,
-            'vdata': 'fake_default_data',
-            'vname': '(Default)',
-            'vtype': 'REG_SZ'
-        }
-        self.assertEqual(
-            win_reg.read_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-            ),
-            expected
-        )
-        expected = {
-            'Deleted': [
-                'HKLM\\SOFTWARE\\Salt\\Test',
-                'HKLM\\SOFTWARE\\Salt'
-            ],
-            'Failed': []
-        }
-        self.assertEqual(
-            win_reg.delete_key_recursive(
-                hive='HKLM',
-                key='SOFTWARE\\Salt'
-            ),
-            expected
-        )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': 'fake_default_data',
+                'vname': '(Default)',
+                'vtype': 'REG_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
+    def test_set_value_unicode_key(self):
+        '''
+        Test the set_value function on a unicode key
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key='{0}\\{1}'.format(FAKE_KEY, UNICODE_KEY),
+                    vname='fake_name',
+                    vdata='fake_value'
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': '{0}\\{1}'.format(FAKE_KEY, UNICODE_KEY),
+                'success': True,
+                'vdata': 'fake_value',
+                'vname': 'fake_name',
+                'vtype': 'REG_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key='{0}\\{1}'.format(FAKE_KEY, UNICODE_KEY),
+                    vname='fake_name'
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
+    def test_set_value_unicode_value(self):
+        '''
+        Test the set_value function on a unicode value
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_unicode',
+                    vdata=UNICODE_VALUE
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': UNICODE_VALUE,
+                'vname': 'fake_unicode',
+                'vtype': 'REG_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_unicode'
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     @destructiveTest
     def test_delete_value(self):
         '''
         Test the delete_value function
         '''
-        self.assertTrue(
-            win_reg.set_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-                vname='fake_name',
-                vdata='fake_data'
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name',
+                    vdata='fake_data'
+                )
             )
-        )
-        self.assertTrue(
-            win_reg.delete_value(
-                hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
-                vname='fake_name'
+            self.assertTrue(
+                win_reg.delete_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name'
+                )
             )
-        )
-        expected = {
-            'Deleted': [
-                'HKLM\\SOFTWARE\\Salt\\Test',
-                'HKLM\\SOFTWARE\\Salt'
-            ],
-            'Failed': []
-        }
-        self.assertEqual(
-            win_reg.delete_key_recursive(
-                hive='HKLM',
-                key='SOFTWARE\\Salt'
-            ),
-            expected
-        )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     def test_delete_value_non_existing(self):
         '''
@@ -298,8 +338,60 @@ class WinFunctionsTestCase(TestCase):
         self.assertEqual(
             win_reg.delete_value(
                 hive='HKLM',
-                key='SOFTWARE\\Salt\\Test\\',
+                key=FAKE_KEY,
                 vname='fake_name'
             ),
             None
         )
+
+    @destructiveTest
+    def test_delete_value_unicode(self):
+        '''
+        Test the delete_value function on a unicode value
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_unicode',
+                    vdata=UNICODE_VALUE
+                )
+            )
+            self.assertTrue(
+                win_reg.delete_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_unicode'
+                )
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
+    def test_delete_key_unicode(self):
+        '''
+        Test the delete_value function on value within a unicode key
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key='{0}\\{1}'.format(FAKE_KEY, UNICODE_KEY),
+                    vname='fake_name',
+                    vdata='fake_value'
+                )
+            )
+            expected = {
+                'Deleted': ['HKLM\\{0}\\{1}\\'.format(FAKE_KEY, UNICODE_KEY)],
+                'Failed': []
+            }
+            self.assertEqual(
+                win_reg.delete_key_recursive(
+                    hive='HKLM',
+                    key='{0}\\{1}\\'.format(FAKE_KEY, UNICODE_KEY),
+                ),
+                expectee
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
