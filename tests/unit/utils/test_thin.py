@@ -17,6 +17,7 @@ import salt.exceptions
 from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
+from salt.utils.stringutils import to_bytes as bts
 
 try:
     import pytest
@@ -349,3 +350,59 @@ class SSHThinTestCase(TestCase):
             thin.gen_thin('')
         assert 'The minimum required python version to run salt-ssh is "2.6"' in str(err)
 
+    def _popen(self, return_value=None, side_effect=None, returncode=0):
+        '''
+        Fake subprocess.Popen
+        :return:
+        '''
+
+        proc = MagicMock()
+        proc.communicate = MagicMock(return_value=return_value, side_effect=side_effect)
+        proc.returncode = returncode
+        popen = MagicMock(return_value=proc)
+
+        return popen
+
+    def _version_info(self, major=None, minor=None):
+        class VersionInfo(tuple):
+            pass
+
+        vi = VersionInfo([major, minor])
+        vi.major = major or sys.version_info.major
+        vi.minor = minor or sys.version_info.minor
+
+        return vi
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.makedirs', MagicMock())
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.thin._get_salt_call', MagicMock())
+    @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/foo3', '/bar3']))
+    @patch('salt.utils.thin.os.path.isfile', MagicMock())
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.remove', MagicMock())
+    @patch('salt.utils.thin.os.path.exists', MagicMock())
+    @patch('salt.utils.path.os_walk', MagicMock())
+    @patch('salt.utils.thin.subprocess.Popen',
+           _popen(None, side_effect=[(bts('2.7'), bts('')), (bts('["/foo27", "/bar27"]'), bts(''))]))
+    @patch('salt.utils.thin.tarfile', MagicMock())
+    @patch('salt.utils.thin.zipfile', MagicMock())
+    @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.tempfile', MagicMock())
+    @patch('salt.utils.thin.shutil', MagicMock())
+    @patch('salt.utils.thin._six.PY3', True)
+    @patch('salt.utils.thin._six.PY2', False)
+    @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    def test_gen_thin_compression_fallback_py3(self):
+        '''
+        Test thin.gen_thin function if fallbacks to the gzip compression, once setup wrong.
+
+        :return:
+        '''
+        thin.gen_thin('', compress='arj')
+        thin.log.warning.assert_called()
+        pt, msg = thin.log.warning.mock_calls[0][1]
+        assert pt % msg == 'Unknown compression type: "arj". Falling back to "gzip" compression.'
