@@ -14,6 +14,7 @@ from tests.support.mock import (
 # Import salt libs
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
+import salt.utils as utils
 
 
 class TestEnvironState(TestCase, LoaderModuleMockMixin):
@@ -27,7 +28,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         return {envstate: loader_globals, envmodule: loader_globals}
 
     def setUp(self):
-        patcher = patch.dict(os.environ, {'INITIAL': 'initial'})
+        patcher = patch.dict(os.environ, {'INITIAL': 'initial'}, clear=True)
         patcher.start()
         def reset_environ(patcher):
             patcher.stop()
@@ -81,14 +82,20 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         '''test that ``clear_all`` option sets other values to '' '''
         ret = envstate.setenv('test', 'value', clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': ''})
-        self.assertEqual(envstate.os.environ, {'test': 'value', 'INITIAL': ''})
+        if utils.is_windows():
+            self.assertEqual(envstate.os.environ, {'TEST': 'value', 'INITIAL': ''})
+        else:
+            self.assertEqual(envstate.os.environ, {'test': 'value', 'INITIAL': ''})
 
     def test_setenv_clearall_with_unset(self):
         '''test that ``clear_all`` option combined with ``false_unsets``
         unsets other values from environment'''
         ret = envstate.setenv('test', 'value', false_unsets=True, clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': None})
-        self.assertEqual(envstate.os.environ, {'test': 'value'})
+        if utils.is_windows():
+            self.assertEqual(envstate.os.environ, {'TEST': 'value'})
+        else:
+            self.assertEqual(envstate.os.environ, {'test': 'value'})
 
     def test_setenv_unset_multi(self):
         '''test basically same things that above tests but with multiple values passed'''
@@ -99,12 +106,18 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
             ret = envstate.setenv(
                 'notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
         self.assertEqual(ret['changes'], {'test': None, 'foo': 'baz'})
-        self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
+        if utils.is_windows():
+            self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'FOO': 'baz'})
+        else:
+            self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
 
         with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
             ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
         self.assertEqual(ret['changes'], {'test': '', 'foo': 'bax'})
-        self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})
+        if utils.is_windows():
+            self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'FOO': 'bax', 'TEST': ''})
+        else:
+            self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})
 
     def test_setenv_test_mode(self):
         '''test that imitating action returns good values'''
