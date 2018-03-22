@@ -302,3 +302,20 @@ class SSHThinTestCase(TestCase):
             tops = thin.get_tops(so_mods='foo,bar')
         assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops)
+
+    @patch('salt.utils.thin.gen_thin', MagicMock(return_value='/path/to/thin/thin.tgz'))
+    @patch('salt.utils.hashutils.get_hash', MagicMock(return_value=12345))
+    def test_thin_sum(self):
+        '''
+        Test thin.thin_sum function.
+
+        :return:
+        '''
+        assert thin.thin_sum('/cachedir', form='sha256') == 12345
+        thin.salt.utils.hashutils.get_hash.assert_called()
+        assert thin.salt.utils.hashutils.get_hash.call_count == 1
+
+        path, form = thin.salt.utils.hashutils.get_hash.call_args[0]
+        assert path == '/path/to/thin/thin.tgz'
+        assert form == 'sha256'
+
