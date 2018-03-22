@@ -27,12 +27,11 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         return {envstate: loader_globals, envmodule: loader_globals}
 
     def setUp(self):
-        original_environ = os.environ.copy()
-        os.environ = {'INITIAL': 'initial'}
-
-        def reset_environ(original_environ):
-            os.environ = original_environ
-        self.addCleanup(reset_environ, original_environ)
+        patcher = patch.dict(os.environ, {'INITIAL': 'initial'})
+        patcher.start()
+        def reset_environ(patcher):
+            patcher.stop()
+        self.addCleanup(reset_environ, patcher)
 
     def test_setenv(self):
         '''test that a subsequent calls of setenv changes nothing'''
