@@ -616,7 +616,9 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
-        salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
+        if multiprocessing_enabled:
+            # We just want to modify the process name if we're on a different process
+            salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         if not self.standalone:
             proc_fn = os.path.join(
