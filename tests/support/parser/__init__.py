@@ -242,7 +242,7 @@ class SaltTestingParser(optparse.OptionParser):
             self, 'Output Options'
         )
         self.output_options_group.add_option(
-            '-f',
+            '-F',
             '--fail-fast',
             dest='failfast',
             default=False,
@@ -941,6 +941,8 @@ class SaltTestcaseParser(SaltTestingParser):
                          width=self.options.output_columns)
 
         runner = TextTestRunner(
-            verbosity=self.options.verbosity, failfast=True).run(tests)
+            verbosity=self.options.verbosity,
+            failfast=self.options.failfast,
+        ).run(tests)
         self.testsuite_results.append((header, runner))
         return runner.wasSuccessful()
