@@ -43,6 +43,7 @@ def valid_certificate(
     except IOError as exc:
         ret['comment'] = '{}'.format(exc)
         ret['result'] = False
+        log.error(ret['comment'])
         return ret
 
     # verify that the cert is valid *now*
