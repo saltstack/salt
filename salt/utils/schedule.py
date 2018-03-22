@@ -1555,7 +1555,7 @@ class Schedule(object):
                                  'job %s, defaulting to 1.', job)
                         data['maxrunning'] = 1
 
-                if self.standalone:
+                if not self.standalone:
                     data['run'] = run
                     data = self._check_max_running(func,
                                                    data,
