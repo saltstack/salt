@@ -30,8 +30,10 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         patcher = patch.dict(os.environ, {'INITIAL': 'initial'}, clear=True)
         patcher.start()
+
         def reset_environ(patcher):
             patcher.stop()
+
         self.addCleanup(reset_environ, patcher)
 
     def test_setenv(self):
