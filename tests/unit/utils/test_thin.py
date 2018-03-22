@@ -32,6 +32,29 @@ class SSHThinTestCase(TestCase):
     TestCase for SaltSSH-related parts.
     '''
 
+    def _popen(self, return_value=None, side_effect=None, returncode=0):
+        '''
+        Fake subprocess.Popen
+        :return:
+        '''
+
+        proc = MagicMock()
+        proc.communicate = MagicMock(return_value=return_value, side_effect=side_effect)
+        proc.returncode = returncode
+        popen = MagicMock(return_value=proc)
+
+        return popen
+
+    def _version_info(self, major=None, minor=None):
+        class VersionInfo(tuple):
+            pass
+
+        vi = VersionInfo([major, minor])
+        vi.major = major or sys.version_info.major
+        vi.minor = minor or sys.version_info.minor
+
+        return vi
+
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
@@ -349,29 +372,6 @@ class SSHThinTestCase(TestCase):
             thin.sys.exc_clear = lambda: None
             thin.gen_thin('')
         assert 'The minimum required python version to run salt-ssh is "2.6"' in str(err)
-
-    def _popen(self, return_value=None, side_effect=None, returncode=0):
-        '''
-        Fake subprocess.Popen
-        :return:
-        '''
-
-        proc = MagicMock()
-        proc.communicate = MagicMock(return_value=return_value, side_effect=side_effect)
-        proc.returncode = returncode
-        popen = MagicMock(return_value=proc)
-
-        return popen
-
-    def _version_info(self, major=None, minor=None):
-        class VersionInfo(tuple):
-            pass
-
-        vi = VersionInfo([major, minor])
-        vi.major = major or sys.version_info.major
-        vi.minor = minor or sys.version_info.minor
-
-        return vi
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
