@@ -455,7 +455,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 shutil.rmtree(tempdir)
                 tempdir = None
 
-
     # Pack alternative data
     if extended_cfg:
         log.debug('Packing libraries based on alternative Salt versions')
@@ -490,7 +489,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     with salt.utils.files.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, 'w+') as fp_:
-        fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
+        fp_.write(str(sys.version_info.major))  # future lint: disable=blacklisted-function
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')
     tfp.add('.thin-gen-py-version')
