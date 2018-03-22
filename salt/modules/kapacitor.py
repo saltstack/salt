@@ -148,8 +148,7 @@ def define_task(name,
         .. versionadded:: Fluorine
 
     database
-        Which database to fetch data from. Defaults to None, which will use the
-        default database in InfluxDB.
+        Which database to fetch data from.
 
     retention_policy
         Which retention policy to fetch data from. Defaults to 'default'.
@@ -160,6 +159,12 @@ def define_task(name,
 
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
+    if not database and not dbrps:
+        return (
+            False,
+            'Providing database name or dbrps is mandatory.'
+        )
+
     if version() < '0.13':
         cmd = 'kapacitor define -name {0}'.format(name)
     else:
