@@ -1567,7 +1567,8 @@ class Schedule(object):
         run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
 
         if run_schedule_jobs_in_background is False:
-            func()
+             # Explicitly pass False for multiprocessing_enabled
+            self.handle_func(False, func, data)
             return
 
         if multiprocessing_enabled and salt.utils.platform.is_windows():
