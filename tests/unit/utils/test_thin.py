@@ -319,3 +319,19 @@ class SSHThinTestCase(TestCase):
         assert path == '/path/to/thin/thin.tgz'
         assert form == 'sha256'
 
+    @patch('salt.utils.thin.gen_min', MagicMock(return_value='/path/to/thin/min.tgz'))
+    @patch('salt.utils.hashutils.get_hash', MagicMock(return_value=12345))
+    def test_min_sum(self):
+        '''
+        Test thin.thin_sum function.
+
+        :return:
+        '''
+        assert thin.min_sum('/cachedir', form='sha256') == 12345
+        thin.salt.utils.hashutils.get_hash.assert_called()
+        assert thin.salt.utils.hashutils.get_hash.call_count == 1
+
+        path, form = thin.salt.utils.hashutils.get_hash.call_args[0]
+        assert path == '/path/to/thin/min.tgz'
+        assert form == 'sha256'
+
