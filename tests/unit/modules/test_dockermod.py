@@ -81,8 +81,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
                     ret = docker_mod.login('portus.example.com:5000')
-                    self.assertTrue('retcode' in ret)
-                    self.assertTrue(ret['retcode'] > 0)
+                    self.assertIn('retcode', ret)
+                    self.assertNotEqual(ret['retcode'], 0)
 
     def test_ps_with_host_true(self):
         '''
