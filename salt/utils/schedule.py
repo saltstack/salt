@@ -1558,13 +1558,17 @@ class Schedule(object):
                     data['_splay'] = None
 
     def _run_job(self, func, data):
+        job_dry_run = data.get('dry_run', False)
+        if job_dry_run:
+            log.debug('Job %s has \'dry_run\' set to True. Not running it.', data['name'])
+            return
+
+        multiprocessing_enabled = self.opts.get('multiprocessing', True)
         run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
 
         if run_schedule_jobs_in_background is False:
             func()
             return
-
-        multiprocessing_enabled = self.opts.get('multiprocessing', True)
 
         if multiprocessing_enabled and salt.utils.platform.is_windows():
             # Temporarily stash our function references.
