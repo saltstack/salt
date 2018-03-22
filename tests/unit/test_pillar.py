@@ -186,6 +186,66 @@ class PillarTestCase(TestCase):
                 ({'foo': 'bar', 'nested': {'level': {'foo': 'bar2'}}}, [])
             )
 
+    def test_includes_override_sls(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'file_roots': [],
+            'extension_modules': ''
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+        with patch('salt.pillar.compile_template') as compile_template:
+
+            # Test with option set to True
+            opts['pillar_includes_override_sls'] = True
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar2'}, [])
+            )
+
+            # Test with option set to False
+            opts['pillar_includes_override_sls'] = False
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar'}, [])
+            )
+
     def test_topfile_order(self):
         with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
                 patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
