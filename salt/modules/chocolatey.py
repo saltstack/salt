@@ -928,6 +928,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     if check_remote:
         available = list_(narrow=name, pre_versions=pre_versions, source=source)
+        available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
             packages[pkg] = {'installed': installed[pkg],
