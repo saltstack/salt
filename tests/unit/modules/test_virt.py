@@ -507,3 +507,35 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             nic = nics[list(nics)[0]]
             self.assertEqual('bridge', nic['type'])
             self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+
+    def test_network(self):
+        xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'network')
+        self.assertEqual(root.find('bridge').attrib['name'], 'main')
+        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
+        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
+
+    def test_network_tag(self):
+        xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch', 1001)
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'network')
+        self.assertEqual(root.find('bridge').attrib['name'], 'main')
+        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
+        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
+        self.assertEqual(root.find('vlan/tag').attrib['id'], '1001')
+
+    def test_pool(self):
+        xml_data = virt._gen_pool_xml('pool', 'logical', 'base')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'logical')
+        self.assertEqual(root.find('target/path').text, '/dev/base')
+
+    def test_pool_with_source(self):
+        xml_data = virt._gen_pool_xml('pool', 'logical', 'base', 'sda')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'logical')
+        self.assertEqual(root.find('target/path').text, '/dev/base')
+        self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')
