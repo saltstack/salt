@@ -241,7 +241,7 @@ def _get_ext_namespaces(config):
         constraint_version = tuple(config[ns].get('py-version', []))
         if not constraint_version:
             raise salt.exceptions.SaltSystemExit("An alternative version is configured, but not defined "
-                                                 "to what Python's major/minor version it should be constained.")
+                                                 "to what Python's major/minor version it should be constrained.")
         else:
             namespaces[ns] = constraint_version
 
