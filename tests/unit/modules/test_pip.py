@@ -298,7 +298,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
                 if salt.utils.platform.is_windows():
                     venv_path = 'c:\\test_env'
-                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
+                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
                 else:
                     venv_path = '/test_env'
                     bin_path = os.path.join(venv_path, 'bin', 'pip')
@@ -934,6 +934,27 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     runas=None,
                     use_vt=False,
                     python_shell=False,
+                )
+                self.assertEqual(ret, eggs)
+
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        # Passing env_vars passes them to underlying command?
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.freeze(env_vars={"foo": "bar"})
+                mock.assert_called_once_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                    env={"foo": "bar"}
                 )
                 self.assertEqual(ret, eggs)
 

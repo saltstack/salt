@@ -1133,9 +1133,9 @@ def installed(
         .. versionadded:: 2014.1.1
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
@@ -1967,9 +1967,9 @@ def downloaded(name,
                       - salt-minion: 2015.8.5-1.el6
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -2259,9 +2259,9 @@ def latest(
             has no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -2856,7 +2856,7 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
         Added support for the ``pkgin`` provider.
 
@@ -2886,9 +2886,9 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             have no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.

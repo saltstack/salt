@@ -98,7 +98,7 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
             pass
-    if result > 0:
+    if len(result):
         return result[sorted(result).pop()]
     else:
         return False
@@ -441,7 +441,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

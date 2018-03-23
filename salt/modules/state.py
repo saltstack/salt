@@ -231,7 +231,7 @@ def soft_kill(jid, state_id=None):
     this instructs a running state to safely exit at a given
     state id. This needs to pass in the jid of the running state.
     If a state_id is not passed then the jid referenced will be safely exited
-    at the begining of the next state run.
+    at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -264,7 +264,7 @@ def pause(jid, state_id=None, duration=None):
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds. If a state_id is not passed then
-    the jid referenced will be paused at the begining of the next state run.
+    the jid referenced will be paused at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -778,19 +778,18 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write state request file %s. Check permission.',
-            notify_path
-        )
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write state request file %s. Check permission.',
+                notify_path
+            )
     return ret
 
 
@@ -844,19 +843,18 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            log.error(
-                'Unable to write state request file %s. Check permission.',
-                notify_path
-            )
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                log.error(
+                    'Unable to write state request file %s. Check permission.',
+                    notify_path
+                )
     return True
 
 
@@ -1249,16 +1247,14 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
-    umask = os.umask(0o77)
-    if kwargs.get('cache'):
-        if os.path.isfile(cfn):
-            with salt.utils.files.fopen(cfn, 'rb') as fp_:
-                high_ = serial.load(fp_)
-                return st_.state.call_high(high_, orchestration_jid)
-    os.umask(umask)
+    with salt.utils.files.set_umask(0o077):
+        if kwargs.get('cache'):
+            if os.path.isfile(cfn):
+                with salt.utils.files.fopen(cfn, 'rb') as fp_:
+                    high_ = serial.load(fp_)
+                    return st_.state.call_high(high_, orchestration_jid)
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
 
     st_.push_active()
     try:
@@ -1269,8 +1265,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             return errors
 
         if exclude:
-            if isinstance(exclude, six.string_types):
-                exclude = exclude.split(',')
+            exclude = salt.utils.args.split_input(exclude)
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
             else:
@@ -1282,36 +1277,36 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to SLS cache file %s. Check permission.',
-            cache_file
-        )
-    _set_retcode(ret, high_)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
+            with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
+                serial.dump(ret, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to SLS cache file %s. Check permission.',
+                cache_file
+            )
+        _set_retcode(ret, high_)
+        # Work around Windows multiprocessing bug, set __opts__['test'] back to
+        # value from before this function was run.
+        __opts__['test'] = orig_test
 
-    try:
-        with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-            try:
-                serial.dump(high_, fp_)
-            except TypeError:
-                # Can't serialize pydsl
-                pass
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to highstate cache file %s. Do you have permissions?',
-            cfn
-        )
-    os.umask(cumask)
+        try:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                try:
+                    serial.dump(high_, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to highstate cache file %s. Do you have permissions?',
+                cfn
+            )
+
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
@@ -1616,7 +1611,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             ``pillar_roots`` or an external Pillar source.  Pillar values that
             are not included in the kwarg will not be overwritten.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1665,8 +1660,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         return ['Pillar failed to render with the following messages:'] + errors
 
-    if isinstance(mods, six.string_types):
-        split_mods = mods.split(',')
+    split_mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
@@ -1774,8 +1768,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1863,8 +1856,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1878,6 +1870,56 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 1
         return errors
     return high_
+
+
+def sls_exists(mods, test=None, queue=False, **kwargs):
+    '''
+    Tests for the existance the of a specific SLS or list of SLS files on the
+    master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
+    rather than returning state details, returns True or False. The default
+    environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. versionadded:: Fluorine
+
+    saltenv
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_exists core,edit.vim saltenv=dev
+    '''
+    return isinstance(
+        show_sls(mods, test=test, queue=queue, **kwargs),
+        dict
+    )
+
+
+def id_exists(ids, mods, test=None, queue=False, **kwargs):
+    '''
+    Tests for the existence of a specific ID or list of IDs within the
+    specified SLS file(s). Similar to :py:func:`state.sls_exists
+    <salt.modules.state.sls_exists>`, returns True or False. The default
+    environment is base``, use ``saltenv`` to specify a different environment.
+
+    .. versionadded:: Fluorine
+
+    saltenv
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.id_exists create_myfile,update_template filestate saltenv=dev
+    '''
+    ids = salt.utils.args.split_input(ids)
+    ids = set(ids)
+    sls_ids = set(x['__id__'] for x in show_low_sls(mods, test=test, queue=queue, **kwargs))
+    return ids.issubset(sls_ids)
 
 
 def show_top(queue=False, **kwargs):
@@ -2066,7 +2108,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains
@@ -2116,8 +2158,7 @@ def disable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = states.split(',')
+    states = salt.utils.args.split_input(states)
 
     msg = []
     _disabled = __salt__['grains.get']('state_runs_disabled')
@@ -2168,8 +2209,7 @@ def enable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = states.split(',')
+    states = salt.utils.args.split_input(states)
     log.debug('states %s', states)
 
     msg = []

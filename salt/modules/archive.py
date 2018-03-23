@@ -157,7 +157,7 @@ def list_(name,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _xz: http://tukaani.org/xz/
@@ -1077,8 +1077,7 @@ def unzip(zip_file,
                         if not salt.utils.platform.is_windows():
                             perm = zfile.getinfo(target).external_attr >> 16
                             if perm == 0:
-                                umask_ = os.umask(0)
-                                os.umask(umask_)
+                                umask_ = salt.utils.files.get_umask()
                                 if target.endswith('/'):
                                     perm = 0o777 & ~umask_
                                 else:
@@ -1135,7 +1134,7 @@ def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Examples:
 

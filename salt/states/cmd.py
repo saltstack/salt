@@ -199,8 +199,7 @@ executed when the state it is watching changes. Example:
 ``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
-``cmd.wait`` will be deprecated in future due to the confusion it causes. The
-preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
+The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
 works on ``cmd.run`` as well as on any other state. The example would then look as follows:
 
 .. code-block:: yaml
@@ -510,7 +509,7 @@ def wait(name,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -654,7 +653,7 @@ def wait_script(name,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
@@ -758,7 +757,7 @@ def run(name,
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
         an easier alternative to the Jinja workaround.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     stateful
         The command being executed is expected to return data about executing
@@ -782,7 +781,7 @@ def run(name,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     quiet
         This option no longer has any functionality and will be removed, please
@@ -1088,7 +1087,7 @@ def script(name,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the

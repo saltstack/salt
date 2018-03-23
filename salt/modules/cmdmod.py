@@ -12,6 +12,7 @@ import functools
 import glob
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -947,7 +948,7 @@ def run(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -972,7 +973,7 @@ def run(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -995,7 +996,7 @@ def run(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1192,7 +1193,7 @@ def shell(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
         to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1217,7 +1218,7 @@ def shell(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1240,7 +1241,7 @@ def shell(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1404,7 +1405,7 @@ def run_stdout(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
         to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1429,7 +1430,7 @@ def run_stdout(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1452,7 +1453,7 @@ def run_stdout(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1515,26 +1516,6 @@ def run_stdout(cmd,
                success_retcodes=success_retcodes,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stdout'] if not hide_output else ''
 
 
@@ -1613,7 +1594,7 @@ def run_stderr(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1638,7 +1619,7 @@ def run_stderr(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1661,7 +1642,7 @@ def run_stderr(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1724,26 +1705,6 @@ def run_stderr(cmd,
                success_retcodes=success_retcodes,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stderr'] if not hide_output else ''
 
 
@@ -1824,7 +1785,7 @@ def run_all(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1849,7 +1810,7 @@ def run_all(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1872,7 +1833,7 @@ def run_all(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1883,7 +1844,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
        Only applies to shell 'powershell'.
 
-       .. versionadded:: Oxygen
+       .. versionadded:: 2018.3.0
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
         redirected to stdout. This is helpful for cases where obtaining both
@@ -1959,27 +1920,6 @@ def run_all(cmd,
                encoded_cmd=encoded_cmd,
                success_retcodes=success_retcodes,
                **kwargs)
-
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
 
     if hide_output:
         ret['stdout'] = ret['stderr'] = ''
@@ -2078,7 +2018,7 @@ def retcode(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2154,22 +2094,6 @@ def retcode(cmd,
                password=password,
                success_retcodes=success_retcodes,
                **kwargs)
-
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
     return ret['retcode']
 
 
@@ -2326,7 +2250,7 @@ def script(source,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2349,7 +2273,7 @@ def script(source,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
@@ -2569,7 +2493,7 @@ def script_retcode(source,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2875,7 +2799,7 @@ def run_chroot(root,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2898,7 +2822,7 @@ def run_chroot(root,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout:
         A timeout in seconds for the executed process to return.
@@ -3345,7 +3269,7 @@ def powershell(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3368,7 +3292,7 @@ def powershell(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -3411,9 +3335,14 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd += ' | ConvertTo-JSON'
-    if depth is not None:
-        cmd += ' -Depth {0}'.format(depth)
+    # ConvertTo-JSON is only available on Versions of Windows greater than
+    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
+    # because this function is called by `salt/grains/core.py` before
+    # `__grains__` is populated
+    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+        cmd += ' | ConvertTo-JSON'
+        if depth is not None:
+            cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -3430,7 +3359,7 @@ def powershell(cmd,
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+    cmd = 'try {' + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -3502,10 +3431,10 @@ def powershell_all(cmd,
     empty Powershell output (which would result in an exception). Instead we
     treat this as a special case and one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field of the return dictionary will be an empty list.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the
+    - If the value of the ``force_list`` parameter is ``False``, then the
       return dictionary **will not have a result key added to it**. We aren't
       setting ``result`` to ``None`` in this case, because ``None`` is the
       Python representation of "null" in JSON. (We likewise can't use ``False``
@@ -3518,20 +3447,20 @@ def powershell_all(cmd,
     content, and the type of the resulting Python object is other than ``list``
     then one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field will be a singleton list with the Python object as its
       sole member.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the value
+    - If the value of the ``force_list`` parameter is ``False``, then the value
       of ``result`` will be the unmodified Python object.
 
     If Powershell's output is not an empty string, Python is able to parse its
     content, and the type of the resulting Python object is ``list``, then the
     value of ``result`` will be the unmodified Python object. The
-    ``force_list`` paramater has no effect in this case.
+    ``force_list`` parameter has no effect in this case.
 
     .. note::
-         An example of why the ``force_list`` paramater is useful is as
+         An example of why the ``force_list`` parameter is useful is as
          follows: The Powershell command ``dir x | Convert-ToJson`` results in
 
          - no output when x is an empty directory.
@@ -3558,7 +3487,7 @@ def powershell_all(cmd,
         salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
         salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     .. warning::
 
@@ -3638,7 +3567,7 @@ def powershell_all(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3679,7 +3608,7 @@ def powershell_all(cmd,
         where characters may be dropped or incorrectly converted when executed.
         Default is False.
 
-    :param bool force_list: The purpose of this paramater is described in the
+    :param bool force_list: The purpose of this parameter is described in the
         preamble of this function's documentation. Default value is False.
 
     :param list success_retcodes: This parameter will be allow a list of
@@ -3860,7 +3789,7 @@ def run_bg(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3910,7 +3839,7 @@ def run_bg(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
