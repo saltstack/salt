@@ -193,3 +193,39 @@ The ``vault`` utils module had the following changes:
 - Support for specifying Vault connection data within a 'profile' has been removed.
   Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
   details on the new configuration schema.
+
+=======
+SaltSSH major updates
+=====================
+
+SaltSSH now can work across different major Python versions. Python 2.7 ~ Python 3.x
+is now supported transparently. Feature works transparently. Requirement is, however,
+that the Master machine should have installed Salt and related dependencies for
+Python 2 and Python 3 should be available and importable there.
+
+SaltSSH also can pack whole additional, another version of Salt. For example, if there
+would be an old box, running only outdated and unsupported Python 2.6, it is still
+would be possible from within Python 3.5 or newer machine to access it. This feature
+requires an additional configuration /etc/salt/master file as follows:
+
+
+.. code-block:: yaml
+
+       ssh_ext_alternatives:
+           2016.3:                     # Namespace, can be actually anything.
+               py-version: [2, 6]      # Constraint to specific interpreter version
+               path: /opt/2016.3/salt  # Main Salt installation
+               dependencies:           # List of dependencies and their installation paths
+                 jinja2: /opt/jinja2
+                 yaml: /opt/yaml
+                 tornado: /opt/tornado
+                 msgpack: /opt/msgpack
+                 certifi: /opt/certifi
+                 singledispatch: /opt/singledispatch.py
+                 singledispatch_helpers: /opt/singledispatch_helpers.py
+                 markupsafe: /opt/markupsafe
+                 backports_abc: /opt/backports_abc.py
+
+It is also possible to add several alternative versions of Salt. One of the way is to
+generate a Minimal tarball using runners and include it. However, this is possible only
+when there is a running alternative Salt version, installed on the Master machine.
