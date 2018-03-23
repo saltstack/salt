@@ -31,10 +31,10 @@ class SSHThinTestCase(TestCase):
     '''
     TestCase for SaltSSH-related parts.
     '''
-
     def _popen(self, return_value=None, side_effect=None, returncode=0):
         '''
         Fake subprocess.Popen
+
         :return:
         '''
 
