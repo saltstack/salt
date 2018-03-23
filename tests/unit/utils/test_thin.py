@@ -62,6 +62,22 @@ class SSHThinTestCase(TestCase):
 
         return vi
 
+    def _tarfile(self, getinfo=False):
+        '''
+        Fake tarfile handler.
+
+        :return:
+        '''
+        spec = ['add', 'close']
+        if getinfo:
+            spec.append('getinfo')
+
+        tf = MagicMock()
+        tf.open = MagicMock(return_value=MagicMock(spec=spec))
+
+        return tf
+
+
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
