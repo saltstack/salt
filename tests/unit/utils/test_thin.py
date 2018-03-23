@@ -399,6 +399,7 @@ class SSHThinTestCase(TestCase):
     def test_gen_thin_compression_fallback_py3(self):
         '''
         Test thin.gen_thin function if fallbacks to the gzip compression, once setup wrong.
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
 
         :return:
         '''
