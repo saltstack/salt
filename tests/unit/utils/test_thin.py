@@ -481,7 +481,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.files.fopen', MagicMock())
     @patch('salt.utils.thin._get_salt_call', MagicMock())
     @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
-    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/foo3', '/bar3']))
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/salt', '/bar3']))
     @patch('salt.utils.thin.get_ext_tops', MagicMock(return_value={}))
     @patch('salt.utils.thin.os.path.isfile', MagicMock())
     @patch('salt.utils.thin.os.path.isdir', MagicMock(return_value=True))
@@ -513,7 +513,7 @@ class SSHThinTestCase(TestCase):
             'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
             'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
             'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
-            'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
+            'pyall/root/r1', 'pyall/root/r2', 'pyall/root/r3', 'pyall/root2/r4', 'pyall/root2/r5', 'pyall/root2/r6'
         ]
         for cl in thin.tarfile.open().method_calls[:-4]:
             arcname = cl[2].get('arcname')
