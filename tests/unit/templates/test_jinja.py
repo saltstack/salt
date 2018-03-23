@@ -303,8 +303,7 @@ class TestGetTemplate(TestCase):
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
-                         a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt),
-                    encoding='utf-8')
+                         a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
             self.assertEqual(out, u'Hey world !Hi Sàlt !' + os.linesep)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 

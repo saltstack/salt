@@ -288,7 +288,7 @@ def _get_jinja_error(trace, context=None):
     return line, out
 
 
-def render_jinja_tmpl(tmplstr, context, tmplpath=None, encoding=SLS_ENCODING):
+def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
     saltenv = context['saltenv']
     loader = None
@@ -296,7 +296,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None, encoding=SLS_ENCODING):
 
     if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
-        tmplstr = tmplstr.decode(encoding)
+        tmplstr = tmplstr.decode(SLS_ENCODING)
 
     if tmplstr.endswith(os.linesep):
         newline = True
@@ -411,11 +411,11 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None, encoding=SLS_ENCODING):
             continue
 
         try:
-            decoded_context[key] = salt.utils.to_unicode(value, encoding=encoding)
+            decoded_context[key] = salt.utils.to_unicode(value, encoding=SLS_ENCODING)
         except UnicodeDecodeError as ex:
             log.debug(
                 "Failed to decode using default encoding (%s), trying system encoding",
-                encoding,
+                SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.locales.sdecode(value)
 
