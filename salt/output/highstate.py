@@ -248,6 +248,7 @@ def _format_host(host, data):
                 tcolor = colors['LIGHT_YELLOW']
 
             state_output = __opts__.get('state_output', 'full').lower()
+            tname = salt.utils.stringutils.to_unicode(tname)
             comps = tname.split('_|-')
 
             if state_output.endswith('_id'):
