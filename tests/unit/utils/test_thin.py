@@ -503,7 +503,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
     def test_gen_thin_main_content_files_written_py3(self):
         '''
-        Test thin.gen_thin function if control files are written (version, salt-call etc).
+        Test thin.gen_thin function if main content files are written.
         NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
 
         :return:
