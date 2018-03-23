@@ -1,0 +1,9 @@
+<network>
+  <name>{{ name }}</name>
+  <bridge name='{{ bridge }}'/>
+  <forward mode='{{ forward }}'/>{% if vport != None %}
+  <virtualport type='{{ vport }}'/>{% endif %}{% if tag != None %}
+  <vlan>
+    <tag id='{{ tag }}'/>
+  </vlan>{% endif %}
+</network>
