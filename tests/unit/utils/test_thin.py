@@ -520,3 +520,53 @@ class SSHThinTestCase(TestCase):
             assert arcname in files
             files.pop(files.index(arcname))
         assert not bool(files)
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.makedirs', MagicMock())
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.thin._get_salt_call', MagicMock())
+    @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=[]))
+    @patch('salt.utils.thin.get_ext_tops',
+           MagicMock(return_value={'namespace': {'py-version': [2, 7],
+                                                 'path': '/opt/2015.8/salt',
+                                                 'dependencies': ['/opt/certifi', '/opt/whatever']}}))
+    @patch('salt.utils.thin.os.path.isfile', MagicMock())
+    @patch('salt.utils.thin.os.path.isdir', MagicMock(return_value=True))
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.remove', MagicMock())
+    @patch('salt.utils.thin.os.path.exists', MagicMock())
+    @patch('salt.utils.path.os_walk',
+           MagicMock(return_value=(('root', [], ['r1', 'r2', 'r3']), ('root2', [], ['r4', 'r5', 'r6']))))
+    @patch('salt.utils.thin.subprocess.Popen',
+           _popen(None, side_effect=[(bts('2.7'), bts('')), (bts('["/foo27", "/bar27"]'), bts(''))]))
+    @patch('salt.utils.thin.tarfile', _tarfile(None))
+    @patch('salt.utils.thin.zipfile', MagicMock())
+    @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.tempfile', MagicMock())
+    @patch('salt.utils.thin.shutil', MagicMock())
+    @patch('salt.utils.thin._six.PY3', True)
+    @patch('salt.utils.thin._six.PY2', False)
+    @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    def test_gen_thin_ext_alternative_content_files_written_py3(self):
+        '''
+        Test thin.gen_thin function if external alternative content files are written.
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
+
+        :return:
+        '''
+        thin.gen_thin('')
+        files = ['namespace/pyall/root/r1', 'namespace/pyall/root/r2', 'namespace/pyall/root/r3',
+                 'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
+                 'namespace/pyall/root/r1', 'namespace/pyall/root/r2', 'namespace/pyall/root/r3',
+                 'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
+                 'namespace/py27/root/r1', 'namespace/py27/root/r2', 'namespace/py27/root/r3',
+                 'namespace/py27/root2/r4', 'namespace/py27/root2/r5', 'namespace/py27/root2/r6'
+        ]
+        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-4]):
+            arcname = cl[2].get('arcname')
+            assert arcname in files
+            files.pop(files.index(arcname))
+        assert not bool(files)
