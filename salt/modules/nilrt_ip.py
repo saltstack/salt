@@ -150,7 +150,7 @@ def _get_service_info(service):
         'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
         'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
-        'hwaddr': six.text_type(service_info.get_property('Ethernet')['Address'])
+        'HWAddress': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
