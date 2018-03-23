@@ -474,3 +474,49 @@ class SSHThinTestCase(TestCase):
         for idx, fname in enumerate(['salt-call', 'version', '.thin-gen-py-version']):
             assert thin.tarfile.open().method_calls[idx + 4][1][0] == fname
         thin.tarfile.open().close.assert_called()
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.makedirs', MagicMock())
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.thin._get_salt_call', MagicMock())
+    @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/foo3', '/bar3']))
+    @patch('salt.utils.thin.get_ext_tops', MagicMock(return_value={}))
+    @patch('salt.utils.thin.os.path.isfile', MagicMock())
+    @patch('salt.utils.thin.os.path.isdir', MagicMock(return_value=True))
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.remove', MagicMock())
+    @patch('salt.utils.thin.os.path.exists', MagicMock())
+    @patch('salt.utils.path.os_walk',
+           MagicMock(return_value=(('root', [], ['r1', 'r2', 'r3']), ('root2', [], ['r4', 'r5', 'r6']))))
+    @patch('salt.utils.thin.subprocess.Popen',
+           _popen(None, side_effect=[(bts('2.7'), bts('')), (bts('["/foo27", "/bar27"]'), bts(''))]))
+    @patch('salt.utils.thin.tarfile', _tarfile(None))
+    @patch('salt.utils.thin.zipfile', MagicMock())
+    @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.tempfile', MagicMock())
+    @patch('salt.utils.thin.shutil', MagicMock())
+    @patch('salt.utils.thin._six.PY3', True)
+    @patch('salt.utils.thin._six.PY2', False)
+    @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    def test_gen_thin_main_content_files_written_py3(self):
+        '''
+        Test thin.gen_thin function if control files are written (version, salt-call etc).
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
+
+        :return:
+        '''
+        thin.gen_thin('')
+        files = [
+            'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
+            'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
+            'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
+            'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
+        ]
+        for cl in thin.tarfile.open().method_calls[:-4]:
+            arcname = cl[2].get('arcname')
+            assert arcname in files
+            files.pop(files.index(arcname))
+        assert not bool(files)
