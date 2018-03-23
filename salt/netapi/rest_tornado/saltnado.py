@@ -740,7 +740,17 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # Grab eauth config for the current backend for the current user
         try:
-            perms = self.application.opts['external_auth'][token['eauth']][token['name']]
+            eauth = self.application.opts['external_auth'][token['eauth']]
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
+
+            if 'groups' in token and token['groups']:
+                user_groups = set(token['groups'])
+                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+
+                for group in user_groups & eauth_groups:
+                    perms.extend(eauth['{0}%'.format(group)])
 
         # If we can't find the creds, then they aren't authorized
         except KeyError:
