@@ -407,3 +407,5 @@ class SSHThinTestCase(TestCase):
         thin.log.warning.assert_called()
         pt, msg = thin.log.warning.mock_calls[0][1]
         assert pt % msg == 'Unknown compression type: "arj". Falling back to "gzip" compression.'
+        thin.zipfile.ZipFile.assert_not_called()
+        thin.tarfile.open.assert_called()
