@@ -468,9 +468,9 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         thin.gen_thin('')
-        thin.tarfile.open().close.assert_called()
         arc_name, arc_mode = thin.tarfile.method_calls[0][1]
         assert arc_name == 'thin/thin.tgz'
         assert arc_mode == 'w:gz'
         for idx, fname in enumerate(['salt-call', 'version', '.thin-gen-py-version']):
             assert thin.tarfile.open().method_calls[idx + 4][1][0] == fname
+        thin.tarfile.open().close.assert_called()
