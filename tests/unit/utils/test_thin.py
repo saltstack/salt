@@ -46,6 +46,13 @@ class SSHThinTestCase(TestCase):
         return popen
 
     def _version_info(self, major=None, minor=None):
+        '''
+        Fake version info.
+
+        :param major:
+        :param minor:
+        :return:
+        '''
         class VersionInfo(tuple):
             pass
 
