@@ -1753,6 +1753,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
 
+    def test_state_sls_unicode_characters(self):
+        '''
+        test state.sls when state file contains non-ascii characters
+        '''
+        ret = self.run_function('state.sls', ['issue-46672'])
+        log.debug('== ret %s ==', type(ret))
+
+        _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
+        self.assertIn(_expected, ret)
+
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
