@@ -156,7 +156,7 @@ command:
 
 .. code-block:: bash
 
-    # salt-cloud -f reserve_ip my-profitbricks-config location='us/ewr' size=1
+    # salt-cloud -f reserve_ipblock  my-profitbricks-config location='us/ewr' size=1
 
 Profile Specifics:
 ------------------
