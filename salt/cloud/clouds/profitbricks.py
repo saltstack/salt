@@ -626,13 +626,13 @@ def list_nodes_full(conn=None, call=None):
     return ret
 
 
-def reserve_ip(call=None, kwargs=None):
+def reserve_ipblock(call=None, kwargs=None):
     '''
 
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The reserve_ip function must be called with -f or '
+            'The reserve_ipblock function must be called with -f or '
             '--function.'
         )
 
