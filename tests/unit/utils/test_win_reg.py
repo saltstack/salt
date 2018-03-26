@@ -391,7 +391,7 @@ class WinFunctionsTestCase(TestCase):
                     hive='HKLM',
                     key='{0}\\{1}\\'.format(FAKE_KEY, UNICODE_KEY),
                 ),
-                expectee
+                expected
             )
         finally:
             win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
