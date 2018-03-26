@@ -96,7 +96,7 @@ class LocalClientTestCase(TestCase,
     @skipIf(not salt.utils.is_windows(), 'Windows only test')
     def test_pub_win32(self):
         '''
-        Tests that the cleint raises a timeout error when using TCP transport
+        Tests that the client raises a timeout error when using TCP transport
         and publisher is not running.
 
         Note: Requires TCP transport, this is only the default on Windows.
