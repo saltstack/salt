@@ -2176,14 +2176,17 @@ class State(object):
                 run_dict = self.pre
             else:
                 run_dict = running
+
+            while True:
+                if self.reconcile_procs(run_dict):
+                    break
+                time.sleep(0.01)
+
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
-                if run_dict[tag].get('proc'):
-                    # Run in parallel, first wait for a touch and then recheck
-                    run_dict[tag].get('proc').join()
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('onfail')  # At least one state is OK
