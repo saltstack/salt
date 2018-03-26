@@ -28,6 +28,7 @@ def _norm_key(key):
         return key.upper()
     return key
 
+
 def setenv(name,
            value,
            false_unsets=False,
