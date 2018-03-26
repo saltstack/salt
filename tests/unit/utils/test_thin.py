@@ -570,3 +570,13 @@ class SSHThinTestCase(TestCase):
             assert arcname in files
             files.pop(files.index(arcname))
         assert not bool(files)
+
+    def test_get_supported_py_config_typecheck(self):
+        '''
+        Test collecting proper py-versions. Should return bytes type.
+        :return:
+        '''
+        tops = {}
+        ext_cfg = {}
+        out = thin._get_supported_py_config(tops=tops, extended_cfg=ext_cfg)
+        assert type(salt.utils.stringutils.to_bytes('')) == type(out)
