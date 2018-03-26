@@ -683,7 +683,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['comment'], expected)
 
         # Update the SLS configuration to remove the last network
-        log.critical('networks = %s', kwargs['networks'])
         kwargs['networks'].pop(-1)
         ret = self.run_state('docker_container.running', **kwargs)
         self.assertSaltTrueReturn(ret)
