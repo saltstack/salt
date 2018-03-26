@@ -151,6 +151,7 @@ command:
 
     # salt-cloud --list-sizes my-profitbricks-config
 
+.. versionadded:: Fluorine
 One or more public IP address can be reserved with the following command:
 command:
 
