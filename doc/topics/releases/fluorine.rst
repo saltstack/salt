@@ -30,6 +30,12 @@ Deprecations
 Module Deprecations
 ===================
 
+The ``napalm_network`` module had the following changes:
+
+- Support for the ``template_path`` has been removed in the ``load_template``
+  function. This is because support for NAPALM native templates has been
+  dropped.
+
 The ``trafficserver`` module had the following changes:
 
 - Support for the ``match_var`` function was removed. Please use the
@@ -122,6 +128,11 @@ instead:
   files to use the ``kubernetes.node_label_present`` function instead.
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
+
+The ``netconfig`` state had the following changes:
+
+- Support for the ``template_path`` option in the ``managed`` state has been
+  removed. This is because support for NAPALM native templates has been dropped.
 
 The ``trafficserver`` state had the following changes:
 
