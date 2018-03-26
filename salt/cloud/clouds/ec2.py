@@ -1218,7 +1218,7 @@ def get_imageid(vm_):
     return image_id
  
 
- _get_subnetname_id(subnetname):
+def _get_subnetname_id(subnetname):
     '''
     Returns the SubnetId of a SubnetName to use
     '''
