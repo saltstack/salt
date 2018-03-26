@@ -1610,9 +1610,9 @@ NaCL Module and Runner changes
 ------------------------------
 
 In addition to argument changes in both the NaCL module and runner for future
-deprecation in the Fluorine release, the default box_type has changed from
-`secretbox` to `sealedbox`.  SecretBox is data encrypted using private key
-`sk` and Sealedbox is encrypted using public key `pk`
+removal in the Neon release, the default "box_type" has changed from
+``secretbox`` to ``sealedbox``.  SecretBox is data encrypted using private key
+``sk`` and Sealedbox is encrypted using public key ``pk``.
 
 Deprecations
 ------------
