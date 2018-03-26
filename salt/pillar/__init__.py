@@ -696,11 +696,22 @@ class Pillar(object):
                                             nstate = {
                                                 key_fragment: nstate
                                             }
-                                    include_states.append(nstate)
+                                    if not self.opts.get('pillar_includes_override_sls', False):
+                                        include_states.append(nstate)
+                                    else:
+                                        state = merge(
+                                            state,
+                                            nstate,
+                                            self.merge_strategy,
+                                            self.opts.get('renderer', 'yaml'),
+                                            self.opts.get('pillar_merge_lists', False))
                                 if err:
                                     errors += err
-                        if include_states:
-                            # merge included state(s) with the current state merged last
+
+                        if not self.opts.get('pillar_includes_override_sls', False):
+                            # merge included state(s) with the current state
+                            # merged last to ensure that its values are
+                            # authoritative.
                             include_states.append(state)
                             state = None
                             for s in include_states:

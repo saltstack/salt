@@ -680,6 +680,9 @@ VALID_OPTS = {
     # Recursively merge lists by aggregating them instead of replacing them.
     'pillar_merge_lists': bool,
 
+    # If True, values from included pillar SLS targets will override
+    'pillar_includes_override_sls': bool,
+
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
     'top_file_merging_strategy': str,
@@ -1139,6 +1142,9 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
+    'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -1467,6 +1473,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',

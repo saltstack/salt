@@ -1,0 +1,15 @@
+===========================
+Salt 2017.7.6 Release Notes
+===========================
+
+Version 2017.7.6 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+
+Option to Return to Previous Pillar Include Behavior
+----------------------------------------------------
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+The :conf_master:`pillar_includes_override_sls` option has been added allow
+users to switch back to the pre-2017.7.3 behavior.
