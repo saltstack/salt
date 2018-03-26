@@ -1697,6 +1697,10 @@ class State(object):
         '''
         The target function to call that will create the parallel thread/process
         '''
+        # we need to re-record start/end duration here because it is impossible to
+        # correctly calculate further down the chain
+        utc_start_time = datetime.datetime.utcnow()
+
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata['full']](*cdata['args'],
@@ -1721,6 +1725,14 @@ class State(object):
                 'comment': 'An exception occurred in this state: {0}'.format(
                     trb)
             }
+
+        utc_finish_time = datetime.datetime.utcnow()
+        delta = (utc_finish_time - utc_start_time)
+        # duration in milliseconds.microseconds
+        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        ret['duration'] = duration
+
+
         troot = os.path.join(self.opts['cachedir'], self.jid)
         tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
