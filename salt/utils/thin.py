@@ -307,7 +307,7 @@ def _get_supported_py_config(tops, extended_cfg):
         elif py_ver == 3:
             pymap.append('py3:3:0')
 
-    for ns, cfg in _six.iteritems(get_ext_tops(copy.deepcopy(extended_cfg) or {})):
+    for ns, cfg in _six.iteritems(copy.deepcopy(extended_cfg) or {}):
         pymap.append('{}:{}:{}'.format(ns, *cfg.get('py-version')))
     pymap.append('')
 
