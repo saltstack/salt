@@ -263,7 +263,6 @@ For example:
 
 # Import python libs
 from __future__ import absolute_import
-import collections
 import difflib
 import itertools
 import logging
@@ -614,7 +613,7 @@ def _find_keep_files(root, keep):
     '''
     real_keep = set()
     real_keep.add(root)
-    if isinstance(keep, collections.Iterable):
+    if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
@@ -634,7 +633,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
-    real_keep = _find_keep_files_old(root, keep)
+    real_keep = _find_keep_files(root, keep)
     removed = set()
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
