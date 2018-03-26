@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
+import copy
 import shutil
 import tarfile
 import zipfile
@@ -288,6 +289,31 @@ def get_tops(extra_mods='', so_mods=''):
     return tops
 
 
+def _get_supported_py_config(tops, extended_cfg):
+    '''
+    Based on the Salt SSH configuration, create a YAML configuration
+    for the supported Python interpreter versions. This is then written into the thin.tgz
+    archive and then verified by salt.client.ssh.ssh_py_shim.get_executable()
+
+    Note: Minimum default of 2.x versions is 2.7 and 3.x is 3.0, unless specified in namespaces.
+
+    :return:
+    '''
+    pymap = []
+    for py_ver, tops in _six.iteritems(copy.deepcopy(tops)):
+        py_ver = int(py_ver)
+        if py_ver == 2:
+            pymap.append('py2:2:7')
+        elif py_ver == 3:
+            pymap.append('py3:3:0')
+
+    for ns, cfg in _six.iteritems(get_ext_tops(copy.deepcopy(extended_cfg) or {})):
+        pymap.append('{}:{}:{}'.format(ns, *cfg.get('py-version')))
+    pymap.append('')
+
+    return salt.utils.stringutils.to_bytes(os.linesep.join(pymap))
+
+
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
              python2_bin='python2', python3_bin='python3', absonly=True,
              compress='gzip', extended_cfg=None):
@@ -318,6 +344,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     thinver = os.path.join(thindir, 'version')
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
+    pymap_cfg = os.path.join(thindir, 'supported-versions')
+
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
         fp_.write(_get_salt_call('pyall', **_get_ext_namespaces(extended_cfg)))
 
@@ -398,6 +426,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         else:
             log.error(tops_failure_msg, 'collecting', python2_bin)
             log.debug(stderr)
+
+    with salt.utils.files.fopen(pymap_cfg, 'wb') as fp_:
+        fp_.write(_get_supported_py_config(tops=tops_py_version_mapping, extended_cfg=extended_cfg))
 
     if compress == 'gzip':
         tfp = tarfile.open(thintar, 'w:gz', dereference=True)
@@ -485,14 +516,15 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                             tfp.add(os.path.join(root, name), arcname=arcname)
 
     os.chdir(thindir)
-    tfp.add('salt-call')
     with salt.utils.files.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, 'w+') as fp_:
         fp_.write(str(sys.version_info.major))  # future lint: disable=blacklisted-function
     os.chdir(os.path.dirname(thinver))
-    tfp.add('version')
-    tfp.add('.thin-gen-py-version')
+
+    for fname in ['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']:
+        tfp.add(fname)
+
     if start_dir:
         os.chdir(start_dir)
     tfp.close()
