@@ -593,3 +593,15 @@ class SSHThinTestCase(TestCase):
         assert len(out) == 2
         for t_line in ['py3:3:0', 'py2:2:7']:
             assert t_line in out
+
+    def test_get_supported_py_config_ext_tops(self):
+        '''
+        Test collecting proper py-versions. Should return proper ext conf tops.
+        :return:
+        '''
+        tops = {}
+        ext_cfg = {'solar-interference': {'py-version': [2, 6]}, 'second-system-effect': {'py-version': [2, 7]}}
+        out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
+            tops=tops, extended_cfg=ext_cfg)).strip().split('\n')
+        for t_line in ['second-system-effect:2:7', 'solar-interference:2:6']:
+            assert t_line in out
