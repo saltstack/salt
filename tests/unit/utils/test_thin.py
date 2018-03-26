@@ -471,7 +471,7 @@ class SSHThinTestCase(TestCase):
         arc_name, arc_mode = thin.tarfile.method_calls[0][1]
         assert arc_name == 'thin/thin.tgz'
         assert arc_mode == 'w:gz'
-        for idx, fname in enumerate(['salt-call', 'version', '.thin-gen-py-version']):
+        for idx, fname in enumerate(['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']):
             assert thin.tarfile.open().method_calls[idx + 4][1][0] == fname
         thin.tarfile.open().close.assert_called()
 
@@ -515,7 +515,7 @@ class SSHThinTestCase(TestCase):
             'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
             'pyall/root/r1', 'pyall/root/r2', 'pyall/root/r3', 'pyall/root2/r4', 'pyall/root2/r5', 'pyall/root2/r6'
         ]
-        for cl in thin.tarfile.open().method_calls[:-4]:
+        for cl in thin.tarfile.open().method_calls[:-5]:
             arcname = cl[2].get('arcname')
             assert arcname in files
             files.pop(files.index(arcname))
@@ -565,7 +565,7 @@ class SSHThinTestCase(TestCase):
                  'namespace/py27/root/r1', 'namespace/py27/root/r2', 'namespace/py27/root/r3',
                  'namespace/py27/root2/r4', 'namespace/py27/root2/r5', 'namespace/py27/root2/r6'
         ]
-        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-4]):
+        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-5]):
             arcname = cl[2].get('arcname')
             assert arcname in files
             files.pop(files.index(arcname))
