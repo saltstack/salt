@@ -423,6 +423,17 @@ def running(name,
 
     .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
 
+    To start a container with no network connectivity (only possible in
+    Fluorine and later) pass this option as an empty list. For example:
+
+    .. code-block:: yaml
+
+        foo:
+          docker_container.running:
+            - image: myuser/myimage:foo
+            - networks: []
+
+
     **CONTAINER CONFIGURATION PARAMETERS**
 
     auto_remove (or *rm*) : False
