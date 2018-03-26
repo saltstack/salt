@@ -186,6 +186,7 @@ disk_type
     This option allow the disk type to be set to HDD or SSD. The default is
     HDD.
 
+.. versionadded:: Fluorine
 image_password
     A password is set on the image for the "root" or "Administrator" account.
     This field may only be set during volume creation. Only valid with 
