@@ -639,18 +639,35 @@ The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``te
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
 For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
 
-Windows Installer: Changes to existing config handling
-------------------------------------------------------
+Windows Installer: Changes to config handling
+---------------------------------------------
 Behavior with existing configuration has changed. With previous installers the
 existing config was used and the master and minion id could be modified via the
 installer. It was problematic in that it didn't account for configuration that
 may be defined in the ``minion.d`` directory. This change gives you the option
-via a checkbox to either use the existing config with out changes or the default
-config using values you pass to the installer. If you choose to use the existing
-config then no changes are made. If not, the existing config is deleted, to
-include the ``minion.d`` directory, and the default config is used. A
-command-line switch (``/use-existing-config``) has also been added to control
-this behavior.
+via a drop-down list to use one of the following:
+
+- Default Config: Use the config that comes with the installer
+- Existing Config: Use the current config without changes
+- Custom Config: Select a custom config using the file picker
+
+The existing config option will only be available if the installer detects an
+existing config. If there is an existing config, and you choose ``Default`` or
+``Custom``, the existing config will be deleted, including the ``minion.d``
+directory, and replaced by your selection.
+
+The ``Default Config`` and ``Custom Config`` options will allow you to modify
+the Master and the Minion ID. ``Existing Config`` will leave the existing
+configuration unchanged.
+
+These settings can be defined on the command line using the following switches:
+
+- ``/default-config``
+- ``/custom-config=C:\Path\To\Custom\Config\minion``
+
+If neither option is passed and there is an existing config, the default is to
+use the existing config. If there is no existing config (new install) the
+default config will be used.
 
 Windows Installer: Multi-master configuration
 ---------------------------------------------
