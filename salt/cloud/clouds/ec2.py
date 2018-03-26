@@ -1212,11 +1212,11 @@ def get_imageid(vm_):
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i,j: cmp(_t(i), _t(j))
+                      lambda i, j: cmp(_t(i), _t(j))
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
- 
+
 
 def _get_subnetname_id(subnetname):
     '''
