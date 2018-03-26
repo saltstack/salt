@@ -580,3 +580,16 @@ class SSHThinTestCase(TestCase):
         ext_cfg = {}
         out = thin._get_supported_py_config(tops=tops, extended_cfg=ext_cfg)
         assert type(salt.utils.stringutils.to_bytes('')) == type(out)
+
+    def test_get_supported_py_config_base_tops(self):
+        '''
+        Test collecting proper py-versions. Should return proper base tops.
+        :return:
+        '''
+        tops = {'3': ['/groundkeepers', '/stole'], '2': ['/the-root', '/password']}
+        ext_cfg = {}
+        out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
+            tops=tops, extended_cfg=ext_cfg)).strip().split('\n')
+        assert len(out) == 2
+        for t_line in ['py3:3:0', 'py2:2:7']:
+            assert t_line in out
