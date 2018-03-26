@@ -9,6 +9,7 @@ Enforce state for SSL/TLS
 from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
+import logging
 
 __virtualname__ = 'tls'
 
