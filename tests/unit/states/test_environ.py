@@ -14,6 +14,7 @@ from tests.support.mock import (
 # Import salt libs
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
+import salt.modules.reg as regmodule
 import salt.utils as utils
 
 
@@ -23,7 +24,10 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         loader_globals = {
             '__env__': 'base',
             '__opts__': {'test': False},
-            '__salt__': {'environ.setenv': envmodule.setenv}
+            '__salt__': {
+                'environ.setenv': envmodule.setenv,
+                'reg.read_value': regmodule.read_value,
+            }
         }
         return {envstate: loader_globals, envmodule: loader_globals}
 
