@@ -4,6 +4,22 @@
 Salt 2018.3.0 Release Notes - Codename Oxygen
 =============================================
 
+Unicode/Python 3 Compatibility Improvements
+-------------------------------------------
+
+This release fixes a number of nagging issues with Unicode strings in Salt
+under Python 2 (ex.  ``'ascii' codec can't decode byte 0xd0``). For best
+results, use a UTF-8 locale (such as by setting the ``LANG`` environment
+variable to one which supports UTF-8. For example ``en_US.UTF-8``,
+``de_DE.UTF-8``, ``ru_RU.UTF-8``, ``C.UTF-8``).
+
+Additionally, a number of Python 3 compatibility fixes have been made, many of
+them having to do with file I/O and str/bytes mismatches.
+
+We continue to work toward improving both Unicode and Python 3 compatibility
+and welcome any feedback.
+
+
 Lots of Docker Improvements
 ---------------------------
 
