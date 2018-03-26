@@ -1677,6 +1677,9 @@ def running(name,
         image = six.text_type(image)
 
     try:
+        # Since we're rewriting the "networks" value below, save the original
+        # value here.
+        configured_networks = networks
         networks = _parse_networks(networks)
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
@@ -1811,9 +1814,14 @@ def running(name,
         post_net_connect = __salt__['docker.inspect_container'](
             temp_container_name)
 
-        if networks:
+        if configured_networks is not None:
             # Use set arithmetic to determine the networks which are connected
-            # but not explicitly defined. They will be disconnected below.
+            # but not explicitly defined. They will be disconnected below. Note
+            # that we check configured_networks because it represents the
+            # original (unparsed) network configuration. When no networks
+            # argument is used, the parsed networks will be an empty list, so
+            # it's not sufficient to do a boolean check on the "networks"
+            # variable.
             extra_nets = set(
                 post_net_connect.get('NetworkSettings', {}).get('Networks', {})
             ) - set(networks)
@@ -2206,7 +2214,7 @@ def run(name,
         return ret
 
     try:
-        if 'networks' in kwargs:
+        if 'networks' in kwargs and kwargs['networks'] is not None:
             kwargs['networks'] = _parse_networks(kwargs['networks'])
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
