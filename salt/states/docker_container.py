@@ -384,11 +384,15 @@ def running(name,
     **NETWORK MANAGEMENT**
 
     .. versionadded:: 2018.3.0
+    .. versionchanged:: Fluorine
+        If the ``networks`` option is used, any networks (including the default
+        ``bridge`` network) which are not specified will be disconnected.
 
     The ``networks`` argument can be used to ensure that a container is
     attached to one or more networks. Optionally, arguments can be passed to
     the networks. In the example below, ``net1`` is being configured with
-    arguments, while ``net2`` is being configured *without* arguments:
+    arguments, while ``net2`` and ``bridge`` are being configured *without*
+    arguments:
 
     .. code-block:: yaml
 
@@ -402,6 +406,7 @@ def running(name,
                   - baz
                 - ipv4_address: 10.0.20.50
               - net2
+              - bridge
             - require:
               - docker_network: net1
               - docker_network: net2
@@ -1802,8 +1807,26 @@ def running(name,
                 ret['result'] = False
                 comments.append(exc.__str__())
                 return _format_comments(ret, comments)
+
         post_net_connect = __salt__['docker.inspect_container'](
             temp_container_name)
+
+        if networks:
+            # Use set arithmetic to determine the networks which are connected
+            # but not explicitly defined. They will be disconnected below.
+            extra_nets = set(
+                post_net_connect.get('NetworkSettings', {}).get('Networks', {})
+            ) - set(networks)
+
+            if extra_nets:
+                for extra_net in extra_nets:
+                    __salt__['docker.disconnect_container_from_network'](
+                        temp_container_name,
+                        extra_net)
+
+                # We've made changes, so we need to inspect the container again
+                post_net_connect = __salt__['docker.inspect_container'](
+                    temp_container_name)
 
         net_changes = __salt__['docker.compare_container_networks'](
             pre_net_connect, post_net_connect)
