@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
-import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -242,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        expr_form=None):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -288,17 +286,6 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
