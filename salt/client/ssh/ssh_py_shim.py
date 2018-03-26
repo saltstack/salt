@@ -221,13 +221,24 @@ def get_executable():
     '''
     Find executable which matches supported python version in the thin
     '''
+    pymap = {}
+    with open(os.path.join(OPTIONS.saltdir, 'supported-versions')) as _fp:
+        for line in _fp.readlines():
+            ns, v_maj, v_min = line.strip().split(':')
+            pymap[ns] = (int(v_maj), int(v_min))
+
     pycmds = (sys.executable, 'python3', 'python27', 'python2.7', 'python26', 'python2.6', 'python2', 'python')
     for py_cmd in pycmds:
-        cmd = py_cmd + ' -c  "import sys; print(\'py{0[0]}\'.format(sys.version_info));"'
+        cmd = py_cmd + (' -c  "import sys; sys.stdout.write(\'{}:{}\''
+                        '.format(sys.version_info.major, sys.version_info.minor))"')
         stdout, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
-        importdir = stdout.decode(encoding=get_system_encoding(), errors="replace").strip()
-        if importdir and os.path.exists(os.path.join(OPTIONS.saltdir, importdir)):
-            return py_cmd
+        stdout = stdout.decode(encoding=get_system_encoding(), errors="replace").strip()
+        if not stdout:
+            continue
+        c_vn = tuple([int(x) for x in stdout.split(':')])
+        for ns in pymap:
+            if c_vn >= pymap[ns] and os.path.exists(os.path.join(OPTIONS.saltdir, ns)):
+                return py_cmd
 
     sys.exit(EX_THIN_PYTHON_INVALID)
 
