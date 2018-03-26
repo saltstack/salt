@@ -42,8 +42,8 @@ def get(key,
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string
-    except __opts__['pillar_raise_on_missing'] is set to True, in which case a
-    KeyError will be raised.
+    except ``__opts__['pillar_raise_on_missing']`` is set to True, in which
+    case a ``KeyError`` exception will be raised.
 
     If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
@@ -53,10 +53,17 @@ def get(key,
 
         {'pkg': {'apache': 'httpd'}}
 
-    To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed::
+    To retrieve the value associated with the ``apache`` key in the ``pkg``
+    dict this key can be passed as::
 
         pkg:apache
+
+    key
+        The pillar key to get value from
+
+    default
+        If specified, return this value in case when named pillar value does
+        not exist.
 
     merge : ``False``
         If ``True``, the retrieved values will be merged into the passed
