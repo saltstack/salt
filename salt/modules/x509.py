@@ -320,9 +320,9 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_bytes(fp_.read())
+            return salt.utils.stringutils.to_str(fp_.read())
     else:
-        return input_
+        return salt.utils.stringutils.to_str(input_)
 
 
 def _parse_subject(subject):
@@ -852,7 +852,7 @@ def create_private_key(path=None,
             pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
-        return bio.read_all()
+        return salt.utils.stringutils.to_str(bio.read_all())
 
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
