@@ -150,12 +150,9 @@ EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
-    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
-        "import sys; sys.exit(not (sys.version_info >= (2, 6)));"
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6)));"
     then
-        py_cmd_path=`"$py_cmd" -c \
-                   'from __future__ import print_function;
-                   import sys; print(sys.executable);'`
+        py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function;import sys; print(sys.executable);'`
         cmdpath=`command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null`
         if file $cmdpath | grep "shell script" > /dev/null
         then
