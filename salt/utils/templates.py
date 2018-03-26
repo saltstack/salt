@@ -410,7 +410,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.locales.sdecode(value)
+        try:
+            decoded_context[key] = salt.utils.to_unicode(value, encoding=SLS_ENCODING)
+        except UnicodeDecodeError as ex:
+            log.debug(
+                "Failed to decode using default encoding (%s), trying system encoding",
+                SLS_ENCODING,
+            )
+            decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
