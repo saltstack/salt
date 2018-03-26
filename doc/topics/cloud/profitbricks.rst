@@ -203,6 +203,7 @@ public_lan
     LAN exists, then a new public LAN will be created. The value accepts a LAN
     ID (integer).
 
+.. versionadded:: Fluorine
 public_ips
     Public IPs assigned to the NIC in the public LAN.
 
@@ -225,6 +226,7 @@ private_lan
     LAN exists, then a new private LAN will be created. The value accepts a LAN
     ID (integer).
 
+.. versionadded:: Fluorine
 private_ips
     Private IPs assigned in the private LAN. NAT setting is ignored when this setting is active.
 
