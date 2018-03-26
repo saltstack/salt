@@ -5218,9 +5218,14 @@ def copy(
         subdir=False,
         **kwargs):
     '''
-    If the source file exists on the system, copy it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the file defined by the ``source`` option exists on the minion, copy it
+    to the named path. The file will not be overwritten if it already exists,
+    unless the ``force`` option is set to ``True``.
+
+    .. note::
+        This state only copies files from one location on a minion to another
+        location on the same minion. For copying files from the master, use a
+        :py:func:`file.managed <salt.states.file.managed>` state.
 
     name
         The location of the file to copy to

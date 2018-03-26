@@ -46,7 +46,8 @@ def __virtual__():
         'Void',
         'Mint',
         'Raspbian',
-        'XenServer'
+        'XenServer',
+        'Cumulus'
     ))
     if __grains__.get('os', '') in disable:
         return (False, 'Your OS is on the disabled list')

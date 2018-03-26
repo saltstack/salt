@@ -3430,7 +3430,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 this_element_value = b''.join([this_element_value.encode('utf-16-le'),
                                                encoded_null])
         elif etree.QName(element).localname == 'multiText':
-            this_vtype = 'REG_MULTI_SZ'
+            this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
                 this_element_value = '{0}{1}{1}'.format(chr(0).join(this_element_value), chr(0))
         elif etree.QName(element).localname == 'list':
