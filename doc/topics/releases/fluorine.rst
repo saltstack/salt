@@ -140,3 +140,11 @@ The ``trafficserver`` state had the following changes:
   function instead.
 
 The ``win_update`` state has been removed. Please use the ``win_wua`` state instead.
+
+Utils Deprecations
+==================
+
+The ``vault`` utils module had the following changes:
+
+- Support for specifying Vault connection data within a 'profile has been removed.
+  Please see the vault documentation for details on the new configuration schema.
