@@ -198,15 +198,15 @@ The ``vault`` utils module had the following changes:
 SaltSSH major updates
 =====================
 
-SaltSSH now can work across different major Python versions. Python 2.7 ~ Python 3.x
-is now supported transparently. Feature works transparently. Requirement is, however,
-that the Master machine should have installed Salt and related dependencies for
-Python 2 and Python 3 should be available and importable there.
+SaltSSH now works across different major Python versions. Python 2.7 ~ Python 3.x
+are now supported transparently. Requirement is, however, that the SaltMaster should
+have installed Salt, including all related dependencies for Python 2 and Python 3.
+Everything needs to be importable from the respective Python environment.
 
-SaltSSH also can pack whole additional, another version of Salt. For example, if there
-would be an old box, running only outdated and unsupported Python 2.6, it is still
-would be possible from within Python 3.5 or newer machine to access it. This feature
-requires an additional configuration /etc/salt/master file as follows:
+SaltSSH can bundle up an arbitrary version of Salt. If there would be an old box for
+example, running an outdated and unsupported Python 2.6, it is still possible from
+a SaltMaster with Python 3.5 or newer to access it. This feature requires an additional
+configuration in /etc/salt/master as follows:
 
 
 .. code-block:: yaml
