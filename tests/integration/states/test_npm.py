@@ -6,12 +6,14 @@
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.modules.cmdmod as cmd
@@ -42,10 +44,14 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
+        user = os.environ.get('SUDO_USER', 'root')
+        npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
+        self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
+        ret = self.run_state('npm.installed', name='request/request#v2.81.1', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('npm.removed', name='git://github.com/request/request')
+        ret = self.run_state('npm.removed', name='git://github.com/request/request', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
+        self.run_state('file.absent', name=npm_dir)
 
     @requires_network()
     @destructiveTest

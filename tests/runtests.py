@@ -736,6 +736,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
+                return status
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
                     status.append(self.run_integration_suite(**TEST_SUITES[suite]))

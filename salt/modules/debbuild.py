@@ -426,6 +426,9 @@ def build(runas,
     # use default /var/cache/pbuilder/result
     results_dir = '/var/cache/pbuilder/result'
 
+    ## ensure clean
+    __salt__['cmd.run']('rm -fR {0}'.format(results_dir))
+
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
         afile = os.path.basename(dsc)
@@ -436,10 +439,10 @@ def build(runas,
             try:
                 __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
 
-                cmd = 'pbuilder --update --override-config'
+                cmd = 'pbuilder update --override-config'
                 __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
-                cmd = 'pbuilder --build {0}'.format(dsc)
+                cmd = 'pbuilder build --debbuildopts "-sa" {0}'.format(dsc)
                 __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
                 # ignore local deps generated package file
