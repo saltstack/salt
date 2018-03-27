@@ -12,6 +12,7 @@ import datetime
 import logging
 
 __virtualname__ = 'tls'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
