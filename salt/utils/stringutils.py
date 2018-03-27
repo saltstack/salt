@@ -294,15 +294,24 @@ def build_whitespace_split_regex(text):
 
 def expr_match(line, expr):
     '''
-    Evaluate a line of text against an expression. First try a full-string
-    match, next try globbing, and then try to match assuming expr is a regular
+    Evaluate a line of text against an expression. Tries to match expr first as
+    a glob using fnmatch.fnmatch(), and then tries to match expr as a regular
     expression. Originally designed to match minion IDs for
     whitelists/blacklists.
+
+    Note that this also does exact matches, as fnmatch.fnmatch() will return
+    ``True`` when no glob characters are used and the string is an exact match:
+
+    .. code-block:: python
+
+        >>> fnmatch.fnmatch('foo', 'foo')
+        True
     '''
-    if line == expr:
-        return True
-    if fnmatch.fnmatch(line, expr):
-        return True
+    try:
+        if fnmatch.fnmatch(line, expr):
+            return True
+    except TypeError:
+        pass
     try:
         if re.match(r'\A{0}\Z'.format(expr), line):
             return True
