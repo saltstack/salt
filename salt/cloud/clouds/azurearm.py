@@ -533,10 +533,10 @@ def list_nodes_full(call=None):
                 image_ref['sku'],
                 image_ref['version'],
             ])
-        except TypeError:
+        except (TypeError, KeyError):
             try:
                 node['image'] = node['storage_profile']['os_disk']['image']['uri']
-            except TypeError:
+            except (TypeError, KeyError):
                 node['image'] = None
         try:
             netifaces = node['network_profile']['network_interfaces']
