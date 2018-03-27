@@ -19,6 +19,7 @@
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import errno
 import subprocess
 
 # Import Salt Testing Libs
@@ -38,10 +39,18 @@ HAS_SYMLINKS = None
 
 
 def no_symlinks():
+    '''
+    Check if git is installed and has symlinks enabled in the configuration.
+    '''
     global HAS_SYMLINKS
     if HAS_SYMLINKS is not None:
         return not HAS_SYMLINKS
-    output = subprocess.check_output('git config --get core.symlinks', shell=True)
+    output = ''
+    try:
+        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+    except OSError as ex:
+        if es.errno != errno.ENOENT:
+            raise
     HAS_SYMLINKS = False
     if output.strip() == 'true':
         HAS_SYMLINKS = True
