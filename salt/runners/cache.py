@@ -76,7 +76,7 @@ def pillar(tgt=None, tgt_type='glob'):
     return cached_pillar
 
 
-def mine(tgt=None, tgt_type='glob'):
+def mine(tgt=None, tgt_type='glob', **kwargs):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
