@@ -55,6 +55,9 @@ VALID_REF_TYPES = _DEFAULT_MASTER_OPTS['gitfs_ref_types']
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
+# Params which are global only and cannot be overridden for a single remote.
+GLOBAL_ONLY = ()
+
 SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
@@ -357,7 +360,7 @@ class GitProvider(object):
                         salt.utils.url.strip_proto(saltenv_ptr['mountpoint'])
 
         for key, val in six.iteritems(self.conf):
-            if key not in PER_SALTENV_PARAMS:
+            if key not in PER_SALTENV_PARAMS and not hasattr(self, key):
                 setattr(self, key, val)
 
         for key in PER_SALTENV_PARAMS:
@@ -489,7 +492,7 @@ class GitProvider(object):
     @classmethod
     def add_conf_overlay(cls, name):
         '''
-        Programatically determine config value based on the desired saltenv
+        Programmatically determine config value based on the desired saltenv
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \
@@ -973,13 +976,13 @@ class GitProvider(object):
         '''
         Resolve dynamically-set branch
         '''
-        if self.branch == '__env__':
+        if self.role == 'git_pillar' and self.branch == '__env__':
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
-            return self.opts['{0}_base'.format(self.role)] \
+            return self.base \
                 if target == 'base' \
-                else target
+                else six.text_type(target)
         return self.branch
 
     def get_tree(self, tgt_env):
@@ -1021,7 +1024,7 @@ class GitProvider(object):
             try:
                 self.branch, self.url = self.id.split(None, 1)
             except ValueError:
-                self.branch = self.opts['{0}_branch'.format(self.role)]
+                self.branch = self.conf['branch']
                 self.url = self.id
         else:
             self.url = self.id
@@ -2026,8 +2029,8 @@ class GitBase(object):
     Base class for gitfs/git_pillar
     '''
     def __init__(self, opts, remotes=None, per_remote_overrides=(),
-                 per_remote_only=PER_REMOTE_ONLY, git_providers=None,
-                 cache_root=None, init_remotes=True):
+                 per_remote_only=PER_REMOTE_ONLY, global_only=GLOBAL_ONLY,
+                 git_providers=None, cache_root=None, init_remotes=True):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
@@ -2085,10 +2088,12 @@ class GitBase(object):
             self.init_remotes(
                 remotes if remotes is not None else [],
                 per_remote_overrides,
-                per_remote_only)
+                per_remote_only,
+                global_only)
 
     def init_remotes(self, remotes, per_remote_overrides=(),
-                     per_remote_only=PER_REMOTE_ONLY):
+                     per_remote_only=PER_REMOTE_ONLY,
+                     global_only=GLOBAL_ONLY):
         '''
         Initialize remotes
         '''
@@ -2121,7 +2126,9 @@ class GitBase(object):
             failhard(self.role)
 
         per_remote_defaults = {}
-        for param in override_params:
+        global_values = set(override_params)
+        global_values.update(set(global_only))
+        for param in global_values:
             key = '{0}_{1}'.format(self.role, param)
             if key not in self.opts:
                 log.critical(
@@ -2967,8 +2974,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_base'.format(self.role)]
-                    env = 'base' if repo.branch == base_branch else repo.branch
+                    env = 'base' if repo.branch == repo.base else repo.branch
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -3095,6 +3101,9 @@ class WinRepo(GitBase):
     Functionality specific to the winrepo runner
     '''
     role = 'winrepo'
+    # Need to define this in case we try to reference it before checking
+    # out the repos.
+    winrepo_dirs = {}
 
     def checkout(self):
         '''

@@ -81,13 +81,13 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
 '''
 
-# Python libs
+# Import Python libs
 from __future__ import absolute_import
 import json
 import logging
 
-# Salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
 
 __virtualname__ = 'azurearm_resource'
 
@@ -424,7 +424,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
             return ret
 
         try:
-            with salt.utils.fopen(sfn, 'r') as prf:
+            with salt.utils.files.fopen(sfn, 'r') as prf:
                 temp_rule = json.load(prf)
         except Exception as exc:
             ret['comment'] = 'Unable to load policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)

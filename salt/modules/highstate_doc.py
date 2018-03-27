@@ -178,7 +178,7 @@ If you wish to customize the document format:
             - mode: '0640'
 
 
-Some `replace_text_regex` values that might be helpfull.
+Some `replace_text_regex` values that might be helpful.
 
     ## CERTS
     '-----BEGIN RSA PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'

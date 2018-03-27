@@ -2054,14 +2054,16 @@ class Minion(MinionBase):
 
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        # dup name spaced event
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to False in Neon Salt release
+            self._fire_master(
+                'Minion {0} started at {1}'.format(
+                self.opts['id'],
+                time.asctime()
+                ),
+                'minion_start'
+            )
+        # send name spaced event
         self._fire_master(
             'Minion {0} started at {1}'.format(
             self.opts['id'],
@@ -2602,7 +2604,7 @@ class Minion(MinionBase):
             def ping_master():
                 try:
                     def ping_timeout_handler(*_):
-                        if not self.opts.get('auth_safemode', True):
+                        if self.opts.get('auth_safemode', False):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
@@ -2756,14 +2758,16 @@ class Syndic(Minion):
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-                self.opts['id'],
-                time.asctime()
-            ),
-            'syndic_start',
-            sync=False,
-        )
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to false in Neon Salt release.
+            self._fire_master(
+                'Syndic {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                ),
+                'syndic_start',
+                sync=False,
+            )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
                 self.opts['id'],
