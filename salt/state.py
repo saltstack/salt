@@ -1721,7 +1721,6 @@ class State(object):
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
 
-
         troot = os.path.join(self.opts['cachedir'], self.jid)
         tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
@@ -1743,7 +1742,7 @@ class State(object):
         # enough to not raise another KeyError as the name is easily
         # guessable and fallback in all cases to present the real
         # exception to the user
-        if len(cdata['args']) > 0:
+        if 'args' in cdata and cdata['args']:
             name = cdata['args'][0]
         elif 'name' in cdata['kwargs']:
             name = cdata['kwargs']['name']
@@ -1892,7 +1891,7 @@ class State(object):
             # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
-            if len(cdata['args']) > 0:
+            if 'args' in cdata and cdata['args']:
                 name = cdata['args'][0]
             elif 'name' in cdata['kwargs']:
                 name = cdata['kwargs']['name']
