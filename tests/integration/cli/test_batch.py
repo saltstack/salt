@@ -18,7 +18,7 @@ class BatchTest(ShellCase):
         '''
         Tests executing a simple batch command to help catch regressions
         '''
-        ret = 'Executing run on [\'sub_minion\']'
+        ret = 'Executing run on [{0}]'.format(repr('sub_minion'))
 
         cmd = self.run_salt('\'*minion\' test.echo \'batch testing\' -b 50%')
         self.assertIn(ret, cmd)
@@ -28,7 +28,7 @@ class BatchTest(ShellCase):
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         '''
-        ret = "Executing run on ['minion', 'sub_minion']"
+        ret = "Executing run on [{0}, {1}]".format(repr('minion'), repr('sub_minion'))
         cmd = self.run_salt('\'*minion\' test.ping --batch-size 2')
         self.assertIn(ret, cmd)
 
@@ -38,8 +38,8 @@ class BatchTest(ShellCase):
         targeting.
         '''
         os_grain = ''
-        sub_min_ret = "Executing run on ['sub_minion']"
-        min_ret = "Executing run on ['minion']"
+        sub_min_ret = "Executing run on [{0}]".format(repr('sub_minion'))
+        min_ret = "Executing run on [{0}]".format(repr('minion'))
 
         for item in self.run_salt('minion grains.get os'):
             if item != 'minion':
