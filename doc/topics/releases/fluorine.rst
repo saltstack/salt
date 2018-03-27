@@ -146,5 +146,6 @@ Utils Deprecations
 
 The ``vault`` utils module had the following changes:
 
-- Support for specifying Vault connection data within a 'profile has been removed.
-  Please see the vault documentation for details on the new configuration schema.
+- Support for specifying Vault connection data within a 'profile' has been removed.
+  Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
+  details on the new configuration schema.
