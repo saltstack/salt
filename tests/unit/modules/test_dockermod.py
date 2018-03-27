@@ -65,6 +65,26 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         docker_mod.__context__.pop('docker.client', None)
 
+    def test_failed_login(self):
+        '''
+        Check that when docker.login failed a retcode other then 0
+        is part of the return.
+        '''
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {
+            'stdout': '',
+            'stderr': 'login failed',
+            'retcode': 1
+        }
+        with patch.dict(docker_mod.__pillar__, {'docker-registries': {'portus.example.com:5000':
+                {'username': 'admin', 'password': 'linux12345', 'email': 'tux@example.com'}}}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+                    ret = docker_mod.login('portus.example.com:5000')
+                    self.assertIn('retcode', ret)
+                    self.assertNotEqual(ret['retcode'], 0)
+
     def test_ps_with_host_true(self):
         '''
         Check that docker.ps called with host is ``True``,

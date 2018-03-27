@@ -1790,7 +1790,7 @@ class State(object):
         ret = {'name': cdata['args'][0],
                 'result': None,
                 'changes': {},
-                'comment': 'Started in a seperate process',
+                'comment': 'Started in a separate process',
                 'proc': proc}
         return ret
 
@@ -2678,14 +2678,13 @@ class State(object):
         listeners = []
         crefs = {}
         for chunk in chunks:
-            crefs[(chunk['state'], chunk['name'])] = chunk
-            crefs[(chunk['state'], chunk['__id__'])] = chunk
+            crefs[(chunk['state'], chunk['__id__'], chunk['name'])] = chunk
             if 'listen' in chunk:
-                listeners.append({(chunk['state'], chunk['__id__']): chunk['listen']})
+                listeners.append({(chunk['state'], chunk['__id__'], chunk['name']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
                     for key, val in six.iteritems(l_in):
-                        listeners.append({(key, val): [{chunk['state']: chunk['__id__']}]})
+                        listeners.append({(key, val, 'lookup'): [{chunk['state']: chunk['__id__']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
@@ -2701,7 +2700,7 @@ class State(object):
                         if not found:
                             continue
                     for lkey, lval in six.iteritems(listen_to):
-                        if (lkey, lval) not in crefs:
+                        if not any(lkey == cref[0] and lval in cref for cref in crefs):
                             rerror = {_l_tag(lkey, lval):
                                       {
                                           'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
@@ -2711,27 +2710,32 @@ class State(object):
                                       }}
                             errors.update(rerror)
                             continue
-                        to_tag = _gen_tag(crefs[(lkey, lval)])
-                        if to_tag not in running:
-                            continue
-                        if running[to_tag]['changes']:
-                            if key not in crefs:
-                                rerror = {_l_tag(key[0], key[1]):
-                                             {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
-                                              'name': 'listen_{0}:{1}'.format(key[0], key[1]),
-                                              'result': False,
-                                              'changes': {}}}
-                                errors.update(rerror)
+                        to_tags = [
+                            _gen_tag(data) for cref, data in six.iteritems(crefs) if lkey == cref[0] and lval in cref
+                        ]
+                        for to_tag in to_tags:
+                            if to_tag not in running:
                                 continue
-                            chunk = crefs[key]
-                            low = chunk.copy()
-                            low['sfun'] = chunk['fun']
-                            low['fun'] = 'mod_watch'
-                            low['__id__'] = 'listener_{0}'.format(low['__id__'])
-                            for req in STATE_REQUISITE_KEYWORDS:
-                                if req in low:
-                                    low.pop(req)
-                            mod_watchers.append(low)
+                            if running[to_tag]['changes']:
+                                if not any(key[0] == cref[0] and key[1] in cref for cref in crefs):
+                                    rerror = {_l_tag(key[0], key[1]):
+                                                 {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
+                                                  'name': 'listen_{0}:{1}'.format(key[0], key[1]),
+                                                  'result': False,
+                                                  'changes': {}}}
+                                    errors.update(rerror)
+                                    continue
+
+                                new_chunks = [data for cref, data in six.iteritems(crefs) if key[0] == cref[0] and key[1] in cref]
+                                for chunk in new_chunks:
+                                    low = chunk.copy()
+                                    low['sfun'] = chunk['fun']
+                                    low['fun'] = 'mod_watch'
+                                    low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                                    for req in STATE_REQUISITE_KEYWORDS:
+                                        if req in low:
+                                            low.pop(req)
+                                    mod_watchers.append(low)
         ret = self.call_chunks(mod_watchers)
         running.update(ret)
         for err in errors:

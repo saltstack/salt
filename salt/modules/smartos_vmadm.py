@@ -151,7 +151,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
                 ret['Error'] = res['stderr']
         return ret
     else:
-        # cleanup json file (only when succesful to help troubleshooting)
+        # cleanup json file (only when successful to help troubleshooting)
         salt.utils.files.safe_rm(vmadm_json_file)
 
         # return uuid

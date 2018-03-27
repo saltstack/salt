@@ -1540,7 +1540,7 @@ def __dict_to_deployment_spec(spec):
     '''
     Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     '''
-    spec_obj = AppsV1beta1DeploymentSpec(template="")
+    spec_obj = AppsV1beta1DeploymentSpec(template=spec.get('template', ''))
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
