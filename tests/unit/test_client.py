@@ -75,7 +75,7 @@ class LocalClientTestCase(TestCase,
         '''
         Tests that the client cleanly returns when the publisher is not running
 
-        Note: Requires IPC transport which is not supported on windows.
+        Note: Requires ZeroMQ's IPC transport which is not supported on windows.
         '''
         if self.get_config('minion')['transport'] != 'zeromq':
             self.skipTest('This test only works with ZeroMQ')
@@ -96,10 +96,10 @@ class LocalClientTestCase(TestCase,
     @skipIf(not salt.utils.is_windows(), 'Windows only test')
     def test_pub_win32(self):
         '''
-        Tests that the client raises a timeout error when using TCP transport
-        and publisher is not running.
+        Tests that the client raises a timeout error when using ZeroMQ's TCP
+        transport and publisher is not running.
 
-        Note: Requires TCP transport, this is only the default on Windows.
+        Note: Requires ZeroMQ's TCP transport, this is only the default on Windows.
         '''
         if self.get_config('minion')['transport'] != 'zeromq':
             self.skipTest('This test only works with ZeroMQ')
