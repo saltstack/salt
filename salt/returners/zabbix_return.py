@@ -71,8 +71,10 @@ def zabbix_send(key, host, output):
         if flag == 'false':
             cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
 
+
 def save_load(jid, load, minions=None):
     pass
+
 
 def returner(ret):
     changes = False
