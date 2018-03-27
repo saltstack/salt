@@ -1927,9 +1927,9 @@ def fqdns():
             fqdns.add(socket.gethostbyaddr(ip)[0])
         except (socket.error, socket.herror,
             socket.gaierror, socket.timeout) as e:
-            log.error("Exception during resolving address: " + str(e))
+            log.info("Exception during resolving address: " + str(e))
 
-    grains['fqdns'] = list(fqdns)
+    grains['fqdns'] = sorted(list(fqdns))
     return grains
 
 

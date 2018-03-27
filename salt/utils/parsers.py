@@ -715,9 +715,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # verify the default
             if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                 # Logfile is not using Syslog, verify
-                current_umask = os.umask(0o027)
-                verify_files([logfile], self.config['user'])
-                os.umask(current_umask)
+                with salt.utils.files.set_umask(0o027):
+                    verify_files([logfile], self.config['user'])
 
         if logfile is None:
             # Use the default setting if the logfile wasn't explicity set
@@ -862,21 +861,30 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
     def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
-        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
-            # On Windows, all logging including console and
-            # log file logging will go through the multiprocessing
-            # logging listener if it exists.
-            # This will allow log file rotation on Windows
-            # since only one process can own the log file
-            # for log file rotation to work.
-            log.setup_multiprocessing_logging(
-                self._get_mp_logging_listener_queue()
-            )
-            # Remove the temp logger and any other configured loggers since all of
-            # our logging is going through the multiprocessing logging listener.
-            log.shutdown_temp_logging()
-            log.shutdown_console_logging()
-            log.shutdown_logfile_logging()
+        if self._setup_mp_logging_listener_:
+            # Set multiprocessing logging level even in non-Windows
+            # environments. In non-Windows environments, this setting will
+            # propogate from process to process via fork behavior and will be
+            # used by child processes if they invoke the multiprocessing
+            # logging client.
+            log.set_multiprocessing_logging_level_by_opts(self.config)
+
+            if salt.utils.platform.is_windows():
+                # On Windows, all logging including console and
+                # log file logging will go through the multiprocessing
+                # logging listener if it exists.
+                # This will allow log file rotation on Windows
+                # since only one process can own the log file
+                # for log file rotation to work.
+                log.setup_multiprocessing_logging(
+                    self._get_mp_logging_listener_queue()
+                )
+                # Remove the temp logger and any other configured loggers since
+                # all of our logging is going through the multiprocessing
+                # logging listener.
+                log.shutdown_temp_logging()
+                log.shutdown_console_logging()
+                log.shutdown_logfile_logging()
 
     def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
         # Since we're not going to be a daemon, setup the console logger
@@ -1411,7 +1419,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             nargs=2,
             default=None,
             metavar='<FUNC-NAME> <PROVIDER>',
-            help='Perform an function that may be specific to this cloud '
+            help='Perform a function that may be specific to this cloud '
                  'provider, that does not apply to an instance. This '
                  'argument requires a provider to be specified (i.e.: nova).'
         )

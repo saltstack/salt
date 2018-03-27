@@ -254,7 +254,7 @@ def chugid_and_umask(runas, umask, group=None):
     if set_runas or set_grp:
         chugid(runas_user, runas_grp)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def get_default_group(user):

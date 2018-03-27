@@ -12,6 +12,7 @@ import functools
 import glob
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -529,16 +530,19 @@ def _run(cmd,
     if python_shell is None:
         python_shell = False
 
-    kwargs = {'cwd': cwd,
-              'shell': python_shell,
-              'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
-              'stdin': six.text_type(stdin) if stdin is not None else stdin,
-              'stdout': stdout,
-              'stderr': stderr,
-              'with_communicate': with_communicate,
-              'timeout': timeout,
-              'bg': bg,
-              }
+    new_kwargs = {'cwd': cwd,
+                  'shell': python_shell,
+                  'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
+                  'stdin': six.text_type(stdin) if stdin is not None else stdin,
+                  'stdout': stdout,
+                  'stderr': stderr,
+                  'with_communicate': with_communicate,
+                  'timeout': timeout,
+                  'bg': bg,
+                  }
+
+    if 'stdin_raw_newlines' in kwargs:
+        new_kwargs['stdin_raw_newlines'] = kwargs['stdin_raw_newlines']
 
     if umask is not None:
         _umask = six.text_type(umask).lstrip('0')
@@ -555,18 +559,18 @@ def _run(cmd,
         _umask = None
 
     if runas or group or umask:
-        kwargs['preexec_fn'] = functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas,
-            _umask,
-            group)
+        new_kwargs['preexec_fn'] = functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas,
+                _umask,
+                group)
 
     if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
-        if kwargs['shell'] is True:
-            kwargs['executable'] = shell
-        kwargs['close_fds'] = True
+        if new_kwargs['shell'] is True:
+            new_kwargs['executable'] = shell
+        new_kwargs['close_fds'] = True
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
@@ -594,14 +598,13 @@ def _run(cmd,
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if output_loglevel is not None
-                        else 'REDACTED',
-                    kwargs
+                    cmd if output_loglevel is not None else 'REDACTED',
+                    new_kwargs
                 )
             )
             try:
@@ -677,11 +680,11 @@ def _run(cmd,
         ret['stdout'] = out
         ret['stderr'] = err
     else:
-        to = ''
+        formatted_timeout = ''
         if timeout:
-            to = ' (timeout: {0}s)'.format(timeout)
+            formatted_timeout = ' (timeout: {0}s)'.format(timeout)
         if output_loglevel is not None:
-            msg = 'Running {0} in VT{1}'.format(cmd, to)
+            msg = 'Running {0} in VT{1}'.format(cmd, formatted_timeout)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
         now = time.time()
@@ -690,18 +693,20 @@ def _run(cmd,
         else:
             will_timeout = -1
         try:
-            proc = salt.utils.vt.Terminal(cmd,
-                               shell=True,
-                               log_stdout=True,
-                               log_stderr=True,
-                               cwd=cwd,
-                               preexec_fn=kwargs.get('preexec_fn', None),
-                               env=run_env,
-                               log_stdin_level=output_loglevel,
-                               log_stdout_level=output_loglevel,
-                               log_stderr_level=output_loglevel,
-                               stream_stdout=True,
-                               stream_stderr=True)
+            proc = salt.utils.vt.Terminal(
+                    cmd,
+                    shell=True,
+                    log_stdout=True,
+                    log_stderr=True,
+                    cwd=cwd,
+                    preexec_fn=new_kwargs.get('preexec_fn', None),
+                    env=run_env,
+                    log_stdin_level=output_loglevel,
+                    log_stdout_level=output_loglevel,
+                    log_stderr_level=output_loglevel,
+                    stream_stdout=True,
+                    stream_stderr=True
+            )
             ret['pid'] = proc.pid
             while proc.has_unread_data:
                 try:
@@ -1027,6 +1032,14 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1260,6 +1273,15 @@ def shell(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1466,6 +1488,15 @@ def run_stdout(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1655,6 +1686,15 @@ def run_stderr(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1868,6 +1908,15 @@ def run_all(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2048,6 +2097,15 @@ def retcode(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2287,6 +2345,15 @@ def script(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2521,6 +2588,15 @@ def script_retcode(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -3319,6 +3395,14 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -3334,9 +3418,14 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd += ' | ConvertTo-JSON'
-    if depth is not None:
-        cmd += ' -Depth {0}'.format(depth)
+    # ConvertTo-JSON is only available on Versions of Windows greater than
+    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
+    # because this function is called by `salt/grains/core.py` before
+    # `__grains__` is populated
+    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+        cmd += ' | ConvertTo-JSON'
+        if depth is not None:
+            cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -3353,7 +3442,7 @@ def powershell(cmd,
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+    cmd = 'try {' + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -3612,6 +3701,14 @@ def powershell_all(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     :return: A dictionary with the following entries:
 
         result
@@ -3860,6 +3957,14 @@ def run_bg(cmd,
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
 
       .. versionadded:: Fluorine
 

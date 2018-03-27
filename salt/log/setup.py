@@ -117,6 +117,7 @@ __EXTERNAL_LOGGERS_CONFIGURED = False
 __MP_LOGGING_LISTENER_CONFIGURED = False
 __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
+__MP_LOGGING_LEVEL = GARBAGE
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
@@ -820,6 +821,37 @@ def set_multiprocessing_logging_queue(queue):
         __MP_LOGGING_QUEUE = queue
 
 
+def get_multiprocessing_logging_level():
+    return __MP_LOGGING_LEVEL
+
+
+def set_multiprocessing_logging_level(log_level):
+    global __MP_LOGGING_LEVEL
+    __MP_LOGGING_LEVEL = log_level
+
+
+def set_multiprocessing_logging_level_by_opts(opts):
+    '''
+    This will set the multiprocessing logging level to the lowest
+    logging level of all the types of logging that are configured.
+    '''
+    global __MP_LOGGING_LEVEL
+
+    log_levels = []
+    log_levels.append(
+        LOG_LEVELS.get(opts.get('log_level', '').lower(), logging.ERROR)
+    )
+    log_levels.append(
+        LOG_LEVELS.get(opts.get('log_level_logfile', '').lower(), logging.ERROR)
+    )
+    for level in six.itervalues(opts.get('log_granular_levels', {})):
+        log_levels.append(
+            LOG_LEVELS.get(level.lower(), logging.ERROR)
+        )
+
+    __MP_LOGGING_LEVEL = min(log_levels)
+
+
 def setup_multiprocessing_logging_listener(opts, queue=None):
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
@@ -883,11 +915,13 @@ def setup_multiprocessing_logging(queue=None):
         # Let's add a queue handler to the logging root handlers
         __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue or get_multiprocessing_logging_queue())
         logging.root.addHandler(__MP_LOGGING_QUEUE_HANDLER)
-        # Set the logging root level to the lowest to get all messages
-        logging.root.setLevel(logging.GARBAGE)
+        # Set the logging root level to the lowest needed level to get all
+        # desired messages.
+        log_level = get_multiprocessing_logging_level()
+        logging.root.setLevel(log_level)
         logging.getLogger(__name__).debug(
             'Multiprocessing queue logging configured for the process running '
-            'under PID: %s', os.getpid()
+            'under PID: %s at log level %s', os.getpid(), log_level
         )
         # The above logging call will create, in some situations, a futex wait
         # lock condition, probably due to the multiprocessing Queue's internal
