@@ -86,7 +86,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             # Sleep on Windows because time.time is only precise to 3 decimal
             # points, and therefore subtracting the jid_ctime from time.time
             # will result in a negative number
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 time.sleep(0.25)
             local_cache.clean_old_jobs()
 
@@ -158,7 +158,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             # Sleep on Windows because time.time is only precise to 3 decimal
             # points, and therefore subtracting the jid_ctime from time.time
             # will result in a negative number
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 time.sleep(0.25)
             local_cache.clean_old_jobs()
 

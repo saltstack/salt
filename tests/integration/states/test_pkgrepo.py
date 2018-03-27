@@ -23,7 +23,7 @@ from salt.ext import six
 
 
 @destructiveTest
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
