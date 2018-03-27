@@ -33,7 +33,6 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 
 # pylint: enable=no-name-in-module,redefined-builtin
-from salt.utils.async import LOOP_CLASS
 import tornado
 
 HAS_RANGE = False

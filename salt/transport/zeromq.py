@@ -328,7 +328,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             install_zmq()
             self.io_loop = ZMQDefaultLoop.current()
 
-        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
+        self.hexid = hashlib.sha1(salt.utils.to_bytes(self.opts['id'])).hexdigest()
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
         self.serial = salt.payload.Serial(self.opts)
         self.context = zmq.Context()
