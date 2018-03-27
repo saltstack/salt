@@ -266,7 +266,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
                 minions = [m for m in minions if m in subset]
     else:
         # Always return 'present' for 0MQ for now
-        # TODO: implement other states spport for 0MQ
+        # TODO: implement other states support for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
         minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
