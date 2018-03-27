@@ -417,10 +417,16 @@ def _run(cmd,
             )
         try:
             # Getting the environment for the runas user
+            # Use markers to thwart any stdout noise
             # There must be a better way to do this.
+            import uuid
+            marker = '<<<' + str(uuid.uuid4()) + '>>>'
+            marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
-                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
+                'sys.stdout.write(\"' + marker + '\"); '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items()))); '
+                'sys.stdout.write(\"' + marker + '\");'
             )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
@@ -434,11 +440,33 @@ def _run(cmd,
                 env_cmd = ('su', '-', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_encoded = subprocess.Popen(
+            env_encoded, env_encoded_err = subprocess.Popen(
                 env_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE
+            ).communicate(py_code.encode(__salt_system_encoding__))
+            marker_count = env_encoded.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_encoded
+                )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_encoded = b''
+            elif marker_count != 2:
+                raise CommandExecutionError(
+                    'Environment could not be retrieved for user \'{0}\'',
+                    info={'stderr': repr(env_encoded_err),
+                          'stdout': repr(env_encoded)}
+                )
+            else:
+                # Strip the marker
+                env_encoded = env_encoded.split(marker_b)[1]
+
             if six.PY2:
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
