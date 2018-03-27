@@ -40,6 +40,13 @@ Those who are using the :ref:`LocalClient <local-client>` (either directly,
 or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
 their code to use ``tgt_type``.
 
+.. code-block:: python
+
+    >>> import salt.client
+    >>> local = salt.client.LocalClient()
+    >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
+    {'jerry': 'root'}
+
 Module Deprecations
 ===================
 
