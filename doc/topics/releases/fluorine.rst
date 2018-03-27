@@ -226,6 +226,7 @@ configuration in /etc/salt/master as follows:
                  markupsafe: /opt/markupsafe
                  backports_abc: /opt/backports_abc.py
 
-It is also possible to add several alternative versions of Salt. One of the way is to
-generate a Minimal tarball using runners and include it. However, this is possible only
-when there is a running alternative Salt version, installed on the Master machine.
+It is also possible to use several alternative versions of Salt. You can for instance generate
+a minimal tarball using runners and include that. But this is only possible, when such specific
+Salt version is also available on the Master machine, although does not need to be directly
+installed together with the older Python interpreter.
