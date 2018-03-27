@@ -53,9 +53,10 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
+    @skipIf(not utils.is_windows(), 'Windows only')
     def test_setenv_permanent(self):
-        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}), \
-                patch('salt.utils.is_windows', MagicMock(return_value=True)):
+        '''test that we can set perminent environment variables (requires pywin32)'''
+        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
             ret = envstate.setenv('test', 'value', permanent=True)
             self.assertEqual(ret['changes'], {'test': 'value'})
             envmodule.__salt__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
