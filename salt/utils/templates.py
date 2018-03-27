@@ -28,6 +28,7 @@ else:
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.dateutils
 import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
