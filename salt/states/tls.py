@@ -22,14 +22,12 @@ def __virtual__():
     return __virtualname__
 
 
-def valid_certificate(
-        name,
-        weeks=0,
-        days=0,
-        hours=0,
-        minutes=0,
-        seconds=0,
-    ):
+def valid_certificate(name,
+                      weeks=0,
+                      days=0,
+                      hours=0,
+                      minutes=0,
+                      seconds=0):
     '''
     Verify that a TLS certificate is valid now and (optionally) will be valid
     for the time specified through weeks, days, hours, minutes, and seconds.
