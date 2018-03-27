@@ -11,7 +11,6 @@ documented in the execution module docs.
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
-import os
 import requests
 
 import salt.crypt
