@@ -44,14 +44,19 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        user = os.environ.get('SUDO_USER', 'root')
-        npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
-        self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
+        if LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION):
+            user = os.environ.get('SUDO_USER', 'root')
+            npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
+            self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
+        else:
+            user = None
+            npm_dir = None
         ret = self.run_state('npm.installed', name='request/request#v2.81.1', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
-        self.run_state('file.absent', name=npm_dir)
+        if npm_dir is not None:
+            self.run_state('file.absent', name=npm_dir)
 
     @requires_network()
     @destructiveTest
