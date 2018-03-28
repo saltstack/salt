@@ -2817,6 +2817,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
+            self.opts['environment'] = self.opts['default_top']
 
         if self.opts['environment']:
             contents = self.client.cache_file(
