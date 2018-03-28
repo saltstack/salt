@@ -1130,7 +1130,7 @@ def _get_system_volume(vm_):
     if 'image_password' in vm_:
         image_password = vm_['image_password']
         volume.image_password = image_password
-    
+
     # Retrieve list of SSH public keys
     ssh_keys = get_public_keys(vm_)
     volume.ssh_keys = ssh_keys
