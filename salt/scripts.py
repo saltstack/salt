@@ -43,7 +43,12 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
 
 
 def _handle_signals(client, signum, sigframe):
-    trace = traceback.format_exc()
+    try:
+        # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
+        # Ref: https://bugs.python.org/issue23003
+        trace = traceback.format_exc()
+    except AttributeError:
+        trace = ''
     try:
         hardcrash = client.options.hard_crash
     except (AttributeError, KeyError):
