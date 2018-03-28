@@ -382,12 +382,12 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                                                              'perms': _octal_perms},
                                     'old': {'acl_name': ', '.join(acl_names),
                                                              'acl_type': acl_type,
-                                                             'perms': str(users[search_name]['octal'])}})
+                                                             'perms': six.text_type(users[search_name]['octal'])}})
                     if __opts__['test']:
                         ret.update({'comment': 'Updated permissions will be applied for '
                                                '{0}: {1} -> {2}'.format(
                             acl_names,
-                            str(users[_search_names]['octal']),
+                            six.text_type(users[_search_names]['octal']),
                             perms),
                             'result': None, 'pchanges': changes})
                         return ret
