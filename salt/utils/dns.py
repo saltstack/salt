@@ -1013,6 +1013,8 @@ def parse_resolv(src='/etc/resolv.conf'):
     '''
 
     nameservers = []
+    ip4_nameservers = []
+    ip6_nameservers = []
     search = []
     sortlist = []
     domain = ''
@@ -1031,10 +1033,20 @@ def parse_resolv(src='/etc/resolv.conf'):
                         lambda x: x[0] not in ('#', ';'), arg))
 
                     if directive == 'nameserver':
+                        # Split the scope (interface) if it is present
+                        addr, scope = arg[0].split('%', 1) if '%' in arg[0] else (arg[0], '')
                         try:
-                            ip_addr = ipaddress.ip_address(arg[0])
+                            ip_addr = ipaddress.ip_address(addr)
+                            version = ip_addr.version
+                            # Rejoin scope after address validation
+                            if scope:
+                                ip_addr = '%'.join((str(ip_addr), scope))
                             if ip_addr not in nameservers:
                                 nameservers.append(ip_addr)
+                            if version == 4 and ip_addr not in ip4_nameservers:
+                                ip4_nameservers.append(ip_addr)
+                            elif version == 6 and ip_addr not in ip6_nameservers:
+                                ip6_nameservers.append(ip_addr)
                         except ValueError as exc:
                             log.error('%s: %s', src, exc)
                     elif directive == 'domain':
@@ -1088,8 +1100,8 @@ def parse_resolv(src='/etc/resolv.conf'):
 
         return {
             'nameservers':     nameservers,
-            'ip4_nameservers': [ip for ip in nameservers if ip.version == 4],
-            'ip6_nameservers': [ip for ip in nameservers if ip.version == 6],
+            'ip4_nameservers': ip4_nameservers,
+            'ip6_nameservers': ip6_nameservers,
             'sortlist':        [ip.with_netmask for ip in sortlist],
             'domain':          domain,
             'search':          search,

@@ -1100,10 +1100,10 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
 
         - running (string): Representation of the native running configuration.
         - candidate (string): Representation of the native candidate configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
         - startup (string): Representation of the native startup configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
 
     CLI Example:
@@ -1690,7 +1690,7 @@ def load_template(template_name,
             # after running the other features:
             # compare_config, discard / commit
             # which have to be over the same session
-            # so we'll set the CLOSE global explicitely as False
+            # so we'll set the CLOSE global explicitly as False
             napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable

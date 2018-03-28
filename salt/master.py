@@ -1484,7 +1484,7 @@ class AESFuncs(object):
             if load['loc']:
                 fp_.seek(load['loc'])
 
-            fp_.write(load['data'])
+            fp_.write(salt.utils.stringutils.to_bytes(load['data']))
         return True
 
     def _pillar(self, load):
