@@ -237,7 +237,7 @@ def get_executable():
             continue
         c_vn = tuple([int(x) for x in stdout.split(':')])
         for ns in pymap:
-            if c_vn >= pymap[ns] and os.path.exists(os.path.join(OPTIONS.saltdir, ns)):
+            if c_vn[0] == pymap[ns][0] and c_vn >= pymap[ns] and os.path.exists(os.path.join(OPTIONS.saltdir, ns)):
                 return py_cmd
 
     sys.exit(EX_THIN_PYTHON_INVALID)
