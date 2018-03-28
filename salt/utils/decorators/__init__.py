@@ -216,22 +216,13 @@ class _DeprecationDecorator(object):
 
     def _get_args(self, kwargs):
         '''
-        Extract function-specific keywords from all of the kwargs.
+        Discard all keywords which aren't function-specific from the kwargs.
 
         :param kwargs:
         :return:
         '''
         _args = list()
-        _kwargs = dict()
-
-        if '__pub_arg' in kwargs:  # For modules
-            for arg_item in kwargs.get('__pub_arg', list()):
-                if type(arg_item) == dict:
-                    _kwargs.update(arg_item.copy())
-                else:
-                    _args.append(arg_item)
-        else:
-            _kwargs = kwargs.copy()  # For states
+        _kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
         return _args, _kwargs
 
