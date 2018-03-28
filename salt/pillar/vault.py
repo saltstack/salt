@@ -87,7 +87,9 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
         if response.status_code == 200:
-            vault_pillar = response.json()['data']
+            vault_pillar = response.json().get('data', {})
+        else:
+            log.info('Vault secret not found for: %s', path)
     except KeyError:
         log.error('No such path in Vault: %s', path)
 
