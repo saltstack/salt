@@ -169,3 +169,12 @@ class StringutilsTestCase(TestCase):
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2, marker=' <---')
         expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
         self.assertEqual(expected, context)
+
+    def test_expr_match(self):
+        val = 'foo/bar/baz'
+        # Exact match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, val))
+        # Glob match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
+        # Glob non-match
+        self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))
