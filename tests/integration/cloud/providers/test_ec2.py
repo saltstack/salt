@@ -46,6 +46,10 @@ class EC2Test(ShellCase):
     TIMEOUT = 1500
 
     def _installer_name(self):
+        '''
+        Determine the downloaded installer name by searching the files
+        directory for the firt file that loosk like an installer.
+        '''
         for path, dirs, files in os.walk(FILES):
             for file in files:
                 if file.startswith(win_installer.PREFIX):
@@ -54,6 +58,9 @@ class EC2Test(ShellCase):
         return
 
     def _fetch_latest_installer(self):
+        '''
+        Download the latest Windows installer executable
+        '''
         name = win_installer.latest_installer_name()
         path = os.path.join(FILES, name)
         with salt.utils.fopen(path, 'wb') as fp:
@@ -61,6 +68,9 @@ class EC2Test(ShellCase):
         return name
 
     def _ensure_installer(self):
+        '''
+        Make sure the testing environment has a Windows installer executbale.
+        '''
         name = self._installer_name()
         if name:
             return name
@@ -238,6 +248,7 @@ class EC2Test(ShellCase):
             {
                 'user_data': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
+                'winrm_ssl_verify': False,
             }
 
         )
@@ -271,6 +282,7 @@ class EC2Test(ShellCase):
             {
                 'user_data': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
+                'winrm_ssl_verify': False,
             }
 
         )

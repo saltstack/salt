@@ -1,13 +1,28 @@
+# -*- coding: utf-8 -*-
+'''
+    :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
+
+    tests.support.win_installer
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Fetches the binary Windows installer
+'''
 import hashlib
 import requests
 import re
 
-PREFIX='Salt-Minion-'
-REPO="https://repo.saltstack.com/windows"
+PREFIX = 'Salt-Minion-'
+REPO = "https://repo.saltstack.com/windows"
 
 
 def iter_installers(content):
-    HREF_RE="<a href=\"(.*?)\">"
+    '''
+    Parse a list of windows installer links and their corresponding md5
+    checksum links.
+    '''
+    HREF_RE = "<a href=\"(.*?)\">"
     installer, md5 = None, None
     for m in re.finditer(HREF_RE, content):
         x = m.groups()[0]
@@ -62,7 +77,7 @@ def download_and_verify(fp, name, repo=REPO):
     Download an installer and verify it's contents.
     '''
     md5 = "{}.md5".format(name)
-    url = lambda x : "{}/{}".format(repo, x)
+    url = lambda x: "{}/{}".format(repo, x)
     resp = requests.get(url(md5))
     if resp.status_code != 200:
         raise Exception("Unable to fetch installer md5")
