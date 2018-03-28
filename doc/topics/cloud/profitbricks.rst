@@ -153,7 +153,6 @@ command:
 
 .. versionadded:: Fluorine
 One or more public IP address can be reserved with the following command:
-command:
 
 .. code-block:: bash
 
