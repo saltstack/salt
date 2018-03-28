@@ -22,6 +22,7 @@ class TimedProc(object):
         self.stdin = kwargs.pop('stdin', None)
         self.with_communicate = kwargs.pop('with_communicate', self.wait)
         self.timeout = kwargs.pop('timeout', None)
+        self.stdin_raw_newlines = kwargs.pop('stdin_raw_newlines', False)
 
         # If you're not willing to wait for the process
         # you can't define any stdin, stdout or stderr
@@ -29,9 +30,10 @@ class TimedProc(object):
             self.stdin = kwargs['stdin'] = None
             self.with_communicate = False
         elif self.stdin is not None:
-            # Translate a newline submitted as '\n' on the CLI to an actual
-            # newline character.
-            self.stdin = self.stdin.replace('\\n', '\n').encode(__salt_system_encoding__)
+            if not self.stdin_raw_newlines:
+                # Translate a newline submitted as '\n' on the CLI to an actual
+                # newline character.
+                self.stdin = self.stdin.replace('\\n', '\n').encode(__salt_system_encoding__)
             kwargs['stdin'] = subprocess.PIPE
 
         if not self.with_communicate:
