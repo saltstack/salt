@@ -75,23 +75,38 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
+    def __new__(cls, opts, functions,
+                returners=None,
+                intervals=None,
+                cleanup=None,
+                proxy=None,
+                standalone=False,
+                new_instance=False):
         '''
         Only create one instance of Schedule
         '''
-        if cls.instance is None:
+        if cls.instance is None or new_instance is True:
             log.debug('Initializing new Schedule')
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
-            cls.instance = object.__new__(cls)
-            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
+            instance = object.__new__(cls)
+            instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
+            if new_instance is True:
+                return instance
+            cls.instance = instance
         else:
             log.debug('Re-using Schedule')
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
+    def __init__(self, opts, functions,
+                 returners=None,
+                 intervals=None,
+                 cleanup=None,
+                 proxy=None,
+                 standalone=False,
+                 new_instance=False):
         pass
 
     # an init for the singleton instance to call
@@ -601,7 +616,9 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
-        salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
+        if multiprocessing_enabled:
+            # We just want to modify the process name if we're on a different process
+            salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         if not self.standalone:
             proc_fn = os.path.join(
@@ -1538,7 +1555,7 @@ class Schedule(object):
                                  'job %s, defaulting to 1.', job)
                         data['maxrunning'] = 1
 
-                if self.standalone:
+                if not self.standalone:
                     data['run'] = run
                     data = self._check_max_running(func,
                                                    data,
