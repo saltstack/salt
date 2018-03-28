@@ -111,7 +111,6 @@ def init(opts):
     except Exception:
         log.error("not able to initiate connection to the device %s" %
                   opts['proxy']['host'])
-        del thisproxy['conn']
         thisproxy['initialized'] = False
         return
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
