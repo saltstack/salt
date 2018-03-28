@@ -10,6 +10,7 @@ integration.modules.test_data
 integration.modules.test_disk
 integration.modules.test_git
 integration.modules.test_grains
+integration.modules.test_groupadd
 integration.modules.test_hosts
 integration.modules.test_mine
 integration.modules.test_pillar
