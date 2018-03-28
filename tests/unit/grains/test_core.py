@@ -893,30 +893,3 @@ SwapTotal:       4789244 kB'''
                 with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
                     fqdns = core.fqdns()
                     self.assertEqual(fqdns, ret)
-
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
-                                                                   'The cables are not the same length.')))
-    @patch('salt.grains.core.log', MagicMock())
-    def test_linux_iqn_non_root(self):
-        '''
-        Test if linux_iqn is running on salt-master as non-root
-        and handling access denial properly.
-        :return:
-        '''
-        assert core._linux_iqn() == []
-        core.log.debug.assert_called()
-        assert 'Error while accessing' in core.log.debug.call_args[0][0]
-        assert 'cables are not the same' in core.log.debug.call_args[0][2].strerror
-        assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
-        assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
-
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
-    @patch('salt.grains.core.log', MagicMock())
-    def test_linux_iqn_no_iscsii_initiator(self):
-        '''
-        Test if linux_iqn is running on salt-master as root.
-        iscsii initiator is not there accessible or is not supported.
-        :return:
-        '''
-        assert core._linux_iqn() == []
-        core.log.debug.assert_not_called()
