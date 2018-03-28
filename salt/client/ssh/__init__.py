@@ -57,7 +57,7 @@ from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
 from salt.utils.zeromq import zmq
@@ -560,6 +560,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,

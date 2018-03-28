@@ -254,17 +254,19 @@ specifying the pillar variable is the same one used for :py:func:`pillar.get
     <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
     newer.
 
+.. _faq-restart-salt-minion:
+
 What is the best way to restart a Salt Minion daemon using Salt after upgrade?
 ------------------------------------------------------------------------------
 
 Updating the ``salt-minion`` package requires a restart of the ``salt-minion``
 service. But restarting the service while in the middle of a state run
 interrupts the process of the Minion running states and sending results back to
-the Master. A common way to workaround that is to schedule restarting of the
-Minion service using :ref:`masterless mode <masterless-quickstart>` after all
-other states have been applied. This allows the minion to keep Minion to Master
-connection alive for the Minion to report the final results to the Master, while
-the service is restarting in the background.
+the Master. A common way to workaround that is to schedule restarting the
+Minion service in the background by issuing a ``salt-call`` command calling
+``service.restart`` function. This prevents the Minion being disconnected from
+the Master immediately. Otherwise you would get
+``Minion did not return. [Not connected]`` message as the result of a state run.
 
 Upgrade without automatic restart
 *********************************
@@ -328,7 +330,7 @@ The following example works on UNIX-like operating systems:
     {%- if grains['os'] != 'Windows' %}
     Restart Salt Minion:
       cmd.run:
-        - name: 'salt-call --local service.restart salt-minion'
+        - name: 'salt-call service.restart salt-minion'
         - bg: True
         - onchanges:
           - pkg: Upgrade Salt Minion
@@ -348,9 +350,9 @@ as follows:
     Restart Salt Minion:
       cmd.run:
     {%- if grains['kernel'] == 'Windows' %}
-        - name: 'C:\salt\salt-call.bat --local service.restart salt-minion'
+        - name: 'C:\salt\salt-call.bat service.restart salt-minion'
     {%- else %}
-        - name: 'salt-call --local service.restart salt-minion'
+        - name: 'salt-call service.restart salt-minion'
     {%- endif %}
         - bg: True
         - onchanges:
@@ -358,7 +360,13 @@ as follows:
 
 However, it requires more advanced tricks to upgrade from legacy version of
 Salt (before ``2016.3.0``) on UNIX-like operating systems, where executing
-commands in the background is not supported:
+commands in the background is not supported. You also may need to schedule
+restarting the Minion service using :ref:`masterless mode
+<masterless-quickstart>` after all other states have been applied for Salt
+versions earlier than ``2016.11.0``. This allows the Minion to keep the
+connection to the Master alive for being able to report the final results back
+to the Master, while the service is restarting in the background. This state
+should run last or watch for the ``pkg`` state changes:
 
 .. code-block:: jinja
 
@@ -382,8 +390,8 @@ Restart the Minion from the command line:
 
 .. code-block:: bash
 
-    salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat --local service.restart salt-minion'
-    salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call --local service.restart salt-minion'
+    salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat service.restart salt-minion'
+    salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call service.restart salt-minion'
 
 Salting the Salt Master
 -----------------------
@@ -408,6 +416,10 @@ More information about salting the Salt master can be found in the salt-formula
 for salt itself:
 
 https://github.com/saltstack-formulas/salt-formula
+
+Restarting the ``salt-master`` service using execution module or application of
+state could be done the same way as for the Salt minion described :ref:`above
+<faq-restart-salt-minion>`.
 
 .. _faq-grain-security:
 
@@ -443,4 +455,3 @@ the grain and values that you want to change / set.)
 
 You should also `file an issue <https://github.com/saltstack/salt/issues>`_
 describing the change so it can be fixed in Salt.
-
