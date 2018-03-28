@@ -3038,6 +3038,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
+    auto_remove = False
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
@@ -3047,9 +3048,12 @@ def rm_(name, force=False, volumes=False, **kwargs):
             'remove this container'.format(name)
         )
     if stop_ and not force:
+        auto_remove = inspect_container(name)['HostConfig']['AutoRemove']
         stop(name)
     pre = ps_(all=True)
-    _client_wrapper('remove_container', name, v=volumes, force=force)
+
+    if not auto_remove:
+        _client_wrapper('remove_container', name, v=volumes, force=force)
     _clear_context()
     return [x for x in pre if x not in ps_(all=True)]
 
