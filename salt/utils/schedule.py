@@ -426,27 +426,8 @@ class Schedule(object):
 
         # Grab run, assume True
         run = data.get('run', True)
-        run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
         if run:
-            if run_schedule_jobs_in_background:
-                multiprocessing_enabled = self.opts.get('multiprocessing', True)
-                if multiprocessing_enabled:
-                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-                else:
-                    thread_cls = threading.Thread
-
-                if multiprocessing_enabled:
-                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                        # Reset current signals before starting the process in
-                        # order not to inherit the current signal handlers
-                        proc.start()
-                    proc.join()
-                else:
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    proc.start()
-            else:
-                func(data)
+            self._run_job(func, data)
 
     def enable_schedule(self):
         '''
@@ -1536,16 +1517,6 @@ class Schedule(object):
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
 
-            multiprocessing_enabled = self.opts.get('multiprocessing', True)
-
-            if salt.utils.platform.is_windows():
-                # Temporarily stash our function references.
-                # You can't pickle function references, and pickling is
-                # required when spawning new processes on Windows.
-                functions = self.functions
-                self.functions = {}
-                returners = self.returners
-                self.returners = {}
             try:
                 # Job is disabled, continue
                 if 'enabled' in data and not data['enabled']:
@@ -1577,23 +1548,7 @@ class Schedule(object):
 
                 if run:
                     log.info('Running scheduled job: %s%s', job, miss_msg)
-
-                    if multiprocessing_enabled:
-                        thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-                    else:
-                        thread_cls = threading.Thread
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-
-                    if multiprocessing_enabled:
-                        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                            # Reset current signals before starting the process in
-                            # order not to inherit the current signal handlers
-                            proc.start()
-                    else:
-                        proc.start()
-
-                    if multiprocessing_enabled:
-                        proc.join()
+                    self._run_job(func, data)
             finally:
                 # Only set _last_run if the job ran
                 if run:
@@ -1602,7 +1557,47 @@ class Schedule(object):
                         data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
                     data['_splay'] = None
 
-            if salt.utils.platform.is_windows():
+    def _run_job(self, func, data):
+        job_dry_run = data.get('dry_run', False)
+        if job_dry_run:
+            log.debug('Job %s has \'dry_run\' set to True. Not running it.', data['name'])
+            return
+
+        multiprocessing_enabled = self.opts.get('multiprocessing', True)
+        run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
+
+        if run_schedule_jobs_in_background is False:
+             # Explicitly pass False for multiprocessing_enabled
+            self.handle_func(False, func, data)
+            return
+
+        if multiprocessing_enabled and salt.utils.platform.is_windows():
+            # Temporarily stash our function references.
+            # You can't pickle function references, and pickling is
+            # required when spawning new processes on Windows.
+            functions = self.functions
+            self.functions = {}
+            returners = self.returners
+            self.returners = {}
+
+        try:
+            if multiprocessing_enabled:
+                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+            else:
+                thread_cls = threading.Thread
+
+            if multiprocessing_enabled:
+                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
+                    proc.start()
+                proc.join()
+            else:
+                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                proc.start()
+        finally:
+            if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
