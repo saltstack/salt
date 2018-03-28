@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 import os
 import uuid
-import shutil
 import hashlib
 import logging
 import psutil
@@ -25,7 +24,6 @@ import tests.support.paths as paths
 # Import salt libs
 import salt.ext.six as six
 import salt.utils
-import salt.utils.files
 
 log = logging.getLogger(__name__)
 
