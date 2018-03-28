@@ -292,12 +292,12 @@ def build_whitespace_split_regex(text):
     return r'(?m)^{0}$'.format(regex)
 
 
-def expr_match(val, expr):
+def expr_match(line, expr):
     '''
-    Checks whether or not val matches the specified expression. Tries to match
-    expr first as a glob using fnmatch.fnmatch(), and then tries to match expr
-    as a regular expression. Originally designed to match minion IDs for
-    whitelists/blacklists.
+    Checks whether or not the passed value matches the specified expression.
+    Tries to match expr first as a glob using fnmatch.fnmatch(), and then tries
+    to match expr as a regular expression. Originally designed to match minion
+    IDs for whitelists/blacklists.
 
     Note that this also does exact matches, as fnmatch.fnmatch() will return
     ``True`` when no glob characters are used and the string is an exact match:
@@ -308,15 +308,15 @@ def expr_match(val, expr):
         True
     '''
     try:
-        if fnmatch.fnmatch(val, expr):
+        if fnmatch.fnmatch(line, expr):
             return True
         try:
-            if re.match(r'\A{0}\Z'.format(expr), val):
+            if re.match(r'\A{0}\Z'.format(expr), line):
                 return True
         except re.error:
             pass
     except TypeError:
-        log.exception('Value %r or expression %r is not a string', val, expr)
+        log.exception('Value %r or expression %r is not a string', line, expr)
     return False
 
 
