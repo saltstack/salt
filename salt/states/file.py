@@ -295,6 +295,7 @@ import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
+from salt.utils.data import repack_dictlist
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -5745,6 +5746,7 @@ def serialize(name,
               merge_if_exists=False,
               encoding=None,
               encoding_errors='strict',
+              serializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -5825,6 +5827,19 @@ def serialize(name,
         content
 
         .. versionadded:: 2014.7.0
+
+    serializer_opts
+        Pass through options to lower serializer module, e.g.
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
 
     For example, this state:
 
@@ -5917,6 +5932,9 @@ def serialize(name,
                 'name': name,
                 'result': False
                 }
+
+    if serializer_opts:
+        default_serializer_opts.get(serializer_name, {}).update(repack_dictlist(serializer_opts))
 
     if merge_if_exists:
         if os.path.isfile(name):
