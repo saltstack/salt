@@ -628,7 +628,7 @@ def list_nodes_full(conn=None, call=None):
 
 def reserve_ipblock(call=None, kwargs=None):
     '''
-
+    Reserve the IP Block
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
