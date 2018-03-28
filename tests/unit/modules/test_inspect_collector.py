@@ -48,9 +48,12 @@ def no_symlinks():
     output = ''
     try:
         output = subprocess.check_output('git config --get core.symlinks', shell=True)
-    except OSError as ex:
-        if es.errno != errno.ENOENT:
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
             raise
+    except subprocess.CalledProcessError:
+        # git returned non-zero status
+        pass
     HAS_SYMLINKS = False
     if output.strip() == 'true':
         HAS_SYMLINKS = True
