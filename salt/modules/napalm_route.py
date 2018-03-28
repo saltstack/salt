@@ -67,7 +67,7 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
         In case the destination prefix is too short,
         there may be too many routes matched.
         Therefore in cases of devices having a very high number of routes
-        it may be necessary to adjust the prefix lenght and request
+        it may be necessary to adjust the prefix length and request
         using a longer prefix.
 
     destination
