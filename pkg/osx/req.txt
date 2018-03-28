@@ -21,7 +21,7 @@ pycrypto==2.6.1
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 PyYAML==3.12
-pyzmq==17.0.0b3
+pyzmq==17.0.0
 requests==2.18.4
 singledispatch==3.4.0.3
 six==1.11.0
