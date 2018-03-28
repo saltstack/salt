@@ -378,7 +378,7 @@ def image_vacuum(name):
     # list of images to keep
     images = []
 
-    # retreive image_present state data for host
+    # retrieve image_present state data for host
     for state in __salt__['state.show_lowstate']():
         # don't throw exceptions when not highstate run
         if 'state' not in state:

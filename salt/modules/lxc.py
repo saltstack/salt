@@ -865,7 +865,7 @@ def _network_conf(conf_tuples=None, **kwargs):
         for row in val:
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     # on old versions of lxc, still support the gateway auto mode
-    # if we didnt explicitly say no to
+    # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
     if _LooseVersion(version()) <= '1.0.7' and \
             True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
