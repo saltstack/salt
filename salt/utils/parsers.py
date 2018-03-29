@@ -35,6 +35,7 @@ import salt.utils.args
 import salt.utils.xdg
 import salt.utils.jid
 import salt.utils.files
+import salt.utils.win_functions
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -1020,8 +1021,8 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
                     return True
             else:
-                # We have no os.getppid() on Windows. Best effort.
-                if self.check_pidfile() and self.is_daemonized(pid):
+                # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
+                if self.check_pidfile() and self.is_daemonized(pid) and not salt.utils.win_functions.get_parent_pid() == pid:
                     return True
         return False
 
