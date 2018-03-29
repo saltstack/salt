@@ -282,7 +282,7 @@ def managed(name,
                     ret['comment'] = ('Failed to disable interface \'{0}\''
                                       .format(name))
         else:
-            ret['comment'] += '(already disabled)'
+            ret['comment'] += ' (already disabled)'
         return ret
     else:
         if not currently_enabled:
