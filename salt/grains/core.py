@@ -818,6 +818,10 @@ def _virtual(osdata):
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
                     grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
                 else:
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
