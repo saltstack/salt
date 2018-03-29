@@ -869,17 +869,19 @@ class Schedule(object):
 
             if not data['_next_fire_time'] and \
                     not data['_splay']:
-                once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
-                try:
-                    once = datetime.datetime.strptime(data['once'],
-                                                      once_fmt)
-                except (TypeError, ValueError):
-                    data['_error'] = ('Date string could not '
-                                      'be parsed: {0}, {1}. '
-                                      'Ignoring job {2}.'.format(
-                                          data['once'], once_fmt, job))
-                    log.error(data['_error'])
-                    return data
+                once = data['once']
+                if not isinstance(once, datetime.datetime):
+                    once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
+                    try:
+                        once = datetime.datetime.strptime(data['once'],
+                                                          once_fmt)
+                    except (TypeError, ValueError):
+                        data['_error'] = ('Date string could not '
+                                          'be parsed: {0}, {1}. '
+                                          'Ignoring job {2}.'.format(
+                                              data['once'], once_fmt, job))
+                        log.error(data['_error'])
+                        return data
                 # If _next_fire_time is less than now, continue
                 if once < now - loop_interval:
                     data['_continue'] = True
