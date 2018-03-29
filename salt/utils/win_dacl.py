@@ -1128,20 +1128,18 @@ def get_name(principal):
         # If None is passed, use the Universal Well-known SID for "Null SID"
         if principal is None:
             principal = 'S-1-0-0'
-
-        # String SID
         # Try Converting String SID to SID Object first as it's least expensive
         try:
             sid_obj = win32security.ConvertStringSidToSid(principal)
         except pywintypes.error:
-
-            # Name
             # Try Getting the SID Object by Name Lookup last
             # This is expensive, especially on large AD Domains
             try:
                 sid_obj = win32security.LookupAccountName(None, principal)[0]
             except pywintypes.error:
-                # Just pass the object and let the LookupAccountSid function try
+                # This is not a PySID object, a SID String, or a valid Account
+                # Name. Just pass it and let the LookupAccountSid function try
+                # to resolve it
                 sid_obj = principal
 
     # By now we should have a valid PySID object
