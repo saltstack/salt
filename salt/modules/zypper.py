@@ -309,7 +309,11 @@ class _Zypper(object):
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
-        return self._is_xml_mode() and dom.parseString(self.__call_result['stdout']) or self.__call_result['stdout']
+        return (
+            self._is_xml_mode() and
+            dom.parseString(salt.utils.stringutils.to_str(self.__call_result['stdout'])) or
+            self.__call_result['stdout']
+        )
 
 
 __zypper__ = _Zypper()
