@@ -808,6 +808,35 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: fibre_channel_grains
+
+``fibre_channel_grains``
+------------------------
+
+Default: ``False``
+
+The ``fibre_channel_grains`` setting will enable the ``fc_wwn`` grain for
+Fibre Channel WWN's on the minion. Since this grain is expensive, it is
+disabled by default.
+
+.. code-block:: yaml
+
+    fibre_channel_grains: True
+
+.. conf_minion:: iscsi_grains
+
+``iscsi_grains``
+------------------------
+
+Default: ``False``
+
+The ``iscsi_grains`` setting will enable the ``iscsi_iqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    iscsi_grains: True
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``

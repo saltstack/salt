@@ -310,7 +310,7 @@ def private_key_managed(name,
 
     ret = __states__['file.managed'](**file_args)
     if ret['changes'] and new_key:
-        ret['changes'] = 'New private key generated'
+        ret['changes'] = {'new': 'New private key generated'}
 
     return ret
 

@@ -185,9 +185,9 @@ def _get_config(**kwargs):
     config = {
         'box_type': 'sealedbox',
         'sk': None,
-        'sk_file': os.path.join(__opts__['pki_dir'], 'master/nacl'),
+        'sk_file': os.path.join(__opts__['pki_dir'], 'master', 'nacl'),
         'pk': None,
-        'pk_file': os.path.join(__opts__['pki_dir'], 'master/nacl.pub'),
+        'pk_file': os.path.join(__opts__['pki_dir'], 'master', 'nacl.pub'),
     }
     config_key = '{0}.config'.format(__virtualname__)
     try:
