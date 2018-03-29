@@ -683,7 +683,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_zip)
-def zip_(zip_file, sources, template=None, cwd=None, runas=None):
+def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
     '''
     Uses the ``zipfile`` Python module to create zip files
 
@@ -727,6 +727,17 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     runas : None
         Create the zip file as the specified user. Defaults to the user under
         which the minion is running.
+
+    zip64 : False
+        Used to enable ZIP64 support, necessary to create archives larger than
+        4 GByte in size.
+        If true, will create ZIP file with the ZIPp64 extension when the zipfile
+        is larger than 2 GB.
+        ZIP64 extension is disabled by default in the Python native zip support
+        because the default zip and unzip commands on Unix (the InfoZIP utilities)
+        don't support these extensions.
+        If set to true, must also be set to true if using ``archive.unzip`` to 
+        extract the created zipfile.
 
 
     CLI Example:
@@ -772,7 +783,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED, zip64)) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
@@ -935,7 +946,8 @@ def unzip(zip_file,
           runas=None,
           trim_output=False,
           password=None,
-          extract_perms=True):
+          extract_perms=True,
+          zip64=False):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -1007,6 +1019,14 @@ def unzip(zip_file,
 
         .. versionadded:: 2016.11.0
 
+	zip64 : False
+		Used to enable ZIP64 support, necessary to extract archives created with
+		the ZIP64 extension (typically archives larger than 4 GB).
+		ZIP64 extension is disabled by default in the Python native zip support
+		because the default zip and unzip commands on Unix (the InfoZIP utilities)
+		don't support these extensions.
+
+
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
 
     CLI Example:
@@ -1039,7 +1059,8 @@ def unzip(zip_file,
         # variable from being defined and cause a NameError in the return
         # statement at the end of the function.
         cleaned_files = []
-        with contextlib.closing(zipfile.ZipFile(zip_file, "r")) as zfile:
+        # Adding zipfile.ZIP_STORED prior to zip64, since ZIP_STORED is the default
+        with contextlib.closing(zipfile.ZipFile(zip_file, "r", zipfile.ZIP_STORED, zip64)) as zfile:
             files = zfile.namelist()
 
             if isinstance(excludes, six.string_types):
