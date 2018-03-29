@@ -132,7 +132,7 @@ class EC2Test(ShellCase):
         conf_path = os.path.join(self.get_config_dir(), 'cloud.profiles.d', 'ec2.conf')
         with salt.utils.fopen(conf_path, 'r') as fp:
             conf = yaml.safe_load(fp)
-        conf.update(data)
+        conf[name].update(data)
         with salt.utils.fopen(conf_path, 'w') as fp:
             yaml.dump(conf, fp)
 
@@ -226,7 +226,7 @@ class EC2Test(ShellCase):
         Tests creating and deleting a Windows 2012r2instance on EC2 using
         winexe (classic)
         '''
-        # TODO: winexe call's hang and the test fails by timing out. The same
+        # TODO: winexe calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
         self.override_profile_config(
             'ec2-win2012-test',
@@ -260,7 +260,7 @@ class EC2Test(ShellCase):
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
         (classic)
         '''
-        # TODO: winexe call's hang and the test fails by timing out. The same
+        # TODO: winexe calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
         self.override_profile_config(
             'ec2-win2016-test',
