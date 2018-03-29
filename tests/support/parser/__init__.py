@@ -530,11 +530,11 @@ class SaltTestingParser(optparse.OptionParser):
         skipped = []
         failures = []
         for testcase, reason in runner.errors:
-            errors.append(TestResult(testcase.id(), reason, failfast=failfast))
+            errors.append(TestResult(testcase.id(), reason))
         for testcase, reason in runner.skipped:
-            skipped.append(TestResult(testcase.id(), reason, failfast=failfast))
+            skipped.append(TestResult(testcase.id(), reason))
         for testcase, reason in runner.failures:
-            failures.append(TestResult(testcase.id(), reason, failfast=failfast))
+            failures.append(TestResult(testcase.id(), reason))
         self.testsuite_results.append(
             TestsuiteResult(header,
                             errors,
