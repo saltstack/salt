@@ -130,7 +130,6 @@ should match what you see when you look at the properties for an object.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import re
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
