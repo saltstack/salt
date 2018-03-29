@@ -44,7 +44,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Module win_snmp: Requires Windows'
 
-    if not __salt__['reg.read_value'](_HKEY, _SNMP_KEY)['success']:
+    if not __salt__['reg.key_exists'](_HKEY, _SNMP_KEY):
         return False, 'Module win_snmp: SNMP not installed'
 
     return __virtualname__

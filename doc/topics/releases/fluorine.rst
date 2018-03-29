@@ -36,6 +36,26 @@ information.
 Deprecations
 ------------
 
+API Deprecations
+================
+
+Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
+been removed. Please use ``tgt_type`` instead. This change was made due to
+numerous reports of confusion among community members, since the targeting
+method is published to minions as ``tgt_type``, and appears as ``tgt_type``
+in the job cache as well.
+
+Those who are using the :ref:`LocalClient <local-client>` (either directly,
+or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
+their code to use ``tgt_type``.
+
+.. code-block:: python
+
+    >>> import salt.client
+    >>> local = salt.client.LocalClient()
+    >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
+    {'jerry': 'root'}
+
 Module Deprecations
 ===================
 

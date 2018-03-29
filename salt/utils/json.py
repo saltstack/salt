@@ -19,14 +19,28 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+def __split(raw):
+    '''
+    Performs a splitlines on the string. This function exists to make mocking
+    possible in unit tests, since the member functions of the str/unicode
+    builtins cannot be mocked.
+    '''
+    return raw.splitlines()
+
+
 def find_json(raw):
     '''
     Pass in a raw string and load the json when it starts. This allows for a
     string to start with garbage and end with json but be cleanly loaded
     '''
     ret = {}
-    for ind, _ in enumerate(raw):
-        working = '\n'.join(raw.splitlines()[ind:])
+    lines = __split(raw)
+    for ind, _ in enumerate(lines):
+        try:
+            working = '\n'.join(lines[ind:])
+        except UnicodeDecodeError:
+            working = '\n'.join(salt.utils.data.decode(lines[ind:]))
+
         try:
             ret = json.loads(working)  # future lint: blacklisted-function
         except ValueError:
