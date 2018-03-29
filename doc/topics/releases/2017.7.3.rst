@@ -30,7 +30,7 @@ Significate changes (PR #43708 & #45390, damon-atkins) have been made to the pkg
 - ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
 - ``pkg.list_pkgs`` now returns multiple versions if software installed more than once.
 - ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found instead of '(value not set)' which matches the contents of the sls definitions.
-- ``pkg.remove()`` will wait upto 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
+- ``pkg.remove()`` will wait up to 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
 - ``pkg.remove()`` can remove ``latest`` software, if ``latest`` is defined in sls definition.
 - Documentation was update for the execution module to match the style in new versions, some corrections as well.
 - All install/remove commands are prefix with cmd.exe shell and cmdmod is called with a command line string instead of a list. Some sls files in saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe (i.e. the use of ``&``).
@@ -69,7 +69,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 - **PR** `#45664`_: (*rallytime*) Back-port `#45452`_ to 2017.7.3
   @ *2018-01-24T15:33:13Z*
 
-  - **PR** `#45452`_: (*adelcast*) opkg.py: make owner fuction return value, instead of iterator
+  - **PR** `#45452`_: (*adelcast*) opkg.py: make owner function return value, instead of iterator
     | refs: `#45664`_
   * 0717f7a578 Merge pull request `#45664`_ from rallytime/`bp-45452`_
   * 369720677b opkg.py: make owner function return value, instead of iterator
@@ -359,7 +359,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   * 66da9b47bc Merge pull request `#45299`_ from garethgreenaway/config_gate_auth_events
   * 9a15ec3430 Updating versionadded string.  Fixing typo.
 
-  * edfc3dc078 Adding in documention for `auth_events` configuration option
+  * edfc3dc078 Adding in documentation for `auth_events` configuration option
 
   * 3ee4eabffd Fixing small typo
 
@@ -1007,7 +1007,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
   * 4b60b1ec84 Merge remote branch 'refs/remotes/upstream/2017.7' into 2017.7_replace_with_newer_2016.11_win_pkg
 
-  * b46f818a57 Raise a PR to fix 2016 issues commited here, fixed issues with merge.
+  * b46f818a57 Raise a PR to fix 2016 issues committed here, fixed issues with merge.
 
   * 32ef1e12ae Merge branch '2017.7' into 2017.7_replace_with_newer_2016.11_win_pkg
 
@@ -1362,7 +1362,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
     * 998d714ee7 Merge pull request `#44517`_ from whytewolf/publish_port_doc_missing
 
-      * 4b5855283a missed one place where i didnt chanbge master_port from my copy to publish_port
+      * 4b5855283a missed one place where i didn't change master_port from my copy to publish_port
 
       * e4610baea5 update doc to have publish port
 
@@ -1569,9 +1569,9 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
   * 3bb385b44e removing debugging logging
 
-  * 7f0ff5a8b0 When passing IDs on the command line convert them all the strings for later comparision.
+  * 7f0ff5a8b0 When passing IDs on the command line convert them all the strings for later comparison.
 
-  * 99e436add4 When looking for job ids to remove based on the tag_name the comparision was comparing an INT to a STR, so the correct job id was not being returned.
+  * 99e436add4 When looking for job ids to remove based on the tag_name the comparison was comparing an INT to a STR, so the correct job id was not being returned.
 
 - **PR** `#44695`_: (*gtmanfred*) pop None for runas and runas_password
   @ *2017-12-01T14:35:01Z*
@@ -1714,7 +1714,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
     * 88ef9f18fc ignore lint error on import
 
-    * 25427d845e convert key iterator to list as python 3 wont index an iterator
+    * 25427d845e convert key iterator to list as python 3 won't index an iterator
 
   * bce50154e5 Merge branch '2017.7' into improve-net-load
 
@@ -1773,13 +1773,13 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
                   * c6733ac1ee pop None
 
-- **PR** `#44616`_: (*Ch3LL*) Add Non Base Environement salt:// source integration test
+- **PR** `#44616`_: (*Ch3LL*) Add Non Base Environment salt:// source integration test
   @ *2017-11-22T16:13:54Z*
 
   * d6ccf4bb30 Merge pull request `#44616`_ from Ch3LL/nonbase_test
   * 80b71652e3 Merge branch '2017.7' into nonbase_test
 
-  * c9ba33432e Add Non Base Environement salt:// source integration test
+  * c9ba33432e Add Non Base Environment salt:// source integration test
 
 - **PR** `#44617`_: (*Ch3LL*) Add ssh thin_dir integration test
   @ *2017-11-22T16:12:51Z*
@@ -1896,7 +1896,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   * 1643bb7fd4 Merge pull request `#44551`_ from cloudflare/annoying-tmpnam
   * ce1882943d Use salt.utils.files.mkstemp() instead
 
-  * 6689bd3b2d Dont use dangerous os.tmpnam
+  * 6689bd3b2d Don't use dangerous os.tmpnam
 
   * 2d6176b0bc Fx2 proxy minion: clean return, like all the other modules
 
@@ -2151,7 +2151,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
   * cab54e34b5 Merge pull request `#44173`_ from twangboy/win_system_docs
 
-    * 8e111b413d Fix some of the wording and grammer errors
+    * 8e111b413d Fix some of the wording and grammar errors
 
     * a12bc5ae41 Use google style docstrings
 
@@ -2728,7 +2728,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   @ *2017-10-17T15:24:19Z*
 
   * 6252f82f58 Merge pull request `#44133`_ from cachedout/fix_paralell_docs
-  * 8d1c1e21f0 Fix typos in paralell states docs
+  * 8d1c1e21f0 Fix typos in parallel states docs
 
 - **PR** `#44135`_: (*timfreund*) Insert missing verb in gitfs walkthrough
   @ *2017-10-17T14:32:13Z*
@@ -2814,7 +2814,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   - **PR** `#44021`_: (*whiteinge*) Also catch cpstats AttributeError for bad CherryPy release ~5.6.0
   - **PR** `#44010`_: (*Ch3LL*) Security Fixes for 2016.3.8
   - **PR** `#43977`_: (*Ch3LL*) Add Security Notes to 2016.3.8 Release Notes
-  - **PR** `#42655`_: (*whiteinge*) Reenable cpstats for rest_cherrypy
+  - **PR** `#42655`_: (*whiteinge*) Re-enable cpstats for rest_cherrypy
     | refs: `#44021`_
   - **PR** `#33806`_: (*cachedout*) Work around upstream cherrypy bug
     | refs: `#42655`_
@@ -3286,7 +3286,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
   - **ISSUE** `#40311`_: (*cralston0*) --hide-timeout used with --output json --static produces unparseable JSON
     | refs: `#43772`_
-  - **PR** `#43772`_: (*gtmanfred*) dont print Minion not responding with quiet
+  - **PR** `#43772`_: (*gtmanfred*) don't print Minion not responding with quiet
   - **PR** `#43747`_: (*rallytime*) Add GPG Verification section to Contributing Docs
   * 9615ca32d5 Merge pull request `#43773`_ from rallytime/merge-2017.7
   * f7035ed7da Merge branch '2017.7' into merge-2017.7
@@ -3295,7 +3295,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
     * 1a8cc60bb4 Merge pull request `#43772`_ from gtmanfred/2016.11
 
-      * 0194c60960 dont print Minion not responding with quiet
+      * 0194c60960 don't print Minion not responding with quiet
 
     * 9dee896fb9 Merge pull request `#43747`_ from rallytime/gpg-verification
 

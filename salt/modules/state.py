@@ -778,19 +778,18 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write state request file %s. Check permission.',
-            notify_path
-        )
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write state request file %s. Check permission.',
+                notify_path
+            )
     return ret
 
 
@@ -844,19 +843,18 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            log.error(
-                'Unable to write state request file %s. Check permission.',
-                notify_path
-            )
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                log.error(
+                    'Unable to write state request file %s. Check permission.',
+                    notify_path
+                )
     return True
 
 
@@ -1249,13 +1247,12 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
-    umask = os.umask(0o77)
-    if kwargs.get('cache'):
-        if os.path.isfile(cfn):
-            with salt.utils.files.fopen(cfn, 'rb') as fp_:
-                high_ = serial.load(fp_)
-                return st_.state.call_high(high_, orchestration_jid)
-    os.umask(umask)
+    with salt.utils.files.set_umask(0o077):
+        if kwargs.get('cache'):
+            if os.path.isfile(cfn):
+                with salt.utils.files.fopen(cfn, 'rb') as fp_:
+                    high_ = serial.load(fp_)
+                    return st_.state.call_high(high_, orchestration_jid)
 
     mods = salt.utils.args.split_input(mods)
 
@@ -1280,36 +1277,36 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to SLS cache file %s. Check permission.',
-            cache_file
-        )
-    _set_retcode(ret, high_)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
+            with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
+                serial.dump(ret, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to SLS cache file %s. Check permission.',
+                cache_file
+            )
+        _set_retcode(ret, high_)
+        # Work around Windows multiprocessing bug, set __opts__['test'] back to
+        # value from before this function was run.
+        __opts__['test'] = orig_test
 
-    try:
-        with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-            try:
-                serial.dump(high_, fp_)
-            except TypeError:
-                # Can't serialize pydsl
-                pass
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to highstate cache file %s. Do you have permissions?',
-            cfn
-        )
-    os.umask(cumask)
+        try:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                try:
+                    serial.dump(high_, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to highstate cache file %s. Do you have permissions?',
+                cfn
+            )
+
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 

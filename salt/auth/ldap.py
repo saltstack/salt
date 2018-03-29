@@ -361,7 +361,7 @@ def groups(username, **kwargs):
                                            [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename'), _config('groupattribute')]:
+                for user in result[_config('accountattributename')]:
                     if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
