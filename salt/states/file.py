@@ -635,6 +635,7 @@ def _clean_dir(root, keep, exclude_pat):
     '''
     real_keep = _find_keep_files(root, keep)
     removed = set()
+
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to

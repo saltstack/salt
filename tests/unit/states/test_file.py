@@ -1849,7 +1849,7 @@ class TestFindKeepFiles(TestCase):
 
     @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     def test__find_keep_files_unix(self):
-        keep = filestate._find_keep_files_old(
+        keep = filestate._find_keep_files(
             '/test/parent_folder',
             ['/test/parent_folder/meh.txt']
         )
