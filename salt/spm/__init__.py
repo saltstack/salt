@@ -200,6 +200,53 @@ def spm_create(path, formula_conf):
     return tarobj
 
 
+def spm_open(spm_path):
+    '''
+    Open an SPM file and return the tar object and formula_conf.
+    '''
+
+    tarobj = None
+    formula_conf = None
+
+    try:
+        # Only use 'r' so that compression is auto-detected - leaves
+        # open-ended to future payload compression types.
+        _tarobj = tarfile.open(spm_path, 'r')
+    except Exception as err:
+        raise SPMPackageError('Unable to open SPM file "{0}": {1}'.format(spm_path, str(err)))
+
+    for member in _tarobj.getmembers():
+        if member.name.count('/') != 1:
+            continue
+
+        if not member.name.endswith('/FORMULA'):
+            continue
+
+        formula_ref = _tarobj.extractfile(member.name)
+        try:
+            formula_def = salt.utils.yaml.safe_load(formula_ref)
+        except salt.utils.yaml.reader.ReaderError:
+            continue
+
+        try:
+            verify_formula(formula_def)
+        except SPMFormulaError as err:
+            log.warning('SPM member %s does not verify as an SPM FORMULA: %s', member.name, str(err))
+            continue
+
+        if member.name != '{0}/FORMULA'.format(formula_def['name']):
+            log.warning('SPM member %s is mismatched with SPM metadata %s/FORMULA', member.name, formula_def['name'])
+            continue
+
+        tarobj = _tarobj
+        formula_conf = formula_def
+        break
+    else:
+        raise SPMPackageError('Unable to locate a valid FORMULA member in the SPM')
+
+    return tarobj, formula_conf
+
+
 class SPMClient(object):
     '''
     Provide an SPM Client
@@ -369,14 +416,8 @@ class SPMClient(object):
         for pkg in packages:
             if pkg.endswith('.spm'):
                 if self._pkgfiles_fun('path_exists', pkg):
-                    comps = pkg.split('-')
-                    comps = '-'.join(comps[:-2]).split('/')
-                    pkg_name = comps[-1]
-
-                    formula_tar = tarfile.open(pkg, 'r:bz2')
-                    formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-                    formula_def = salt.utils.yaml.safe_load(formula_ref)
-                    verify_formula(formula_def)
+                    _, formula_def = spm_open(pkg)
+                    pkg_name = formula_def['name']
 
                     file_map[pkg_name] = pkg
                     to_, op_, re_ = self._check_all_deps(
@@ -578,10 +619,7 @@ class SPMClient(object):
         Install one individual package
         '''
         self.ui.status('... installing {0}'.format(pkg_name))
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-        formula_def = salt.utils.yaml.safe_load(formula_ref)
-        verify_formula(formula_def)
+        formula_tar, formula_def = spm_open(pkg_file)
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -856,12 +894,8 @@ class SPMClient(object):
                 spm_path = '{0}/{1}'.format(repo_path, spm_file)
                 if not tarfile.is_tarfile(spm_path):
                     continue
-                comps = spm_file.split('-')
-                spm_name = '-'.join(comps[:-2])
-                spm_fh = tarfile.open(spm_path, 'r:bz2')
-                formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
-                formula_conf = salt.utils.yaml.safe_load(formula_handle.read())
-                verify_formula(formula_conf)
+                _, formula_conf = spm_open(spm_path)
+                spm_name = formula_conf['name']
 
                 use_formula = True
                 if spm_name in repo_metadata:
@@ -1016,14 +1050,7 @@ class SPMClient(object):
         if not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
-        comps = pkg_file.split('-')
-        comps = '-'.join(comps[:-2]).split('/')
-        name = comps[-1]
-
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
-        formula_def = salt.utils.yaml.safe_load(formula_ref)
-        verify_formula(formula_def)
+        _, formula_def = spm_open(pkg_file)
 
         self.ui.status(self._get_info(formula_def))
 
@@ -1085,13 +1112,10 @@ class SPMClient(object):
             raise SPMInvocationError('A package filename must be specified')
 
         pkg_file = args[1]
-        if not os.path.exists(pkg_file):
-            raise SPMPackageError('Package file {0} not found'.format(pkg_file))
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        pkg_files = formula_tar.getmembers()
+        formula_tar, _ = spm_open(pkg_file)
 
-        for member in pkg_files:
-            self.ui.status(member.name)
+        for name in formula_tar.getnames():
+            self.ui.status(name)
 
     def _list_packages(self, args):
         '''
