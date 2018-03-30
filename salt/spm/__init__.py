@@ -12,6 +12,7 @@ import tarfile
 import shutil
 import hashlib
 import logging
+import re
 import sys
 try:
     import pwd
@@ -78,6 +79,11 @@ FORMULA_FIELDS = {
     'files': {
         'description': 'Files that should be included in the SPM',
         'type': list,
+        'required': False,
+        'dont_leak': True,
+    },
+    'spm_build_exclude': {
+        'description': '(sequence) Regular expressions of files to exclude from the SPM',
         'required': False,
         'dont_leak': True,
     },
@@ -161,6 +167,7 @@ class SPMClient(object):
     '''
     Provide an SPM Client
     '''
+
     def __init__(self, ui, opts=None):  # pylint: disable=W0231
         self.ui = ui
         if not opts:
@@ -1151,14 +1158,23 @@ class SPMClient(object):
         Exclude based on opts
         '''
         if isinstance(member, string_types):
+            mpath = member
+            ret_exclude = True
+            ret_include = False
+        elif isinstance(member, tarfile.TarInfo):
+            mpath = member.name
+            ret_exclude = None
+            ret_include = member
+        else:
             return None
 
-        for item in self.opts['spm_build_exclude']:
-            if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
-                return None
-            elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
-                return None
-        return member
+        for pat in self.formula_conf.get('spm_build_exclude', self.opts['spm_build_exclude']):
+            if re.match('{0}/{1}'.format(self.formula_conf['name'], pat), mpath):
+                return ret_exclude
+            elif re.match('{0}/{1}'.format(self.abspath, pat), mpath):
+                return ret_exclude
+
+        return ret_include
 
     def _render(self, data, formula_def):
         '''

@@ -47,17 +47,17 @@ When packages are built, they will be placed in this directory.
 
 spm_build_exclude
 -----------------
-Default: ``['.git']``
+Default: ``['\.git']``
 
 When SPM builds a package, it normally adds all files in the formula directory
-to the package. Files listed here will be excluded from that package. This
-option requires a list to be specified.
+to the package. Files that match the listed regular expressions will be excluded
+from that package. This option requires a list to be specified.
 
 .. code-block:: yaml
 
     spm_build_exclude:
-      - .git
-      - .svn
+      - \.git
+      - \.svn
 
 
 Types of Packages
