@@ -482,10 +482,11 @@ def _run(cmd,
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
             env = env_runas
-        except ValueError:
+        except ValueError as exc:
+            log.exception('Error raised retrieving environment for user %s', runas)
             raise CommandExecutionError(
-                'Environment could not be retrieved for User \'{0}\''.format(
-                    runas
+                'Environment could not be retrieved for user \'{0}\': {1}'.format(
+                    runas, exc
                 )
             )
 
