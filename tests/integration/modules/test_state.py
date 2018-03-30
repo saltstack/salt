@@ -1347,6 +1347,39 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
         self.assertFalse(state_run[state_id]['result'])
 
+    def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(self):
+        '''
+        This tests the case where require, order, and failhard are all used together in a state definition.
+
+        Previously, the order option, which used in tandem with require and failhard, would cause the state
+        compiler to stacktrace. This exposed a logic error in the ``check_failhard`` function of the state
+        compiler. With the logic error resolved, this test should now pass.
+
+        See https://github.com/saltstack/salt/issues/38683 for more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='issue-46762'
+        )
+
+        state_id = 'test_|-a_|-a_|-fail_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Failure!')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-b_|-b_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.c')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-c_|-c_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.a')
+        self.assertFalse(state_run[state_id]['result'])
+
     def test_state_nonbase_environment(self):
         '''
         test state.sls with saltenv using a nonbase environment
