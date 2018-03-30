@@ -469,7 +469,7 @@ Python Version
 Python 2 Windows API was design when Windows did not support Unicode. Windows now supports
 Unicode however to keep backwards compatibility Python 2 Windows API has not been changed.
 Python 3 Windows API supports Unicode. Salt Python 3 installer is the recommend choice for
-users who need Non-ASCII (7bit) characters.
+users who need characters other than Non-ASCII (7bit) characters.
 
 Execution module changes
 ========================
