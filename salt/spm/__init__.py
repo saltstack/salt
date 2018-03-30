@@ -27,6 +27,7 @@ import salt.config
 import salt.loader
 import salt.cache
 import salt.syspaths as syspaths
+from salt.defaults import exitcodes
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
@@ -99,17 +100,24 @@ class SPMException(Exception):
     '''
     Base class for SPMClient exceptions
     '''
+    status = exitcodes.EX_SOFTWARE
+
+    def __init__(self, status=None):
+        super(SPMException, self).__init__()
+        if status is not None:
+            self.status = status
 
 
 class SPMFormulaError(SPMException):
     '''
     FORMUAL does not verify: e.g. missing or incorrect field types.
     '''
+    status = exitcodes.EX_DATAERR
 
-    def __init__(self, missing=None, bad_types=None):
+    def __init__(self, missing=None, bad_types=None, status=None):
         self.missing = missing or ()
         self.bad_types = bad_types or ()
-        super(SPMFormulaError, self).__init__()
+        super(SPMFormulaError, self).__init__(status=status)
 
     def __str__(self):
         msgs = []
@@ -128,24 +136,28 @@ class SPMInvocationError(SPMException):
     '''
     Wrong number of arguments or other usage error
     '''
+    status = exitcodes.EX_USAGE
 
 
 class SPMPackageError(SPMException):
     '''
     Problem with package file or package installation
     '''
+    status = exitcodes.EX_NOINPUT
 
 
 class SPMDatabaseError(SPMException):
     '''
     SPM database not found, etc
     '''
+    status = exitcodes.EX_SOFTWARE
 
 
 class SPMOperationCanceled(SPMException):
     '''
     SPM install or uninstall was canceled
     '''
+    status = exitcodes.EX_CANTCREAT
 
 
 def verify_formula(formula):
@@ -279,6 +291,7 @@ class SPMClient(object):
         '''
         Run the SPM command
         '''
+        ret = exitcodes.EX_OK
         command = args[0]
         try:
             if command == 'install':
@@ -305,6 +318,9 @@ class SPMClient(object):
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
             self.ui.error(six.text_type(exc))
+            ret = exc.status
+
+        return ret
 
     def _pkgdb_fun(self, func, *args, **kwargs):
         try:
