@@ -1843,3 +1843,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+
+class TestFindKeepFiles(TestCase):
+
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    def test__find_keep_files_unix(self):
+        keep = filestate._find_keep_files(
+            '/test/parent_folder',
+            ['/test/parent_folder/meh.txt']
+        )
+        expected = [
+            '/',
+            '/test',
+            '/test/parent_folder',
+            '/test/parent_folder/meh.txt',
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual
+
+    @skipIf(not salt.utils.is_windows(), 'Only run on Windows')
+    def test__find_keep_files_win32(self):
+        keep = filestate._find_keep_files(
+            'c:\\test\\parent_folder',
+            ['C:\\test\\parent_folder\\meh-2.txt']
+        )
+        expected = [
+            'c:\\',
+            'c:\\test',
+            'c:\\test\\parent_folder',
+            'c:\\test\\parent_folder\\meh-2.txt'
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual
