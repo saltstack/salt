@@ -102,7 +102,7 @@ def is_windows():
 def need_deployment():
     '''
     Salt thin needs to be deployed - prep the target directory and emit the
-    delimeter and exit code that signals a required deployment.
+    delimiter and exit code that signals a required deployment.
     '''
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)

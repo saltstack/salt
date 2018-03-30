@@ -27,8 +27,34 @@ syndic respects :conf_minion:`enable_legacy_startup_events` as well.
 Deprecations
 ------------
 
+API Deprecations
+================
+
+Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
+been removed. Please use ``tgt_type`` instead. This change was made due to
+numerous reports of confusion among community members, since the targeting
+method is published to minions as ``tgt_type``, and appears as ``tgt_type``
+in the job cache as well.
+
+Those who are using the :ref:`LocalClient <local-client>` (either directly,
+or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
+their code to use ``tgt_type``.
+
+.. code-block:: python
+
+    >>> import salt.client
+    >>> local = salt.client.LocalClient()
+    >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
+    {'jerry': 'root'}
+
 Module Deprecations
 ===================
+
+The ``napalm_network`` module had the following changes:
+
+- Support for the ``template_path`` has been removed in the ``load_template``
+  function. This is because support for NAPALM native templates has been
+  dropped.
 
 The ``trafficserver`` module had the following changes:
 
@@ -122,6 +148,11 @@ instead:
   files to use the ``kubernetes.node_label_present`` function instead.
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
+
+The ``netconfig`` state had the following changes:
+
+- Support for the ``template_path`` option in the ``managed`` state has been
+  removed. This is because support for NAPALM native templates has been dropped.
 
 The ``trafficserver`` state had the following changes:
 

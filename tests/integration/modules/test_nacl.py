@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for the salt-run command
+Tests for the nacl execution module
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -12,7 +12,8 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 try:
-    import libnacl  # pylint: disable=unused-import
+    import libnacl.secret  # pylint: disable=unused-import
+    import libnacl.sealed  # pylint: disable=unused-import
     HAS_LIBNACL = True
 except ImportError:
     HAS_LIBNACL = False

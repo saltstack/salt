@@ -348,7 +348,8 @@ def get_size(vm_):
         return sizes['Small Instance']
 
     for size in sizes:
-        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
+        combinations = (six.text_type(sizes[size]['id']), six.text_type(size))
+        if vm_size and six.text_type(vm_size) in combinations:
             return sizes[size]
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -568,7 +569,8 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get nodes list from datacenter: %s', datacenter_id)
+        log.error('Failed to get nodes list '
+                  'from datacenter: %s', datacenter_id)
         raise
 
     for item in nodes['items']:
@@ -1112,8 +1114,6 @@ def _get_system_volume(vm_):
     '''
     Construct VM system volume list from cloud profile config
     '''
-    # Retrieve list of SSH public keys
-    ssh_keys = get_public_keys(vm_)
 
     # Override system volume size if 'disk_size' is defined in cloud profile
     disk_size = get_size(vm_)['disk']
@@ -1124,9 +1124,16 @@ def _get_system_volume(vm_):
     volume = Volume(
         name='{0} Storage'.format(vm_['name']),
         size=disk_size,
-        disk_type=get_disk_type(vm_),
-        ssh_keys=ssh_keys
+        disk_type=get_disk_type(vm_)
     )
+
+    if 'image_password' in vm_:
+        image_password = vm_['image_password']
+        volume.image_password = image_password
+
+    # Retrieve list of SSH public keys
+    ssh_keys = get_public_keys(vm_)
+    volume.ssh_keys = ssh_keys
 
     if 'image_alias' in vm_.keys():
         volume.image_alias = vm_['image_alias']
