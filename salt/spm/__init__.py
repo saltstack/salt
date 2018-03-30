@@ -14,6 +14,7 @@ import hashlib
 import logging
 import re
 import sys
+import time
 try:
     import pwd
     import grp
@@ -30,6 +31,7 @@ from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import filter
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 from salt.template import compile_template
 import salt.utils.files
 import salt.utils.http as http
@@ -161,6 +163,41 @@ def verify_formula(formula):
 
     if missing or bad_types:
         raise SPMFormulaError(missing=missing, bad_types=bad_types)
+
+
+def spm_create(path, formula_conf):
+    '''
+    Write the FORMULA file detailed by formula_conf to an SPM tar object
+    '''
+
+    verify_formula(formula_conf)
+
+    now = time.time()
+    _formula_conf = dict([(k, v) for k, v in formula_conf.items() if k not in DONT_LEAK_FORMULA_FIELDS])
+
+    try:
+        tarobj = tarfile.open(path, 'w:bz2')
+    except Exception as err:
+        raise SPMPackageError('Failed to create SPM: {0}: {1}'.format(path, err))
+
+    fdir = tarfile.TarInfo(_formula_conf['name'])
+    fdir.type = tarfile.DIRTYPE
+    fdir.mode = 0755
+    fdir.mtime = now
+    tarobj.addfile(fdir)
+
+    fpath = '{0}/FORMULA'.format(_formula_conf['name'])
+    fc_str = salt.utils.yaml.safe_dump(_formula_conf, default_flow_style=False) + '\n'
+    fc_fobj = StringIO(fc_str)
+    ffile = tarfile.TarInfo(fpath)
+    ffile.size = len(fc_str)
+    ffile.type = tarfile.REGTYPE
+    ffile.mode = 0444
+    ffile.mtime = now
+    tarobj.addfile(ffile, fc_fobj)
+    fc_fobj.close()
+
+    return tarobj
 
 
 class SPMClient(object):
@@ -1122,7 +1159,7 @@ class SPMClient(object):
 
         self.formula_conf = formula_conf
 
-        formula_tar = tarfile.open(out_path, 'w:bz2')
+        formula_tar = spm_create(out_path, formula_conf)
 
         if 'files' in formula_conf:
             # This allows files to be added to the SPM file in a specific order.
@@ -1130,9 +1167,6 @@ class SPMClient(object):
             # RPM files. This tag is ignored here, but is used when installing
             # the SPM file.
             if isinstance(formula_conf['files'], list):
-                formula_dir = tarfile.TarInfo(formula_conf['name'])
-                formula_dir.type = tarfile.DIRTYPE
-                formula_tar.addfile(formula_dir)
                 for file_ in formula_conf['files']:
                     for ftype in FILE_TYPES:
                         if file_.startswith('{0}|'.format(ftype)):
@@ -1144,10 +1178,8 @@ class SPMClient(object):
         else:
             # If no files are specified, then the whole directory will be added.
             try:
-                formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
                 formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
             except TypeError:
-                formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
                 formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
@@ -1167,6 +1199,16 @@ class SPMClient(object):
             ret_include = member
         else:
             return None
+
+        # parent directory and FORMULA are explicitly written into the
+        # archive - don't passively include them.
+        if mpath in (
+                '{0}'.format(self.formula_conf['name']),
+                '{0}'.format(self.abspath),
+                '{0}/FORMULA'.format(self.formula_conf['name']),
+                '{0}/FORMULA'.format(self.abspath)
+        ):
+            return ret_exclude
 
         for pat in self.formula_conf.get('spm_build_exclude', self.opts['spm_build_exclude']):
             if re.match('{0}/{1}'.format(self.formula_conf['name'], pat), mpath):
