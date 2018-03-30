@@ -159,6 +159,7 @@ def extracted(name,
               source_hash_update=False,
               skip_verify=False,
               password=None,
+              zip64=False,
               options=None,
               list_options=None,
               force=False,
@@ -428,6 +429,12 @@ def extracted(name,
           <salt.modules.archive.is_encrypted>` function will be used to
           determine if the archive is password-protected. If it is, then the
           ``password`` argument will be required for the state to proceed.
+
+    zip64 : False
+        **For ZIP archives using Python native zipfile_  support only.**
+        If the zip file was created using ZIP64 extension,set this argument
+        to ``True``.
+        ZIP64 extension is required to handle zip files larger than 4 GB in size.
 
     options
         **For tar and zip archives only.**  This option can be used to specify
@@ -887,10 +894,21 @@ def extracted(name,
                     'set it to False) and allow Salt to extract the archive '
                     'using Python\'s built-in ZIP file support.'
                 )
+        if zip64:
+            if use_cmd_unzip:
+                ret['comment'] = (
+                    '\'zip64\' can not be used together with \'use_cmd_unzip\', '
+                    'it is only available when using Pythons native zip support'
+                )
+                return ret
     else:
         if password:
             ret['comment'] = \
                 'The \'password\' argument is only supported for zip archives'
+            return ret
+        if zip64:
+            ret['comment'] = \
+                'The \'zip64\' argument is only supported for zip archives'
             return ret
 
     if archive_format == 'rar':
@@ -1268,6 +1286,7 @@ def extracted(name,
                                                       options=options,
                                                       trim_output=trim_output,
                                                       password=password,
+                                                      zip64=zip64,
                                                       **kwargs)
             elif archive_format == 'rar':
                 try:
