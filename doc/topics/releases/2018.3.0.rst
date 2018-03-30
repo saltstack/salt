@@ -464,6 +464,13 @@ For more information on these output modes, see the docs for the :mod:`Highstate
 
 Windows
 -------
+Python Version
+==============
+Python 2 Windows API was design when Windows did not support Unicode. Windows now supports
+Unicode however to keep backwards compatibility Python 2 Windows API has not been changed.
+Python 3 Windows API supports Unicode. Salt Python 3 installer is the recommend choice for
+users who need Non-ASCII (7bit) characters.
+
 Execution module changes
 ========================
 pkg
@@ -529,6 +536,15 @@ Command-line help
 *****************
 The Windows installer will now display command-line help when a help switch
 (``/?``) is passed.
+
+utils.pkg.win preview
+=====================
+A new utils python module has been added, which gathers information about windows
+installed software. This is currently not used by any salt execution module or state.
+Users are encource to run this and report any issues. Running the command with the
+``detail`` option will be useful for anyone developing windows package definitions.
+With salt installed in the default location the following command will print the help
+message ``c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py``.
 
 Salt Cloud Features
 -------------------
