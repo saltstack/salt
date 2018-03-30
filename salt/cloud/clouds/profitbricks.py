@@ -684,8 +684,7 @@ def _get_nics(vm_):
                   name='public',
                   firewall_rules=firewall_rules)
         if 'public_ips' in vm_:
-            ips = _get_ip_addresses(vm_['public_ips'])
-            nic.ips = ips
+            nic.ips = _get_ip_addresses(vm_['public_ips'])
         nics.append(nic)
 
     if 'private_lan' in vm_:
@@ -696,8 +695,7 @@ def _get_nics(vm_):
                   name='private',
                   firewall_rules=firewall_rules)
         if 'private_ips' in vm_:
-            ips = _get_ip_addresses(vm_['private_ips'])
-            nic.ips = ips
+            nic.ips = _get_ip_addresses(vm_['private_ips'])
         if 'nat' in vm_ and 'private_ips' not in vm_:
             nic.nat = vm_['nat']
         nics.append(nic)
