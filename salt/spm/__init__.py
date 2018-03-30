@@ -513,7 +513,7 @@ class SPMClient(object):
                             )
                             out_file = os.path.join(
                                 cache_path,
-                                repo_info['packages'][package]['filename']
+                                os.path.basename(repo_info['packages'][package]['filename'])
                             )
                             dl_list[package] = {
                                 'version': repo_ver,
@@ -534,7 +534,7 @@ class SPMClient(object):
 
             # Download the package
             if dl_url.startswith('file://'):
-                dl_url = dl_url.replace('file://', '')
+                dl_url = os.path.abspath(dl_url.replace('file://', ''))
                 shutil.copyfile(dl_url, out_file)
             else:
                 with salt.utils.files.fopen(out_file, 'w') as outf:
