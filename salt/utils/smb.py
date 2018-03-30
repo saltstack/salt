@@ -6,6 +6,8 @@ Utility functions for SMB connections
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
+import socket
+import io
 
 # Import python libs
 import salt.utils.files
@@ -13,6 +15,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from salt.exceptions import SaltException
 try:
     import impacket.smbconnection
     from impacket.smbconnection import SessionError as smbSessionError
@@ -22,10 +25,15 @@ except ImportError:
     HAS_IMPACKET = False
 try:
     import smb.SMBConnection
-    from smb.SMBConnection import SMBConnectionError
     HAS_PYSMB = True
 except ImportError:
     HAS_PYSMB = False
+
+
+class MissingSmb(SaltException):
+    '''
+    Raised when no smb library is found.
+    '''
 
 
 class StrHandle(object):
@@ -50,29 +58,32 @@ class StrHandle(object):
         return ''
 
 
-def _get_conn_impacket(host=none, username=none, password=none):
+def _get_conn_impacket(host=None, username=None, password=None, client_name=None, port=445):
     conn = impacket.smbconnection.SMBConnection(
-        remoteName='*SMBSERVER',
+        remoteName=host,
         remoteHost=host,
+        myName=client_name,
     )
     conn.login(user=username, password=password)
     return conn
 
-def _get_conn_pysmb(host=none, username=none, password=none):
-    host = socket.gethostbyname(host)
-    conn = smb.SMBConnection(username, password)
-    conn.connect(host)
+def _get_conn_pysmb(host='', username='', password='', client_name='', port=445, is_direct_tcp=True):
+    addr = socket.gethostbyname(host)
+    conn = smb.SMBConnection.SMBConnection(username, password, client_name, host, is_direct_tcp=is_direct_tcp)
+    conn.connect(addr, port)
     return conn
 
 
-def get_conn(host=None, username=None, password=None):
+def get_conn(host='', username=None, password=None, port=445):
     '''
     Get an SMB connection
     '''
     if HAS_PYSMB:
-        return _get_conn_pysmb(host, username, password)
+        log.warn("Get connection pysmb")
+        return _get_conn_pysmb(host, username, password, port=port)
     elif HAS_IMPACKET:
-        return _get_conn_pysmb(host, username, password)
+        log.warn("Get connection impacket")
+        return _get_conn_impacket(host, username, password, port=port)
     return False
 
 
@@ -114,18 +125,19 @@ def _mkdirs_pysmb(path, share='C$', conn=None, host=None, username=None, passwor
         cwd = '\\'.join(comps[0:pos])
         try:
             conn.listPath(share, cwd)
-        except (smbSessionError):
-            log.exception('Encountered error running conn.listPath')
+        except Exception:  # TODO
+            log.debug("Unable to list path, create it: %s %s", share, path)
+            #log.exception('Encountered error running conn.listPath')
             conn.createDirectory(share, cwd)
         pos += 1
 
 
 def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None):
     if HAS_PYSMB:
-        return _mkdirs_pysmb(host, username, password)
+        return _mkdirs_pysmb(path, share, conn=conn, host=host, username=username, password=password)
     elif HAS_IMPACKET:
-        return _mkdirs_impacket(host, username, password)
-    raise Exception("Need smb lib")
+        return _mkdirs_impacket(path, share, conn=conn, host=host, username=username, password=password)
+    raise MissingException("SMB library required (impacket or pysmb)")
 
 
 def _put_str_impacket(content, path, share='C$', conn=None, host=None, username=None, password=None):
@@ -140,10 +152,9 @@ def _put_str_impacket(content, path, share='C$', conn=None, host=None, username=
 
 
 def _put_str_pysmb(content, path, share='C$', conn=None, host=None, username=None, password=None):
-    if con is None:
+    if conn is None:
         conn = get_conn(host, username, password)
-    conn.storeFile(share, path, io.StringIO(content))
-
+    conn.storeFile(share, path, io.BytesIO(content))
 
 
 def put_str(content, path, share='C$', conn=None, host=None, username=None, password=None):
@@ -152,10 +163,10 @@ def put_str(content, path, share='C$', conn=None, host=None, username=None, pass
     uploaded, without first writing it as a local file
     '''
     if HAS_PYSMB:
-        return _put_str_pysmb(host, username, password)
+        return _put_str_pysmb(content, path, share, conn=conn, host=host, username=username, password=password)
     elif HAS_IMPACKET:
-        return _put_str_impacket(host, username, password)
-    raise Exception("Need smb lib")
+        return _put_str_impacket(content, path, share, conn=conn, host=host, username=username, password=password)
+    raise MissingException("SMB library required (impacket or pysmb)")
 
 
 def _put_file_impacket(local_path, path, share='C$', conn=None, host=None, username=None, password=None):
@@ -175,7 +186,10 @@ def _put_file_impacket(local_path, path, share='C$', conn=None, host=None, usern
     if conn is False:
         return False
 
-    with salt.utils.files.fopen(local_path, 'rb') as fh_:
+    if hasattr(local_path, 'read'):
+        conn.putFile(share, path, local_path)
+        return
+    with salt.utils.fopen(local_path, 'rb') as fh_:
         conn.putFile(share, path, fh_.read)
 
 
@@ -186,8 +200,11 @@ def _put_file_pysmb(local_path, path, share='C$', conn=None, host=None, username
     if conn is False:
         return False
 
-    with salt.utils.files.fopen(local_path, 'rb') as fh_:
-        conn.storeFile(share, path, fh_.read)
+    if hasattr(local_path, 'read'):
+        conn.putFile(share, path, local_path)
+        return
+    with salt.utils.fopen(local_path, 'rb') as fh_:
+        conn.storeFile(share, path, fh_)
 
 
 def put_file(local_path, path, share='C$', conn=None, host=None, username=None, password=None):
@@ -202,10 +219,10 @@ def put_file(local_path, path, share='C$', conn=None, host=None, username=None, 
         salt.utils.smb.put_file('/root/test.pdf', 'temp\\myfiles\\test1.pdf', conn=smb_conn)
     '''
     if HAS_PYSMB:
-        return _put_file_pysmb(host, username, password)
+        return _put_file_pysmb(local_path, path, share, conn=conn, host=host, username=username, password=password)
     elif HAS_IMPACKET:
-        return _put_file_impacket(host, username, password)
-    raise Exception("Need smb lib")
+        return _put_file_impacket(local_path, path, share, conn=conn, host=host, username=username, password=password)
+    raise MissingException("SMB library required (impacket or pysmb)")
 
 
 def _delete_file_impacket(path, share='C$', conn=None, host=None, username=None, password=None):
@@ -227,10 +244,10 @@ def _delete_file_pysmb(path, share='C$', conn=None, host=None, username=None, pa
 
 def delete_file(path, share='C$', conn=None, host=None, username=None, password=None):
     if HAS_PYSMB:
-        return _put_file_pysmb(host, username, password)
+        return _delete_file_pysmb(path, share, conn=conn, host=host, username=username, password=password)
     elif HAS_IMPACKET:
-        return _put_file_impacket(host, username, password)
-    raise Exception("Need smb lib")
+        return _delete_file_impacket(path, share, conn=conn, host=host, username=username, password=password)
+    raise MissingException("SMB library required (impacket or pysmb)")
 
 
 def _delete_directory_impacket(path, share='C$', conn=None, host=None, username=None, password=None):
@@ -250,7 +267,7 @@ def _delete_directory_pysmb(path, share='C$', conn=None, host=None, username=Non
 
 def delete_directory(path, share='C$', conn=None, host=None, username=None, password=None):
     if HAS_PYSMB:
-        return delete_directoy_pysmb(host, username, password)
+        return _delete_directory_pysmb(path, share, conn=conn, host=host, username=username, password=password)
     elif HAS_IMPACKET:
-        return _delete_directoy_impacket(host, username, password)
-    raise Exception("Need smb lib")
+        return _delete_directory_impacket(path, share, conn=conn, host=host, username=username, password=password)
+    raise MissingException("SMB library required (impacket or pysmb)")
