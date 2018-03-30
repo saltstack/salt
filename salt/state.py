@@ -2434,6 +2434,7 @@ class State(object):
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
                 }
+                self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
