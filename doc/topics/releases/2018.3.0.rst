@@ -544,7 +544,13 @@ installed software. This is currently not used by any salt execution module or s
 Users are encource to run this and report any issues. Running the command with the
 ``detail`` option will be useful for anyone developing windows package definitions.
 With salt installed in the default location the following command will print the help
-message ``c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py``.
+message.
+
+.. code-block:: text
+
+    chcp 65001
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py detail system
 
 Salt Cloud Features
 -------------------
