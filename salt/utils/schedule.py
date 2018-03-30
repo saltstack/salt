@@ -630,8 +630,9 @@ class Schedule(object):
             # Reconfigure multiprocessing logging after daemonizing
             log_setup.setup_multiprocessing_logging()
 
-        # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
-        salt.utils.process.daemonize_if(self.opts)
+        if multiprocessing_enabled:
+            # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
+            salt.utils.process.daemonize_if(self.opts)
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
