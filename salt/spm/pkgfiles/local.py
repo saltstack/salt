@@ -7,6 +7,7 @@ This module allows SPM to use the local filesystem to install files for SPM.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import os
 import os.path
 import logging
@@ -177,7 +178,11 @@ def remove_file(path, conn=None):
         conn = init()
 
     log.debug('Removing package file %s', path)
-    os.remove(path)
+    try:
+        os.remove(path)
+    except OSError as err:
+        if errno.ENOENT != err.errno:
+            raise err
 
 
 def hash_file(path, hashobj, conn=None):
@@ -187,9 +192,15 @@ def hash_file(path, hashobj, conn=None):
     if os.path.isdir(path):
         return ''
 
-    with salt.utils.files.fopen(path, 'r') as f:
-        hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
-        return hashobj.hexdigest()
+    try:
+        with salt.utils.fopen(path, 'r') as fobj:
+            hashobj.update(salt.utils.to_bytes(fobj.read()))
+            return hashobj.hexdigest()
+    except IOError as err:
+        if errno.ENOENT == err.errno:
+            return ''
+        else:
+            raise err
 
 
 def path_exists(path):
