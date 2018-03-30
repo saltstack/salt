@@ -1018,11 +1018,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         if self.check_pidfile():
             pid = self.get_pidfile()
             if not salt.utils.is_windows():
-                if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+                if self.check_pidfile() and self.is_daemonized(pid) and os.getppid() != pid:
                     return True
             else:
                 # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
-                if self.check_pidfile() and self.is_daemonized(pid) and not salt.utils.win_functions.get_parent_pid() == pid:
+                if self.check_pidfile() and self.is_daemonized(pid) and salt.utils.win_functions.get_parent_pid() != pid:
                     return True
         return False
 
