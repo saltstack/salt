@@ -49,11 +49,71 @@ FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
 # s: SLS file
 # m: Salt module
 
+FORMULA_FIELDS = {
+    'name': {
+        'description': 'SPM name',
+        'type': six.string_types,
+        'required': True,
+    },
+    'version': {
+        'description': 'Verion of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'release': {
+        'description': 'Release of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'summary': {
+        'description': 'One-line summary of what the SPM does',
+        'type': six.string_types,
+        'required': True,
+    },
+    'description': {
+        'description': 'Verbose description of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'files': {
+        'description': 'Files that should be included in the SPM',
+        'type': list,
+        'required': False,
+        'dont_leak': True,
+    },
+}
+
+REQUIRED_FORMULA_FIELDS = [_field for _field, _info in FORMULA_FIELDS.items() if _info.get('required')]
+DONT_LEAK_FORMULA_FIELDS = [_field for _field, _info in FORMULA_FIELDS.items() if _info.get('dont_leak')]
+
 
 class SPMException(Exception):
     '''
     Base class for SPMClient exceptions
     '''
+
+
+class SPMFormulaError(SPMException):
+    '''
+    FORMUAL does not verify: e.g. missing or incorrect field types.
+    '''
+
+    def __init__(self, missing=None, bad_types=None):
+        self.missing = missing or ()
+        self.bad_types = bad_types or ()
+        super(SPMFormulaError, self).__init__()
+
+    def __str__(self):
+        msgs = []
+        if self.missing:
+            msgs.append('Missing FORMULA fields: {0}'.format(', '.join(self.missing)))
+        if self.bad_types:
+            msgs.append(
+                'Incorrect FORMULA field types: {0}'.format(
+                    ', '.join(['{0} ({1})'.format(f, str(FORMULA_FIELDS[f]['type'])) for f in self.bad_types])
+                )
+            )
+        return '; '.join(msgs)
 
 
 class SPMInvocationError(SPMException):
@@ -78,6 +138,23 @@ class SPMOperationCanceled(SPMException):
     '''
     SPM install or uninstall was canceled
     '''
+
+
+def verify_formula(formula):
+    '''
+    Verify the existence and types of fields in a FORMULA
+    '''
+    missing = []
+    bad_types = []
+    for fname, finfo in FORMULA_FIELDS.items():
+        if fname in formula:
+            if not isinstance(formula[fname], finfo.get('type')):
+                bad_types.append(fname)
+        elif finfo.get('required'):
+            missing.append(fname)
+
+    if missing or bad_types:
+        raise SPMFormulaError(missing=missing, bad_types=bad_types)
 
 
 class SPMClient(object):
@@ -255,6 +332,7 @@ class SPMClient(object):
                     formula_tar = tarfile.open(pkg, 'r:bz2')
                     formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
                     formula_def = salt.utils.yaml.safe_load(formula_ref)
+                    verify_formula(formula_def)
 
                     file_map[pkg_name] = pkg
                     to_, op_, re_ = self._check_all_deps(
@@ -459,6 +537,7 @@ class SPMClient(object):
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
         formula_def = salt.utils.yaml.safe_load(formula_ref)
+        verify_formula(formula_def)
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -738,6 +817,7 @@ class SPMClient(object):
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = salt.utils.yaml.safe_load(formula_handle.read())
+                verify_formula(formula_conf)
 
                 use_formula = True
                 if spm_name in repo_metadata:
@@ -899,6 +979,7 @@ class SPMClient(object):
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = salt.utils.yaml.safe_load(formula_ref)
+        verify_formula(formula_def)
 
         self.ui.status(self._get_info(formula_def))
 
@@ -1016,8 +1097,9 @@ class SPMClient(object):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
         with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = salt.utils.yaml.safe_load(fp_)
+            verify_formula(formula_conf)
 
-        for field in ('name', 'version', 'release', 'summary', 'description'):
+        for field in REQUIRED_FORMULA_FIELDS:
             if field not in formula_conf:
                 raise SPMPackageError('Invalid package: a {0} must be defined'.format(field))
 
