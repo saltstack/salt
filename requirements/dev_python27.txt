@@ -1,6 +1,6 @@
 -r base.txt
 
-mock
+mock>=2.0.0
 apache-libcloud>=0.14.0
 boto>=2.32.1
 boto3>=1.2.1

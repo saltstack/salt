@@ -296,6 +296,33 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
+    def test_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
+        self.assertEqual(pillar.opts['file_roots'],
+                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
+
+    def test_ignored_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
+        self.assertEqual(pillar.opts['file_roots'], {'base': ['/srv/pillar/base']})
+
     @patch('salt.fileclient.Client.list_states')
     def test_malformed_pillar_sls(self, mock_list_states):
         with patch('salt.pillar.compile_template') as compile_template:

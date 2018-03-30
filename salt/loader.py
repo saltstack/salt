@@ -652,7 +652,7 @@ def _load_cached_grains(opts, cfn):
     try:
         serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, 'rb') as fp_:
-            cached_grains = salt.utils.data.decode(serial.load(fp_))
+            cached_grains = salt.utils.data.decode(serial.load(fp_), preserve_tuples=True)
         if not cached_grains:
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
             return None
@@ -819,7 +819,7 @@ def grains(opts, force_refresh=False, proxy=None):
         salt.utils.dictupdate.update(grains_data, opts['grains'])
     else:
         grains_data.update(opts['grains'])
-    return salt.utils.data.decode(grains_data)
+    return salt.utils.data.decode(grains_data, preserve_tuples=True)
 
 
 # TODO: get rid of? Does anyone use this? You should use raw() instead

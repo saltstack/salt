@@ -828,7 +828,7 @@ def installed(name,
                                                      user=user, cwd=cwd,
                                                      env_vars=env_vars)
 
-                    # If we didnt find the package in the system after
+                    # If we didn't find the package in the system after
                     # installing it report it
                     if not pipsearch:
                         pkg_404_comms.append(
