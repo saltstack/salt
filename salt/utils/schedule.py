@@ -1194,7 +1194,6 @@ class Schedule(object):
                 data['_error'] = ('Missing python-dateutil. '
                                   'Ignoring job {0}'.format(job))
                 log.error(data['_error'])
-                return data
             else:
                 if isinstance(data['range'], dict):
                     start = data['range']['start']
@@ -1206,7 +1205,7 @@ class Schedule(object):
                             data['_error'] = ('Invalid date string for start. '
                                               'Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
-                            return data
+                            return None
                     if not isinstance(end, datetime.datetime):
                         try:
                             end = dateutil_parser.parse(end)
@@ -1214,7 +1213,7 @@ class Schedule(object):
                             data['_error'] = ('Invalid date string for end.'
                                               ' Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
-                            return data
+                            return None
                     if end > start:
                         if 'invert' in data['range'] and data['range']['invert']:
                             if now <= start or now >= end:
@@ -1237,13 +1236,11 @@ class Schedule(object):
                                           'range, end must be larger '
                                           'than start. Ignoring job {0}.'.format(job))
                         log.error(data['_error'])
-                        return data
                 else:
                     data['_error'] = ('schedule.handle_func: Invalid, range '
                                       'must be specified as a dictionary.'
                                       'Ignoring job {0}.'.format(job))
                     log.error(data['_error'])
-                    return data
 
         def _handle_after(job, data):
             '''
@@ -1457,7 +1454,7 @@ class Schedule(object):
                 data['_run_on_start'] = False
             elif run:
                 if 'range' in data:
-                    data = _handle_range(job, data)
+                    _handle_range(job, data)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
