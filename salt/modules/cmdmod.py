@@ -443,7 +443,7 @@ def _run(cmd,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0]
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))
             marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
