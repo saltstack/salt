@@ -653,10 +653,11 @@ VALID_OPTS = {
     's3fs_update_interval': int,
     'svnfs_update_interval': int,
 
-    'git_pillar_base': six.string_types,
-    'git_pillar_branch': six.string_types,
-    'git_pillar_env': six.string_types,
-    'git_pillar_root': six.string_types,
+    # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
+    # git_pillar_root omitted here because their values could conceivably be
+    # loaded as non-string types, which is OK because git_pillar will normalize
+    # them to strings. But rather than include all the possible types they
+    # could be, we'll just skip type-checking.
     'git_pillar_ssl_verify': bool,
     'git_pillar_global_lock': bool,
     'git_pillar_user': six.string_types,
@@ -668,12 +669,11 @@ VALID_OPTS = {
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
     'git_pillar_verify_config': bool,
+    # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
+    # their values could conceivably be loaded as non-string types, which is OK
+    # because gitfs will normalize them to strings. But rather than include all
+    # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
-    'gitfs_mountpoint': six.string_types,
-    'gitfs_root': six.string_types,
-    'gitfs_base': six.string_types,
-    'gitfs_user': six.string_types,
-    'gitfs_password': six.string_types,
     'gitfs_insecure_auth': bool,
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
@@ -888,11 +888,14 @@ VALID_OPTS = {
     'winrepo_dir': six.string_types,
     'winrepo_dir_ng': six.string_types,
     'winrepo_cachefile': six.string_types,
+    # NOTE: winrepo_branch omitted here because its value could conceivably be
+    # loaded as a non-string type, which is OK because winrepo will normalize
+    # them to strings. But rather than include all the possible types it could
+    # be, we'll just skip type-checking.
     'winrepo_cache_expire_max': int,
     'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
-    'winrepo_branch': six.string_types,
     'winrepo_ssl_verify': bool,
     'winrepo_user': six.string_types,
     'winrepo_password': six.string_types,
@@ -1639,6 +1642,7 @@ DEFAULT_MASTER_OPTS = {
     'eauth_acl_module': '',
     'eauth_tokens': 'localfs',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
+    'module_dirs': [],
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,

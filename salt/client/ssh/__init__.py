@@ -223,8 +223,8 @@ class SSH(object):
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
         if not salt.utils.path.which('ssh'):
-            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
-                                                 'installed for salt-ssh to run. Exiting.')
+            raise salt.exceptions.SaltSystemExit(code=-1,
+                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
@@ -1031,6 +1031,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:

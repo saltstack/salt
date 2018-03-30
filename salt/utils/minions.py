@@ -718,21 +718,11 @@ class CkMinions(object):
         _res = self.check_minions(v_expr, v_matcher)
         return set(_res['minions'])
 
-    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = self._expand_matching(valid)
         if minions is None:

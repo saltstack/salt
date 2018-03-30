@@ -220,7 +220,7 @@ def rm_(key, recurse=False, profile=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
-    Delete a key from etcd.  Returns True if the key was deleted, False if it wasn
+    Delete a key from etcd.  Returns True if the key was deleted, False if it was
     not and None if there was a failure.
 
     CLI Example:

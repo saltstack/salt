@@ -564,7 +564,7 @@ def fcontext_apply_policy(name, recursive=False):
     .. versionadded:: 2017.7.0
 
     Applies SElinux policies to filespec using `restorecon [-R]
-    filespec`. Returns dict with changes if succesful, the output of
+    filespec`. Returns dict with changes if successful, the output of
     the restorecon command otherwise.
 
     name
