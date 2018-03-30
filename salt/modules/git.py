@@ -2115,6 +2115,82 @@ def diff(cwd,
                     output_encoding=output_encoding)['stdout']
 
 
+def discard_local_changes(cwd,
+                          path='.',
+                          user=None,
+                          password=None,
+                          ignore_retcode=False,
+                          output_encoding=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
+
+    cwd
+        The path to the git checkout
+
+    path
+        path relative to cwd (defaults to ``.``)
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+      .. versionadded:: 2016.3.4
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+        .. versionadded:: 2015.8.0
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.discard_local_changes /path/to/repo
+        salt myminion git.discard_local_changes /path/to/repo path=foo
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git', 'checkout', '--', path]
+    # Checkout message goes to stderr
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
 def fetch(cwd,
           remote=None,
           force=False,
