@@ -327,7 +327,7 @@ The following example works on UNIX-like operating systems:
 
 .. code-block:: jinja
 
-    {%- if grains['os'] != 'Windows' %
+    {%- if grains['os'] != 'Windows' %}
     Restart Salt Minion:
       cmd.run:
         - name: 'salt-call service.restart salt-minion'
