@@ -2046,6 +2046,8 @@ class ClearFuncs(object):
 
             if not authorized:
                 # Authorization error occurred. Do not continue.
+                if auth_type == 'eauth' and not auth_list and 'username' in extra and 'eauth' in extra:
+                    log.debug('Auth configuration for eauth "%s" and user "%s" is empty', extra['eauth'], extra['username'])
                 log.warning(err_msg)
                 return {'error': {'name': 'AuthorizationError',
                                   'message': 'Authorization error occurred.'}}
