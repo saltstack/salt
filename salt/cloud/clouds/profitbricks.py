@@ -677,10 +677,9 @@ def _get_nics(vm_):
         firewall_rules = []
         # Set LAN to public if it already exists, otherwise create a new
         # public LAN.
-        lan_id = set_public_lan(int(vm_['public_lan']))
         if 'public_firewall_rules' in vm_:
             firewall_rules = _get_firewall_rules(vm_['public_firewall_rules'])
-        nic = NIC(lan=lan_id,
+        nic = NIC(lan=set_public_lan(int(vm_['public_lan'])),
                   name='public',
                   firewall_rules=firewall_rules)
         if 'public_ips' in vm_:
