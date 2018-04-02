@@ -16,6 +16,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
+import re
 import shutil
 import sys
 import tarfile
@@ -41,6 +42,7 @@ import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
+from salt.utils.decorators import with_deprecated
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
@@ -2286,7 +2288,115 @@ def _disabled(funs):
     return ret
 
 
-def event(tagmatch='*',
+@with_deprecated(globals(), "Fluorine")
+def event(tagmatch='.*',
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='minion'):
+    r'''
+    Watch Salt's event bus and block until the given tag is matched
+
+    .. versionadded:: 2016.3.0
+<<<<<<< HEAD
+    .. versionchanged:: Fluorine
+        ``tagmatch`` can now be either a glob or regular expression.
+=======
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+
+    This is useful for utilizing Salt's event bus from shell scripts or for
+    taking simple actions directly from the CLI.
+
+    Enable debug logging to see ignored events.
+
+    :param tagmatch: the event is written to stdout for each tag that matches
+<<<<<<< HEAD
+        this glob or regular expression.
+=======
+        this regular expression.
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+    :param count: this number is decremented for each event that matches the
+        ``tagmatch`` parameter; pass ``-1`` to listen forever.
+    :param quiet: do not print to stdout; just block
+    :param sock_dir: path to the Salt master's event socket file.
+    :param pretty: Output the JSON all on a single line if ``False`` (useful
+        for shell tools); pretty-print the JSON output if ``True``.
+    :param node: Watch the minion-side or master-side event bus.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call --local state.event pretty=True
+    '''
+<<<<<<< HEAD
+=======
+    try:
+        patt = re.compile(tagmatch)
+    except:
+        raise SaltInvocationError(
+            'Invalid regular expression "{0}" given as parameter "tagmatch"'.format(tagmatch)
+        )
+
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+    sevent = salt.utils.event.get_event(
+            node,
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True)
+
+<<<<<<< HEAD
+=======
+    we_are_counting = True if count > -1 else False
+
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+    while True:
+        ret = sevent.get_event(full=True, auto_reconnect=True)
+        if ret is None:
+            continue
+
+<<<<<<< HEAD
+        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
+            if not quiet:
+                salt.utils.stringutils.print_cli(
+                    '{0}\t{1}'.format(  # future lint: blacklisted-function
+=======
+        if patt.search(ret['tag']) is not None:
+            if not quiet:
+                salt.utils.stringutils.print_cli(
+                    str('{0}\t{1}').format(  # future lint: blacklisted-function
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+                        salt.utils.stringutils.to_str(ret['tag']),
+                        salt.utils.json.dumps(
+                            ret['data'],
+                            sort_keys=pretty,
+                            indent=None if not pretty else 4)
+                    )
+                )
+                sys.stdout.flush()
+<<<<<<< HEAD
+            if count > -1:
+                count -= 1
+                log.debug('Remaining event matches: %s', count)
+            if count == 0:
+                break
+=======
+
+            if we_are_counting:
+                count -= 1
+                if count == 0:
+                    break
+                log.debug('Remaining event matches: %s', count)
+
+>>>>>>> ab5bfc81a88bd21a31fa3d32aefb5b3636bbb9cb
+        else:
+            log.debug('Skipping event tag: %s', ret['tag'])
+            continue
+
+
+def _event(tagmatch='*',
         count=-1,
         quiet=False,
         sock_dir=None,

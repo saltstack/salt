@@ -11,6 +11,7 @@ import salt.loader
 import salt.utils.event
 import salt.utils.functools
 from salt.exceptions import SaltInvocationError
+from salt.utils.decorators import with_deprecated
 
 LOGGER = logging.getLogger(__name__)
 
@@ -224,7 +225,70 @@ def orchestrate_show_sls(mods,
 orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
-def event(tagmatch='*',
+@with_deprecated(globals(), "Fluorine")
+def event(tagmatch='.*',
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='master'):
+    r'''
+    Watch Salt's event bus and block until the given tag is matched
+
+    .. versionadded:: 2014.7.0
+
+    This is useful for utilizing Salt's event bus from shell scripts or for
+    taking simple actions directly from the CLI.
+
+    Enable debug logging to see ignored events.
+
+    :param tagmatch: the event is written to stdout for each tag that matches
+        this regular expression.
+    :param count: this number is decremented for each event that matches the
+        ``tagmatch`` parameter; pass ``-1`` to listen forever.
+    :param quiet: do not print to stdout; just block
+    :param sock_dir: path to the Salt master's event socket file.
+    :param pretty: Output the JSON all on a single line if ``False`` (useful
+        for shell tools); pretty-print the JSON output if ``True``.
+    :param node: Watch the minion-side or master-side event bus.
+        .. versionadded:: 2016.3.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Reboot a minion and run highstate when it comes back online
+        salt 'jerry' system.reboot && \\
+            salt-run state.event 'salt/minion/jerry/start' count=1 quiet=True && \\
+            salt 'jerry' state.highstate
+
+        # Reboot multiple minions and run highstate when all are back online
+        salt -L 'kevin,stewart,dave' system.reboot && \\
+            salt-run state.event 'salt/minion/*/start' count=3 quiet=True && \\
+            salt -L 'kevin,stewart,dave' state.highstate
+
+        # Watch the event bus forever in a shell while-loop.
+        salt-run state.event | while read -r tag data; do
+            echo $tag
+            echo $data | jq --color-output .
+        done
+
+    .. seealso::
+
+        See :blob:`tests/eventlisten.sh` for an example of usage within a shell
+        script.
+    '''
+    statemod = salt.loader.raw_mod(__opts__, 'state', None)
+
+    return statemod['state.event'](tagmatch=tagmatch,
+                                   count=count,
+                                   quiet=quiet,
+                                   sock_dir=sock_dir,
+                                   pretty=pretty,
+                                   node=node)
+
+
+def _event(tagmatch='*',
         count=-1,
         quiet=False,
         sock_dir=None,
