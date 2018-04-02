@@ -262,10 +262,15 @@ def _get_interface_info(interface):
     return details about given interface
     '''
     iface = __salt__['cmd.run']('ifconfig {0}'.format(interface)).strip().splitlines()
-    data = {}
-    data['label'] = interface
-    data['connectionid'] = interface
-    data['up'] = False
+    data = {
+        'label': interface,
+        'connectionid': interface,
+        'up': False,
+        'ipv4': {
+            'supportedrequestmodes': ['dhcp_linklocal', 'dhcp_only', 'linklocal_only', 'static'],
+            'requestmode': _get_requestmode_info(interface)
+        }
+    }
     while iface:
         line = iface.pop(0)
         if 'HWaddr' in line:
@@ -275,20 +280,21 @@ def _get_interface_info(interface):
             split_line = line.split()
             address = split_line[1].strip()
             netmask = split_line[3].strip()
-            data['ipv4'] = {
-                'address': address.split(':')[1].strip(),
-                'netmask': netmask.split(':')[1].strip(),
-                'gateway': '0.0.0.0'
-            }
+            data['ipv4']['address'] = address.split(':')[1].strip()
+            data['ipv4']['netmask'] = netmask.split(':')[1].strip()
+            data['ipv4']['gateway'] = '0.0.0.0'
             data['ipv4']['dns'] = _get_dns_info()
-            data['ipv4']['requestmode'] = _get_requestmode_info(interface)
-            data['ipv4']['supportedrequestmodes'] = [
-                    'dhcp_linklocal',
-                    'dhcp_only',
-                    'linklocal_only',
-                    'static'
-                    ]
-    iface_gateway_hex = __salt__['cmd.shell']("grep {0} /proc/net/route | awk '{{ if ($2 == '00000000') print $3}}'".format(interface)).strip()
+        elif data['ipv4']['requestmode'] == 'static':
+            data['ipv4']['address'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
+                                                          format(NIRTCFG_PATH, interface, 'IP_Address'))
+            data['ipv4']['netmask'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
+                                                          format(NIRTCFG_PATH, interface, 'Subnet_Mask'))
+            data['ipv4']['gateway'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
+                                                          format(NIRTCFG_PATH, interface, 'Gateway'))
+            data['ipv4']['dns'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
+                                                      format(NIRTCFG_PATH, interface, 'DNS_Address'))
+    iface_gateway_hex = __salt__['cmd.shell']("grep {0} /proc/net/route | awk '{{ if ($2 == '00000000') print $3}}'".
+                                              format(interface)).strip()
     if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
         data['ipv4']['gateway'] = '.'.join([str(int(iface_gateway_hex[i:i+2], 16)) for i in range(6, -1, -2)])
     return data
