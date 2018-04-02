@@ -80,7 +80,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         return {}
 
     vault_pillar = {}
-    
+
     try:
         path = paths[0].replace('path=', '')
         path = path.format(**{'minion': minion_id})
