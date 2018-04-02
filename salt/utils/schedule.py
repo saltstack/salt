@@ -1202,7 +1202,7 @@ class Schedule(object):
                             data['_error'] = ('Invalid date string for start. '
                                               'Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
-                            return None
+                            return
                     if not isinstance(end, datetime.datetime):
                         try:
                             end = dateutil_parser.parse(end)
@@ -1210,7 +1210,7 @@ class Schedule(object):
                             data['_error'] = ('Invalid date string for end.'
                                               ' Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
-                            return None
+                            return
                     if end > start:
                         if 'invert' in data['range'] and data['range']['invert']:
                             if now <= start or now >= end:
