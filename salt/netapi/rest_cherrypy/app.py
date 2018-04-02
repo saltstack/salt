@@ -174,7 +174,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 
