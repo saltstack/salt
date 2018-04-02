@@ -14,7 +14,7 @@ The following fields can be set in the minion conf file:
     slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
     slack.changes(optional, only show changes and failed states)
-    slack.failed(optional, only show failed states)
+    slack.only_show_failed(optional, only show failed states)
     slack.yaml_format(optional, format the json in yaml format)
 
 
@@ -111,7 +111,7 @@ def _get_options(ret=None):
              'as_user': 'as_user',
              'api_key': 'api_key',
              'changes': 'changes',
-             'failed': 'failed',
+             'only_show_failed': 'only_show_failed',
              'yaml_format': 'yaml_format',
              }
 
@@ -190,7 +190,7 @@ def returner(ret):
     as_user = _options.get('as_user')
     api_key = _options.get('api_key')
     changes = _options.get('changes')
-    failed = _options.get('failed')
+    only_show_failed = _options.get('only_show_failed')
     yaml_format = _options.get('yaml_format')
 
     if not channel:
@@ -209,11 +209,15 @@ def returner(ret):
         log.error('slack.api_key not defined in salt config')
         return
 
+    if only_show_failed and changes:
+        log.error('cannot define both slack.changes and slack.only_show_failed in salt config')
+        return
+
     returns = ret.get('return')
-    if changes is True and failed is not True:
+    if changes is True:
         returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
 
-    if failed is True and changes is not True:
+    if only_show_failed is True:
         returns = dict((key, value) for key, value in returns.items() if value['result'] is not True)
 
     if yaml_format is True:
