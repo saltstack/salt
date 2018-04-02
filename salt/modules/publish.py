@@ -13,7 +13,6 @@ import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
-import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -183,8 +182,7 @@ def publish(tgt,
             tgt_type='glob',
             returner='',
             timeout=5,
-            via_master=None,
-            expr_form=None):
+            via_master=None):
     '''
     Publish a command from the minion out to other minions.
 
@@ -251,17 +249,6 @@ def publish(tgt,
     master the publication should be sent to. Only one master may be specified. If
     unset, the publication will be sent only to the first master in minion configuration.
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,
@@ -278,8 +265,7 @@ def full_data(tgt,
               arg=None,
               tgt_type='glob',
               returner='',
-              timeout=5,
-              expr_form=None):
+              timeout=5):
     '''
     Return the full data about the publication, this is invoked in the same
     way as the publish function
@@ -301,17 +287,6 @@ def full_data(tgt,
             salt '*' publish.full_data test.kwarg arg='cheese=spam'
 
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,

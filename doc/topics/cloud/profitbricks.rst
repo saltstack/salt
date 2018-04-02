@@ -104,6 +104,7 @@ Here is an example of a profile:
     profitbricks_production:
       provider: my-profitbricks-config
       image: Ubuntu-15.10-server-2016-05-01
+      image_password: MyPassword1
       disk_type: SSD
       disk_size: 40
       cores: 8
@@ -191,6 +192,14 @@ disk_size
 disk_type
     This option allow the disk type to be set to HDD or SSD. The default is
     HDD.
+
+.. versionadded:: Fluorine
+image_password
+    A password is set on the image for the "root" or "Administrator" account.
+    This field may only be set during volume creation. Only valid with 
+    ProfitBricks supplied HDD (not ISO) images. The password must contain at 
+    least 8 and no more than 50 characters. Only these characters are 
+    allowed: [a-z][A-Z][0-9]
 
 cores
     This option allows you to override the number of CPU cores as defined by
