@@ -174,8 +174,8 @@ def update():
                 except ValueError:
                     # Document the invalid entry in the log
                     log.warning(
-                        'Skipped invalid cache mtime entry in %s: %s',
-                        mtime_map_path, line
+                        'Skipped invalid cache mtime entry in {0}: {1}'.format(
+                        mtime_map_path, line)
                     )
 
     # compare the maps, set changed to the return value
@@ -303,7 +303,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir %s', list_cachedir)
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
             return []
     list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
     w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
@@ -333,16 +333,16 @@ def _file_lists(load, form):
 
             for item in items:
                 abs_path = os.path.join(parent_dir, item)
-                log.trace('roots: Processing %s', abs_path)
+                log.trace('roots: Processing {0}'.format(abs_path))
                 is_link = salt.utils.path.islink(abs_path)
                 log.trace(
-                    'roots: %s is %sa link',
-                    abs_path, 'not ' if not is_link else ''
+                    'roots: {0} is {1}a link'.format(
+                    abs_path, 'not ' if not is_link else '')
                 )
                 if is_link and __opts__['fileserver_ignoresymlinks']:
                     continue
                 rel_path = _translate_sep(os.path.relpath(abs_path, fs_root))
-                log.trace('roots: %s relative path is %s', abs_path, rel_path)
+                log.trace('roots: {0} relative path is {1}'.format(abs_path, rel_path))
                 if salt.fileserver.is_file_ignored(__opts__, rel_path):
                     continue
                 tgt.add(rel_path)
@@ -357,8 +357,8 @@ def _file_lists(load, form):
                 if is_link:
                     link_dest = salt.utils.path.readlink(abs_path)
                     log.trace(
-                        'roots: %s symlink destination is %s',
-                        abs_path, link_dest
+                        'roots: {0} symlink destination is {1}'.format(
+                        abs_path, link_dest)
                     )
                     if salt.utils.platform.is_windows() \
                             and link_dest.startswith('\\\\'):
@@ -366,8 +366,8 @@ def _file_lists(load, form):
                         # join UNC and non-UNC paths, just assume the original
                         # path.
                         log.trace(
-                            'roots: %s is a UNC path, using %s instead',
-                            link_dest, abs_path
+                            'roots: {0} is a UNC path, using {1} instead'.format(
+                            link_dest, abs_path)
                         )
                         link_dest = abs_path
                     if link_dest.startswith('..'):
@@ -383,8 +383,8 @@ def _file_lists(load, form):
                         )
                     )
                     log.trace(
-                        'roots: %s relative path is %s',
-                        abs_path, rel_dest
+                        'roots: {0} relative path is {1}'.format(
+                        abs_path, rel_dest)
                     )
                     if not rel_dest.startswith('..'):
                         # Only count the link if it does not point
