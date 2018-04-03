@@ -254,16 +254,14 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
 
     # stuff that splunk returns but that you should not attempt to set.
     # cf http://dev.splunk.com/view/python-sdk/SP-CAAAEK2
-    readonly_keys = set([
-        "triggered_alert_count",
-        "action.email",
-        "action.populate_lookup",
-        "action.rss",
-        "action.script",
-        "action.summary_index",
-        "qualifiedSearch",
-        "next_scheduled_time"
-    ])
+    readonly_keys = ("triggered_alert_count",
+                     "action.email",
+                     "action.populate_lookup",
+                     "action.rss",
+                     "action.script",
+                     "action.summary_index",
+                     "qualifiedSearch",
+                     "next_scheduled_time")
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
