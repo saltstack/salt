@@ -108,10 +108,6 @@ Functions to interact with Hashicorp Vault.
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import Salt libs
-import salt.crypt
-import salt.exceptions
-
 
 log = logging.getLogger(__name__)
 
