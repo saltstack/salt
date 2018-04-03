@@ -653,7 +653,6 @@ def reserve_ipblock(call=None, kwargs=None):
         size = kwargs.get('size')
 
     block = conn.reserve_ipblock(IPBlock(size=size, location=location))
-    pprint.pprint(block)
     for item in block['properties']['ips']:
         ret['ips'].append(item)
 
