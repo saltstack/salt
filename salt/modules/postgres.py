@@ -838,6 +838,12 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
     # will return empty string if return_password = False
     _x = lambda s: s if return_password else ''
 
+    membership_query = ' '.join('''
+        SELECT pg_auth_members.member as "oid", array_to_string(array_agg(pg_roles.rolname), ',') as "membership"
+        FROM pg_auth_members JOIN pg_roles ON pg_roles.oid=pg_auth_members.roleid
+        GROUP BY pg_auth_members.member
+    '''.split())
+
     query = (''.join([
         'SELECT '
         'pg_roles.rolname as "name",'
@@ -854,12 +860,13 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         '    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)'
         '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-        'pg_roles.rolconfig  as "defaults variables" '
+        'pg_roles.rolconfig  as "defaults variables", '
+        'membership.membership as "membership" '
         , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
-        'FROM pg_roles '
+        'FROM pg_roles LEFT JOIN ({2}) as membership ON pg_roles.oid=membership.oid '
         , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
         , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
-    ]).format(rolcatupdate_column, replication_column))
+    ]).format(rolcatupdate_column, replication_column, membership_query))
 
     rows = psql_query(query,
                       runas=runas,
@@ -886,6 +893,8 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                     'can create databases', 'can update system catalogs',
                     'can login', 'replication', 'connections'):
             retrow[key] = get_bool(row, key)
+        # Add the inherited roles.
+        retrow['groups'] = sorted(x for x in row['membership'].split(',') if x)
         for date_key in ('expiry time',):
             try:
                 retrow[date_key] = datetime.datetime.strptime(

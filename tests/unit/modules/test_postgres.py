@@ -373,7 +373,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'connections': '-1',
                                    'groups': '',
                                    'expiry time': '',
-                                   'defaults variables': None
+                                   'defaults variables': None,
+                                   'membership': '',
                                    }])):
                     ret = postgres.user_exists(
                         'test_user',
@@ -405,7 +406,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'connections': '-1',
                                    'groups': '',
                                    'expiry time': '2017-08-16 08:57:46',
-                                   'defaults variables': None
+                                   'defaults variables': None,
+                                   'membership': '',
                                }])):
                     ret = postgres.user_list(
                         'test_user',
