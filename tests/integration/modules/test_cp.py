@@ -648,7 +648,7 @@ class CPModuleTest(ModuleCase):
     @with_tempfile
     def test_get_file_from_env_in_url(self, tgt):
         self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
-        with salt.utils.fopen(tgt, 'r') as cheese:
+        with salt.utils.files.fopen(tgt, 'r') as cheese:
             data = cheese.read()
             self.assertIn('Gromit', data)
             self.assertIn('Comte', data)

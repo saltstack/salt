@@ -15,6 +15,7 @@ from tests.support.unit import skipIf
 from salt.ext import six
 from salt.ext.six.moves import range
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.stringutils
 
 
@@ -191,7 +192,7 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, str(group_info['members']))
 
-    @skipIf(salt.utils.is_windows(), 'gid test skipped on windows')
+    @skipIf(salt.utils.platform.is_windows(), 'gid test skipped on windows')
     def test_chgid(self):
         '''
         Test the change gid function
