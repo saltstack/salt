@@ -9,12 +9,9 @@ from tests.support.case import ModuleCase
 # Import Salt libs
 from tests.support.jinja_filters import JinjaFiltersTest
 
-import logging
-log = logging.getLogger(__name__)
-
 
 class StateModuleJinjaFiltersTest(ModuleCase, JinjaFiltersTest):
     '''
-    Validate jinja filters via state module
+    testing Jinja filters are available via state system & salt-ssh
     '''
     pass

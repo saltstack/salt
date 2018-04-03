@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 class JinjaFiltersTest():
     '''
-    testing the state system with salt-ssh
+    testing Jinja filters are available via state system
     '''
 
     def test_data_compare_dicts(self):
