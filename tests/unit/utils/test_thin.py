@@ -562,8 +562,8 @@ class SSHThinTestCase(TestCase):
                  'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
                  'namespace/pyall/root/r1', 'namespace/pyall/root/r2', 'namespace/pyall/root/r3',
                  'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
-                 'namespace/py27/root/r1', 'namespace/py27/root/r2', 'namespace/py27/root/r3',
-                 'namespace/py27/root2/r4', 'namespace/py27/root2/r5', 'namespace/py27/root2/r6'
+                 'namespace/py2/root/r1', 'namespace/py2/root/r2', 'namespace/py2/root/r3',
+                 'namespace/py2/root2/r4', 'namespace/py2/root2/r5', 'namespace/py2/root2/r6'
         ]
         for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-5]):
             arcname = cl[2].get('arcname')
