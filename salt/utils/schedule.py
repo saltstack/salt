@@ -881,12 +881,11 @@ class Schedule(object):
                                               data['once'], once_fmt, job))
                         log.error(data['_error'])
                         return
+                data['_next_fire_time'] = once
+                data['_next_scheduled_fire_time'] = once
                 # If _next_fire_time is less than now, continue
                 if once < now - loop_interval:
                     data['_continue'] = True
-                else:
-                    data['_next_fire_time'] = once
-                    data['_next_scheduled_fire_time'] = once
 
         def _handle_when(job, data, loop_interval):
             '''
