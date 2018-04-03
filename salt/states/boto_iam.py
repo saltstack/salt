@@ -478,8 +478,8 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
         return ret
 
 
-def user_present(name, policies=None, policies_from_pillars=None, managed_policies=None, password=None, path=None,
-                 region=None, key=None, keyid=None, profile=None):
+def user_present(name, policies=None, policies_from_pillars=None, managed_policies=None, password=None,
+                 password_reset_required=False, path=None, region=None, key=None, keyid=None, profile=None):
     '''
 
     .. versionadded:: 2015.8.0
@@ -506,7 +506,17 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
         user.
 
     password (string)
-        The password for the new user. Must comply with account policy.
+        The password for the new user.  Must comply with account policy.
+        NOTE that because AWS will not for any reason return an existing password, there is no way
+        to compare the one provided to what is currently set.  This in turn means that if ANY login
+        profile is found, the password is assumed to be current, and will never be updated.  It
+        will ONLY be set if no login_profile whatsoever is attached to the user.
+
+    password_reset_required (bool)
+        Defaults to False.  Boolean specifying whether the user is required to change their
+        password on next sign-in.  Note that once this has been set to True, the AWS API does
+        not permit resetting it to False without also changing the password.
+        .. versionadded:: Fluorine
 
     path (string)
         The path of the user. Default is '/'.
@@ -549,14 +559,14 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
             ret['changes']['user'] = created
             ret['comment'] = ' '.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
-                ret = _case_password(ret, name, password, region, key, keyid, profile)
+                ret = _set_login_profile(ret, name, password, password_reset_required, region, key, keyid, profile)
             _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     else:
         ret['comment'] = ' '.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
-            ret = _case_password(ret, name, password, region, key, keyid, profile)
+            ret = _set_login_profile(ret, name, password, password_reset_required, region, key, keyid, profile)
         _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -786,22 +796,26 @@ def _user_policies_deleted(
     return ret
 
 
-def _case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
+def _set_login_profile(ret, name, password, password_reset_required, region=None, key=None, keyid=None, profile=None):
+    current = __salt__['boto_iam.get_login_profile'](name, region, key, keyid, profile)
+    if current is not None:
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile for IAM user {0} already set.'.format(name)])
+        return ret
     if __opts__['test']:
         ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
         ret['result'] = None
         return ret
-    login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
-    log.debug('Login is : %s.', login)
+    login = __salt__['boto_iam.create_login_profile'](name, password, password_reset_required,
+                                                      region, key, keyid, profile)
+    log.debug('Login is : {0}.'.format(login))
     if login:
-        if 'Conflict' in login:
-            ret['comment'] = ' '.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
-        else:
-            ret['comment'] = ' '.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
-            ret['changes']['password'] = 'REDACTED'
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile has been set for IAM user {0}.'.format(name)])
+        ret['changes'].setdefault('new', {})['LoginProfile'] = login['LoginProfile']
+        ret['changes'].setdefault('old', {})['LoginProfile'] = None
+        ret['changes']['new']['LoginProfile']['Password'] = 'REDACTED'
     else:
         ret['result'] = False
-        ret['comment'] = ' '.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile for IAM user {0} could not be set.'.format(name)])
     return ret
 
 
