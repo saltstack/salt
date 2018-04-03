@@ -24,6 +24,15 @@ The Salt Syndic currently sends an old style  `syndic_start` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
 
 
+Pass Through Options to :py:func:`file.serialize <salt.states.file.serialize>` State
+------------------------------------------------------------------------------------
+
+This allows for more granular control over the way in which the dataset is
+serialized. See the documentation for the new ``serializer_opts`` option in the
+:py:func:`file.serialize <salt.states.file.serialize>` state for more
+information.
+
+
 Deprecations
 ------------
 
