@@ -634,6 +634,7 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt)
 
+    @with_tempfile
     def test_get_file_from_env_in_url(self):
         tgt = os.path.join(paths.TMP, 'cheese')
         try:
@@ -644,14 +645,6 @@ class CPModuleTest(ModuleCase):
             self.assertIn('Comte', data)
         finally:
             os.unlink(tgt)
-
-    @with_tempfile
-    def test_get_file_from_env_in_url(self, tgt):
-        self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
-        with salt.utils.files.fopen(tgt, 'r') as cheese:
-            data = cheese.read()
-            self.assertIn('Gromit', data)
-            self.assertIn('Comte', data)
 
     def test_push(self):
         log_to_xfer = os.path.join(paths.TMP, uuid.uuid4().hex)
