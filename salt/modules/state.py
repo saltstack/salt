@@ -2335,7 +2335,7 @@ def event(tagmatch='*',
         if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
             if not quiet:
                 salt.utils.stringutils.print_cli(
-                    str('{0}\t{1}').format(  # future lint: blacklisted-function
+                    '{0}\t{1}'.format(  # future lint: blacklisted-function
                         salt.utils.stringutils.to_str(ret['tag']),
                         salt.utils.json.dumps(
                             ret['data'],
