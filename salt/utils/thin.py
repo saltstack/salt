@@ -495,7 +495,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         for top in tops:
             base, top_dirname = os.path.basename(top), os.path.dirname(top)
             os.chdir(top_dirname)
-            site_pkg_dir = _is_shareable(base) and 'pyall' or 'py{0}{1}'.format(py_ver_major, py_ver_minor)
+            site_pkg_dir = _is_shareable(base) and 'pyall' or 'py{0}'.format(py_ver_major)
             log.debug('Packing alternative "%s" to "%s/%s" destination', base, ns, site_pkg_dir)
             if not os.path.isdir(top):
                 # top is a single file module
