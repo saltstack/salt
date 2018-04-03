@@ -1506,24 +1506,8 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
-            'require_in',
-            'watch_in',
-            'onfail_in',
-            'onchanges_in',
-            'use',
-            'use_in',
-            'prereq',
-            'prereq_in',
-            ])
-        req_in_all = req_in.union(
-                set([
-                    'require',
-                    'watch',
-                    'onfail',
-                    'onfail_stop',
-                    'onchanges',
-                    ]))
+        req_in = {'require_in', 'watch_in', 'onfail_in', 'onchanges_in', 'use', 'use_in', 'prereq', 'prereq_in'}
+        req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
         for id_, body in six.iteritems(high):
