@@ -147,7 +147,7 @@ def get_pidfile(pidfile):
             pid = pdf.read().strip()
         return int(pid)
     except (OSError, IOError, TypeError, ValueError):
-        return None
+        return -1
 
 
 def clean_proc(proc, wait_for_kill=10):

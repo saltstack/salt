@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 import os
 import uuid
-import shutil
 import hashlib
 import logging
 import psutil
@@ -15,7 +14,10 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import get_unused_localhost_port, skip_if_not_root
+from tests.support.helpers import (
+    get_unused_localhost_port,
+    skip_if_not_root,
+    with_tempfile)
 from tests.support.unit import skipIf
 import tests.support.paths as paths
 
@@ -30,11 +32,11 @@ class CPModuleTest(ModuleCase):
     '''
     Validate the cp module
     '''
-    def test_get_file(self):
+    @with_tempfile
+    def test_get_file(self, tgt):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
                 'cp.get_file',
                 [
@@ -46,11 +48,11 @@ class CPModuleTest(ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
-    def test_get_file_templated_paths(self):
+    @with_tempfile
+    def test_get_file_templated_paths(self, tgt):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(paths.TMP, 'cheese')
         self.run_function(
             'cp.get_file',
             [
@@ -64,11 +66,11 @@ class CPModuleTest(ModuleCase):
             self.assertIn('Gromit', data)
             self.assertNotIn('bacon', data)
 
-    def test_get_file_gzipped(self):
+    @with_tempfile
+    def test_get_file_gzipped(self, tgt):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(paths.TMP, 'file.big')
         src = os.path.join(paths.FILES, 'file', 'base', 'file.big')
         with salt.utils.fopen(src, 'r') as fp_:
             data = fp_.read()
@@ -111,11 +113,11 @@ class CPModuleTest(ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
-    def test_get_template(self):
+    @with_tempfile
+    def test_get_template(self, tgt):
         '''
         cp.get_template
         '''
-        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
                 'cp.get_template',
                 ['salt://grail/scene33', tgt],
@@ -160,11 +162,11 @@ class CPModuleTest(ModuleCase):
 
     # cp.get_url tests
 
-    def test_get_url(self):
+    @with_tempfile
+    def test_get_url(self, tgt):
         '''
         cp.get_url with salt:// source given
         '''
-        tgt = os.path.join(paths.TMP, 'scene33')
         self.run_function(
             'cp.get_url',
             [
@@ -235,11 +237,11 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
-    def test_get_url_https(self):
+    @with_tempfile
+    def test_get_url_https(self, tgt):
         '''
         cp.get_url with https:// source given
         '''
-        tgt = os.path.join(paths.TMP, 'test_get_url_https')
         self.run_function(
             'cp.get_url',
             [
@@ -576,30 +578,24 @@ class CPModuleTest(ModuleCase):
             self.assertEqual(
                 sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 
-    def test_get_file_from_env_predefined(self):
+    @with_tempfile
+    def test_get_file_from_env_predefined(self, tgt):
         '''
         cp.get_file
         '''
-        tgt = os.path.join(paths.TMP, 'cheese')
-        try:
-            self.run_function('cp.get_file', ['salt://cheese', tgt])
-            with salt.utils.fopen(tgt, 'r') as cheese:
-                data = cheese.read()
-                self.assertIn('Gromit', data)
-                self.assertNotIn('Comte', data)
-        finally:
-            os.unlink(tgt)
+        self.run_function('cp.get_file', ['salt://cheese', tgt])
+        with salt.utils.fopen(tgt, 'r') as cheese:
+            data = cheese.read()
+            self.assertIn('Gromit', data)
+            self.assertNotIn('Comte', data)
 
-    def test_get_file_from_env_in_url(self):
-        tgt = os.path.join(paths.TMP, 'cheese')
-        try:
-            self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
-            with salt.utils.fopen(tgt, 'r') as cheese:
-                data = cheese.read()
-                self.assertIn('Gromit', data)
-                self.assertIn('Comte', data)
-        finally:
-            os.unlink(tgt)
+    @with_tempfile
+    def test_get_file_from_env_in_url(self, tgt):
+        self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
+        with salt.utils.fopen(tgt, 'r') as cheese:
+            data = cheese.read()
+            self.assertIn('Gromit', data)
+            self.assertIn('Comte', data)
 
     def test_push(self):
         log_to_xfer = os.path.join(paths.TMP, uuid.uuid4().hex)

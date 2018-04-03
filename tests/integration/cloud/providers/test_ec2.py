@@ -8,14 +8,18 @@ from __future__ import absolute_import
 import os
 import random
 import string
+import yaml
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+import salt.utils
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
+from tests.support.unit import expectedFailure
+from tests.support import win_installer
 
 # Import Third-Party Libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -39,6 +43,38 @@ class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+    TIMEOUT = 500
+
+    def _installer_name(self):
+        '''
+        Determine the downloaded installer name by searching the files
+        directory for the firt file that loosk like an installer.
+        '''
+        for path, dirs, files in os.walk(FILES):
+            for file in files:
+                if file.startswith(win_installer.PREFIX):
+                    return file
+            break
+        return
+
+    def _fetch_latest_installer(self):
+        '''
+        Download the latest Windows installer executable
+        '''
+        name = win_installer.latest_installer_name()
+        path = os.path.join(FILES, name)
+        with salt.utils.fopen(path, 'wb') as fp:
+            win_installer.download_and_verify(fp, name)
+        return name
+
+    def _ensure_installer(self):
+        '''
+        Make sure the testing environment has a Windows installer executbale.
+        '''
+        name = self._installer_name()
+        if name:
+            return name
+        return self._fetch_latest_installer()
 
     @expensiveTest
     def setUp(self):
@@ -90,24 +126,51 @@ class EC2Test(ShellCase):
                 'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(PROVIDER_NAME)
             )
+        self.INSTALLER = self._ensure_installer()
 
-    def test_instance(self):
+    def override_profile_config(self, name, data):
+        conf_path = os.path.join(self.get_config_dir(), 'cloud.profiles.d', 'ec2.conf')
+        with salt.utils.fopen(conf_path, 'r') as fp:
+            conf = yaml.safe_load(fp)
+        conf[name].update(data)
+        with salt.utils.fopen(conf_path, 'w') as fp:
+            yaml.dump(conf, fp)
+
+    def copy_file(self, name):
+        '''
+        Copy a file from tests/integration/files to a test's temporary
+        configuration directory. The path to the file which is created will be
+        returned.
+        '''
+        src = os.path.join(FILES, name)
+        dst = os.path.join(self.get_config_dir(), name)
+        with salt.utils.fopen(src, 'rb') as sfp:
+            with salt.utils.fopen(dst, 'wb') as dfp:
+                dfp.write(sfp.read())
+        return dst
+
+    def _test_instance(self, profile='ec2-test', debug=False, timeout=TIMEOUT):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
+
         # create the instance
-        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME), timeout=500)
+        cmd = '-p {0}'.format(profile)
+        if debug:
+            cmd += ' -l debug'
+        cmd += ' {0}'.format(INSTANCE_NAME)
+        instance = self.run_cloud(cmd, timeout=timeout)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=timeout)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=timeout)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -151,6 +214,80 @@ class EC2Test(ShellCase):
         # check if deletion was performed appropriately
         self.assertIn(ret_str, delete)
 
+    def test_instance(self):
+        '''
+        Tests creating and deleting an instance on EC2 (classic)
+        '''
+        self._test_instance('ec2-test')
+
+    @expectedFailure
+    def test_win2012r2_winexe(self):
+        '''
+        Tests creating and deleting a Windows 2012r2instance on EC2 using
+        winexe (classic)
+        '''
+        # TODO: winexe calls hang and the test fails by timing out. The same
+        # same calls succeed when run outside of the test environment.
+        self.override_profile_config(
+            'ec2-win2012-test',
+            {
+                'use_winrm': False,
+                'user_data': self.copy_file('windows-firewall-winexe.ps1'),
+                'win_installer': self.copy_file(self.INSTALLER),
+            },
+        )
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+
+    def test_win2012r2_winrm(self):
+        '''
+        Tests creating and deleting a Windows 2012r2 instance on EC2 using
+        winrm (classic)
+        '''
+        self.override_profile_config(
+            'ec2-win2016-test',
+            {
+                'user_data': self.copy_file('windows-firewall.ps1'),
+                'win_installer': self.copy_file(self.INSTALLER),
+                'winrm_ssl_verify': False,
+            }
+
+        )
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+
+    @expectedFailure
+    def test_win2016_winexe(self):
+        '''
+        Tests creating and deleting a Windows 2016 instance on EC2 using winrm
+        (classic)
+        '''
+        # TODO: winexe calls hang and the test fails by timing out. The same
+        # same calls succeed when run outside of the test environment.
+        self.override_profile_config(
+            'ec2-win2016-test',
+            {
+                'use_winrm': False,
+                'user_data': self.copy_file('windows-firewall-winexe.ps1'),
+                'win_installer': self.copy_file(self.INSTALLER),
+            },
+        )
+        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+
+    def test_win2016_winrm(self):
+        '''
+        Tests creating and deleting a Windows 2016 instance on EC2 using winrm
+        (classic)
+        '''
+        self.override_profile_config(
+            'ec2-win2016-test',
+            {
+                'user_data': self.copy_file('windows-firewall.ps1'),
+                'win_installer': self.copy_file(self.INSTALLER),
+                'winrm_ssl_verify': False,
+            }
+
+        )
+        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+
     def tearDown(self):
         '''
         Clean up after tests
@@ -160,4 +297,4 @@ class EC2Test(ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=self.TIMEOUT)
