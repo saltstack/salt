@@ -1349,8 +1349,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(self):
         '''
-        This tests the case where state C requires state A which fails.
-        State C is a prereq for State B.
+        This tests the case where state C requires state A, which fails.
+        State C is a pre-required state for State B.
+        Since state A fails, state C will not run because the requisite failed,
+        therefore state B will not run because state C failed to run.
 
         See https://github.com/saltstack/salt/issues/46762 for
         more information.
