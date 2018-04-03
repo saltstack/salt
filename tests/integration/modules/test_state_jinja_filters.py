@@ -10,6 +10,6 @@ from tests.support.jinja_filters import JinjaFiltersTest
 
 class StateModuleJinjaFiltersTest(ModuleCase, JinjaFiltersTest):
     '''
-    testing Jinja filters are available via state system & salt-ssh
+    testing Jinja filters are available via state system
     '''
     pass
