@@ -311,9 +311,9 @@ Configuration
 
 By default, automatic discovery is disabled.
 
-..warning::
-   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
-   make sure your network is secured and trusted.
+.. warning::
+    Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+    make sure your network is secured and trusted.
 
 Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
 as follows:
