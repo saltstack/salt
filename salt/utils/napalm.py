@@ -14,28 +14,40 @@ Utils for the NAPALM modules and proxy.
 
 .. versionadded:: 2017.7.0
 '''
+
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import traceback
 import logging
 import importlib
 from functools import wraps
 
 # Import Salt libs
+from salt.ext import six as six
 import salt.output
 import salt.utils.platform
 
-# Import 3rd-party libs
-from salt.ext import six
+# Import third party libs
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    import napalm_base
+    import napalm
+    import napalm.base as napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
+    HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
+    try:
+        NAPALM_MAJOR = int(napalm.__version__.split('.')[0])
+    except AttributeError:
+        NAPALM_MAJOR = 0
 except ImportError:
     HAS_NAPALM = False
+    try:
+        import napalm_base
+        HAS_NAPALM_BASE = True
+    except ImportError:
+        HAS_NAPALM_BASE = False
 
 try:
     # try importing ConnectionClosedException
@@ -81,7 +93,7 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if HAS_NAPALM and (is_proxy(opts) or is_minion(opts)):
+    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (
@@ -176,14 +188,14 @@ def call(napalm_device, method, *args, **kwargs):
             comment = 'Disconnected from {device}. Trying to reconnect.'.format(device=hostname)
             log.error(err_tb)
             log.error(comment)
-            log.debug('Clearing the connection with {device}'.format(device=hostname))
+            log.debug('Clearing the connection with %s', hostname)
             call(napalm_device, 'close', __retry=False)  # safely close the connection
             # Make sure we don't leave any TCP connection open behind
             #   if we fail to close properly, we might not be able to access the
-            log.debug('Re-opening the connection with {device}'.format(device=hostname))
+            log.debug('Re-opening the connection with %s', hostname)
             call(napalm_device, 'open', __retry=False)
-            log.debug('Connection re-opened with {device}'.format(device=hostname))
-            log.debug('Re-executing {method}'.format(method=method))
+            log.debug('Connection re-opened with %s', hostname)
+            log.debug('Re-executing %s', method)
             return call(napalm_device, method, *args, **kwargs)
             # If still not able to reconnect and execute the task,
             #   the proxy keepalive feature (if enabled) will attempt
@@ -226,7 +238,7 @@ def call(napalm_device, method, *args, **kwargs):
             # either running in a not-always-alive proxy
             # either running in a regular minion
             # close the connection when the call is over
-            # unless the CLOSE is explicitely set as False
+            # unless the CLOSE is explicitly set as False
             napalm_device['DRIVER'].close()
     return {
         'out': out,
@@ -247,7 +259,7 @@ def get_device_opts(opts, salt_obj=None):
     if opts.get('proxy') or opts.get('napalm'):
         opts['multiprocessing'] = device_dict.get('multiprocessing', False)
         # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
-        # But the user can be allows to have a different value for the multiprocessing, which will
+        # But the user can be allows one to have a different value for the multiprocessing, which will
         #   override the opts.
     if salt_obj and not device_dict:
         # get the connection details from the opts
@@ -304,7 +316,9 @@ def get_device(opts, salt_obj=None):
         try:
             provider_lib = importlib.import_module(network_device.get('PROVIDER'))
         except ImportError as ierr:
-            log.error('Unable to import {0}'.format(network_device.get('PROVIDER')), exc_info=True)
+            log.error('Unable to import %s',
+                      network_device.get('PROVIDER'),
+                      exc_info=True)
             log.error('Falling back to napalm-base')
     _driver_ = provider_lib.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
@@ -327,9 +341,7 @@ def get_device(opts, salt_obj=None):
         )
         log.error(base_err_msg)
         log.error(
-            "Please check error: {error}".format(
-                error=error
-            )
+            "Please check error: %s", error
         )
         raise napalm_base.exceptions.ConnectionException(base_err_msg)
     return network_device
@@ -375,12 +387,12 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
@@ -401,12 +413,12 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions

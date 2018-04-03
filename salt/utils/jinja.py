@@ -4,9 +4,8 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
-import json
 import logging
 import os.path
 import pipes
@@ -20,20 +19,22 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 # Import third party libs
 import jinja2
 from salt.ext import six
-import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
 # Import salt libs
+from salt.exceptions import TemplateError
 import salt.fileclient
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.yaml
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
-from salt.exceptions import TemplateError
 
 log = logging.getLogger(__name__)
 
@@ -43,18 +44,6 @@ __all__ = [
 ]
 
 GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
-
-# To dump OrderedDict objects as regular dicts. Used by the yaml
-# template filter.
-
-
-class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
-    pass
-
-
-yaml.add_representer(OrderedDict,
-                     yaml.representer.SafeRepresenter.represent_dict,
-                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -103,9 +92,11 @@ class SaltCacheLoader(BaseLoader):
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
-        self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
+        self._file_client = None
+        # Instantiate the fileclient
+        self.file_client()
 
     def file_client(self):
         '''
@@ -135,8 +126,8 @@ class SaltCacheLoader(BaseLoader):
         # checks for relative '..' paths
         if '..' in template:
             log.warning(
-                'Discarded template path \'{0}\', relative paths are '
-                'prohibited'.format(template)
+                'Discarded template path \'%s\', relative paths are '
+                'prohibited', template
             )
             raise TemplateNotFound(template)
 
@@ -430,7 +421,12 @@ def uuid_(val):
 
         f4efeff8-c219-578a-bad7-3dc280612ec8
     '''
-    return str(uuid.uuid5(GLOBAL_UUID, str(val)))
+    return six.text_type(
+        uuid.uuid5(
+            GLOBAL_UUID,
+            salt.utils.stringutils.to_str(val)
+        )
+    )
 
 
 ### List-related filters
@@ -753,11 +749,11 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+        regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
 
     will be rendered as::
 
-        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+        regex_escape = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
     ** Set Theory Filters **
 
@@ -818,11 +814,11 @@ class SerializerExtension(Extension, object):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+        return Markup(salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
-                             Dumper=OrderedDictDumper).strip()
+        yaml_txt = salt.utils.yaml.safe_dump(
+            value, default_flow_style=flow_style).strip()
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
         return Markup(yaml_txt)
@@ -859,10 +855,10 @@ class SerializerExtension(Extension, object):
                 else:
                     sub = Element(tag)
                 if isinstance(attrs, (str, int, bool, float)):
-                    sub.text = str(attrs)
+                    sub.text = six.text_type(attrs)
                     continue
                 if isinstance(attrs, dict):
-                    sub.attrib = {attr: str(val) for attr, val in attrs.items()
+                    sub.attrib = {attr: six.text_type(val) for attr, val in attrs.items()
                                   if not isinstance(val, (dict, list))}
                 for tag, val in [item for item in normalize_iter(attrs) if
                                  isinstance(item[1], (dict, list))]:
@@ -878,25 +874,43 @@ class SerializerExtension(Extension, object):
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
-            return yaml.safe_load(value)
+            return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
+        except salt.utils.yaml.YAMLError as exc:
+            msg = 'Encountered error loading yaml: '
+            try:
+                # Reported line is off by one, add 1 to correct it
+                line = exc.problem_mark.line + 1
+                buf = exc.problem_mark.buffer
+                problem = exc.problem
+            except AttributeError:
+                # No context information available in the exception, fall back
+                # to the stringified version of the exception.
+                msg += six.text_type(exc)
+            else:
+                msg += '{0}\n'.format(problem)
+                msg += salt.utils.stringutils.get_context(
+                    buf,
+                    line,
+                    marker='    <======================')
+            raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
-            return json.loads(value)
+            return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(
                 'Unable to load json from {0}'.format(value))
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
 
         return value
 

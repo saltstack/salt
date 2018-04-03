@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/RPM package repos
-===================================
+Management of APT/DNF/YUM/Zypper package repos
+==============================================
 
-Package repositories for APT-based and RPM-based distros(openSUSE/SUSE, CentOS/Fedora/Redhat) can be managed with
-these states. Here is some example SLS:
+States for managing software package repositories on Linux distros. Supported
+package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
 .. code-block:: yaml
 
@@ -86,7 +86,7 @@ these states. Here is some example SLS:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import salt libs
@@ -97,6 +97,9 @@ import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 import salt.utils.versions
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -151,8 +154,14 @@ def managed(name, ppa=None, **kwargs):
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
-    Additional configuration values seen in repo files, such as ``gpgkey`` or
-    ``gpgcheck``, will be used directly as key-value pairs. For example:
+    gpgautoimport
+        Only valid for Zypper package manager. If set to True, automatically
+        trust and import public GPG key for the repository. The key should be
+        specified with ``gpgkey`` parameter. See details below.
+
+    Additional configuration values seen in YUM/DNF/Zypper repo files, such as
+    ``gpgkey`` or ``gpgcheck``, will be used directly as key-value pairs.
+    For example:
 
     .. code-block:: yaml
 
@@ -218,7 +227,7 @@ def managed(name, ppa=None, **kwargs):
         and/or installing packages.
 
     enabled : True
-        Included to reduce confusion due to yum/dnf/zypper's use of the
+        Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
         ``enabled=False`` will assume ``disabled=False``.
@@ -243,8 +252,8 @@ def managed(name, ppa=None, **kwargs):
        for.  (e.g. unstable). This option is rarely needed.
 
     keyid
-       The KeyID of the GPG key to install. This option also requires
-       the ``keyserver`` option to be set.
+       The KeyID or a list of KeyIDs of the GPG key to install.
+       This option also requires the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The
@@ -261,7 +270,7 @@ def managed(name, ppa=None, **kwargs):
     key_text
         The string representation of the GPG key to install.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
        .. note::
 
@@ -290,7 +299,7 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: Oxygen
+       .. deprecated:: 2018.3.0
            Use ``refresh`` instead.
 
     require_in
@@ -358,7 +367,7 @@ def managed(name, ppa=None, **kwargs):
             try:
                 repo = ':'.join(('ppa', ppa))
             except TypeError:
-                repo = ':'.join(('ppa', str(ppa)))
+                repo = ':'.join(('ppa', six.text_type(ppa)))
 
         kwargs['disabled'] = not salt.utils.data.is_true(enabled) \
             if enabled is not None \
@@ -408,6 +417,9 @@ def managed(name, ppa=None, **kwargs):
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
+        #22412: Remove file attribute in case same repo is set up multiple times but with different files
+        pre.pop('file', None)
+        sanitizedkwargs.pop('file', None)
         for kwarg in sanitizedkwargs:
             if kwarg not in pre:
                 if kwarg == 'enabled':
@@ -455,7 +467,7 @@ def managed(name, ppa=None, **kwargs):
                             salt.utils.data.is_true(pre[kwarg]):
                         break
                 else:
-                    if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
+                    if six.text_type(sanitizedkwargs[kwarg]) != six.text_type(pre[kwarg]):
                         break
         else:
             ret['result'] = True

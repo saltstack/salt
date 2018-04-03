@@ -242,8 +242,8 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def test_load_highstate(self):
         result = self.render_sls(textwrap.dedent('''
-            import yaml
-            __pydsl__.load_highstate(yaml.load("""
+            import salt.utils.yaml
+            __pydsl__.load_highstate(salt.utils.yaml.safe_load("""
             A:
               cmd.run:
                 - name: echo hello

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import logging
 import os
 import signal
 import subprocess
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -19,6 +20,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.states.file
 from salt.ext.six.moves import range
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +132,7 @@ class SystemModuleTest(ModuleCase):
                             diff = abs(hwTime - swTime)
 
                             self.assertTrue(diff <= 2.0,
-                                msg=("hwclock difference too big: " + str(timeCompStr)))
+                                msg=("hwclock difference too big: " + six.text_type(timeCompStr)))
                             break
             except CompareTimeout:
                 p.terminate()
@@ -317,12 +319,34 @@ class SystemModuleTest(ModuleCase):
     @skip_if_not_root
     def test_set_computer_desc(self):
         '''
-        Test setting the system hostname
+        Test setting the computer description
         '''
         self._save_machine_info()
         desc = "test"
         ret = self.run_function('system.set_computer_desc', [desc])
         computer_desc = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertIn(desc, computer_desc)
+
+    @destructiveTest
+    @skip_if_not_root
+    def test_set_computer_desc_multiline(self):
+        '''
+        Test setting the computer description with a multiline string with tabs
+        and double-quotes.
+        '''
+        self._save_machine_info()
+        desc = textwrap.dedent('''\
+            'First Line
+            \tSecond Line: 'single-quoted string'
+            \t\tThird Line: "double-quoted string with unicode: питон"''')
+        ret = self.run_function('system.set_computer_desc', [desc])
+        # self.run_function returns the serialized return, we need to convert
+        # back to unicode to compare to desc. in the assertIn below.
+        computer_desc = salt.utils.stringutils.to_unicode(
+            self.run_function('system.get_computer_desc')
+        )
 
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)

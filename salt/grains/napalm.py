@@ -16,7 +16,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
@@ -326,7 +326,7 @@ def host(proxy=None):
 
     .. note::
 
-        The diference betwen ``host`` and ``hostname`` is that
+        The diference between ``host`` and ``hostname`` is that
         ``host`` provides the physical location - either domain name or IP address,
         while ``hostname`` provides the hostname as configured on the device.
         They are not necessarily the same.

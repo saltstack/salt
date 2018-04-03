@@ -3,8 +3,7 @@
     :codeauthor: :email:`Alexander Pyatkin <asp@thexyz.net`
 '''
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -13,6 +12,7 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.path
 
 
@@ -58,7 +58,7 @@ class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('file.directory', name='/salt_test_bower_3',
                              makedirs=True)
         self.assertSaltTrueReturn(ret)
-        bower_json = json.dumps({
+        bower_json = salt.utils.json.dumps({
             'name': 'salt_test_bower_3',
             'dependencies': {
                 'numeral': '~1.5.3',

@@ -33,7 +33,7 @@ is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 try:

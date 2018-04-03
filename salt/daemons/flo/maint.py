@@ -3,7 +3,7 @@
 Define the behaviors used in the maintenance process
 '''
 # pylint: disable=3rd-party-module-not-gated
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import multiprocessing
 import os
@@ -12,15 +12,17 @@ import os
 import ioflo.base.deeding
 
 # Import salt libs
+import salt.daemons.masterapi
 import salt.fileserver
 import salt.loader
 import salt.utils.minions
-import salt.daemons.masterapi
+import salt.utils.stringutils
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetMaintFork',
-        ioinits={'opts': '.salt.opts', 'proc_mgr': '.salt.usr.proc_mgr'})
+        salt.utils.stringutils.to_str('SaltRaetMaintFork'),
+        ioinits={'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')})
 def maint_fork(self):
     '''
     For off the maintinence process from the master router process
@@ -44,7 +46,7 @@ class Maintenance(multiprocessing.Process):
         Spin up a worker, do this in s multiprocess
         '''
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts))]
+        preloads = [(salt.utils.stringutils.to_str('.salt.opts'), dict(value=self.opts))]
 
         console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
@@ -78,11 +80,11 @@ class SaltRaetMaintSetup(ioflo.base.deeding.Deed):
     do salt raet maint setup at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'fileserver': '.salt.loader.fileserver',
-               'runners': '.salt.loader.runners',
-               'pillargitfs': '.salt.loader.pillargitfs',
-               'ckminions': '.salt.loader.ckminions'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'fileserver': salt.utils.stringutils.to_str('.salt.loader.fileserver'),
+               'runners': salt.utils.stringutils.to_str('.salt.loader.runners'),
+               'pillargitfs': salt.utils.stringutils.to_str('.salt.loader.pillargitfs'),
+               'ckminions': salt.utils.stringutils.to_str('.salt.loader.ckminions')}
 
     def action(self):
         '''
@@ -103,7 +105,7 @@ class SaltRaetMaintFileserverClean(ioflo.base.deeding.Deed):
     do salt raet maint fileserver clean at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts')}
 
     def action(self):
         '''
@@ -120,7 +122,7 @@ class SaltRaetMaintOldJobsClear(ioflo.base.deeding.Deed):
     do salt raet maint old jobs clear
 
     '''
-    Ioinits = {'opts': '.salt.opts'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts')}
 
     def action(self):
         '''
@@ -137,9 +139,9 @@ class SaltRaetMaintBackendsUpdate(ioflo.base.deeding.Deed):
     do salt raet maint backends update
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'fileserver': '.salt.loader.fileserver',
-               'pillargitfs': '.salt.loader.pillargitfs'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'fileserver': salt.utils.stringutils.to_str('.salt.loader.fileserver'),
+               'pillargitfs': salt.utils.stringutils.to_str('.salt.loader.pillargitfs')}
 
     def action(self):
         '''

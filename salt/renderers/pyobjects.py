@@ -263,7 +263,7 @@ different grain matches.
     **Ubuntu** classes, since Ubuntu has an ``os_family`` grain of **Debian**
     an an ``os`` grain of **Ubuntu**. As of the 2017.7.0 release, the order is
     dictated by the order of declaration, with classes defined later overriding
-    earlier ones. Addtionally, 2017.7.0 adds support for explicitly defining
+    earlier ones. Additionally, 2017.7.0 adds support for explicitly defining
     the ordering using an optional attribute called ``priority``.
 
     Given the above example, ``os_family`` matches will be processed first,
@@ -295,13 +295,13 @@ TODO
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
 
 # Import Salt Libs
-from salt.ext.six import exec_
+from salt.ext import six
 import salt.utils.files
 import salt.loader
 from salt.fileclient import get_file_client
@@ -384,7 +384,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             mod,
             valid_funcs
         )
-        exec_(mod_cmd, mod_globals, mod_locals)
+        six.exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -459,7 +459,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
                 with salt.utils.files.fopen(state_file) as state_fh:
                     state_contents, state_globals = process_template(state_fh)
-                exec_(state_contents, state_globals)
+                six.exec_(state_contents, state_globals)
 
                 # if no imports have been specified then we are being imported as: import salt://foo.sls
                 # so we want to stick all of the locals from our state file into the template globals
@@ -501,6 +501,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    exec_(final_template, _globals)
+    six.exec_(final_template, _globals)
 
     return Registry.salt_data()

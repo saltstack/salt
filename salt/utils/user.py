@@ -4,7 +4,7 @@ Functions for querying and modifying a user account and the groups to which it
 belongs.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import ctypes
@@ -16,6 +16,7 @@ import sys
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -55,12 +56,13 @@ def get_user():
     Get the current user
     '''
     if HAS_PWD:
-        return pwd.getpwuid(os.geteuid()).pw_name
+        ret = pwd.getpwuid(os.geteuid()).pw_name
     elif HAS_WIN_FUNCTIONS and salt.utils.win_functions.HAS_WIN32:
-        return salt.utils.win_functions.get_current_user()
+        ret = salt.utils.win_functions.get_current_user()
     else:
         raise CommandExecutionError(
             'Required external library (pwd or win32api) not installed')
+    return salt.utils.stringutils.to_unicode(ret)
 
 
 @jinja_filter('get_uid')
@@ -155,7 +157,7 @@ def get_specific_user():
     return user
 
 
-def chugid(runas):
+def chugid(runas, group=None):
     '''
     Change the current process to belong to the specified user (and the groups
     to which it belongs)
@@ -163,6 +165,18 @@ def chugid(runas):
     uinfo = pwd.getpwnam(runas)
     supgroups = []
     supgroups_seen = set()
+
+    if group:
+        try:
+            target_pw_gid = grp.getgrnam(group).gr_gid
+        except KeyError as err:
+            raise CommandExecutionError(
+                'Failed to fetch the GID for {0}. Error: {1}'.format(
+                    group, err
+                )
+            )
+    else:
+        target_pw_gid = uinfo.pw_gid
 
     # The line below used to exclude the current user's primary gid.
     # However, when root belongs to more than one group
@@ -183,13 +197,13 @@ def chugid(runas):
            and not supgroups_seen.add(gid)):
             supgroups.append(gid)
 
-    if os.getgid() != uinfo.pw_gid:
+    if os.getgid() != target_pw_gid:
         try:
-            os.setgid(uinfo.pw_gid)
+            os.setgid(target_pw_gid)
         except OSError as err:
             raise CommandExecutionError(
                 'Failed to change from gid {0} to {1}. Error: {2}'.format(
-                    os.getgid(), uinfo.pw_gid, err
+                    os.getgid(), target_pw_gid, err
                 )
             )
 
@@ -215,15 +229,32 @@ def chugid(runas):
             )
 
 
-def chugid_and_umask(runas, umask):
+def chugid_and_umask(runas, umask, group=None):
     '''
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
     '''
-    if runas is not None and runas != getpass.getuser():
-        chugid(runas)
+    set_runas = False
+    set_grp = False
+
+    current_user = getpass.getuser()
+    if runas and runas != current_user:
+        set_runas = True
+        runas_user = runas
+    else:
+        runas_user = current_user
+
+    current_grp = grp.getgrgid(pwd.getpwnam(getpass.getuser()).pw_gid).gr_name
+    if group and group != current_grp:
+        set_grp = True
+        runas_grp = group
+    else:
+        runas_grp = current_grp
+
+    if set_runas or set_grp:
+        chugid(runas_user, runas_grp)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def get_default_group(user):

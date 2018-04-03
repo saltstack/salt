@@ -71,11 +71,12 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
 # Import Salt Libs
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.data
 
@@ -700,16 +701,21 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
                 if type(value) is bool:
                     params[k] = 'on' if value else 'off'
                 else:
-                    params[k] = str(value)
-        logging.debug('Parameters from user are : {0}.'.format(params))
+                    params[k] = six.text_type(value)
+        log.debug('Parameters from user are : %s.', params)
         options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
         if not options.get('result'):
             ret['result'] = False
             ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
             return ret
         for parameter in options['parameters'].values():
-            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != str(parameter['ParameterValue']):
-                logging.debug('Values that are being compared for {0} are {1}:{2} .'.format(parameter['ParameterName'], params.get(parameter['ParameterName']), parameter['ParameterValue']))
+            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != six.text_type(parameter['ParameterValue']):
+                log.debug(
+                    'Values that are being compared for %s are %s:%s.',
+                    parameter['ParameterName'],
+                    params.get(parameter['ParameterName']),
+                    parameter['ParameterValue']
+                )
                 changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
         if len(changed) > 0:
             if __opts__['test']:

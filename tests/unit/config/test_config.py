@@ -8,11 +8,12 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -25,6 +26,8 @@ import salt.minion
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.yaml
+from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -32,9 +35,6 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltCloudConfigError
 )
-
-# Import Third-Party Libs
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def _salt_configuration_error(filename):
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_sha256_is_default_for_master(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         try:
             with salt.utils.files.fopen(fpath, 'w') as wfh:
                 wfh.write(
@@ -92,7 +92,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 os.unlink(fpath)
 
     def test_sha256_is_default_for_minion(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         try:
             with salt.utils.files.fopen(fpath, 'w') as wfh:
                 wfh.write(
@@ -106,7 +106,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 os.unlink(fpath)
 
     def test_proper_path_joining(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         temp_config = 'root_dir: /\n'\
                       'key_logfile: key\n'
         if salt.utils.platform.is_windows():
@@ -390,7 +390,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_master_file_roots_glob(self):
         # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -420,7 +420,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_master_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -474,7 +474,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_minion_file_roots_glob(self):
         # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -504,7 +504,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_minion_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -555,6 +555,31 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_backend_rename(self):
+        '''
+        This tests that we successfully rename git, hg, svn, and minion to
+        gitfs, hgfs, svnfs, and minionfs in the master and minion opts.
+        '''
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        fpath = salt.utils.files.mkstemp(dir=tempdir)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                fileserver_backend:
+                  - roots
+                  - git
+                  - hg
+                  - svn
+                  - minion
+                '''))
+
+        master_config = sconfig.master_config(fpath)
+        minion_config = sconfig.minion_config(fpath)
+        expected = ['roots', 'gitfs', 'hgfs', 'svnfs', 'minionfs']
+
+        self.assertEqual(master_config['fileserver_backend'], expected)
+        self.assertEqual(minion_config['fileserver_backend'], expected)
+
     def test_syndic_config(self):
         syndic_conf_path = self.get_config_file_path('syndic')
         minion_conf_path = self.get_config_file_path('minion')
@@ -579,6 +604,91 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
+
+    def _get_tally(self, conf_func):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = {}
+
+        def _count_strings(config):
+            if isinstance(config, dict):
+                for key, val in six.iteritems(config):
+                    log.debug('counting strings in dict key: %s', key)
+                    log.debug('counting strings in dict val: %s', val)
+                    _count_strings(key)
+                    _count_strings(val)
+            elif isinstance(config, list):
+                log.debug('counting strings in list: %s', config)
+                for item in config:
+                    _count_strings(item)
+            else:
+                if isinstance(config, six.string_types):
+                    if isinstance(config, six.text_type):
+                        tally['unicode'] = tally.get('unicode', 0) + 1
+                    else:
+                        # We will never reach this on PY3
+                        tally.setdefault('non_unicode', []).append(config)
+
+        fpath = salt.utils.files.mkstemp(dir=TMP)
+        try:
+            with salt.utils.files.fopen(fpath, 'w') as wfh:
+                wfh.write(textwrap.dedent('''
+                    foo: bar
+                    mylist:
+                      - somestring
+                      - 9
+                      - 123.456
+                      - True
+                      - nested:
+                        - key: val
+                        - nestedlist:
+                          - foo
+                          - bar
+                          - baz
+                    mydict:
+                      - somestring: 9
+                      - 123.456: 789
+                      - True: False
+                      - nested:
+                        - key: val
+                        - nestedlist:
+                          - foo
+                          - bar
+                          - baz'''))
+                if conf_func is sconfig.master_config:
+                    wfh.write('\n\n')
+                    wfh.write(textwrap.dedent('''
+                        rest_cherrypy:
+                          port: 8000
+                          disable_ssl: True
+                          app_path: /beacon_demo
+                          app: /srv/web/html/index.html
+                          static: /srv/web/static'''))
+            config = conf_func(fpath)
+            _count_strings(config)
+            return tally
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+
+    def test_conf_file_strings_are_unicode_for_master(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.master_config)
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
+
+    def test_conf_file_strings_are_unicode_for_minion(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.minion_config)
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 0, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
@@ -1133,7 +1243,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             default_config = sconfig.cloud_config(config_file_path)
             default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(default_config, cfd, default_flow_style=False)
 
             default_config = sconfig.cloud_config(config_file_path)
 

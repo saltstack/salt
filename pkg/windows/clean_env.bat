@@ -33,6 +33,10 @@ goto CheckPython3
     MsiExec.exe /X {4A656C6C-D24A-473F-9747-3A8D00907A03} /QN
     echo %0 :: - 2.7.13 (64 bit)
     MsiExec.exe /X {4A656C6C-D24A-473F-9747-3A8D00907A04} /QN
+    echo %0 :: - 2.7.14 (32 bit)
+    MsiExec.exe /X {0398A685-FD8D-46B3-9816-C47319B0CF5E} /QN
+    echo %0 :: - 2.7.14 (64 bit)
+    MsiExec.exe /X {0398A685-FD8D-46B3-9816-C47319B0CF5F} /QN
 
     echo.
 

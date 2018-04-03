@@ -155,7 +155,7 @@ This state creates a private key then requests a certificate signed by ca accord
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import os
 import re
@@ -310,7 +310,7 @@ def private_key_managed(name,
 
     ret = __states__['file.managed'](**file_args)
     if ret['changes'] and new_key:
-        ret['changes'] = 'New private key generated'
+        ret['changes'] = {'new': 'New private key generated'}
 
     return ret
 

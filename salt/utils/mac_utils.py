@@ -3,7 +3,7 @@
 Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import logging
@@ -23,6 +23,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError,\
 
 # Import Third Party Libs
 from salt.ext.six.moves import range
+from salt.ext import six
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -57,7 +58,7 @@ def _run_all(cmd):
 
     for idx, item in enumerate(cmd):
         if not isinstance(cmd[idx], six.string_types):
-            cmd[idx] = str(cmd[idx])
+            cmd[idx] = six.text_type(cmd[idx])
 
     cmd = ' '.join(cmd)
 
@@ -88,7 +89,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc)
+        ret['stdout'] = six.text_type(exc)
         ret['stderr'] = ''
         ret['retcode'] = 1
         ret['pid'] = proc.process.pid

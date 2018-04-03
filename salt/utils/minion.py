@@ -4,7 +4,7 @@ Utility functions for minions
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import logging
 import threading
@@ -14,9 +14,6 @@ import salt.payload
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +109,7 @@ def _read_proc_file(path, opts):
         pid = data.get('pid')
         if pid:
             log.warning(
-                'PID {0} exists but does not appear to be a salt process.'.format(pid)
+                'PID %s exists but does not appear to be a salt process.', pid
             )
         try:
             os.remove(path)
@@ -143,7 +140,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.files.fopen(path, 'rb') as fp_:
-            if six.b('salt') in fp_.read():
+            if b'salt' in fp_.read():
                 return True
     except (OSError, IOError):
         return False

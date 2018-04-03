@@ -2,7 +2,7 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -237,17 +237,19 @@ def create(name,
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
-                opts.append(str(kwargs[key]))
+                opts.append(six.text_type(kwargs[key]))
         if key == 'spare-devices':
             raid_devices -= int(kwargs[key])
 
     cmd = ['mdadm',
            '-C', name,
            '-R',
-           '-v'] + opts + [
-           '-l', str(level),
+           '-v',
+           '-l', six.text_type(level),
+           ] + opts + [
            '-e', metadata,
-           '-n', str(raid_devices)] + devices
+           '-n', six.text_type(raid_devices),
+           ] + devices
 
     cmd_str = ' '.join(cmd)
 

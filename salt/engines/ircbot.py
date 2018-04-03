@@ -40,21 +40,21 @@ event <tag> [<extra>, <data>]
 
 Example of usage
 
-.. code-block:: txt
+.. code-block:: text
 
     08:33:57 @gtmanfred > !ping
     08:33:57   gtmanbot > gtmanfred: pong
     08:34:02 @gtmanfred > !echo ping
     08:34:02   gtmanbot > ping
-    08:34:17 @gtmanfred > !event test/tag/ircbot irc is usefull
+    08:34:17 @gtmanfred > !event test/tag/ircbot irc is useful
     08:34:17   gtmanbot > gtmanfred: TaDa!
 
-.. code-block:: txt
+.. code-block:: text
 
-    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': [u'irc', u'is', u'usefull']}
+    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': ['irc', 'is', 'useful']}
 
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libraries
 import base64

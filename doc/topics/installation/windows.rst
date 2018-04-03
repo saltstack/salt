@@ -107,34 +107,43 @@ Minion silently:
 =========================  =====================================================
 Option                     Description
 =========================  =====================================================
-``/master=``               A string value to set the IP address or host name of
+``/master=``               A string value to set the IP address or hostname of
                            the master. Default value is 'salt'. You can pass a
                            single master or a comma-separated list of masters.
-                           Setting the master will replace existing config with
-                           the default config. Cannot be used in conjunction
-                           with ``/use-existing-config``
-``/minion-name=``          A string value to set the minion name. Default is
-                           'hostname'. Setting the minion name will replace
-                           existing config with the default config. Cannot be
-                           used in conjunction with ``/use-existing-config``
+                           Setting the master will cause the installer to use
+                           the default config or a custom config if defined.
+``/minion-name=``          A string value to set the minion name. Default value
+                           is 'hostname'. Setting the minion name causes the
+                           installer to use the default config or a custom
+                           config if defined.
 ``/start-minion=``         Either a 1 or 0. '1' will start the salt-minion
                            service, '0' will not. Default is to start the
-                           service after installation
+                           service after installation.
 ``/start-minion-delayed``  Set the minion start type to
-                           ``Automatic (Delayed Start)``
-``/use-existing-config``   Either a 1 or 0. '1' will use the existing config if
-                           present. '0' will replace existing config with the
-                           default config. Default is '1'. If this is set to '1'
-                           values passed in ``/master`` and ``/minion-name``
-                           will be ignored
+                           ``Automatic (Delayed Start)``.
+``/default-config``        Overwrite the existing config if present with the
+                           default config for salt. Default is to use the
+                           existing config if present. If ``/master`` and/or
+                           ``/minion-name`` is passed, those values will be used
+                           to update the new default config.
+``/custom-config=``        A string value specifying the name of a custom config
+                           file in the same path as the installer of the full
+                           path to a custom config file. If ``/master`` and/or
+                           ``/minion-name`` is passed, those values will be used
+                           to update the new custom config.
 ``/S``                     Runs the installation silently. Uses the above
-                           settings or the defaults
-``/?``                     Displays command line help
+                           settings or the defaults.
+``/?``                     Displays command line help.
 =========================  =====================================================
 
 .. note::
     ``/start-service`` has been deprecated but will continue to function as
     expected for the time being.
+
+.. note::
+    ``/default-config`` and ``/custom-config=`` will backup an existing config
+    if found. A timestamp and a ``.bak`` extension will be added. That includes
+    the ``minion`` file and the ``minion.d`` directory.
 
 Here are some examples of using the silent installer:
 
@@ -151,6 +160,13 @@ Here are some examples of using the silent installer:
     # Configure the minion but don't start the minion service
 
     Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
+
+.. code-block:: bat
+
+    # Install the Salt Minion
+    # Configure the minion using a custom config and configuring multimaster
+
+    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /custom-config=windows_minion /master=prod_master1,prod_master2
 
 
 Running the Salt Minion on Windows as an Unprivileged User

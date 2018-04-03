@@ -30,7 +30,7 @@ Complete example in etc/salt/master
 '''
 
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 
@@ -75,9 +75,9 @@ def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
         aux_dict[subkeys[-1]] = subtree[subkeys[-1]]
         return ret_dict
 
-    log.trace('minion_id = {0}'.format(minion_id))
-    log.trace('include = {0}'.format(include))
-    log.trace('extra_minion_data = {0}'.format(extra_minion_data))
+    log.trace('minion_id = %s', minion_id)
+    log.trace('include = %s', include)
+    log.trace('extra_minion_data = %s', extra_minion_data)
     data = {}
 
     if not extra_minion_data:

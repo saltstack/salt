@@ -5,7 +5,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pwd
 import grp
@@ -115,7 +115,7 @@ class AuthTest(ShellCase):
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
         self.assertTrue(
-            'Failed to authenticate' in ''.join(resp)
+            'Authentication error occurred.' in ''.join(resp)
         )
 
     def test_pam_auth_valid_group(self):

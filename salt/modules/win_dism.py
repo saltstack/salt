@@ -5,7 +5,7 @@ not running server versions of Windows. Some functions are only available on
 Windows 10.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import re
@@ -14,6 +14,9 @@ import logging
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.versions
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -563,7 +566,7 @@ def package_info(package, image=None):
 
     if out['retcode'] == 0:
         ret = dict()
-        for line in str(out['stdout']).splitlines():
+        for line in six.text_type(out['stdout']).splitlines():
             if ' : ' in line:
                 info = line.split(' : ')
                 if len(info) < 2:

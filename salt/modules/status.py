@@ -5,7 +5,7 @@ These data can be useful for compiling into stats later.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import os
 import re
@@ -28,6 +28,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -299,6 +300,9 @@ def cpustats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 2018.3.0
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -312,7 +316,7 @@ def cpustats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/stat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -407,10 +411,28 @@ def cpustats():
 
         return ret
 
+    def openbsd_cpustats():
+        '''
+        openbsd specific implementation of cpustats
+        '''
+        systat = __salt__['cmd.run']('systat -s 2 -B cpu').splitlines()
+        fields = systat[3].split()
+        ret = {}
+        for cpu in systat[4:]:
+            cpu_line = cpu.split()
+            cpu_idx = cpu_line[0]
+            ret[cpu_idx] = {}
+
+            for idx, field in enumerate(fields[1:]):
+                ret[cpu_idx][field] = cpu_line[idx+1]
+
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
+        'OpenBSD': openbsd_cpustats,
         'SunOS': sunos_cpustats,
         'AIX': aix_cpustats,
     }
@@ -426,6 +448,9 @@ def meminfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 2018.3.0
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -439,7 +464,7 @@ def meminfo():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/meminfo', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -553,10 +578,25 @@ def meminfo():
 
         return ret
 
+    def openbsd_meminfo():
+        '''
+        openbsd specific implementation of meminfo
+        '''
+        vmstat = __salt__['cmd.run']('vmstat').splitlines()
+        # We're only interested in memory and page values which are printed
+        # as subsequent fields.
+        fields = ['active virtual pages', 'free list size', 'page faults',
+                  'pages reclaimed', 'pages paged in', 'pages paged out',
+                  'pages freed', 'pages scanned']
+        data = vmstat[2].split()[2:10]
+        ret = dict(zip(fields, data))
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_meminfo,
         'FreeBSD': freebsd_meminfo,
+        'OpenBSD': openbsd_meminfo,
         'AIX': aix_meminfo,
     }
 
@@ -572,6 +612,9 @@ def cpuinfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 2018.3.0
+        Added support for NetBSD and OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -585,7 +628,7 @@ def cpuinfo():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -602,14 +645,19 @@ def cpuinfo():
 
     def bsd_cpuinfo():
         '''
-        freebsd specific cpuinfo implementation
+        bsd specific cpuinfo implementation
         '''
-        freebsd_cmd = 'sysctl hw.model hw.ncpu'
+        bsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
-        for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
+        if __grains__['kernel'].lower() in ['netbsd', 'openbsd']:
+            sep = '='
+        else:
+            sep = ':'
+
+        for line in __salt__['cmd.run'](bsd_cmd).splitlines():
             if not line:
                 continue
-            comps = line.split(':')
+            comps = line.split(sep)
             comps[0] = comps[0].strip()
             ret[comps[0]] = comps[1].strip()
         return ret
@@ -754,6 +802,7 @@ def cpuinfo():
     get_version = {
         'Linux': linux_cpuinfo,
         'FreeBSD': bsd_cpuinfo,
+        'NetBSD': bsd_cpuinfo,
         'OpenBSD': bsd_cpuinfo,
         'SunOS': sunos_cpuinfo,
         'AIX': aix_cpuinfo,
@@ -784,7 +833,7 @@ def diskstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/diskstats', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -934,7 +983,7 @@ def diskusage(*args):
         if __grains__['kernel'] == 'Linux':
             try:
                 with salt.utils.files.fopen('/proc/mounts', 'r') as fp_:
-                    ifile = fp_.read().splitlines()
+                    ifile = salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
             except OSError:
                 return {}
         elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
@@ -989,7 +1038,7 @@ def vmstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/vmstat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1032,19 +1081,46 @@ def nproc():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 2018.3.0
+        Added support for Darwin, FreeBSD and OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.nproc
     '''
-    if __grains__['kernel'] == 'AIX':
-        return _aix_nproc()
+    def linux_nproc():
+        '''
+        linux specific implementation of nproc
+        '''
+        try:
+            return _number(__salt__['cmd.run']('nproc').strip())
+        except ValueError:
+            return 0
 
-    try:
-        return _number(__salt__['cmd.run']('nproc').strip())
-    except ValueError:
-        return 0
+    def generic_nproc():
+        '''
+        generic implementation of nproc
+        '''
+        ncpu_data = __salt__['sysctl.get']('hw.ncpu')
+        if not ncpu_data:
+            # We need at least one CPU to run
+            return 1
+        else:
+            return _number(ncpu_data)
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_nproc,
+        'Darwin': generic_nproc,
+        'FreeBSD': generic_nproc,
+        'OpenBSD': generic_nproc,
+        'AIX': _aix_nproc,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def netstats():
@@ -1053,6 +1129,9 @@ def netstats():
 
     .. versionchanged:: 2016.11.4
         Added support for AIX
+
+    .. versionchanged:: 2018.3.0
+        Added support for OpenBSD
 
     CLI Example:
 
@@ -1067,7 +1146,7 @@ def netstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/net/netstat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1091,15 +1170,18 @@ def netstats():
         return ret
 
     def freebsd_netstats():
+        return bsd_netstats()
+
+    def bsd_netstats():
         '''
-        freebsd specific netstats implementation
+        bsd specific netstats implementation
         '''
         ret = {}
         for line in __salt__['cmd.run']('netstat -s').splitlines():
             if line.startswith('\t\t'):
                 continue  # Skip, too detailed
             if not line.startswith('\t'):
-                key = line.split()[0]
+                key = line.split()[0].replace(':', '')
                 ret[key] = {}
             else:
                 comps = line.split()
@@ -1159,7 +1241,8 @@ def netstats():
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netstats,
-        'FreeBSD': freebsd_netstats,
+        'FreeBSD': bsd_netstats,
+        'OpenBSD': bsd_netstats,
         'SunOS': sunos_netstats,
         'AIX': aix_netstats,
     }
@@ -1189,7 +1272,7 @@ def netdev():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/net/dev', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1358,21 +1441,55 @@ def w():  # pylint: disable=C0103
 
         salt '*' status.w
     '''
-    user_list = []
-    users = __salt__['cmd.run']('w -h').splitlines()
-    for row in users:
-        if not row:
-            continue
-        comps = row.split()
-        rec = {'idle': comps[3],
-               'jcpu': comps[4],
-               'login': comps[2],
-               'pcpu': comps[5],
-               'tty': comps[1],
-               'user': comps[0],
-               'what': ' '.join(comps[6:])}
-        user_list.append(rec)
-    return user_list
+    def linux_w():
+        '''
+        Linux specific implementation for w
+        '''
+        user_list = []
+        users = __salt__['cmd.run']('w -fh').splitlines()
+        for row in users:
+            if not row:
+                continue
+            comps = row.split()
+            rec = {'idle': comps[3],
+                   'jcpu': comps[4],
+                   'login': comps[2],
+                   'pcpu': comps[5],
+                   'tty': comps[1],
+                   'user': comps[0],
+                   'what': ' '.join(comps[6:])}
+            user_list.append(rec)
+        return user_list
+
+    def bsd_w():
+        '''
+        Generic BSD implementation for w
+        '''
+        user_list = []
+        users = __salt__['cmd.run']('w -h').splitlines()
+        for row in users:
+            if not row:
+                continue
+            comps = row.split()
+            rec = {'from': comps[2],
+                   'idle': comps[4],
+                   'login': comps[3],
+                   'tty': comps[1],
+                   'user': comps[0],
+                   'what': ' '.join(comps[5:])}
+            user_list.append(rec)
+        return user_list
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Darwin': bsd_w,
+        'FreeBSD': bsd_w,
+        'Linux': linux_w,
+        'OpenBSD': bsd_w,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def all_status():
@@ -1438,6 +1555,9 @@ def version():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 2018.3.0
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -1450,14 +1570,21 @@ def version():
         '''
         try:
             with salt.utils.files.fopen('/proc/version', 'r') as fp_:
-                return fp_.read().strip()
+                return salt.utils.stringutils.to_unicode(fp_.read()).strip()
         except IOError:
             return {}
+
+    def bsd_version():
+        '''
+        bsd specific implementation of version
+        '''
+        return __salt__['cmd.run']('sysctl -n kern.version')
 
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_version,
-        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'FreeBSD': bsd_version,
+        'OpenBSD': bsd_version,
         'AIX': lambda: __salt__['cmd.run']('oslevel -s'),
     }
 
@@ -1584,18 +1711,10 @@ def proxy_reconnect(proxy_name, opts=None):
     is_alive = __proxy__[proxy_keepalive_fn](opts)
     if not is_alive:
         minion_id = opts.get('proxyid', '') or opts.get('id', '')
-        log.info('{minion_id} ({proxy_name} proxy) is down. Restarting.'.format(
-                minion_id=minion_id,
-                proxy_name=proxy_name
-            )
-        )
+        log.info('%s (%s proxy) is down. Restarting.', minion_id, proxy_name)
         __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
         __proxy__[proxy_name+'.init'](opts)  # reopen connection
-        log.debug('Restarted {minion_id} ({proxy_name} proxy)!'.format(
-                minion_id=minion_id,
-                proxy_name=proxy_name
-            )
-        )
+        log.debug('Restarted %s (%s proxy)!', minion_id, proxy_name)
 
     return True  # success
 

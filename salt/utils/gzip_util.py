@@ -5,7 +5,7 @@
     Helper module for handling gzip consistently between 2.7+ and 2.6-
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import gzip

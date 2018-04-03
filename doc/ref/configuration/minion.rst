@@ -138,7 +138,7 @@ name) is set in the :conf_minion:`master` configuration setting.
 ``master_tops_first``
 ---------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -207,6 +207,28 @@ minion event bus. The value is expressed in bytes.
 .. code-block:: yaml
 
     max_event_size: 1048576
+
+.. conf_minion:: enable_legacy_startup_events
+
+``enable_legacy_startup_events``
+--------------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``True``
+
+When a minion starts up it sends a notification on the event bus with a tag
+that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+the minion also sends a similar event with an event tag like this:
+`minion_start`. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set `enable_legacy_startup_events: False` in the
+minion config to ensure only the `salt/minion/<minion_id>/start` events are
+sent. Beginning with the `Neon` Salt release this option will default to
+`False`
+
+.. code-block:: yaml
+
+    enable_legacy_startup_events: True
 
 .. conf_minion:: master_failback
 
@@ -320,6 +342,131 @@ option on the Salt master.
 .. code-block:: yaml
 
     master_port: 4506
+
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
+.. conf_minion:: source_interface_name
+
+``source_interface_name``
+-------------------------
+
+.. versionadded:: 2018.3.0
+
+The name of the interface to use when establishing the connection to the Master.
+
+.. note::
+
+    If multiple IP addresses are configured on the named interface,
+    the first one will be selected. In that case, for a better selection,
+    consider using the :conf_minion:`source_address` option.
+
+.. note::
+
+    To use an IPv6 address from the named interface, make sure the option
+    :conf_minion:`ipv6` is enabled, i.e., ``ipv6: true``.
+
+.. note::
+
+    If the interface is down, it will avoid using it, and the Minion
+    will bind to ``0.0.0.0`` (all interfaces).
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_interface_name: bond0.1234
+
+.. conf_minion:: source_address
+
+``source_address``
+------------------
+
+.. versionadded:: 2018.3.0
+
+The source IP address or the domain name to be used when connecting the Minion
+to the Master.
+See :conf_minion:`ipv6` for IPv6 connections to the Master.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_address: if-bond0-1234.sjc.us-west.internal
+
+.. conf_minion:: source_ret_port
+
+``source_ret_port``
+-------------------
+
+.. versionadded:: 2018.3.0
+
+The source port to be used when connecting the Minion to the Master ret server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_ret_port: 49017
+
+.. conf_minion:: source_publish_port
+
+``source_publish_port``
+-----------------------
+
+.. versionadded:: 2018.3.0
+
+The source port to be used when connecting the Minion to the Master publish
+server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_publish_port: 49018
 
 .. conf_minion:: user
 
@@ -495,6 +642,19 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
+
 .. conf_minion:: append_minionid_config_dirs
 
 ``append_minionid_config_dirs``
@@ -647,6 +807,35 @@ A value of 10 minutes is a reasonable default.
 .. code-block:: yaml
 
     grains_refresh_every: 0
+
+.. conf_minion:: fibre_channel_grains
+
+``fibre_channel_grains``
+------------------------
+
+Default: ``False``
+
+The ``fibre_channel_grains`` setting will enable the ``fc_wwn`` grain for
+Fibre Channel WWN's on the minion. Since this grain is expensive, it is
+disabled by default.
+
+.. code-block:: yaml
+
+    fibre_channel_grains: True
+
+.. conf_minion:: iscsi_grains
+
+``iscsi_grains``
+------------------------
+
+Default: ``False``
+
+The ``iscsi_grains`` setting will enable the ``iscsi_iqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    iscsi_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -901,7 +1090,7 @@ restart.
 
 Default: ``0``
 
-Instructs the minion to ping its master(s) every n number of seconds. Used
+Instructs the minion to ping its master(s) every n number of minutes. Used
 primarily as a mitigation technique against minion disconnects.
 
 .. code-block:: yaml
@@ -1129,6 +1318,40 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_minion:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. conf_minion:: proxy_host
 
 ``proxy_host``
@@ -1181,19 +1404,54 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
-Minion Module Management
-========================
+.. conf_minion:: docker.compare_container_networks
+
+``docker.compare_container_networks``
+-------------------------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
+
+Specifies which keys are examined by
+:py:func:`docker.compare_container_networks
+<salt.modules.dockermod.compare_container_networks>`.
+
+.. note::
+    This should not need to be modified unless new features added to Docker
+    result in new keys added to the network configuration which must be
+    compared to determine if two containers have different network configs.
+    This config option exists solely as a way to allow users to continue using
+    Salt to manage their containers after an API change, without waiting for a
+    new Salt release to catch up to the changes in the Docker API.
+
+.. code-block:: yaml
+
+    docker.compare_container_networks:
+      static:
+        - Aliases
+        - Links
+        - IPAMConfig
+      automatic:
+        - IPAddress
+        - Gateway
+        - GlobalIPv6Address
+        - IPv6Gateway
+
+Minion Execution Module Management
+==================================
 
 .. conf_minion:: disable_modules
 
 ``disable_modules``
 -------------------
 
-Default: ``[]`` (all modules are enabled by default)
+Default: ``[]`` (all execution modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The ``sys`` module is built into the minion
-and cannot be disabled.
+be able to execute a certain module.
+
+However, the ``sys`` module is built into the minion and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
 memory, disabling modules will lower the minion's memory footprint.
@@ -1232,7 +1490,8 @@ Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config
 will cause only the listed modules to be enabled.  Modules not in the list will
 not be loaded.)
 
-This option is the reverse of disable_modules.
+This option is the reverse of disable_modules. If enabled, only execution modules in this
+list will be loaded and executed on the minion.
 
 Note that this is a very large hammer and it can be quite difficult to keep the minion working
 the way you think it should since Salt uses many modules internally itself.  At a bare minimum
@@ -1725,9 +1984,15 @@ enabled and can be disabled by changing this value to ``False``.
     If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
 
 .. conf_minion:: environment
+.. conf_minion:: saltenv
 
-``environment``
----------------
+``saltenv``
+-----------
+
+.. versionchanged:: 2018.3.0
+    Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+    ``saltenv`` will take its value. If both are used, ``environment`` will be
+    ignored and ``saltenv`` will be used.
 
 Normally the minion is not isolated to any single environment on the master
 when running states, but the environment can be isolated on the minion side
@@ -1736,7 +2001,25 @@ environments is to isolate via the top file.
 
 .. code-block:: yaml
 
-    environment: dev
+    saltenv: dev
+
+.. conf_minion:: lock_saltenv
+
+``lock_saltenv``
+----------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``False``
+
+For purposes of running states, this option prevents using the ``saltenv``
+argument to manually set the environment. This is useful to keep a minion which
+has the :conf_minion:`saltenv` option set to ``dev`` from running states from
+an environment other than ``dev``.
+
+.. code-block:: yaml
+
+    lock_saltenv: True
 
 .. conf_minion:: snapper_states
 
@@ -2252,6 +2535,27 @@ minion's pki directory.
 
     master_sign_key_name: <filename_without_suffix>
 
+.. conf_minion:: autosign_grains
+
+``autosign_grains``
+-------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``not defined``
+
+The grains that should be sent to the master on authentication to decide if
+the minion's key should be accepted automatically.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more information.
+
+.. code-block:: yaml
+
+    autosign_grains:
+      - uuid
+      - server_id
+
 .. conf_minion:: always_verify_signature
 
 ``always_verify_signature``
@@ -2429,7 +2733,7 @@ executed in a thread.
 ``process_count_max``
 -------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``-1``
 
@@ -2825,6 +3129,27 @@ the metadata will be refreshed.
 
 .. _winrepo-minion-config-opts:
 
+Minion Windows Software Repo Settings
+=====================================
+
+.. important::
+    To use these config options, the minion can be running in master-minion or
+    masterless mode.
+
+
+.. conf_minion:: winrepo_source_dir
+
+``winrepo_source_dir``
+----------------------
+
+Default: ``salt://win/repo-ng/``
+
+The source location for the winrepo sls files.
+
+.. code-block:: yaml
+
+    winrepo_source_dir: salt://win/repo-ng/
+
 Standalone Minion Windows Software Repo Settings
 ================================================
 
@@ -2867,19 +3192,6 @@ out for 2015.8.0 and later minions.
 .. code-block:: yaml
 
     winrepo_dir_ng: /srv/salt/win/repo-ng
-
-.. conf_minion:: winrepo_source_dir
-
-``winrepo_source_dir``
-----------------------
-
-Default: ``salt://win/repo-ng/``
-
-The source location for the winrepo sls files.
-
-.. code-block:: yaml
-
-    winrepo_source_dir: salt://win/repo-ng/
 
 .. conf_minion:: winrepo_cachefile
 .. conf_minion:: win_repo_cachefile

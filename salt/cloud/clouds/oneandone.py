@@ -80,7 +80,7 @@ Set ``deploy`` to False if Salt should not be installed on the node.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
@@ -99,6 +99,7 @@ import salt.utils.files
 
 # Import salt.cloud libs
 import salt.utils.cloud
+import salt.utils.stringutils
 from salt.ext import six
 
 try:
@@ -545,12 +546,10 @@ def create(vm_):
                              data['id'])
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Error creating {0} on 1and1\n\n'
+            'Error creating %s on 1and1\n\n'
             'The following exception was thrown by the 1and1 library '
-            'when trying to run the initial deployment: \n{1}'.format(
-                vm_['name'], exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'when trying to run the initial deployment: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -567,17 +566,14 @@ def create(vm_):
             if not data:
                 return False
             log.debug(
-                'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
-                    vm_['name'],
-                    pprint.pformat(data['name']),
-                    data['status']['state']
-                )
+                'Loaded node data for %s:\nname: %s\nstate: %s',
+                vm_['name'],
+                pprint.pformat(data['name']),
+                data['status']['state']
             )
         except Exception as err:
             log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
+                'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -609,15 +605,11 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc.message))
+            raise SaltCloudSystemExit(six.text_type(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM {0}'.format(vm_))
-    log.debug(
-        '{0} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM %s', vm_)
+    log.debug('%s VM creation details:\n%s', vm_, pprint.pformat(data))
 
     __utils__['cloud.fire_event'](
         'event',
@@ -806,7 +798,7 @@ def load_public_key(vm_):
             )
 
         with salt.utils.files.fopen(public_key_filename, 'r') as public_key:
-            key = public_key.read().replace('\n', '')
+            key = salt.utils.stringutils.to_unicode(public_key.read().replace('\n', ''))
 
             return key
 

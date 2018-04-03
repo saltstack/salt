@@ -132,7 +132,7 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import stdlib
 import logging
@@ -297,7 +297,7 @@ def _build_bank_hier(bank, redis_pipe):
     for bank_name in bank_list[1:]:
         prev_bank_redis_key = _get_bank_redis_key(parent_bank_path)
         redis_pipe.sadd(prev_bank_redis_key, bank_name)
-        log.debug('Adding {bname} to {bkey}'.format(bname=bank_name, bkey=prev_bank_redis_key))
+        log.debug('Adding %s to %s', bank_name, prev_bank_redis_key)
         parent_bank_path = '{curr_path}/{bank_name}'.format(
             curr_path=parent_bank_path,
             bank_name=bank_name
@@ -341,13 +341,12 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug('Setting the value for {key} under {bank} ({redis_key})'.format(
-            key=key,
-            bank=bank,
-            redis_key=redis_key
-        ))
+        log.debug(
+            'Setting the value for %s under %s (%s)',
+            key=key, bank=bank, redis_key=redis_key
+        )
         redis_pipe.sadd(redis_bank_keys, key)
-        log.debug('Adding {key} to {bkey}'.format(key=key, bkey=redis_bank_keys))
+        log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = 'Cannot set the Redis cache key {rkey}: {rerr}'.format(rkey=redis_key,
@@ -393,7 +392,7 @@ def flush(bank, key=None):
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitely allow Salt inject scripts in their Redis instance.
+    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     '''
     redis_server = _get_redis_server()
     redis_pipe = redis_server.pipeline()
@@ -405,10 +404,10 @@ def flush(bank, key=None):
             bank_keys_redis_key = _get_bank_keys_redis_key(bank_to_remove)
             # Redis key of the SET that stores the bank keys
             redis_pipe.smembers(bank_keys_redis_key)  # fetch these keys
-            log.debug('Fetching the keys of the {bpath} bank ({bkey})'.format(
-                bpath=bank_to_remove,
-                bkey=bank_keys_redis_key
-            ))
+            log.debug(
+                'Fetching the keys of the %s bank (%s)',
+                bank_to_remove, bank_keys_redis_key
+            )
         try:
             log.debug('Executing the pipe...')
             subtree_keys = redis_pipe.execute()  # here are the keys under these banks to be removed
@@ -430,41 +429,35 @@ def flush(bank, key=None):
             for key in bank_keys:
                 redis_key = _get_key_redis_key(bank_path, key)
                 redis_pipe.delete(redis_key)  # kill 'em all!
-                log.debug('Removing the key {key} under the {bpath} bank ({bkey})'.format(
-                    key=key,
-                    bpath=bank_path,
-                    bkey=redis_key
-                ))
+                log.debug(
+                    'Removing the key %s under the %s bank (%s)',
+                    key, bank_path, redis_key
+                )
             bank_keys_redis_key = _get_bank_keys_redis_key(bank_path)
             redis_pipe.delete(bank_keys_redis_key)
-            log.debug('Removing the bank-keys key for the {bpath} bank ({bkey})'.format(
-                bpath=bank_path,
-                bkey=bank_keys_redis_key
-            ))
+            log.debug(
+                'Removing the bank-keys key for the %s bank (%s)',
+                bank_path, bank_keys_redis_key
+            )
             # delete the Redis key where are stored
             # the list of keys under this bank
             bank_key = _get_bank_redis_key(bank_path)
             redis_pipe.delete(bank_key)
-            log.debug('Removing the {bpath} bank ({bkey})'.format(
-                bpath=bank_path,
-                bkey=bank_key
-            ))
+            log.debug('Removing the %s bank (%s)', bank_path, bank_key)
             # delete the bank key itself
     else:
         redis_key = _get_key_redis_key(bank, key)
         redis_pipe.delete(redis_key)  # delete the key cached
-        log.debug('Removing the key {key} under the {bank} bank ({bkey})'.format(
-            key=key,
-            bank=bank,
-            bkey=redis_key
-        ))
+        log.debug(
+            'Removing the key %s under the %s bank (%s)',
+            key, bank, redis_key
+        )
         bank_keys_redis_key = _get_bank_keys_redis_key(bank)
         redis_pipe.srem(bank_keys_redis_key, key)
-        log.debug('De-referencing the key {key} from the bank-keys of the {bank} bank ({bkey})'.format(
-            key=key,
-            bank=bank,
-            bkey=bank_keys_redis_key
-        ))
+        log.debug(
+            'De-referencing the key %s from the bank-keys of the %s bank (%s)',
+            key, bank, bank_keys_redis_key
+        )
         # but also its reference from $BANKEYS list
     try:
         redis_pipe.execute()  # Fluuuush

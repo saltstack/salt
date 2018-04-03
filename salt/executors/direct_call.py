@@ -2,7 +2,7 @@
 '''
 Direct call executor module
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def execute(opts, data, func, args, kwargs):

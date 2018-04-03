@@ -5,7 +5,7 @@ Tests for the supervisord state
 '''
 
 # Import python lins
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import time
 import subprocess

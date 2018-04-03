@@ -8,12 +8,13 @@ This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import time
 
 # Import salt libs
+import salt.utils.data
 from salt.utils.timeout import wait_for
 
 log = logging.getLogger(__name__)
@@ -199,7 +200,7 @@ def vb_get_network_adapters(machine_name=None, machine=None):
     return network_adapters
 
 
-def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=None):
+def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=None, wait_for_pattern=None):
     '''
     Wait until a machine has a network address to return or quit after the timeout
 
@@ -211,12 +212,16 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     @type machine_name: str
     @param machine:
     @type machine: IMachine
+    @type wait_for_pattern: str
+    @param wait_for_pattern:
+    @type machine: str
     @return:
     @rtype: list
     '''
     kwargs = {
         'machine_name': machine_name,
-        'machine': machine
+        'machine': machine,
+        'wait_for_pattern': wait_for_pattern
     }
     return wait_for(vb_get_network_addresses, timeout=timeout, step=step, default=[], func_kwargs=kwargs)
 
@@ -253,7 +258,7 @@ def vb_wait_for_session_state(xp_session, state='Unlocked', timeout=10, step=Non
     wait_for(_check_session_state, timeout=timeout, step=step, default=False, func_args=args)
 
 
-def vb_get_network_addresses(machine_name=None, machine=None):
+def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=None):
     '''
     TODO distinguish between private and public addresses
 
@@ -278,21 +283,38 @@ def vb_get_network_addresses(machine_name=None, machine=None):
         machine = vb_get_box().findMachine(machine_name)
 
     ip_addresses = []
-    # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
-    # For some reason it may give us outdated (cached?) values
+    log.debug("checking for power on:")
     if machine.state == _virtualboxManager.constants.MachineState_Running:
-        try:
-            total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
-        except ValueError:
-            total_slots = 0
-        for i in range(total_slots):
-            try:
-                address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
-                if address:
-                    ip_addresses.append(address)
-            except Exception as e:
-                log.debug(e.message)
 
+        log.debug("got power on:")
+
+        #wait on an arbitrary named property
+        #for instance use a dhcp client script to set a property via VBoxControl guestproperty set dhcp_done 1
+        if wait_for_pattern and not machine.getGuestPropertyValue(wait_for_pattern):
+            log.debug("waiting for pattern:%s:", wait_for_pattern)
+            return None
+
+        _total_slots = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count')
+
+        #upon dhcp the net count drops to 0 and it takes some seconds for it to be set again
+        if not _total_slots:
+            log.debug("waiting for net count:%s:", wait_for_pattern)
+            return None
+
+        try:
+            total_slots = int(_total_slots)
+            for i in range(total_slots):
+                try:
+                    address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
+                    if address:
+                        ip_addresses.append(address)
+                except Exception as e:
+                    log.debug(e.message)
+        except ValueError as e:
+            log.debug(e.message)
+            return None
+
+    log.debug("returning ip_addresses:%s:", ip_addresses)
     return ip_addresses
 
 
@@ -341,6 +363,7 @@ def vb_create_machine(name=None):
 def vb_clone_vm(
     name=None,
     clone_from=None,
+    clone_mode=0,
     timeout=10000,
     **kwargs
 ):
@@ -372,7 +395,7 @@ def vb_clone_vm(
 
     progress = source_machine.cloneTo(
         new_machine,
-        0,  # CloneMode
+        clone_mode,  # CloneMode
         None  # CloneOptions : None = Full?
     )
 
@@ -517,7 +540,7 @@ def vb_xpcom_to_attribute_dict(xpcom,
     '''
     # Check the interface
     if interface_name:
-        m = re.search(r'XPCOM.+implementing {0}'.format(interface_name), str(xpcom))
+        m = re.search(r'XPCOM.+implementing {0}'.format(interface_name), six.text_type(xpcom))
         if not m:
             # TODO maybe raise error here?
             log.warning('Interface %s is unknown and cannot be converted to dict', interface_name)
@@ -602,11 +625,12 @@ def vb_machinestate_to_tuple(machinestate):
     @rtype: tuple(<name>, <description>)
     '''
     if isinstance(machinestate, int):
-        return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
+        ret = MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
     elif isinstance(machinestate, six.string_types):
-        return MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
+        ret = MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
     else:
-        return UNKNOWN_MACHINE_STATE
+        ret = UNKNOWN_MACHINE_STATE
+    return salt.utils.data.decode(ret, preserve_tuples=True)
 
 
 def machine_get_machinestate_tuple(machinedict):

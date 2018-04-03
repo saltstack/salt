@@ -36,7 +36,7 @@ Ensure DRAC network is in a consistent state
         - gateway: 10.225.108.1
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.exceptions
 import salt.utils.path

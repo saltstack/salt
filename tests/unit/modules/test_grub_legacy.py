@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.grub_legacy as grub_legacy
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 
@@ -47,7 +48,7 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(grub_legacy, '_detect_conf', return_value='A'):
                 self.assertRaises(CommandExecutionError, grub_legacy.conf)
 
-        file_data = '\n'.join(['#', 'A B C D,E,F G H'])
+        file_data = salt.utils.stringutils.to_str('\n'.join(['#', 'A B C D,E,F G H']))
         with patch('salt.utils.files.fopen',
                    mock_open(read_data=file_data), create=True) as f_mock:
             f_mock.return_value.__iter__.return_value = file_data.splitlines()

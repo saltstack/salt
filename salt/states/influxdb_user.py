@@ -6,6 +6,9 @@ Management of InfluxDB users
 (compatible with InfluxDB version 0.9+)
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -41,6 +44,18 @@ def present(name,
         grants:
           foo_db: read
           bar_db: all
+
+    **Example:**
+
+    .. code-block:: yaml
+        example user present in influxdb:
+          influxdb_user.present:
+            - name: example
+            - password: somepassword
+            - admin: False
+            - grants:
+                foo_db: read
+                bar_db: all
     '''
     create = False
     ret = {'name': name,

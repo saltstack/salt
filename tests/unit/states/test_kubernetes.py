@@ -3,7 +3,7 @@
     :codeauthor: :email:`Jeff Schroeder <jeffschroeder@computer.org>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import base64
 
 from contextlib import contextmanager
@@ -84,7 +84,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             'kind': 'Node',
             'metadata': {
                 'annotations': {
-                    u'node.alpha.kubernetes.io/ttl': '0',
+                    'node.alpha.kubernetes.io/ttl': '0',
                 },
                 'labels': self.make_node_labels(name=name),
                 'name': name,

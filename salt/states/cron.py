@@ -137,7 +137,7 @@ The script will be executed every reboot if cron daemon support this option.
 This counter part definition will ensure than a job with a special keyword
 is not set.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -148,6 +148,7 @@ from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+from salt.ext import six
 
 
 def __virtual__():
@@ -172,21 +173,21 @@ def _check_cron(user,
     Return the changes
     '''
     if minute is not None:
-        minute = str(minute).lower()
+        minute = six.text_type(minute).lower()
     if hour is not None:
-        hour = str(hour).lower()
+        hour = six.text_type(hour).lower()
     if daymonth is not None:
-        daymonth = str(daymonth).lower()
+        daymonth = six.text_type(daymonth).lower()
     if month is not None:
-        month = str(month).lower()
+        month = six.text_type(month).lower()
     if dayweek is not None:
-        dayweek = str(dayweek).lower()
+        dayweek = six.text_type(dayweek).lower()
     if identifier is not None:
-        identifier = str(identifier)
+        identifier = six.text_type(identifier)
     if commented is not None:
         commented = commented is True
     if cmd is not None:
-        cmd = str(cmd)
+        cmd = six.text_type(cmd)
     lst = __salt__['cron.list_tab'](user)
     if special is None:
         for cron in lst['crons']:
@@ -201,7 +202,14 @@ def _check_cron(user,
                 return 'present'
     else:
         for cron in lst['special']:
-            if special == cron['spec'] and cmd == cron['cmd']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['spec'], special),
+                         (cron['identifier'], identifier),
+                         (cron['cmd'], cmd),
+                         (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
                 return 'present'
     return 'absent'
 
@@ -348,7 +356,12 @@ def present(name,
                                         commented=commented,
                                         identifier=identifier)
     else:
-        data = __salt__['cron.set_special'](user, special, name)
+        data = __salt__['cron.set_special'](user=user,
+                                            special=special,
+                                            cmd=name,
+                                            comment=comment,
+                                            commented=commented,
+                                            identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -392,9 +405,9 @@ def absent(name,
         The special keyword used in the job (eg. @reboot, @hourly...).
         Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
+    # NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    #       cannot be removed from the function definition, otherwise the use
+    #       of unsupported arguments will result in a traceback.
 
     name = name.strip()
     if identifier is False:
@@ -417,7 +430,7 @@ def absent(name,
     if special is None:
         data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     else:
-        data = __salt__['cron.rm_special'](user, special, name)
+        data = __salt__['cron.rm_special'](user, name, special=special, identifier=identifier)
 
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
@@ -541,7 +554,7 @@ def file(name,
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)
-        fp_.write(raw_cron)
+        fp_.write(salt.utils.stringutils.to_str(raw_cron))
 
     ret = {'changes': {},
            'comment': '',
@@ -566,6 +579,7 @@ def file(name,
                                              user,
                                              group,
                                              mode,
+                                             [],  # no special attrs for cron
                                              template,
                                              context,
                                              defaults,

@@ -4,15 +4,17 @@ Helpful decorators for module writing
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
+import sys
 import time
 from functools import wraps
 from collections import defaultdict
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
@@ -50,9 +52,8 @@ class Depends(object):
         '''
 
         log.trace(
-            'Depends decorator instantiated with dep list of {0}'.format(
-                dependencies
-            )
+            'Depends decorator instantiated with dep list of %s',
+            dependencies
         )
         self.dependencies = dependencies
         self.fallback_function = kwargs.get('fallback_function')
@@ -76,8 +77,10 @@ class Depends(object):
                 self.dependency_dict[kind][dep][(mod_name, fun_name)] = \
                         (frame, self.fallback_function)
         except Exception as exc:
-            log.error('Exception encountered when attempting to inspect frame in '
-                      'dependency decorator: {0}'.format(exc))
+            log.error(
+                'Exception encountered when attempting to inspect frame in '
+                'dependency decorator: %s', exc
+            )
         return function
 
     @classmethod
@@ -93,30 +96,21 @@ class Depends(object):
                 # check if dependency is loaded
                 if dependency is True:
                     log.trace(
-                        'Dependency for {0}.{1} exists, not unloading'.format(
-                            mod_name,
-                            func_name
-                        )
+                        'Dependency for %s.%s exists, not unloading',
+                        mod_name, func_name
                     )
                     continue
                 # check if you have the dependency
                 if dependency in frame.f_globals \
                         or dependency in frame.f_locals:
                     log.trace(
-                        'Dependency ({0}) already loaded inside {1}, '
-                        'skipping'.format(
-                            dependency,
-                            mod_name
-                        )
+                        'Dependency (%s) already loaded inside %s, skipping',
+                        dependency, mod_name
                     )
                     continue
                 log.trace(
-                    'Unloading {0}.{1} because dependency ({2}) is not '
-                    'imported'.format(
-                        mod_name,
-                        func_name,
-                        dependency
-                    )
+                    'Unloading %s.%s because dependency (%s) is not imported',
+                    mod_name, func_name, dependency
                 )
                 # if not, unload the function
                 if frame:
@@ -138,7 +132,7 @@ class Depends(object):
                             del functions[mod_key]
                     except AttributeError:
                         # we already did???
-                        log.trace('{0} already removed, skipping'.format(mod_key))
+                        log.trace('%s already removed, skipping', mod_key)
                         continue
 
 
@@ -158,13 +152,10 @@ def timing(function):
             mod_name = function.__module__[16:]
         else:
             mod_name = function.__module__
-        log.profile(
-            'Function {0}.{1} took {2:.20f} seconds to execute'.format(
-                mod_name,
-                function.__name__,
-                end_time - start_time
-            )
+        fstr = 'Function %s.%s took %.{0}f seconds to execute'.format(
+            sys.float_info.dig
         )
+        log.profile(fstr, mod_name, function.__name__, end_time - start_time)
         return ret
     return wrapped
 
@@ -185,7 +176,7 @@ def memoize(func):
         str_args = []
         for arg in args:
             if not isinstance(arg, six.string_types):
-                str_args.append(str(arg))
+                str_args.append(six.text_type(arg))
             else:
                 str_args.append(arg)
 
@@ -225,22 +216,13 @@ class _DeprecationDecorator(object):
 
     def _get_args(self, kwargs):
         '''
-        Extract function-specific keywords from all of the kwargs.
+        Discard all keywords which aren't function-specific from the kwargs.
 
         :param kwargs:
         :return:
         '''
         _args = list()
-        _kwargs = dict()
-
-        if '__pub_arg' in kwargs:  # For modules
-            for arg_item in kwargs.get('__pub_arg', list()):
-                if type(arg_item) == dict:
-                    _kwargs.update(arg_item.copy())
-                else:
-                    _args.append(arg_item)
-        else:
-            _kwargs = kwargs.copy()  # For states
+        _kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
         return _args, _kwargs
 
@@ -258,14 +240,17 @@ class _DeprecationDecorator(object):
             try:
                 return self._function(*args, **kwargs)
             except TypeError as error:
-                error = str(error).replace(self._function, self._orig_f_name)  # Hide hidden functions
-                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._orig_f_name,
-                                                                                        error=error))
+                error = six.text_type(error).replace(self._function, self._orig_f_name)  # Hide hidden functions
+                log.error(
+                    'Function "%s" was not properly called: %s',
+                    self._orig_f_name, error
+                )
                 return self._function.__doc__
             except Exception as error:
-                log.error('Unhandled exception occurred in '
-                          'function "{f_name}: {error}'.format(f_name=self._function.__name__,
-                                                               error=error))
+                log.error(
+                    'Unhandled exception occurred in function "%s: %s',
+                    self._function.__name__, error
+                )
                 raise error
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
@@ -586,3 +571,19 @@ def ignores_kwargs(*kwarg_names):
             return fn(*args, **kwargs_filtered)
         return __ignores_kwargs
     return _ignores_kwargs
+
+
+def ensure_unicode_args(function):
+    '''
+    Decodes all arguments passed to the wrapped function
+    '''
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        if six.PY2:
+            return function(
+                *salt.utils.data.decode_list(args),
+                **salt.utils.data.decode_dict(kwargs)
+            )
+        else:
+            return function(*args, **kwargs)
+    return wrapped

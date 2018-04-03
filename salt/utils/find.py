@@ -84,7 +84,7 @@ the following:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
@@ -107,6 +107,7 @@ from salt.ext import six
 # Import salt libs
 import salt.utils.args
 import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.stringutils
 import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
@@ -159,7 +160,7 @@ def _parse_interval(value):
         m = minute
         s = second
     '''
-    match = _INTERVAL_REGEX.match(str(value))
+    match = _INTERVAL_REGEX.match(six.text_type(value))
     if match is None:
         raise ValueError('invalid time interval: \'{0}\''.format(value))
 
@@ -570,16 +571,16 @@ class ExecOption(Option):
             (out, err) = p.communicate()
             if err:
                 log.error(
-                    'Error running command: {0}\n\n{1}'.format(
+                    'Error running command: %s\n\n%s',
                     command,
-                    salt.utils.stringutils.to_str(err)))
+                    salt.utils.stringutils.to_str(err))
             return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
         except Exception as e:
             log.error(
-                'Exception while executing command "{0}":\n\n{1}'.format(
-                    command,
-                    e))
+                'Exception while executing command "%s":\n\n%s',
+                command,
+                e)
             return '{0}: Failed'.format(fullpath)
 
 
@@ -642,7 +643,7 @@ class Finder(object):
                 for result in self._perform_actions(path, fstat=fstat):
                     yield result
 
-        for dirpath, dirs, files in os.walk(path):
+        for dirpath, dirs, files in salt.utils.path.os_walk(path):
             relpath = os.path.relpath(dirpath, path)
             depth = path_depth(relpath) + 1
             if depth >= self.mindepth and (self.maxdepth is None or self.maxdepth >= depth):

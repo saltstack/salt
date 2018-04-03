@@ -10,6 +10,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.load as load
+import salt.utils.platform
 
 import logging
 log = logging.getLogger(__name__)
@@ -45,6 +46,8 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (False, 'Averages configuration is required'
                                       ' for load beacon.'))
 
+    @skipIf(salt.utils.platform.is_windows(),
+            'os.getloadavg not available on Windows')
     def test_load_match(self):
         with patch('os.getloadavg',
                    MagicMock(return_value=(1.82, 1.84, 1.56))):

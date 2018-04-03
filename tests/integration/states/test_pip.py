@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import pwd
@@ -161,19 +161,19 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # some of the state return parts
             for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
-                if ret[key]['name'] != 'carbon':
+                if ret[key]['name'] != 'carbon < 1.1':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    'There was no error installing package \'carbon\' '
+                    'There was no error installing package \'carbon < 1.1\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
                 break
             else:
                 raise Exception('Expected state did not run')
         finally:
-            if os.path.isdir('/opt/graphite'):
-                shutil.rmtree('/opt/graphite')
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
 
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
@@ -296,7 +296,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
+            reqf.write(b'pep8\n')
 
         try:
             ret = self.run_state(
@@ -363,7 +363,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
+            reqf.write(b'pep8\n')
 
         try:
             ret = self.run_state(
@@ -458,7 +458,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
         with salt.utils.files.fopen(requirements_file, 'wb') as reqf:
-            reqf.write(six.b('pep8\n'))
+            reqf.write(b'pep8\n')
 
         try:
             self.run_function('virtualenv.create', [venv_dir])
@@ -522,5 +522,80 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             self.assertNotIn('warnings', next(six.itervalues(ret)))
         finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_46127_pip_env_vars(self):
+        '''
+        Test that checks if env_vars passed to pip.installed are also passed
+        to pip.freeze while checking for existing installations
+        '''
+        # This issue is most easily checked while installing carbon
+        # Much of the code here comes from the test_weird_install function above
+        ographite = '/opt/graphite'
+        if os.path.isdir(ographite):
+            self.skipTest(
+                'You already have \'{0}\'. This test would overwrite this '
+                'directory'.format(ographite)
+            )
+        try:
+            os.makedirs(ographite)
+        except OSError as err:
+            if err.errno == errno.EACCES:
+                # Permission denied
+                self.skipTest(
+                    'You don\'t have the required permissions to run this test'
+                )
+        finally:
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
+
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-46127-pip-env-vars')
+        try:
+            # We may be able to remove this, I had to add it because the custom
+            # modules from the test suite weren't available in the jinja
+            # context when running the call to state.sls that comes after.
+            self.run_function('saltutil.sync_modules')
+            # Since we don't have the virtualenv created, pip.installed will
+            # thrown and error.
+            ret = self.run_function(
+                'state.sls', mods='issue-46127-pip-env-vars'
+            )
+            self.assertSaltTrueReturn(ret)
+            for key in six.iterkeys(ret):
+                self.assertTrue(ret[key]['result'])
+                if ret[key]['name'] != 'carbon < 1.3':
+                    continue
+                self.assertEqual(
+                    ret[key]['comment'],
+                    'All packages were successfully installed'
+                )
+                break
+            else:
+                raise Exception('Expected state did not run')
+            # Run the state again. Now the already installed message should
+            # appear
+            ret = self.run_function(
+                'state.sls', mods='issue-46127-pip-env-vars'
+            )
+            self.assertSaltTrueReturn(ret)
+            # We cannot use assertInSaltComment here because we need to skip
+            # some of the state return parts
+            for key in six.iterkeys(ret):
+                self.assertTrue(ret[key]['result'])
+                # As we are re-running the formula, some states will not be run
+                # and "name" may or may not be present, so we use .get() pattern
+                if ret[key].get('name', '') != 'carbon < 1.3':
+                    continue
+                self.assertEqual(
+                    ret[key]['comment'],
+                    ('Python package carbon < 1.3 was already installed\n'
+                     'All packages were successfully installed'))
+                break
+            else:
+                raise Exception('Expected state did not run')
+        finally:
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)

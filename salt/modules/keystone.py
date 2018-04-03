@@ -50,7 +50,7 @@ Module for handling openstack keystone calls.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Libs
@@ -163,6 +163,13 @@ def auth(profile=None, **connection_args):
 
         salt '*' keystone.auth
     '''
+    __utils__['versions.warn_until'](
+        'Neon',
+        (
+            'The keystone module has been deprecated and will be removed in {version}.  '
+            'Please update to using the keystoneng module',
+        ),
+    )
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
     disc = discover.Discover(auth_url=kwargs['auth_url'])
@@ -1072,7 +1079,7 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         if description is None:
             description = getattr(user, 'description', None)
         else:
-            description = str(description)
+            description = six.text_type(description)
 
         project_id = None
         if project:

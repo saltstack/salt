@@ -169,6 +169,12 @@ TEST_SUITES = {
     'external_api':
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemon',
+         'path': 'integration/daemons'},
+    'scheduler':
+        {'display_name': 'Scheduler',
+         'path': 'integration/scheduler'},
 }
 
 
@@ -468,6 +474,21 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             help='Run venafi runner tests'
         )
+        self.test_selection_group.add_option(
+            '--daemons',
+            '--daemon-tests',
+            dest='daemons',
+            action='store_true',
+            default=False,
+            help='Run salt/daemons/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--scheduler',
+            dest='scheduler',
+            action='store_true',
+            default=False,
+            help='Run scheduler integration tests'
+        )
 
     def validate_options(self):
         if self.options.cloud_provider or self.options.external_api:
@@ -529,7 +550,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         '''
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name, suffix='test_*.py')
+        return self.run_suite(
+            full_path, display_name, suffix='test_*.py',
+            failfast=self.options.failfast,
+        )
 
     def start_daemons_only(self):
         if not salt.utils.platform.is_windows():
@@ -708,12 +732,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         results = self.run_suite(os.path.dirname(name),
                                                  name,
                                                  suffix=os.path.basename(name),
+                                                 failfast=self.options.failfast,
                                                  load_from_name=False)
                         status.append(results)
                         continue
                     if name.startswith(('tests.unit.', 'unit.')):
                         continue
-                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
+                    results = self.run_suite(
+                        '', name, suffix='test_*.py', load_from_name=True,
+                        failfast=self.options.failfast,
+                    )
                     status.append(results)
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
@@ -742,7 +770,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits('unit')
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py'
+                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py',
+                failfast=self.options.failfast,
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -751,7 +780,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         for name in named_unit_test:
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py', load_from_name=True
+                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py',
+                load_from_name=True, failfast=self.options.failfast,
             )
             status.append(results)
         return status
@@ -790,7 +820,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return status
 
 
-def main():
+def main(**kwargs):
     '''
     Parse command line options for running specific tests
     '''
@@ -801,6 +831,12 @@ def main():
             tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
+
+        # Override parser options (helpful when importing runtests.py and
+        # running from within a REPL). Using kwargs.items() to avoid importing
+        # six, as this feature will rarely be used.
+        for key, val in kwargs.items():
+            setattr(parser.options, key, val)
 
         overall_status = []
         if parser.options.interactive:

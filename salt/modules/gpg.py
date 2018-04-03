@@ -13,7 +13,7 @@ Sign, encrypt and sign plus encrypt text and files.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 import os
@@ -71,14 +71,13 @@ VERIFY_TRUST_LEVELS = {
     '4': 'Ultimate'
 }
 
-HAS_LIBS = False
 GPG_1_3_1 = False
-
 try:
     import gnupg
-    HAS_LIBS = True
+    HAS_GPG_BINDINGS = True
+    GPG_1_3_1 = _LooseVersion(gnupg.__version__) >= _LooseVersion('1.3.1')
 except ImportError:
-    pass
+    HAS_GPG_BINDINGS = False
 
 
 def _gpg():
@@ -96,15 +95,10 @@ def __virtual__():
     if not _gpg():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
-    if HAS_LIBS:
-        gnupg_version = _LooseVersion(gnupg.__version__)
-        if gnupg_version >= '1.3.1':
-            global GPG_1_3_1
-            GPG_1_3_1 = True
-        return __virtualname__
 
-    return (False, 'The gpg execution module cannot be loaded; the'
-       ' gnupg python module is not installed.')
+    return __virtualname__ if HAS_GPG_BINDINGS \
+        else (False, 'The gpg execution module cannot be loaded; the '
+                     'gnupg python module is not installed.')
 
 
 def _get_user_info(user=None):
@@ -546,12 +540,12 @@ def delete_key(keyid=None,
             ret['res'] = False
             ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
             return ret
-        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == 'ok':
+        elif skey and delete_secret and six.text_type(gpg.delete_keys(fingerprint, True)) == 'ok':
             # Delete the secret key
             ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
 
         # Delete the public key
-        if str(gpg.delete_keys(fingerprint)) == 'ok':
+        if six.text_type(gpg.delete_keys(fingerprint)) == 'ok':
             ret['message'] += 'Public key for {0} deleted'.format(fingerprint)
         ret['res'] = True
         return ret
@@ -1057,7 +1051,7 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1091,7 +1085,7 @@ def verify(text=None,
         ret['res'] = True
         ret['username'] = verified.username
         ret['key_id'] = verified.key_id
-        ret['trust_level'] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+        ret['trust_level'] = VERIFY_TRUST_LEVELS[six.text_type(verified.trust_level)]
         ret['message'] = 'The signature is verified.'
     else:
         ret['res'] = False

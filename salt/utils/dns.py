@@ -10,7 +10,7 @@ dns.srv_data('my1.example.com', 389, prio=10, weight=100)
 dns.srv_name('ldap/tcp', 'example.com')
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import base64
@@ -28,11 +28,13 @@ import string
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.stringutils
 import salt.modules.cmdmod
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
 
@@ -239,14 +241,15 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     if secure:
         cmd += '+dnssec +adflag '
 
-    cmd = __salt__['cmd.run_all'](cmd + str(name), python_shell=False, output_loglevel='quiet')
+    cmd = __salt__['cmd.run_all'](cmd + six.text_type(name), python_shell=False, output_loglevel='quiet')
 
     if 'ignoring invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
     elif cmd['retcode'] != 0:
-        log.warning('dig returned ({0}): {1}'.format(
+        log.warning(
+            'dig returned (%s): %s',
             cmd['retcode'], cmd['stderr'].strip(string.whitespace + ';')
-        ))
+        )
         return False
     elif not cmd['stdout']:
         return []
@@ -288,9 +291,7 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
         python_shell=False, output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('drill returned ({0}): {1}'.format(
-                cmd['retcode'], cmd['stderr']
-        ))
+        log.warning('drill returned (%s): %s', cmd['retcode'], cmd['stderr'])
         return False
 
     lookup_res = iter(cmd['stdout'].splitlines())
@@ -373,9 +374,7 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     if 'invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
     elif cmd['retcode'] != 0:
-        log.warning('host returned ({0}): {1}'.format(
-            cmd['retcode'], cmd['stderr']
-        ))
+        log.warning('host returned (%s): %s', cmd['retcode'], cmd['stderr'])
         return False
     elif 'has no' in cmd['stdout']:
         return []
@@ -413,7 +412,7 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
         resolver.ednsflags += dns.flags.DO
 
     try:
-        res = [str(rr.to_text().strip(string.whitespace + '"'))
+        res = [six.text_type(rr.to_text().strip(string.whitespace + '"'))
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
     except dns.rdatatype.UnknownRdatatype:
@@ -434,7 +433,7 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     :param server: server to query
     :return: [] of records or False if error
     '''
-    cmd = 'nslookup -query={0} {1}'.format(rdtype, str(name))
+    cmd = 'nslookup -query={0} {1}'.format(rdtype, name)
 
     if timeout is not None:
         cmd += ' -timeout={0}'.format(int(timeout))
@@ -444,9 +443,11 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('nslookup returned ({0}): {1}'.format(
-            cmd['retcode'], cmd['stdout'].splitlines()[-1].strip(string.whitespace + ';')
-        ))
+        log.warning(
+            'nslookup returned (%s): %s',
+            cmd['retcode'],
+            cmd['stdout'].splitlines()[-1].strip(string.whitespace + ';')
+        )
         return False
 
     lookup_res = iter(cmd['stdout'].splitlines())
@@ -543,9 +544,9 @@ def lookup(
             resolver = next((rcb for rname, rcb, rtest in query_methods if rname == method and rtest))
     except StopIteration:
         log.error(
-            'Unable to lookup {1}/{2}: Resolver method {0} invalid, unsupported or unable to perform query'.format(
-                method, rdtype, name
-            ))
+            'Unable to lookup %s/%s: Resolver method %s invalid, unsupported '
+            'or unable to perform query', method, rdtype, name
+        )
         return False
 
     res_kwargs = {
@@ -692,7 +693,7 @@ def caa_rec(rdatas):
     rschema = OrderedDict((
         ('flags', lambda flag: ['critical'] if int(flag) > 0 else []),
         ('tag', lambda tag: RFC.validate(tag, RFC.COO_TAGS)),
-        ('value', lambda val: str(val).strip('"'))
+        ('value', lambda val: six.text_type(val).strip('"'))
     ))
 
     res = _data2rec_group(rschema, rdatas, 'tag')
@@ -743,7 +744,10 @@ def ptr_name(rdata):
     try:
         return ipaddress.ip_address(rdata).reverse_pointer
     except ValueError:
-        log.error('Unable to generate PTR record; {0} is not a valid IP address'.format(rdata))
+        log.error(
+            'Unable to generate PTR record; %s is not a valid IP address',
+            rdata
+        )
         return False
 
 
@@ -954,7 +958,7 @@ def services(services_file='/etc/services'):
     res = {}
     with salt.utils.files.fopen(services_file, 'r') as svc_defs:
         for svc_def in svc_defs.readlines():
-            svc_def = svc_def.strip()
+            svc_def = salt.utils.stringutils.to_unicode(svc_def.strip())
             if not len(svc_def) or svc_def.startswith('#'):
                 continue
             elif '#' in svc_def:
@@ -1009,6 +1013,8 @@ def parse_resolv(src='/etc/resolv.conf'):
     '''
 
     nameservers = []
+    ip4_nameservers = []
+    ip6_nameservers = []
     search = []
     sortlist = []
     domain = ''
@@ -1018,7 +1024,7 @@ def parse_resolv(src='/etc/resolv.conf'):
         with salt.utils.files.fopen(src) as src_file:
             # pylint: disable=too-many-nested-blocks
             for line in src_file:
-                line = line.strip().split()
+                line = salt.utils.stringutils.to_unicode(line).strip().split()
 
                 try:
                     (directive, arg) = (line[0].lower(), line[1:])
@@ -1027,12 +1033,22 @@ def parse_resolv(src='/etc/resolv.conf'):
                         lambda x: x[0] not in ('#', ';'), arg))
 
                     if directive == 'nameserver':
+                        # Split the scope (interface) if it is present
+                        addr, scope = arg[0].split('%', 1) if '%' in arg[0] else (arg[0], '')
                         try:
-                            ip_addr = ipaddress.ip_address(arg[0])
+                            ip_addr = ipaddress.ip_address(addr)
+                            version = ip_addr.version
+                            # Rejoin scope after address validation
+                            if scope:
+                                ip_addr = '%'.join((str(ip_addr), scope))
                             if ip_addr not in nameservers:
                                 nameservers.append(ip_addr)
+                            if version == 4 and ip_addr not in ip4_nameservers:
+                                ip4_nameservers.append(ip_addr)
+                            elif version == 6 and ip_addr not in ip6_nameservers:
+                                ip6_nameservers.append(ip_addr)
                         except ValueError as exc:
-                            log.error('{0}: {1}'.format(src, exc))
+                            log.error('%s: %s', src, exc)
                     elif directive == 'domain':
                         domain = arg[0]
                     elif directive == 'search':
@@ -1046,13 +1062,13 @@ def parse_resolv(src='/etc/resolv.conf'):
                             try:
                                 ip_net = ipaddress.ip_network(ip_raw)
                             except ValueError as exc:
-                                log.error('{0}: {1}'.format(src, exc))
+                                log.error('%s: %s', src, exc)
                             else:
                                 if '/' not in ip_raw:
                                     # No netmask has been provided, guess
                                     # the "natural" one
                                     if ip_net.version == 4:
-                                        ip_addr = str(ip_net.network_address)
+                                        ip_addr = six.text_type(ip_net.network_address)
                                         # pylint: disable=protected-access
                                         mask = salt.utils.network.natural_ipv4_netmask(ip_addr)
                                         ip_net = ipaddress.ip_network(
@@ -1077,13 +1093,15 @@ def parse_resolv(src='/etc/resolv.conf'):
             # The domain and search keywords are mutually exclusive.  If more
             # than one instance of these keywords is present, the last instance
             # will override.
-            log.debug('{0}: The domain and search keywords are mutually '
-                      'exclusive.'.format(src))
+            log.debug(
+                '%s: The domain and search keywords are mutually exclusive.',
+                src
+            )
 
         return {
             'nameservers':     nameservers,
-            'ip4_nameservers': [ip for ip in nameservers if ip.version == 4],
-            'ip6_nameservers': [ip for ip in nameservers if ip.version == 6],
+            'ip4_nameservers': ip4_nameservers,
+            'ip6_nameservers': ip6_nameservers,
             'sortlist':        [ip.with_netmask for ip in sortlist],
             'domain':          domain,
             'search':          search,

@@ -5,7 +5,7 @@ Support for Linux File Access Control Lists
 The Linux ACL module requires the `getfacl` and `setfacl` binaries.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.path
@@ -144,17 +144,17 @@ def _parse_acl(acl, user, group):
     # Set the permissions fields
     octal = 0
     vals['permissions'] = {}
-    if 'r' in comps[2]:
+    if 'r' in comps[-1]:
         octal += 4
         vals['permissions']['read'] = True
     else:
         vals['permissions']['read'] = False
-    if 'w' in comps[2]:
+    if 'w' in comps[-1]:
         octal += 2
         vals['permissions']['write'] = True
     else:
         vals['permissions']['write'] = False
-    if 'x' in comps[2]:
+    if 'x' in comps[-1]:
         octal += 1
         vals['permissions']['execute'] = True
     else:

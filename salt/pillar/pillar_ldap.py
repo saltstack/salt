@@ -58,8 +58,9 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 - filtering for:
     - members of the group ``it-admins``
     - objects with ``objectclass=user``
-- returning the data of users (``mode: map``), where each user is a dictionary
-  containing the configured string or list attributes.
+- returning the data of users (``mode: map``) as a list of dictionaries, where
+  each user is a dictionary containing the configured string or list attributes,
+  and the user dictionaries are combined to a list.
 
   **Configuration:**
 
@@ -106,6 +107,118 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
               - cn=team02,ou=groups,dc=company
 
 
+Dict Mode
+---------
+
+The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
+
+- filtering for:
+    - members of the group ``it-admins``
+    - objects with ``objectclass=user``
+- returning the data of users (``mode: dict``), where each user is a dictionary
+  containing the configured string or list attributes, and the user dictionaries
+  are combined to a dictionary using the value of the LDAP attribute defined in the
+  ``dict_key_attr`` configuration option (defaults to ``dn`` or ``distinguishedName``)
+  as the key.
+
+
+  **Configuration:**
+
+.. code-block:: yaml
+
+    salt-users:
+        server:    ldap.company.tld
+        port:      389
+        tls:       true
+        dn:        'dc=company,dc=tld'
+        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+        bindpw:    bi7ieBai5Ano
+        referrals: false
+        anonymous: false
+        mode:      dict
+        dn:        'ou=users,dc=company,dc=tld'
+        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        attrs:
+            - cn
+            - displayName
+            - givenName
+            - sn
+        lists:
+            - memberOf
+
+
+  **Result:**
+
+.. code-block:: yaml
+
+    salt-users:
+        cn=johndoe,ou=users,dc=company,dc=tld:
+            - cn: cn=johndoe,ou=users,dc=company,dc=tld
+              displayName: John Doe
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
+        cn=janedoe,ou=users,dc=company,dc=tld:
+            - cn: cn=janedoe,ou=users,dc=company,dc=tld
+              displayName: Jane Doe
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
+
+
+  **Configuration:**
+
+.. code-block:: yaml
+
+    salt-users:
+        server:    ldap.company.tld
+        port:      389
+        tls:       true
+        dn:        'dc=company,dc=tld'
+        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+        bindpw:    bi7ieBai5Ano
+        referrals: false
+        anonymous: false
+        mode:      dict
+        dict_key_attr: displayName
+        dn:        'ou=users,dc=company,dc=tld'
+        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        attrs:
+            - dn
+            - cn
+            - givenName
+            - sn
+        lists:
+            - memberOf
+
+
+  **Result:**
+
+.. code-block:: yaml
+
+    salt-users:
+        John Doe:
+            - dn: cn=johndoe,ou=users,dc=company,dc=tld
+              cn: cn=johndoe,ou=users,dc=company,dc=tld
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
+        Jane Doe:
+            - dn: cn=janedoe,ou=users,dc=company,dc=tld
+              cn: cn=janedoe,ou=users,dc=company,dc=tld
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
+
+
 List Mode
 ---------
 
@@ -113,8 +226,7 @@ TODO: see also ``_result_to_dict()`` documentation
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -122,7 +234,6 @@ import logging
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap  # pylint: disable=W0611
@@ -195,6 +306,7 @@ def _result_to_dict(data, result, conf, source):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
+    dict_key_attr = _config('dict_key_attr', conf) or 'dn'
     # TODO:
     # deprecate the default 'mode: split' and make the more
     # straightforward 'mode: dict' the new default
@@ -203,8 +315,11 @@ def _result_to_dict(data, result, conf, source):
         data[source] = []
         for record in result:
             ret = {}
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                log.debug('dn: %s', record[0])
+                ret['dn'] = record[0]
             record = record[1]
-            log.debug('record: {0}'.format(record))
+            log.debug('record: %s', record)
             for key in record:
                 if key in attrs:
                     for item in record.get(key):
@@ -212,6 +327,30 @@ def _result_to_dict(data, result, conf, source):
                 if key in lists:
                     ret[key] = record.get(key)
             data[source].append(ret)
+    elif mode == 'dict':
+        data[source] = {}
+        for record in result:
+            ret = {}
+            distinguished_name = record[0]
+            log.debug('dn: %s', distinguished_name)
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                ret['dn'] = distinguished_name
+            record = record[1]
+            log.debug('record: %s', record)
+            for key in record:
+                if key in attrs:
+                    for item in record.get(key):
+                        ret[key] = item
+                if key in lists:
+                    ret[key] = record.get(key)
+            if dict_key_attr in ['dn', 'distinguishedName']:
+                dict_key = distinguished_name
+            else:
+                dict_key = ','.join(sorted(record.get(dict_key_attr, [])))
+            try:
+                data[source][dict_key].append(ret)
+            except KeyError:
+                data[source][dict_key] = [ret]
     elif mode == 'split':
         for key in result[0][1]:
             if key in attrs:
@@ -249,7 +388,8 @@ def _do_search(conf):
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
-    attrs = _lists + _attrs
+    _dict_key_attr = _config('dict_key_attr', conf) or 'dn'
+    attrs = _lists + _attrs + [_dict_key_attr]
     if not attrs:
         attrs = None
     # Perform the search
@@ -257,11 +397,7 @@ def _do_search(conf):
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results']
     except IndexError:  # we got no results for this search
-        log.debug(
-            'LDAP search returned no results for filter {0}'.format(
-                _filter
-            )
-        )
+        log.debug('LDAP search returned no results for filter %s', _filter)
         result = {}
     except Exception:
         log.critical(
@@ -278,26 +414,27 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Execute LDAP searches and return the aggregated data
     '''
     if os.path.isfile(config_file):
+        import salt.utils.yaml
         try:
             #open(config_file, 'r') as raw_config:
             config = _render_template(config_file) or {}
-            opts = yaml.safe_load(config) or {}
+            opts = salt.utils.yaml.safe_load(config) or {}
             opts['conf_file'] = config_file
         except Exception as err:
             import salt.log
-            msg = 'Error parsing configuration file: {0} - {1}'
+            msg = 'Error parsing configuration file: {0} - {1}'.format(config_file, err)
             if salt.log.is_console_configured():
-                log.warning(msg.format(config_file, err))
+                log.warning(msg)
             else:
-                print(msg.format(config_file, err))
+                print(msg)
     else:
-        log.debug('Missing configuration file: {0}'.format(config_file))
+        log.debug('Missing configuration file: %s', config_file)
 
     data = {}
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        log.debug('source {0} got result {1}'.format(source, result))
+        log.debug('source %s got result %s', source, result)
         if result:
             data = _result_to_dict(data, result, config, source)
     return data

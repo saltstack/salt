@@ -25,6 +25,7 @@ Example:
         - nameserver: 123.234.345.456
         - keyfile: /srv/salt/dnspy_tsig_key.txt
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

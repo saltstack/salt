@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -35,8 +35,9 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         self.addCleanup(reset_environ, original_environ)
 
     def test_setenv(self):
-        '''test that a subsequent calls of setenv changes nothing'''
-
+        '''
+        test that a subsequent calls of setenv changes nothing
+        '''
         ret = envstate.setenv('test', 'value')
         self.assertEqual(ret['changes'], {'test': 'value'})
 
@@ -59,18 +60,24 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
             envmodule.__salt__['reg.delete_value'].assert_called_with("HKCU", "Environment", 'test')
 
     def test_setenv_dict(self):
-        '''test that setenv can be invoked with dict'''
+        '''
+        test that setenv can be invoked with dict
+        '''
         ret = envstate.setenv('notimportant', {'test': 'value'})
         self.assertEqual(ret['changes'], {'test': 'value'})
 
     def test_setenv_int(self):
-        '''test that setenv can not be invoked with int
-        (actually it's anything other than strings and dict)'''
+        '''
+        test that setenv can not be invoked with int
+        (actually it's anything other than strings and dict)
+        '''
         ret = envstate.setenv('test', 1)
         self.assertEqual(ret['result'], False)
 
     def test_setenv_unset(self):
-        '''test that ``false_unsets`` option removes variable from environment'''
+        '''
+        test that ``false_unsets`` option removes variable from environment
+        '''
         ret = envstate.setenv('test', 'value')
         self.assertEqual(ret['changes'], {'test': 'value'})
 
@@ -79,20 +86,26 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial'})
 
     def test_setenv_clearall(self):
-        '''test that ``clear_all`` option sets other values to '' '''
+        '''
+        test that ``clear_all`` option sets other values to ''
+        '''
         ret = envstate.setenv('test', 'value', clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': ''})
         self.assertEqual(envstate.os.environ, {'test': 'value', 'INITIAL': ''})
 
     def test_setenv_clearall_with_unset(self):
-        '''test that ``clear_all`` option combined with ``false_unsets``
-        unsets other values from environment'''
+        '''
+        test that ``clear_all`` option combined with ``false_unsets``
+        unsets other values from environment
+        '''
         ret = envstate.setenv('test', 'value', false_unsets=True, clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': None})
         self.assertEqual(envstate.os.environ, {'test': 'value'})
 
     def test_setenv_unset_multi(self):
-        '''test basically same things that above tests but with multiple values passed'''
+        '''
+        test basically same things that above tests but with multiple values passed
+        '''
         ret = envstate.setenv('notimportant', {'foo': 'bar'})
         self.assertEqual(ret['changes'], {'foo': 'bar'})
 
@@ -108,7 +121,9 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})
 
     def test_setenv_test_mode(self):
-        '''test that imitating action returns good values'''
+        '''
+        test that imitating action returns good values
+        '''
         with patch.dict(envstate.__opts__, {'test': True}):
             ret = envstate.setenv('test', 'value')
             self.assertEqual(ret['changes'], {'test': 'value'})

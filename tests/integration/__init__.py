@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import copy
-import json
 import time
 import stat
 import errno
@@ -55,6 +54,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
@@ -68,7 +68,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import yaml
 import msgpack
 from salt.ext import six
 from salt.ext.six.moves import cStringIO
@@ -291,7 +290,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -327,7 +326,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -363,7 +362,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -399,7 +398,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -435,7 +434,7 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -472,7 +471,7 @@ class TestDaemon(object):
                     daemon_class=SaltProxy,
                     bin_dir_path=SCRIPT_DIR,
                     fail_hard=True,
-                    start_timeout=30)
+                    start_timeout=60)
                 sys.stdout.write(
                     '\r{0}\r'.format(
                         ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -672,8 +671,13 @@ class TestDaemon(object):
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        syndic_roster_path = os.path.join(FILES, 'conf/_ssh/syndic_roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        shutil.copy(syndic_roster_path, os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'))
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
+            roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -808,7 +812,26 @@ class TestDaemon(object):
                 os.path.join(FILES, 'pillar', 'base'),
             ]
         }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
+        minion_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -838,6 +861,8 @@ class TestDaemon(object):
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
+        # all read, only owner write
+        autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         for opts_dict in (master_opts, syndic_master_opts):
             # We need to copy the extension modules into the new master root_dir or
             # it will be prefixed by it
@@ -850,6 +875,14 @@ class TestDaemon(object):
                     new_extension_modules_path
                 )
             opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
+
+            # Copy the autosign_file to the new  master root_dir
+            new_autosign_file_path = os.path.join(opts_dict['root_dir'], 'autosign_file')
+            shutil.copyfile(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+                new_autosign_file_path
+            )
+            os.chmod(new_autosign_file_path, autosign_file_permissions)
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -905,24 +938,18 @@ class TestDaemon(object):
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
-                fp_.write(yaml.dump(computed_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(computed_config, fp_, default_flow_style=False)
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(sub_minion_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(sub_minion_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_master_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_master_computed_config, wfh, default_flow_style=False)
         syndic_computed_config = copy.deepcopy(syndic_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
@@ -986,7 +1013,9 @@ class TestDaemon(object):
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
@@ -1097,7 +1126,7 @@ class TestDaemon(object):
         for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
                         RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=remove_readonly)
+                shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs

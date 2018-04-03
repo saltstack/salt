@@ -3,7 +3,7 @@
 Classes for working with Windows Update Agent
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import subprocess
 
@@ -135,7 +135,7 @@ class Updates(object):
 
             results[update.Identity.UpdateID] = {
                 'guid': update.Identity.UpdateID,
-                'Title': str(update.Title),
+                'Title': six.text_type(update.Title),
                 'Type': self.update_types[update.Type],
                 'Description': update.Description,
                 'Downloaded': bool(update.IsDownloaded),
@@ -143,7 +143,7 @@ class Updates(object):
                 'Mandatory': bool(update.IsMandatory),
                 'EULAAccepted': bool(update.EulaAccepted),
                 'NeedsReboot': bool(update.RebootRequired),
-                'Severity': str(update.MsrcSeverity),
+                'Severity': six.text_type(update.MsrcSeverity),
                 'UserInput':
                     bool(update.InstallationBehavior.CanRequestUserInput),
                 'RebootBehavior':
@@ -338,7 +338,7 @@ class WindowsUpdateAgent(object):
         try:
             results = searcher.Search(search_string)
             if results.Updates.Count == 0:
-                log.debug('No Updates found for:\n\t\t{0}'.format(search_string))
+                log.debug('No Updates found for:\n\t\t%s', search_string)
                 return 'No Updates found: {0}'.format(search_string)
         except pywintypes.com_error as error:
             # Something happened, raise an error
@@ -348,8 +348,7 @@ class WindowsUpdateAgent(object):
             except KeyError:
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
-            log.error('Search Failed: {0}\n\t\t{1}'.format(
-                failure_code, search_string))
+            log.error('Search Failed: %s\n\t\t%s', failure_code, search_string)
             raise CommandExecutionError(failure_code)
 
         self._updates = results.Updates
@@ -510,7 +509,7 @@ class WindowsUpdateAgent(object):
             search_string = [search_string]
 
         if isinstance(search_string, six.integer_types):
-            search_string = [str(search_string)]
+            search_string = [six.text_type(search_string)]
 
         for update in self._updates:
 
@@ -588,13 +587,13 @@ class WindowsUpdateAgent(object):
 
             # Accept EULA
             if not salt.utils.data.is_true(update.EulaAccepted):
-                log.debug('Accepting EULA: {0}'.format(update.Title))
+                log.debug('Accepting EULA: %s', update.Title)
                 update.AcceptEula()  # pylint: disable=W0104
 
             # Update already downloaded
             if not salt.utils.data.is_true(update.IsDownloaded):
-                log.debug('To Be Downloaded: {0}'.format(uid))
-                log.debug('\tTitle: {0}'.format(update.Title))
+                log.debug('To Be Downloaded: %s', uid)
+                log.debug('\tTitle: %s', update.Title)
                 download_list.Add(update)
 
         # Check the download list
@@ -618,7 +617,7 @@ class WindowsUpdateAgent(object):
             except KeyError:
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
-            log.error('Download Failed: {0}'.format(failure_code))
+            log.error('Download Failed: %s', failure_code)
             raise CommandExecutionError(failure_code)
 
         # Lookup dictionary
@@ -698,8 +697,8 @@ class WindowsUpdateAgent(object):
 
             # Make sure the update has actually been installed
             if not salt.utils.data.is_true(update.IsInstalled):
-                log.debug('To Be Installed: {0}'.format(uid))
-                log.debug('\tTitle: {0}'.format(update.Title))
+                log.debug('To Be Installed: %s', uid)
+                log.debug('\tTitle: %s', update.Title)
                 install_list.Add(update)
 
         # Check the install list
@@ -724,7 +723,7 @@ class WindowsUpdateAgent(object):
             except KeyError:
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
-            log.error('Install Failed: {0}'.format(failure_code))
+            log.error('Install Failed: %s', failure_code)
             raise CommandExecutionError(failure_code)
 
         # Lookup dictionary
@@ -742,7 +741,7 @@ class WindowsUpdateAgent(object):
         if result.ResultCode in [2, 3]:
             ret['Success'] = True
             ret['NeedsReboot'] = result.RebootRequired
-            log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
+            log.debug('NeedsReboot: %s', result.RebootRequired)
         else:
             log.debug('Install Failed')
             ret['Success'] = False
@@ -818,8 +817,8 @@ class WindowsUpdateAgent(object):
 
             # Make sure the update has actually been Uninstalled
             if salt.utils.data.is_true(update.IsInstalled):
-                log.debug('To Be Uninstalled: {0}'.format(uid))
-                log.debug('\tTitle: {0}'.format(update.Title))
+                log.debug('To Be Uninstalled: %s', uid)
+                log.debug('\tTitle: %s', update.Title)
                 uninstall_list.Add(update)
 
         # Check the install list
@@ -879,10 +878,10 @@ class WindowsUpdateAgent(object):
 
                 except CommandExecutionError as exc:
                     log.debug('Uninstall using DISM failed')
-                    log.debug('Command: {0}'.format(' '.join(cmd)))
-                    log.debug('Error: {0}'.format(str(exc)))
-                    raise CommandExecutionError('Uninstall using DISM failed:'
-                                                '{0}'.format(str(exc)))
+                    log.debug('Command: %s', ' '.join(cmd))
+                    log.debug('Error: %s', exc)
+                    raise CommandExecutionError(
+                        'Uninstall using DISM failed: {0}'.format(exc))
 
                 # DISM Uninstall Completed Successfully
                 log.debug('Uninstall Completed using DISM')
@@ -891,7 +890,7 @@ class WindowsUpdateAgent(object):
                 ret['Success'] = True
                 ret['Message'] = 'Uninstalled using DISM'
                 ret['NeedsReboot'] = needs_reboot()
-                log.debug('NeedsReboot: {0}'.format(ret['NeedsReboot']))
+                log.debug('NeedsReboot: %s', ret['NeedsReboot'])
 
                 # Refresh the Updates Table
                 self.refresh()
@@ -917,7 +916,7 @@ class WindowsUpdateAgent(object):
                 return ret
 
             # Found a differenct exception, Raise error
-            log.error('Uninstall Failed: {0}'.format(failure_code))
+            log.error('Uninstall Failed: %s', failure_code)
             raise CommandExecutionError(failure_code)
 
         # Lookup dictionary
@@ -935,7 +934,7 @@ class WindowsUpdateAgent(object):
         if result.ResultCode in [2, 3]:
             ret['Success'] = True
             ret['NeedsReboot'] = result.RebootRequired
-            log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
+            log.debug('NeedsReboot: %s', result.RebootRequired)
         else:
             log.debug('Uninstall Failed')
             ret['Success'] = False
@@ -976,8 +975,8 @@ class WindowsUpdateAgent(object):
             return p.communicate()
 
         except (OSError, IOError) as exc:
-            log.debug('Command Failed: {0}'.format(' '.join(cmd)))
-            log.debug('Error: {0}'.format(str(exc)))
+            log.debug('Command Failed: %s', ' '.join(cmd))
+            log.debug('Error: %s', exc)
             raise CommandExecutionError(exc)
 
 

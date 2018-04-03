@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,28 +17,28 @@ from salt.ext import six
 OPTS = {'consul_config': {'consul.port': 8500, 'consul.host': '172.17.0.15'}}
 
 PILLAR_DATA = [
-    {'Value': '/path/to/certs/testsite1.crt', 'Key': u'test-shared/sites/testsite1/ssl/certs/SSLCertificateFile'},
-    {'Value': '/path/to/certs/testsite1.key', 'Key': u'test-shared/sites/testsite1/ssl/certs/SSLCertificateKeyFile'},
-    {'Value': None, 'Key': u'test-shared/sites/testsite1/ssl/certs/'},
-    {'Value': 'True', 'Key': u'test-shared/sites/testsite1/ssl/force'},
-    {'Value': None, 'Key': u'test-shared/sites/testsite1/ssl/'},
-    {'Value': 'salt://sites/testsite1.tmpl', 'Key': u'test-shared/sites/testsite1/template'},
-    {'Value': 'test.example.com', 'Key': u'test-shared/sites/testsite1/uri'},
-    {'Value': None, 'Key': u'test-shared/sites/testsite1/'},
-    {'Value': None, 'Key': u'test-shared/sites/'},
-    {'Value': 'Test User', 'Key': u'test-shared/user/full_name'},
-    {'Value': 'adm\nwww-data\nmlocate', 'Key': u'test-shared/user/groups'},
-    {'Value': '"adm\nwww-data\nmlocate"', 'Key': u'test-shared/user/dontsplit'},
-    {'Value': None, 'Key': u'test-shared/user/blankvalue'},
-    {'Value': 'test', 'Key': u'test-shared/user/login'},
-    {'Value': None, 'Key': u'test-shared/user/'}
+    {'Value': '/path/to/certs/testsite1.crt', 'Key': 'test-shared/sites/testsite1/ssl/certs/SSLCertificateFile'},
+    {'Value': '/path/to/certs/testsite1.key', 'Key': 'test-shared/sites/testsite1/ssl/certs/SSLCertificateKeyFile'},
+    {'Value': None, 'Key': 'test-shared/sites/testsite1/ssl/certs/'},
+    {'Value': 'True', 'Key': 'test-shared/sites/testsite1/ssl/force'},
+    {'Value': None, 'Key': 'test-shared/sites/testsite1/ssl/'},
+    {'Value': 'salt://sites/testsite1.tmpl', 'Key': 'test-shared/sites/testsite1/template'},
+    {'Value': 'test.example.com', 'Key': 'test-shared/sites/testsite1/uri'},
+    {'Value': None, 'Key': 'test-shared/sites/testsite1/'},
+    {'Value': None, 'Key': 'test-shared/sites/'},
+    {'Value': 'Test User', 'Key': 'test-shared/user/full_name'},
+    {'Value': 'adm\nwww-data\nmlocate', 'Key': 'test-shared/user/groups'},
+    {'Value': '"adm\nwww-data\nmlocate"', 'Key': 'test-shared/user/dontsplit'},
+    {'Value': None, 'Key': 'test-shared/user/blankvalue'},
+    {'Value': 'test', 'Key': 'test-shared/user/login'},
+    {'Value': None, 'Key': 'test-shared/user/'}
 ]
 
 SIMPLE_DICT = {'key1': {'key2': 'val1'}}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not consul_pillar.HAS_CONSUL, 'no consul-python')
+@skipIf(not consul_pillar.HAS_CONSUL, 'python-consul module not installed')
 class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.pillar.consul_pillar
@@ -62,14 +62,14 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
                 consul_pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
-                assert list(pillar_data) == [u'user', u'sites']
-                self.assertNotIn('blankvalue', pillar_data[u'user'])
+                assert sorted(pillar_data) == ['sites', 'user']
+                self.assertNotIn('blankvalue', pillar_data['user'])
 
     def test_value_parsing(self):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
-                assert isinstance(pillar_data[u'user'][u'dontsplit'], six.string_types)
+                assert isinstance(pillar_data['user']['dontsplit'], six.string_types)
 
     def test_dict_merge(self):
         test_dict = {}

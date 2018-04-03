@@ -10,6 +10,7 @@ Tests for a state should be created in files ending in *.tst and placed in the s
 
 Multiple tests can be created in a file.
 Multiple *.tst files can be created in the saltcheck-tests folder.
+Salt rendering is supported in test files e.g. yaml + jinja.
 The "id" of a test works in the same manner as in salt state files.
 They should be unique and descriptive.
 
@@ -46,15 +47,18 @@ echo-test-hello:
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import time
-import yaml
+from json import loads, dumps
 try:
-    import salt.utils
+    import salt.utils.files
+    import salt.utils.path
+    import salt.utils.yaml
     import salt.client
     import salt.exceptions
+    from salt.ext import six
 except ImportError:
     pass
 
@@ -136,7 +140,7 @@ def run_state_tests(state):
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
-                log.info("dummy={}, val={}".format(dummy, val))
+                log.info("dummy=%s, val=%s", dummy, val)
                 if val.startswith('Pass'):
                     passed = passed + 1
                 if val.startswith('Fail'):
@@ -185,7 +189,7 @@ def run_highstate_tests():
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
-                log.info("dummy={}, val={}".format(dummy, val))
+                log.info("dummy=%s, val=%s", dummy, val)
                 if val.startswith('Pass'):
                     passed = passed + 1
                 if val.startswith('Fail'):
@@ -196,6 +200,14 @@ def run_highstate_tests():
     out_list.sort()
     out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
     return out_list
+
+
+def _render_file(file_path):
+    '''call the salt utility to render a file'''
+    # salt-call slsutil.renderer /srv/salt/jinjatest/saltcheck-tests/test1.tst
+    rendered = __salt__['slsutil.renderer'](file_path)
+    log.info("rendered: %s", rendered)
+    return rendered
 
 
 def _is_valid_module(module):
@@ -228,7 +240,7 @@ def _get_top_states():
             alt_states.append(i)
     except Exception:
         raise
-    # log.info("top states: {}".format(alt_states))
+    # log.info("top states: %s", alt_states)
     return alt_states
 
 
@@ -278,7 +290,7 @@ class SaltCheck(object):
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
         expected_return = test_dict.get('expected-return', None)
-        log.info("__is_valid_test has test: {}".format(test_dict))
+        log.info("__is_valid_test has test: %s", test_dict)
         if m_and_f:
             tots += 1
             module, function = m_and_f.split('.')
@@ -295,7 +307,7 @@ class SaltCheck(object):
         if expected_return:
             tots += 1
             log.info("__is_valid_test has valid_expected_return")
-        log.info("__is_valid_test score: {}".format(tots))
+        log.info("__is_valid_test score: %s", tots)
         return tots >= 6
 
     def call_salt_command(self,
@@ -370,10 +382,10 @@ class SaltCheck(object):
             new_expected = ret_type(expected)
         except ValueError:
             log.info("Unable to cast expected into type of returned")
-            log.info("returned = {}".format(returned))
-            log.info("type of returned = {}".format(type(returned)))
-            log.info("expected = {}".format(expected))
-            log.info("type of expected = {}".format(type(expected)))
+            log.info("returned = %s", returned)
+            log.info("type of returned = %s", type(returned))
+            log.info("expected = %s", expected)
+            log.info("type of expected = %s", type(expected))
         return new_expected
 
     @staticmethod
@@ -386,7 +398,7 @@ class SaltCheck(object):
         try:
             assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -398,7 +410,7 @@ class SaltCheck(object):
         try:
             assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -410,7 +422,7 @@ class SaltCheck(object):
         try:
             assert (returned is True), "{0} not True".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -427,7 +439,7 @@ class SaltCheck(object):
         try:
             assert (returned is False), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -439,7 +451,7 @@ class SaltCheck(object):
         try:
             assert (expected in returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -451,7 +463,7 @@ class SaltCheck(object):
         try:
             assert (expected not in returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -463,7 +475,7 @@ class SaltCheck(object):
         try:
             assert (expected > returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -475,7 +487,7 @@ class SaltCheck(object):
         try:
             assert (expected >= returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -487,7 +499,7 @@ class SaltCheck(object):
         try:
             assert (expected < returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -499,7 +511,7 @@ class SaltCheck(object):
         try:
             assert (expected <= returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + str(err)
+            result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
@@ -509,7 +521,7 @@ class SaltCheck(object):
         # state cache should be updated before running this method
         search_list = []
         cachedir = __opts__.get('cachedir', None)
-        environment = __opts__['environment']
+        environment = __opts__['saltenv']
         if environment:
             path = cachedir + os.sep + "files" + os.sep + environment
             search_list.append(path)
@@ -534,7 +546,8 @@ class StateTestLoader(object):
         '''load tests either from one file, or a set of files'''
         self.test_dict = {}
         for myfile in self.test_files:
-            self.load_file(myfile)
+            # self.load_file(myfile)
+            self.load_file_salt_rendered(myfile)
         self.test_files = []
 
     def load_file(self, filepath):
@@ -542,23 +555,36 @@ class StateTestLoader(object):
         loads in one test file
         '''
         try:
-            with salt.utils.files.fopen(filepath, 'r') as myfile:
+            with __utils__['files.fopen'](filepath, 'r') as myfile:
+                # with salt.utils.files.fopen(filepath, 'r') as myfile:
                 # with open(filepath, 'r') as myfile:
-                contents_yaml = yaml.load(myfile)
+                contents_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(myfile))
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
         except:
             raise
         return
 
+    def load_file_salt_rendered(self, filepath):
+        '''
+        loads in one test file
+        '''
+        # use the salt renderer module to interpret jinja and etc
+        tests = _render_file(filepath)
+        # use json as a convenient way to convert the OrderedDicts from salt renderer
+        mydict = loads(dumps(tests))
+        for key, value in mydict.items():
+            self.test_dict[key] = value
+        return
+
     def gather_files(self, filepath):
         '''gather files for a test suite'''
         self.test_files = []
-        log.info("gather_files: {}".format(time.time()))
+        log.info("gather_files: %s", time.time())
         filepath = filepath + os.sep + 'saltcheck-tests'
         rootdir = filepath
-        # for dirname, subdirlist, filelist in os.walk(rootdir):
-        for dirname, dummy, filelist in os.walk(rootdir):
+        # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir):
+        for dirname, dummy, filelist in salt.utils.path.os_walk(rootdir):
             for fname in filelist:
                 if fname.endswith('.tst'):
                     start_path = dirname + os.sep + fname
@@ -587,16 +613,16 @@ class StateTestLoader(object):
             full_path = path + os.sep + sls_path
             rootdir = full_path
             if os.path.isdir(full_path):
-                log.info("searching path= {}".format(full_path))
-                # for dirname, subdirlist, filelist in os.walk(rootdir, topdown=True):
-                for dirname, subdirlist, dummy in os.walk(rootdir, topdown=True):
+                log.info("searching path= %s", full_path)
+                # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir, topdown=True):
+                for dirname, subdirlist, dummy in salt.utils.path.os_walk(rootdir, topdown=True):
                     if "saltcheck-tests" in subdirlist:
                         self.gather_files(dirname)
-                        log.info("test_files list: {}".format(self.test_files))
-                        log.info("found subdir match in = {}".format(dirname))
+                        log.info("test_files list: %s", self.test_files)
+                        log.info("found subdir match in = %s", dirname)
                     else:
-                        log.info("did not find subdir match in = {}".format(dirname))
+                        log.info("did not find subdir match in = %s", dirname)
                     del subdirlist[:]
             else:
-                log.info("path is not a directory= {}".format(full_path))
+                log.info("path is not a directory= %s", full_path)
         return

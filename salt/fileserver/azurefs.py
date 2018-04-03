@@ -2,6 +2,8 @@
 '''
 The backend for serving files from the Azure blob storage service.
 
+.. versionadded:: 2015.8.0
+
 To enable, add ``azurefs`` to the :conf_master:`fileserver_backend` option in
 the Master config file.
 
@@ -10,9 +12,9 @@ the Master config file.
     fileserver_backend:
       - azurefs
 
-Starting in Oxygen, this fileserver requires the standalone Azure Storage SDK
-for Python. Theoretically any version >= v0.20.0 should work, but it was
-developed against the v0.33.0 version.
+Starting in Salt 2018.3.0, this fileserver requires the standalone Azure
+Storage SDK for Python. Theoretically any version >= v0.20.0 should work, but
+it was developed against the v0.33.0 version.
 
 Each storage container will be mapped to an environment. By default, containers
 will be mapped to the ``base`` environment. You can override this behavior with
@@ -45,12 +47,10 @@ permissions.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
-import json
 import logging
 import os
-import os.path
 import shutil
 
 # Import salt libs
@@ -58,7 +58,9 @@ import salt.fileserver
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.json
 import salt.utils.path
+import salt.utils.stringutils
 from salt.utils.versions import LooseVersion
 
 try:
@@ -152,10 +154,8 @@ def serve_file(load, fnd):
     required_load_keys = set(['path', 'loc', 'saltenv'])
     if not all(x in load for x in required_load_keys):
         log.debug(
-            'Not all of the required keys present in payload. '
-            'Missing: {0}'.format(
-                ', '.join(required_load_keys.difference(load))
-            )
+            'Not all of the required keys present in payload. Missing: %s',
+            ', '.join(required_load_keys.difference(load))
         )
         return ret
     if not fnd['path']:
@@ -207,7 +207,7 @@ def update():
         # Walk the cache directory searching for deletions
         blob_names = [blob.name for blob in blob_list]
         blob_set = set(blob_names)
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in salt.utils.path.os_walk(path):
             for f in files:
                 fname = os.path.join(root, f)
                 relpath = os.path.relpath(fname, path)
@@ -238,8 +238,8 @@ def update():
                 # Lock writes
                 lk_fn = fname + '.lk'
                 salt.fileserver.wait_lock(lk_fn, fname)
-                with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
-                    fp_.write('')
+                with salt.utils.files.fopen(lk_fn, 'w'):
+                    pass
 
                 try:
                     blob_service.get_blob_to_path(name, blob.name, fname)
@@ -257,10 +257,10 @@ def update():
         container_list = path + '.list'
         lk_fn = container_list + '.lk'
         salt.fileserver.wait_lock(lk_fn, container_list)
-        with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
-            fp_.write('')
+        with salt.utils.files.fopen(lk_fn, 'w'):
+            pass
         with salt.utils.files.fopen(container_list, 'w') as fp_:
-            fp_.write(json.dumps(blob_names))
+            salt.utils.json.dump(blob_names, fp_)
         try:
             os.unlink(lk_fn)
         except Exception:
@@ -291,11 +291,11 @@ def file_hash(load, fnd):
             os.makedirs(os.path.dirname(hashdest))
         ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:
-            fp_.write(ret['hsum'])
+            fp_.write(salt.utils.stringutils.to_str(ret['hsum']))
         return ret
     else:
         with salt.utils.files.fopen(hashdest, 'rb') as fp_:
-            ret['hsum'] = fp_.read()
+            ret['hsum'] = salt.utils.stringutils.to_unicode(fp_.read())
         return ret
 
 
@@ -314,7 +314,7 @@ def file_list(load):
             if not os.path.exists(container_list):
                 continue
             with salt.utils.files.fopen(container_list, 'r') as fp_:
-                ret.update(set(json.load(fp_)))
+                ret.update(set(salt.utils.json.load(fp_)))
     except Exception as exc:
         log.error('azurefs: an error ocurred retrieving file lists. '
                   'It should be resolved next time the fileserver '
@@ -377,13 +377,15 @@ def _validate_config():
         return False
     for container in __opts__['azurefs']:
         if not isinstance(container, dict):
-            log.error('One or more entries in the azurefs configuration list '
-                      'are not formed as a dict. Skipping azurefs: {0}'
-                      .format(container))
+            log.error(
+                'One or more entries in the azurefs configuration list are '
+                'not formed as a dict. Skipping azurefs: %s', container
+            )
             return False
         if 'account_name' not in container or 'container_name' not in container:
-            log.error('An azurefs container configuration is missing either '
-                      'an account_name or a container_name: {0}'
-                      .format(container))
+            log.error(
+                'An azurefs container configuration is missing either an '
+                'account_name or a container_name: %s', container
+            )
             return False
     return True

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class StdTest(ModuleCase):
@@ -85,10 +88,10 @@ class StdTest(ModuleCase):
                        'inner': 'value'}
                 )
         data = ret['minion']['ret']
-        self.assertIn('str', data['args'][0])
+        self.assertIn(six.text_type.__name__, data['args'][0])
         self.assertIn('int', data['args'][1])
         self.assertIn('dict', data['kwargs']['outer'])
-        self.assertIn('str', data['kwargs']['inner'])
+        self.assertIn(six.text_type.__name__, data['kwargs']['inner'])
 
     def test_full_return_kwarg(self):
         ret = self.client.cmd('minion', 'test.ping', full_return=True)

@@ -5,7 +5,7 @@ values are stored and computed, such as averages etc.
 '''
 
 # import python libs
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 import salt.utils.stringutils
 
 __func_alias__ = {

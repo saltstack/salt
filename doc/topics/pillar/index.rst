@@ -168,6 +168,28 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     context.
 
 
+Dynamic Pillar Environments
+===========================
+
+If environment ``__env__`` is specified in :conf_master:`pillar_roots`, all
+environments that are not explicitly specified in :conf_master:`pillar_roots`
+will map to the directories from ``__env__``. This allows one to use dynamic
+git branch based environments for state/pillar files with the same file-based
+pillar applying to all environments. For example:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/pillar
+
+    ext_pillar:
+      - git:
+        - __env__ https://example.com/git-pillar.git
+
+.. versionadded:: 2017.7.5,2018.3.1
+
+
 Pillar Namespace Flattening
 ===========================
 
@@ -409,7 +431,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function

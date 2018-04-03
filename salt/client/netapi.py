@@ -3,7 +3,7 @@
 The main entry point for salt-api
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import signal
 import logging
 
@@ -20,7 +20,7 @@ class NetapiClient(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.process_manager = salt.utils.process.ProcessManager(name=u'NetAPIProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name='NetAPIProcessManager')
         self.netapi = salt.loader.netapi(self.opts)
 
     def run(self):
@@ -28,11 +28,11 @@ class NetapiClient(object):
         Load and start all available api modules
         '''
         if not len(self.netapi):
-            log.error(u"Did not find any netapi configurations, nothing to start")
+            log.error("Did not find any netapi configurations, nothing to start")
 
         for fun in self.netapi:
-            if fun.endswith(u'.start'):
-                log.info(u'Starting %s netapi module', fun)
+            if fun.endswith('.start'):
+                log.info('Starting %s netapi module', fun)
                 self.process_manager.add_process(self.netapi[fun])
 
         # Install the SIGINT/SIGTERM handlers if not done so far

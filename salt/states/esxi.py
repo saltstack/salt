@@ -92,7 +92,7 @@ execution functions against ESXi hosts via a Salt Proxy Minion, and a larger sta
 example.
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import sys
 import re
@@ -124,7 +124,7 @@ try:
     if 'vim25/6.0' in VmomiSupport.versionMap and \
         sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
 
-        log.error('pyVmomi not loaded: Incompatible versions '
+        log.debug('pyVmomi not loaded: Incompatible versions '
                   'of Python. See Issue #29537.')
         raise ImportError()
     HAS_PYVMOMI = True
@@ -243,10 +243,10 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         changes = True
 
     current_port = current_config.get('port')
-    if current_port != str(dump_port):
+    if current_port != six.text_type(dump_port):
         ret['changes'].update({'dump_port':
                               {'old': current_port,
-                               'new': str(dump_port)}})
+                               'new': six.text_type(dump_port)}})
         changes = True
 
     # Only run the command if not using test=True and changes were detected.
@@ -990,7 +990,7 @@ def syslog_configured(name,
             return ret
 
         current_val = current_syslog_config[lookup_key]
-        if str(current_val) != str(val):
+        if six.text_type(current_val) != six.text_type(val):
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('set_syslog_config',
@@ -1061,7 +1061,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
     erase_disks
         Specifies whether to erase all partitions on all disks member of the
-        disk group before the disk group is created. Default vaule is False.
+        disk group before the disk group is created. Default value is False.
     '''
     proxy_details = __salt__['esxi.get_details']()
     hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
@@ -1102,7 +1102,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
             __salt__['vsphere.disconnect'](si)
         ret.update({
             'result': False if not __opts__['test'] else None,
-            'comment': str(err)})
+            'comment': six.text_type(err)})
         return ret
 
     # Iterate through all of the disk groups
@@ -1189,7 +1189,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
             comments.append('Created disk group #\'{0}\'.'.format(idx))
             log.info(comments[-1])
-            diskgroup_changes[str(idx)] = \
+            diskgroup_changes[six.text_type(idx)] = \
                  {'new': {'cache': cache_disk_display,
                           'capacity': capacity_disk_displays}}
             changes = True
@@ -1272,7 +1272,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                    ''.format(s, idx))
             log.info(com)
             comments.append(com)
-            diskgroup_changes[str(idx)] = \
+            diskgroup_changes[six.text_type(idx)] = \
                  {'new': {'cache': cache_disk_display,
                           'capacity': capacity_disk_displays},
                   'old': {'cache': cache_disk_display,
@@ -1371,19 +1371,18 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
 
     erase_backing_disk
         Specifies whether to erase all partitions on the backing disk before
-        the datastore is created. Default vaule is False.
+        the datastore is created. Default value is False.
     '''
-    log.trace('enabled = {0}'.format(enabled))
-    log.trace('datastore = {0}'.format(datastore))
-    log.trace('swap_size = {0}'.format(swap_size))
-    log.trace('erase_backing_disk = {0}'.format(erase_backing_disk))
+    log.trace('enabled = %s', enabled)
+    log.trace('datastore = %s', datastore)
+    log.trace('swap_size = %s', swap_size)
+    log.trace('erase_backing_disk = %s', erase_backing_disk)
     # Variable used to return the result of the invocation
     proxy_details = __salt__['esxi.get_details']()
     hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
                else proxy_details['esxi_host']
-    log.trace('hostname = {0}'.format(hostname))
-    log.info('Running host_cache_swap_configured for host '
-             '\'{0}\''.format(hostname))
+    log.trace('hostname = %s', hostname)
+    log.info('Running host_cache_swap_configured for host \'%s\'', hostname)
     ret = {'name': hostname, 'comment': 'Default comments',
            'result': None, 'changes': {}, 'pchanges': {}}
     result = None if __opts__['test'] else True  # We assume success
@@ -1405,8 +1404,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
         m = re.match(r'(\d+)(%|GiB)', swap_size)
         swap_size_value = int(m.group(1))
         swap_type = m.group(2)
-        log.trace('swap_size_value = {0}; swap_type = {1}'.format(
-            swap_size_value, swap_type))
+        log.trace('swap_size_value = %s; swap_type = %s', swap_size_value, swap_type)
         si = __salt__['vsphere.get_service_instance_via_proxy']()
         host_cache = __salt__['vsphere.get_host_cache'](service_instance=si)
 
@@ -1434,7 +1432,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
         backing_disk = existing_disks[0]
         backing_disk_display = '{0} (id:{1})'.format(
             backing_disk['scsi_address'], backing_disk['id'])
-        log.trace('backing_disk = {0}'.format(backing_disk_display))
+        log.trace('backing_disk = %s', backing_disk_display)
 
         existing_datastore = None
         if not existing_datastores:
@@ -1467,7 +1465,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
                     # Check backing disk doesn't already have partitions
                     partitions = __salt__['vsphere.list_disk_partitions'](
                         disk_id=backing_disk['id'], service_instance=si)
-                    log.trace('partitions = {0}'.format(partitions))
+                    log.trace('partitions = %s', partitions)
                     # We will ignore the mbr partitions
                     non_mbr_partitions = [p for p in partitions
                                           if p['format'] != 'mbr']
@@ -1515,7 +1513,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
                             'done.'.format(datastore['name'], hostname,
                                            backing_disk_display))
             existing_datastore = existing_datastores[0]
-            log.trace('existing_datastore = {0}'.format(existing_datastore))
+            log.trace('existing_datastore = %s', existing_datastore)
             log.info(comments[-1])
 
         if existing_datastore:
@@ -1531,9 +1529,9 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
                         (existing_datastore['capacity']/1024/1024)
             else:
                 raw_size_MiB = swap_size_value * 1024
-            log.trace('raw_size = {0}MiB'.format(raw_size_MiB))
+            log.trace('raw_size = %sMiB', raw_size_MiB)
             swap_size_MiB = int(raw_size_MiB/1024)*1024
-            log.trace('adjusted swap_size = {0}MiB'.format(swap_size_MiB))
+            log.trace('adjusted swap_size = %sMiB', swap_size_MiB)
             existing_swap_size_MiB = 0
             m = re.match(r'(\d+)MiB', host_cache.get('swap_size')) if \
                     host_cache.get('swap_size') else None
@@ -1587,7 +1585,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
             ret['changes'] = changes
         return ret
     except CommandExecutionError as err:
-        log.error('Error: {0}.'.format(err))
+        log.error('Error: %s.', err)
         if si:
             __salt__['vsphere.disconnect'](si)
         ret.update({

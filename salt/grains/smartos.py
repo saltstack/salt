@@ -10,18 +10,19 @@ SmartOS grain provider
 .. versionadded:: nitrogen
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import re
-import json
 import logging
 
 # Import salt libs
 import salt.utils.dictupdate
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext.six.moves import zip
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -84,7 +85,7 @@ def _smartos_computenode_data():
         grains['computenode_vms_type'][vms[vm]['type']] += 1
 
     # sysinfo derived grains
-    sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
+    sysinfo = salt.utils.json.loads(__salt__['cmd.run']('sysinfo'))
     grains['computenode_sdc_version'] = sysinfo['SDC Version']
     grains['computenode_vm_capable'] = sysinfo['VM Capable']
     if sysinfo['VM Capable']:
@@ -117,6 +118,7 @@ def _smartos_zone_data():
     if os.path.isfile('/etc/product'):
         with salt.utils.files.fopen('/etc/product', 'r') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 match = imageversion.match(line)
                 if match:
                     grains['imageversion'] = match.group(1)
@@ -141,6 +143,7 @@ def _smartos_zone_pkgsrc_data():
     if os.path.isfile('/etc/pkgsrc_version'):
         with salt.utils.files.fopen('/etc/pkgsrc_version', 'r') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 match = pkgsrcversion.match(line)
                 if match:
                     grains['pkgsrcversion'] = match.group(1)
@@ -149,6 +152,7 @@ def _smartos_zone_pkgsrc_data():
     if os.path.isfile('/opt/local/etc/pkg_install.conf'):
         with salt.utils.files.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 match = pkgsrcpath.match(line)
                 if match:
                     grains['pkgsrcpath'] = match.group(1)
@@ -171,6 +175,7 @@ def _smartos_zone_pkgin_data():
     if os.path.isfile('/opt/local/etc/pkgin/repositories.conf'):
         with salt.utils.files.fopen('/opt/local/etc/pkgin/repositories.conf', 'r') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 if pkginrepo.match(line):
                     grains['pkgin_repositories'].append(line)
 

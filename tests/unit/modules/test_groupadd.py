@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import grp
 except ImportError:
@@ -158,7 +158,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for os_version in os_version_list:
-            mock_ret = MagicMock(return_value={'retcode': 0})
+            mock_retcode = MagicMock(return_value=0)
             mock_stdout = MagicMock(return_value='test foo')
             mock_info = MagicMock(return_value={'passwd': '*',
                                                 'gid': 0,
@@ -166,10 +166,10 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
                                                 'members': ['root']})
 
             with patch.dict(groupadd.__grains__, os_version['grains']):
-                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_retcode,
                                                     'group.info': mock_info,
                                                     'cmd.run_stdout': mock_stdout}):
-                    self.assertFalse(groupadd.deluser('test', 'root'))
+                    self.assertTrue(groupadd.deluser('test', 'root'))
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1

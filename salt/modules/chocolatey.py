@@ -5,7 +5,7 @@ A dead simple module wrapping calls to the Chocolatey package manager
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -219,8 +219,9 @@ def bootstrap(force=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     if result['retcode'] != 0:
-        err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
+        )
 
     return result['stdout']
 
@@ -291,8 +292,9 @@ def list_(narrow=None,
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     ret = {}
     pkg_re = re.compile(r'(\S+)\|(\S+)')
@@ -328,8 +330,9 @@ def list_webpi():
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -353,8 +356,9 @@ def list_windowsfeatures():
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -369,7 +373,6 @@ def install(name,
             force_x86=False,
             package_args=None,
             allow_multiple=False,
-            no_progress=False,
             execution_timeout=None):
     '''
     Instructs Chocolatey to install a package.
@@ -426,13 +429,10 @@ def install(name,
 
             .. versionadded:: 2017.7.0
 
-        no_progress
-            Do not show download progress percentages. Defaults to False.
-
         execution_timeout (str):
         Chocolatey execution timeout value you want to pass to the installation process. Default is None.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         str: The output of the ``chocolatey`` command
@@ -472,16 +472,19 @@ def install(name,
         cmd.extend(['--packageparameters', package_args])
     if allow_multiple:
         cmd.append('--allow-multiple')
-    if no_progress:
-        cmd.append(_no_progress(__context__))
     if execution_timeout:
         cmd.extend(['--execution-timeout', execution_timeout])
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
+
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     if name == 'chocolatey':
         _clear_context(__context__)
@@ -600,8 +603,9 @@ def install_missing(name, version=None, source=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -732,8 +736,9 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1605, 1614, 1641]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -746,13 +751,12 @@ def upgrade(name,
             install_args=None,
             override_args=False,
             force_x86=False,
-            package_args=None,
-            no_progress=False):
+            package_args=None):
     '''
     .. versionadded:: 2016.3.4
 
     Instructs Chocolatey to upgrade packages on the system. (update is being
-    deprecated)
+    deprecated). This command will install the package if not installed.
 
     Args:
 
@@ -790,9 +794,6 @@ def upgrade(name,
         package_args
             A list of arguments you want to pass to the package
 
-        no_progress
-            Do not show download progress percentages. Defaults to False.
-
     Returns:
         str: Results of the ``chocolatey`` command
 
@@ -807,7 +808,7 @@ def upgrade(name,
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'upgrade', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
     if salt.utils.data.is_true(force):
@@ -822,21 +823,22 @@ def upgrade(name,
         cmd.append('--forcex86')
     if package_args:
         cmd.extend(['--packageparameters', package_args])
-    if no_progress:
-        cmd.append(_no_progress(__context__))
 
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
 
-def update(name, source=None, pre_versions=False, no_progress=False):
+def update(name, source=None, pre_versions=False):
     '''
     Instructs Chocolatey to update packages on the system.
 
@@ -850,9 +852,6 @@ def update(name, source=None, pre_versions=False, no_progress=False):
 
     pre_versions
         Include pre-release packages in comparison. Defaults to False.
-
-    no_progress
-        Do not show download progress percentages. Defaults to False.
 
     CLI Example:
 
@@ -872,14 +871,17 @@ def update(name, source=None, pre_versions=False, no_progress=False):
         cmd.extend(['--source', source])
     if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
-    if no_progress:
-        cmd.append(_no_progress(__context__))
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
+
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -917,6 +919,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         salt "*" chocolatey.version <package name> check_remote=True
     '''
     installed = list_(narrow=name, local_only=True)
+    installed = {k.lower(): v for k, v in installed.items()}
 
     packages = {}
     lower_name = name.lower()
@@ -926,6 +929,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     if check_remote:
         available = list_(narrow=name, pre_versions=pre_versions, source=source)
+        available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
             packages[pkg] = {'installed': installed[pkg],
@@ -969,8 +973,9 @@ def add_source(name, source_location, username=None, password=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -991,8 +996,9 @@ def _change_source_state(name, state):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 

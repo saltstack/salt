@@ -2,7 +2,7 @@
 '''
 Module for sending data to OpsGenie
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration: This module can be used in Reactor System for
     posting data to OpsGenie as a remote-execution function.
@@ -21,13 +21,13 @@ Module for sending data to OpsGenie
                 action_type: Create
 '''
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import requests
 
 # Import Salt libs
 import salt.exceptions
+import salt.utils.json
 
 API_ENDPOINT = "https://api.opsgenie.com/v1/json/saltstack?apiKey="
 
@@ -90,9 +90,11 @@ def post_data(api_key=None, name='OpsGenie Execution Module', reason=None,
     data['username'] = __grains__['username']
     data['uuid'] = __grains__['uuid']
 
-    log.debug('Below data will be posted:\n' + str(data))
-    log.debug('API Key:' + api_key + '\t API Endpoint:' + API_ENDPOINT)
+    log.debug('Below data will be posted:\n%s', data)
+    log.debug('API Key: %s \t API Endpoint: %s', api_key, API_ENDPOINT)
 
-    response = requests.post(url=API_ENDPOINT + api_key, data=json.dumps(data),
-                             headers={'Content-Type': 'application/json'})
+    response = requests.post(
+        url=API_ENDPOINT + api_key,
+        data=salt.utils.json.dumps(data),
+        headers={'Content-Type': 'application/json'})
     return response.status_code, response.text

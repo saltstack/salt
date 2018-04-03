@@ -28,7 +28,7 @@ using the :ref:`saltutil execution module <salt.modules.saltutil>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import hashlib
 import logging
@@ -356,9 +356,9 @@ def gen(id_=None, keysize=2048):
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
     pub = '{0}.pub'.format(priv[:priv.rindex('.')])
     with salt.utils.files.fopen(priv) as fp_:
-        ret['priv'] = fp_.read()
+        ret['priv'] = salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(pub) as fp_:
-        ret['pub'] = fp_.read()
+        ret['pub'] = salt.utils.stringutils.to_unicode(fp_.read())
 
     # The priv key is given the Read-Only attribute. The causes `os.remove` to
     # fail in Windows.
@@ -416,7 +416,7 @@ def gen_accept(id_, keysize=2048, force=False):
     if os.path.isfile(acc_path) and not force:
         return {}
     with salt.utils.files.fopen(acc_path, 'w+') as fp_:
-        fp_.write(ret['pub'])
+        fp_.write(salt.utils.stringutils.to_str(ret['pub']))
     return ret
 
 

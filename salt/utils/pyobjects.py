@@ -5,7 +5,7 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
 

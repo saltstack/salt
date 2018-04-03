@@ -3,7 +3,7 @@
     :codeauthor: :email:`Lukas Raska <lukas@raska.me>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -187,7 +187,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Alias foo for index bar does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.alias_present(name, index, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Alias foo for index bar exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Alias foo for index bar exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.alias_present(name, index, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})
@@ -352,7 +352,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Pipeline foo does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.pipeline_present(name, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Pipeline foo exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Pipeline foo exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.pipeline_present(name, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})
@@ -434,7 +434,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Search template foo does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.search_template_present(name, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Search template foo exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Search template foo exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.search_template_present(name, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})

@@ -2,7 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import time
@@ -12,8 +12,10 @@ import logging
 import salt.payload
 import salt.transport
 import salt.utils.args
-import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ def _publish(
     time.sleep(float(timeout))
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
-            'jid': str(peer_data['jid'])}
+            'jid': six.text_type(peer_data['jid'])}
     ret = channel.send(load)
     if form == 'clean':
         cret = {}
@@ -108,8 +110,7 @@ def publish(tgt,
             arg=None,
             tgt_type='glob',
             returner='',
-            timeout=5,
-            expr_form=None):
+            timeout=5):
     '''
     Publish a command from the minion out to other minions.
 
@@ -164,17 +165,6 @@ def publish(tgt,
 
 
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,
@@ -189,8 +179,7 @@ def full_data(tgt,
               arg=None,
               tgt_type='glob',
               returner='',
-              timeout=5,
-              expr_form=None):
+              timeout=5):
     '''
     Return the full data about the publication, this is invoked in the same
     way as the publish function
@@ -212,17 +201,6 @@ def full_data(tgt,
             salt '*' publish.full_data test.kwarg arg='cheese=spam'
 
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,

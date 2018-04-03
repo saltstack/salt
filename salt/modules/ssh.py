@@ -10,7 +10,7 @@ Manage client ssh components
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import binascii
 import hashlib
 import logging
@@ -173,7 +173,8 @@ def _replace_auth_key(
             # Re-open the file writable after properly closing it
             with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
-                _fh.writelines(lines)
+                for line in lines:
+                    _fh.write(line)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem reading or writing to key file: {0}'.format(exc)
@@ -337,15 +338,14 @@ def host_keys(keydir=None, private=True, certs=True):
         m = fnre.match(fn_)
         if m:
             if not m.group('pub') and private is False:
-                log.info(
-                    'Skipping private key file {0} as private is set to False'
-                    .format(fn_)
-                )
+                log.info('Skipping private key file %s as '
+                         'private is set to False',
+                         fn_)
                 continue
             if m.group('cert') and certs is False:
                 log.info(
-                    'Skipping key file {0} as certs is set to False'
-                    .format(fn_)
+                    'Skipping key file %s as certs is set to False',
+                    fn_
                 )
                 continue
 
@@ -621,9 +621,11 @@ def rm_auth_key(user,
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
             with salt.utils.files.fopen(full, 'w') as _fh:
+                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
-            log.warning('Could not read/write key file: {0}'.format(str(exc)))
+            log.warning('Could not read/write key file: %s',
+                        exc)
             return 'Key not removed'
         return 'Key removed'
     # TODO: Should this function return a simple boolean?
@@ -774,14 +776,12 @@ def set_auth_key(
                         # File isn't empty, check if last byte is a newline
                         # If not, add one
                         _fh.seek(-1, 2)
-                        if _fh.read(1) != six.b('\n'):
-                            _fh.write(six.b('\n'))
-                if six.PY3:
-                    auth_line = auth_line.encode(__salt_system_encoding__)
-                _fh.write(auth_line)
+                        if _fh.read(1) != b'\n':
+                            _fh.write(b'\n')
+                _fh.write(salt.utils.stringutils.to_bytes(auth_line))
         except (IOError, OSError) as exc:
             msg = 'Could not write to key file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
 
         if new_file:
             if os.geteuid() == 0:
@@ -844,10 +844,12 @@ def get_known_host(user,
                    port=None,
                    fingerprint_hash_type=None):
     '''
+    .. deprecated:: 2018.3.0
+        Use :py:func:`ssh.get_known_host_entries
+        <salt.modules.ssh.get_known_host_entries>` instead.
+
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
-
-    .. deprecated:: Oxygen
 
     CLI Example:
 
@@ -857,7 +859,7 @@ def get_known_host(user,
     '''
     salt.utils.versions.warn_until(
             'Neon',
-            '\'get_known_host\' has been deprecated in favour of '
+            '\'get_known_host\' has been deprecated in favor of '
             '\'get_known_host_entries\'. \'get_known_host\' will be '
             'removed in Salt Neon.'
     )
@@ -872,7 +874,7 @@ def get_known_host_entries(user,
                            port=None,
                            fingerprint_hash_type=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Return information about known host entries from the configfile, if any.
     If there are no entries for a matching hostname, return None.
@@ -910,7 +912,9 @@ def recv_known_host(hostname,
     '''
     Retrieve information about host public key from remote server
 
-    .. deprecated:: Oxygen
+    .. deprecated:: 2018.3.0
+        Use :py:func:`ssh.recv_known_host_entries
+        <salt.modules.ssh.recv_known_host_entries>` instead.
 
     hostname
         The name of the remote host (e.g. "github.com")
@@ -949,7 +953,7 @@ def recv_known_host(hostname,
     '''
     salt.utils.versions.warn_until(
             'Neon',
-            '\'recv_known_host\' has been deprecated in favour of '
+            '\'recv_known_host\' has been deprecated in favor of '
             '\'recv_known_host_entries\'. \'recv_known_host\' will be '
             'removed in Salt Neon.'
     )
@@ -965,7 +969,7 @@ def recv_known_host_entries(hostname,
                             timeout=5,
                             fingerprint_hash_type=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Retrieve information about host public keys from remote server
 
@@ -1015,7 +1019,7 @@ def recv_known_host_entries(hostname,
         cmd.extend(['-t', 'rsa'])
     if hash_known_hosts:
         cmd.append('-H')
-    cmd.extend(['-T', str(timeout)])
+    cmd.extend(['-T', six.text_type(timeout)])
     cmd.append(hostname)
     lines = None
     attempts = 5
@@ -1253,7 +1257,8 @@ def set_known_host(user=None,
         if remove_lines:
             try:
                 with salt.utils.files.fopen(full, 'r+') as ofile:
-                    known_hosts_lines = list(ofile)
+                    known_hosts_lines = [salt.utils.stringutils.to_unicode(_l)
+                                         for _l in list(ofile)]
                     # Delete from last line to first to avoid invalidating earlier indexes
                     for line_no in sorted(remove_lines, reverse=True):
                         del known_hosts_lines[line_no - 1]
@@ -1261,7 +1266,7 @@ def set_known_host(user=None,
                     ofile.seek(0)
                     ofile.truncate()
                     for line in known_hosts_lines:
-                        ofile.write(line)
+                        ofile.write(salt.utils.stringutils.to_str(line))
             except (IOError, OSError) as exception:
                 raise CommandExecutionError(
                     "Couldn't remove old entry(ies) from known hosts file: '{0}'".format(exception)
@@ -1288,15 +1293,15 @@ def set_known_host(user=None,
         uinfo = __salt__['user.info'](user)
 
     try:
-        log.debug('Ensuring ssh config dir "{0}" exists'.format(ssh_dir))
+        log.debug('Ensuring ssh config dir "%s" exists', ssh_dir)
         os.makedirs(ssh_dir)
     except OSError as exc:
         if exc.args[1] == 'Permission denied':
-            log.error('Unable to create directory {0}: '
-                      '{1}'.format(ssh_dir, exc.args[1]))
+            log.error('Unable to create directory %s: '
+                      '%s', ssh_dir, exc.args[1])
         elif exc.args[1] == 'File exists':
-            log.debug('{0} already exists, no need to create '
-                      'it'.format(ssh_dir))
+            log.debug('%s already exists, no need to create '
+                      'it', ssh_dir)
     else:
         # set proper ownership/permissions
         if user:
@@ -1307,7 +1312,7 @@ def set_known_host(user=None,
     try:
         with salt.utils.files.fopen(full, 'a') as ofile:
             for line in lines:
-                ofile.write(line)
+                ofile.write(salt.utils.stringutils.to_str(line))
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
             "Couldn't append to known hosts file: '{0}'".format(exception)
@@ -1392,7 +1397,11 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             if os.path.exists(fn_):
                 try:
                     with salt.utils.files.fopen(fn_, 'r') as _fh:
-                        keys[u][keyname] = ''.join(_fh.readlines()).strip()
+                        keys[u][keyname] = ''.join(
+                            salt.utils.data.decode(
+                                _fh.readlines()
+                            )
+                        ).strip()
                 except (IOError, OSError):
                     pass
 
@@ -1468,18 +1477,4 @@ def key_is_encrypted(key):
 
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
-    try:
-        with salt.utils.files.fopen(key, 'r') as fp_:
-            key_data = fp_.read()
-    except (IOError, OSError) as exc:
-        # Raise a CommandExecutionError
-        salt.utils.files.process_read_exception(exc, key)
-
-    is_private_key = re.search(r'BEGIN (?:\w+\s)*PRIVATE KEY', key_data)
-    is_encrypted = 'ENCRYPTED' in key_data
-    del key_data
-
-    if not is_private_key:
-        raise CommandExecutionError('{0} is not a private key'.format(key))
-
-    return is_encrypted
+    return __utils__['ssh.key_is_encrypted'](key)

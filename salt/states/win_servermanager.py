@@ -8,7 +8,7 @@ remove roles/features.
 :depends:       win_servermanager.install
 :depends:       win_servermanager.remove
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt modules
 import salt.utils.data
@@ -53,7 +53,7 @@ def installed(name,
             A list of features to install. If this is passed it will be used
             instead of the ``name`` parameter.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
         recurse (Optional[bool]):
             Install all sub-features as well. If the feature is installed but
@@ -118,7 +118,7 @@ def installed(name,
             'Flourine',
             'Parameter \'force\' has been detected in the argument list. This'
             'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt Oxygen. This warning will be removed in Salt Flourine.'
+            'as of Salt 2018.3.0. This warning will be removed in Salt Flourine.'
         )
         kwargs.pop('force')
 
@@ -219,7 +219,7 @@ def removed(name, features=None, remove_payload=False, restart=False):
             A list of features to remove. If this is passed it will be used
             instead of the ``name`` parameter.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
         remove_payload (Optional[bool]):
             True will cause the feature to be removed from the side-by-side

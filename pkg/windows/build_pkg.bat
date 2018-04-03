@@ -113,6 +113,23 @@ xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
+@echo Copying NSSM to buildenv
+@echo ----------------------------------------------------------------------
+:: Make sure the "prereq" directory exists
+If NOT Exist "%PreDir%" mkdir "%PreDir%"
+
+:: Set the location of the nssm to download
+Set Url64="https://repo.saltstack.com/windows/dependencies/64/nssm-2.24-101-g897c7ad.exe"
+Set Url32="https://repo.saltstack.com/windows/dependencies/32/nssm-2.24-101-g897c7ad.exe"
+
+:: Check for 64 bit by finding the Program Files (x86) directory
+If Defined ProgramFiles(x86) (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%BldDir%\nssm.exe"
+) Else (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%BldDir%\nssm.exe"
+)
+@echo.
+
 @echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
@@ -386,8 +403,8 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\solaris*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solaris*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\solr.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solr.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\ssh*" 1>nul
+If Exist "%BinDir%\Lib\site-packages\salt\modules\ssh_*"^
+    del /Q "%BinDir%\Lib\site-packages\salt\modules\ssh_*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\sysbench.py"^
@@ -522,8 +539,8 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\smartos.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\smartos.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\snapper.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\snapper.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\ssh*" 1>nul
+If Exist "%BinDir%\Lib\site-packages\salt\states\ssh_*"^
+    del /Q "%BinDir%\Lib\site-packages\salt\states\ssh_*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\sysrc.py"^

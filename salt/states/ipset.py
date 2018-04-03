@@ -52,9 +52,9 @@ in IPTables Firewalls.
       ipset.flush:
 
 '''
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -204,7 +204,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
             entry_opts = 'timeout {0} {1}'.format(kwargs['timeout'], entry_opts)
         if 'comment' in kwargs and 'comment' not in entry_opts:
             entry_opts = '{0} comment "{1}"'.format(entry_opts, kwargs['comment'])
-        _entry = ' '.join([entry, entry_opts]).strip()
+        _entry = ' '.join([entry, entry_opts.lstrip()]).strip()
 
         if __salt__['ipset.check'](kwargs['set_name'],
                                    _entry,
@@ -221,7 +221,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
                     kwargs['set_name'],
                     family)
             else:
-                command = __salt__['ipset.add'](kwargs['set_name'], entry, family, **kwargs)
+                command = __salt__['ipset.add'](kwargs['set_name'], _entry, family, **kwargs)
                 if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['comment'] += 'entry {0} added to set {1} for family {2}\n'.format(
@@ -276,7 +276,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
             entry_opts = '{0} comment "{1}"'.format(entry_opts, kwargs['comment'])
         _entry = ' '.join([entry, entry_opts]).strip()
 
-        log.debug('_entry {0}'.format(_entry))
+        log.debug('_entry %s', _entry)
         if not __salt__['ipset.check'](kwargs['set_name'],
                                       _entry,
                                       family) is True:

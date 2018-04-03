@@ -8,7 +8,7 @@ Manage groups on Windows
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.platform
@@ -218,7 +218,7 @@ def getent(refresh=False):
 
         refresh (bool):
             Refresh the info for all groups in ``__context__``. If False only
-            the groups in ``__context__`` wil be returned. If True the
+            the groups in ``__context__`` will be returned. If True the
             ``__context__`` will be refreshed with current data and returned.
             Default is False
 
@@ -469,7 +469,7 @@ def list_groups(refresh=False):
 
         refresh (bool):
             Refresh the info for all groups in ``__context__``. If False only
-            the groups in ``__context__`` wil be returned. If True, the
+            the groups in ``__context__`` will be returned. If True, the
             ``__context__`` will be refreshed with current data and returned.
             Default is False
 

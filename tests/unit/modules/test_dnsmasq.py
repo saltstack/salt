@@ -3,7 +3,7 @@
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -20,6 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.dnsmasq as dnsmasq
+import salt.utils.stringutils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -97,7 +98,8 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         test for generic function for parsing dnsmasq files including includes.
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
-            text_file_data = '\n'.join(["line here", "second line", "A=B", "#"])
+            text_file_data = salt.utils.stringutils.to_str(
+                    '\n'.join(["line here", "second line", "A=B", "#"]))
             with patch('salt.utils.files.fopen',
                        mock_open(read_data=text_file_data),
                        create=True) as m:

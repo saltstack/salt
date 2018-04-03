@@ -67,6 +67,13 @@ This would explicitly set the roots to the default:
       base:
         - /srv/thorium
 
+Example ``thorium_roots`` configuration:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /etc/salt/thorium
 
 
 The Thorium top.sls File

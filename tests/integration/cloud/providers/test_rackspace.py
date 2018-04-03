@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -18,18 +18,18 @@ from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
 try:
-    import libcloud  # pylint: disable=unused-import
-    HAS_LIBCLOUD = True
+    import shade  # pylint: disable=unused-import
+    HAS_SHADE = True
 except ImportError:
-    HAS_LIBCLOUD = False
+    HAS_SHADE = False
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'rackspace'
+PROVIDER_NAME = 'openstack'
 DRIVER_NAME = 'openstack'
 
 
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
+@skipIf(HAS_SHADE is False, 'openstack driver requires `shade`')
 class RackspaceTest(ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
@@ -43,7 +43,7 @@ class RackspaceTest(ShellCase):
         super(RackspaceTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'rackspace-config'
+        profile_str = 'openstack-config'
         providers = self.run_cloud('--list-providers')
         if profile_str + ':' not in providers:
             self.skipTest(
@@ -62,12 +62,12 @@ class RackspaceTest(ShellCase):
             )
         )
 
-        user = config[profile_str][DRIVER_NAME]['user']
-        tenant = config[profile_str][DRIVER_NAME]['tenant']
-        api = config[profile_str][DRIVER_NAME]['apikey']
-        if api == '' or tenant == '' or user == '':
+        region_name = config[profile_str][DRIVER_NAME].get('region_name')
+        auth = config[profile_str][DRIVER_NAME].get('auth')
+        cloud = config[profile_str][DRIVER_NAME].get('cloud')
+        if not region_name or not (auth or cloud):
             self.skipTest(
-                'A user, tenant, and an api key must be provided to run these '
+                'A region_name and (auth or cloud) must be provided to run these '
                 'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(PROVIDER_NAME)
             )

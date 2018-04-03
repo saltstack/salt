@@ -4,7 +4,9 @@ Watch the shell commands being executed actively. This beacon requires strace.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+
+import logging
 import time
 
 # Import salt libs
@@ -13,7 +15,6 @@ import salt.utils.vt
 
 __virtualname__ = 'sh'
 
-import logging
 log = logging.getLogger(__name__)
 
 

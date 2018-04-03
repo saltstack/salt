@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
@@ -18,6 +18,8 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
+
+EC2_TIMEOUT = 1000
 
 
 class EC2Test(ShellCase):
@@ -81,18 +83,21 @@ class EC2Test(ShellCase):
         Tests creating and deleting an instance on EC2 (classic)
         '''
         # create the instance
-        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME), timeout=500)
+        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME),
+                                  timeout=EC2_TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=EC2_TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                                timeout=EC2_TIMEOUT)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -100,6 +105,45 @@ class EC2Test(ShellCase):
             self.assertIn(ret_str, delete)
         except AssertionError:
             raise
+
+    def test_instance_rename(self):
+        '''
+        Tests creating and renaming an instance on EC2 (classic)
+        '''
+        # create the instance
+        rename = INSTANCE_NAME + '-rename'
+        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME),
+                                  timeout=EC2_TIMEOUT)
+        ret_str = '{0}:'.format(INSTANCE_NAME)
+
+        # check if instance returned
+        try:
+            self.assertIn(ret_str, instance)
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=EC2_TIMEOUT)
+            raise
+
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=EC2_TIMEOUT)
+
+        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
+        exp_results = ['        {0}:'.format(rename), '            size:',
+                       '            architecture:']
+        try:
+            for result in exp_results:
+                self.assertIn(result, check_rename[0])
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=EC2_TIMEOUT)
+            raise
+
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(rename),
+                                timeout=EC2_TIMEOUT)
+        ret_str = '                    shutting-down'
+
+        # check if deletion was performed appropriately
+        self.assertIn(ret_str, delete)
 
     def tearDown(self):
         '''
@@ -110,4 +154,5 @@ class EC2Test(ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=EC2_TIMEOUT)

@@ -28,6 +28,8 @@ if TESTS_DIR.startswith('//'):
 if sys.platform.startswith('win'):
     TESTS_DIR = os.path.normcase(TESTS_DIR)
 CODE_DIR = os.path.dirname(TESTS_DIR)
+if sys.platform.startswith('win'):
+    CODE_DIR = CODE_DIR.replace('\\', '\\\\')
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, 'integration')
 
 # Let's inject CODE_DIR so salt is importable if not there already

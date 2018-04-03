@@ -52,7 +52,7 @@ setting the configuration option, like in the example above.
 # responds to the name 'reclass'.
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -117,19 +117,19 @@ def ext_pillar(minion_id, pillar, **kwargs):
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError as e:
-        if 'unexpected keyword argument' in str(e):
-            arg = str(e).split()[-1]
+        if 'unexpected keyword argument' in six.text_type(e):
+            arg = six.text_type(e).split()[-1]
             raise SaltInvocationError('ext_pillar.reclass: unexpected option: '
                                       + arg)
         else:
             raise
 
     except KeyError as e:
-        if 'id' in str(e):
+        if 'id' in six.text_type(e):
             raise SaltInvocationError('ext_pillar.reclass: __opts__ does not '
                                       'define minion ID')
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(str(e)))
+        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(e))

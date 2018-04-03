@@ -4,10 +4,11 @@ Utilities for managing Debian preseed
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import
-import yaml
+from __future__ import absolute_import, print_function, unicode_literals
 import shlex
 import salt.utils.files
+import salt.utils.stringutils
+import salt.utils.yaml
 
 
 def mksls(src, dst=None):
@@ -17,6 +18,7 @@ def mksls(src, dst=None):
     ps_opts = {}
     with salt.utils.files.fopen(src, 'r') as fh_:
         for line in fh_:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.startswith('#'):
                 continue
             if not line.strip():
@@ -73,6 +75,6 @@ def mksls(src, dst=None):
 
     if dst is not None:
         with salt.utils.files.fopen(dst, 'w') as fh_:
-            fh_.write(yaml.safe_dump(sls, default_flow_style=False))
+            salt.utils.yaml.safe_dump(sls, fh_, default_flow_style=False)
     else:
-        return yaml.safe_dump(sls, default_flow_style=False)
+        return salt.utils.yaml.safe_dump(sls, default_flow_style=False)

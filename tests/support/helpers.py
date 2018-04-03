@@ -24,6 +24,7 @@ import signal
 import socket
 import string
 import sys
+import tempfile
 import threading
 import time
 import tornado.ioloop
@@ -50,7 +51,7 @@ except ImportError:
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
-from tests.support.paths import FILES
+from tests.support.paths import FILES, TMP
 
 log = logging.getLogger(__name__)
 
@@ -428,6 +429,7 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.__original_import = builtins.__import__
         self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):
@@ -436,7 +438,12 @@ class ForceImportErrorOn(object):
     def restore_import_funtion(self):
         self.patcher.stop()
 
-    def __fake_import__(self, name, globals_, locals_, fromlist, level=-1):
+    def __fake_import__(self,
+                        name,
+                        globals_={} if six.PY2 else None,
+                        locals_={} if six.PY2 else None,
+                        fromlist=[] if six.PY2 else (),
+                        level=-1 if six.PY2 else 0):
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -452,7 +459,6 @@ class ForceImportErrorOn(object):
                         )
                     )
                 )
-
         return self.__original_import(name, globals_, locals_, fromlist, level)
 
     def __enter__(self):
@@ -949,6 +955,24 @@ def with_system_user_and_group(username, group,
     return decorator
 
 
+def with_tempfile(func):
+    '''
+    Generates a tempfile and cleans it up when test completes.
+    '''
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        fd_, name = tempfile.mkstemp(prefix='__salt.test.', dir=TMP)
+        os.close(fd_)
+        del fd_
+        ret = func(self, name, *args, **kwargs)
+        try:
+            os.remove(name)
+        except Exception:
+            pass
+        return ret
+    return wrapper
+
+
 def requires_system_grains(func):
     '''
     Function decorator which loads and passes the system's grains to the test
@@ -1339,7 +1363,7 @@ def generate_random_name(prefix, size=6):
     Generates a random name by combining the provided prefix with a randomly generated
     ascii string.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     prefix
         The string to prefix onto the randomly generated ascii string.

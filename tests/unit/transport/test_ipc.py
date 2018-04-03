@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import errno
 import socket
@@ -19,16 +19,20 @@ import salt.exceptions
 import salt.transport.ipc
 import salt.transport.server
 import salt.transport.client
+import salt.utils.platform
 
+from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 from tests.support.mock import MagicMock
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
 class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     '''
     Test the req server/client pair
@@ -122,7 +126,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.assertEqual(self.payloads[:-1], msgs)
 
     def test_very_big_message(self):
-        long_str = ''.join([str(num) for num in range(10**5)])
+        long_str = ''.join([six.text_type(num) for num in range(10**5)])
         msg = {'long_str': long_str, 'stop': True}
         self.channel.send(msg)
         self.wait()

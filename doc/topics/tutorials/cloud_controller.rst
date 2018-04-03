@@ -192,7 +192,7 @@ Fedora Linux
 ~~~~~~~~~~~~
 
 Images for Fedora Linux can be found here:
-http://fedoraproject.org/en/get-fedora#clouds
+https://alt.fedoraproject.org/cloud
 
 openSUSE
 ~~~~~~~~

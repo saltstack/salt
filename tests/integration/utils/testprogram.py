@@ -19,11 +19,10 @@ import sys
 import tempfile
 import time
 
-import yaml
-
 import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
+import salt.utils.yaml
 import salt.defaults.exitcodes as exitcodes
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -600,7 +599,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
     @staticmethod
     def config_caster(cfg):
-        return yaml.safe_load(cfg)
+        return salt.utils.yaml.safe_load(cfg)
 
     def __init__(self, *args, **kwargs):
         if len(args) < 2 and 'program' not in kwargs:
@@ -649,8 +648,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                 cfg[key] = val.format(**subs)
             else:
                 cfg[key] = val
-        scfg = yaml.safe_dump(cfg, default_flow_style=False)
-        return scfg
+        return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
 
     def setup(self, *args, **kwargs):
         super(TestSaltProgram, self).setup(*args, **kwargs)

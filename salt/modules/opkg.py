@@ -17,7 +17,7 @@ Support for Opkg
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import os
 import re
@@ -30,6 +30,7 @@ import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -148,7 +149,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
         If True, raise an error with a list of the package databases that
         encountered errors.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -193,9 +194,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     # On a non-zero exit code where no failed repos were found, raise an
     # exception because this appears to be a different kind of error.
     if call['retcode'] != 0 and not error_repos:
-        raise CommandExecutionError(
-            '{0}'.format(out)
-        )
+        raise CommandExecutionError(out)
 
     return ret
 
@@ -741,9 +740,7 @@ def _set_state(pkg, state):
     ret = {}
     valid_states = ('hold', 'noprune', 'user', 'ok', 'installed', 'unpacked')
     if state not in valid_states:
-        raise SaltInvocationError(
-            'Invalid state: {0}'.format(state)
-        )
+        raise SaltInvocationError('Invalid state: {0}'.format(state))
     oldstate = _get_state(pkg)
     cmd = ['opkg', 'flag']
     cmd.append(state)
@@ -828,9 +825,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=unused-argument
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
-        raise CommandExecutionError(
-                '{0}'.format(comment)
-        )
+        raise CommandExecutionError(comment)
     else:
         out = call['stdout']
 
@@ -951,9 +946,7 @@ def info_installed(*names, **kwargs):
                 else:
                     comment += call['stdout']
 
-                raise CommandExecutionError(
-                    '{0}'.format(comment)
-                )
+                raise CommandExecutionError(comment)
             ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
     else:
         # All installed packages
@@ -968,9 +961,7 @@ def info_installed(*names, **kwargs):
             else:
                 comment += call['stdout']
 
-            raise CommandExecutionError(
-                '{0}'.format(comment)
-            )
+            raise CommandExecutionError(comment)
         ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
 
     return ret
@@ -1006,7 +997,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split(':', 1)[-1] if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -1054,6 +1045,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
         if filename.endswith(".conf"):
             with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
                 for line in conf_file:
+                    line = salt.utils.stringutils.to_unicode(line)
                     if regex.search(line):
                         repo = {}
                         if line.startswith('#'):
@@ -1103,12 +1095,13 @@ def _del_repo_from_file(alias, filepath):
         output = []
         regex = re.compile(REPO_REGEXP)
         for line in fhandle:
+            line = salt.utils.stringutils.to_unicode(line)
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
                 cols = salt.utils.args.shlex_split(line.strip())
                 if alias != cols[1]:
-                    output.append(line)
+                    output.append(salt.utils.stringutils.to_str(line))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
@@ -1127,7 +1120,7 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
-        fhandle.write(repostr)
+        fhandle.write(salt.utils.stringutils.to_str(repostr))
 
 
 def _mod_repo_in_file(alias, repostr, filepath):
@@ -1137,11 +1130,13 @@ def _mod_repo_in_file(alias, repostr, filepath):
     with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
-            cols = salt.utils.args.shlex_split(line.strip())
+            cols = salt.utils.args.shlex_split(
+                salt.utils.stringutils.to_unicode(line).strip()
+            )
             if alias not in cols:
                 output.append(line)
             else:
-                output.append(repostr + '\n')
+                output.append(salt.utils.stringutils.to_str(repostr + '\n'))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
@@ -1353,5 +1348,5 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret

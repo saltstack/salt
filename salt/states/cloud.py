@@ -15,7 +15,7 @@ Use this minion to spin up a cloud instance:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import pprint
 
 # Import 3rd-party libs
@@ -127,8 +127,8 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
     if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
-        ret['comment'] = ('Created instance {0} using provider {1}'
-                          ' and the following options: {2}').format(
+        ret['comment'] = ('Created instance {0} using provider {1} '
+                          'and the following options: {2}').format(
             name,
             cloud_provider,
             pprint.pformat(kwargs)
@@ -202,9 +202,7 @@ def absent(name, onlyif=None, unless=None):
     if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
-        ret['comment'] = ('Destroyed instance {0}').format(
-            name,
-        )
+        ret['comment'] = 'Destroyed instance {0}'.format(name)
     elif 'Error' in info:
         ret['result'] = False
         ret['comment'] = ('Failed to destroy instance {0}: {1}').format(
@@ -404,8 +402,10 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     if name in volumes and volumes[name]['attachments']:
         volume = volumes[name]
         ret['comment'] = (
-                          'Volume {name} is already attached: {attachments}'
-                          ).format(**volumes[name])
+            'Volume {name} is already attached: {attachments}'.format(
+                **volumes[name]
+            )
+        )
         ret['result'] = True
         return ret
     elif name not in volumes:

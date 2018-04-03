@@ -7,7 +7,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import pwd
 import shutil
@@ -48,7 +48,7 @@ class PipModuleTest(ModuleCase):
         '''
         return any(w in ret for w in ['URLError', 'Download error'])
 
-    def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
+    def pip_successful_install(self, target, expect=('tox', 'pep8',)):
         '''
         isolate regex for extracting `successful install` message from pip
         '''
@@ -103,7 +103,7 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.files.fopen(req1b_filename, 'w') as f:
-            f.write('flake8\n')
+            f.write('tox\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.files.fopen(req2b_filename, 'w') as f:
@@ -141,7 +141,7 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.files.fopen(req1b_filename, 'w') as f:
-            f.write('flake8\n')
+            f.write('tox\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.files.fopen(req2b_filename, 'w') as f:
@@ -174,7 +174,7 @@ class PipModuleTest(ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
         with salt.utils.files.fopen(req1_filename, 'w') as f:
-            f.write('flake8\n')
+            f.write('tox\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8\n')
 
@@ -211,7 +211,7 @@ class PipModuleTest(ModuleCase):
         req2_filepath = os.path.join(req_cwd, req2_filename)
 
         with salt.utils.files.fopen(req1_filepath, 'w') as f:
-            f.write('flake8\n')
+            f.write('tox\n')
         with salt.utils.files.fopen(req2_filepath, 'w') as f:
             f.write('pep8\n')
 

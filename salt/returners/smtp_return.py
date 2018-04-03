@@ -106,7 +106,7 @@ This configuration enables Salt Master to send an email when accepting or reject
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import smtplib
@@ -184,7 +184,7 @@ def returner(ret):
 
     if not port:
         port = 25
-    log.debug('SMTP port has been set to {0}'.format(port))
+    log.debug('SMTP port has been set to %s', port)
 
     for field in fields:
         if field in ret:
@@ -198,7 +198,7 @@ def returner(ret):
                                **ret)
     if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
-    log.debug("smtp_return: Subject is '{0}'".format(subject))
+    log.debug("smtp_return: Subject is '%s'", subject)
 
     template = _options.get('template')
     if template:
@@ -224,7 +224,7 @@ def returner(ret):
             encrypted_data = gpg.encrypt(content, to_addrs)
             if encrypted_data.ok:
                 log.debug('smtp_return: Encryption successful')
-                content = str(encrypted_data)
+                content = six.text_type(encrypted_data)
             else:
                 log.error('smtp_return: Encryption failed, only an error message will be sent')
                 content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(

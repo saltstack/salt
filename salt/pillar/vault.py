@@ -49,11 +49,8 @@ Multiple Vault sources may also be used:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-
-# Import Salt libs
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -77,27 +74,23 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     comps = conf.split()
 
-    if not comps[0].startswith('path='):
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The \'profile\' argument has been deprecated. Any parts up until '
-            'and following the first "path=" are discarded'
-        )
     paths = [comp for comp in comps if comp.startswith('path=')]
     if not paths:
-        log.error('"{0}" is not a valid Vault ext_pillar config'.format(conf))
+        log.error('"%s" is not a valid Vault ext_pillar config', conf)
         return {}
+
+    vault_pillar = {}
 
     try:
         path = paths[0].replace('path=', '')
         path = path.format(**{'minion': minion_id})
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
-        if response.status_code != 200:
-            response.raise_for_status()
-        vault_pillar = response.json()['data']
+        if response.status_code == 200:
+            vault_pillar = response.json().get('data', {})
+        else:
+            log.info('Vault secret not found for: %s', path)
     except KeyError:
-        log.error('No such path in Vault: {0}'.format(path))
-        vault_pillar = {}
+        log.error('No such path in Vault: %s', path)
 
     return vault_pillar

@@ -22,34 +22,18 @@ Values or Entries
 Values/Entries are name/data pairs. There can be many values in a key. The
 (Default) value corresponds to the Key, the rest are their own value pairs.
 
-:depends:   - winreg Python module
+:depends:   - PyWin32
 '''
 # When production windows installer is using Python 3, Python 2 code can be removed
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import _future_ python libs first & before any other code
-from __future__ import absolute_import
-from __future__ import unicode_literals
 # Import python libs
-import sys
 import logging
-from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
-from salt.ext import six
-
-# Import third party libs
-try:
-    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
-    from win32api import RegCreateKeyEx, RegSetValueEx, RegFlushKey, \
-        RegCloseKey, error as win32apiError, SendMessage
-    HAS_WINDOWS_MODULES = True
-except ImportError:
-    HAS_WINDOWS_MODULES = False
 
 # Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-PY2 = sys.version_info[0] == 2
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -58,129 +42,23 @@ __virtualname__ = 'reg'
 
 def __virtual__():
     '''
-    Only works on Windows systems with the _winreg python module
+    Only works on Windows systems with the PyWin32
     '''
     if not salt.utils.platform.is_windows():
         return (False, 'reg execution module failed to load: '
                        'The module will only run on Windows systems')
 
-    if not HAS_WINDOWS_MODULES:
+    if 'reg.read_value' not in __utils__:
         return (False, 'reg execution module failed to load: '
-                       'One of the following libraries did not load: '
-                       + '_winreg, win32gui, win32con, win32api')
+                       'The reg salt util is unavailable')
 
     return __virtualname__
 
 
-# winreg in python 2 is hard coded to use codex 'mbcs', which uses
-# encoding that the user has assign. The function _unicode_to_mbcs
-# and _unicode_to_mbcs help with this.
-
-
-def _unicode_to_mbcs(instr):
+def key_exists(hive, key, use_32bit_registry=False):
     '''
-    Converts unicode to to current users character encoding.
-    '''
-    if isinstance(instr, six.text_type):
-        # unicode to windows utf8
-        return instr.encode('mbcs')
-    else:
-        # Assume its byte str or not a str/unicode
-        return instr
-
-
-def _mbcs_to_unicode(instr):
-    '''
-    Converts from current users character encoding to unicode.
-    When instr has a value of None, the return value of the function
-    will also be None.
-    '''
-    if instr is None or isinstance(instr, six.text_type):
-        return instr
-    else:
-        return six.text_type(instr, 'mbcs')
-
-
-def _mbcs_to_unicode_wrap(obj, vtype):
-    '''
-    Wraps _mbcs_to_unicode for use with registry vdata
-    '''
-    if vtype == 'REG_BINARY':
-        # We should be able to leave it alone if the user has passed binary data in yaml with
-        # binary !!
-        # In python < 3 this should have type str and in python 3+ this should be a byte array
-        return obj
-    if isinstance(obj, list):
-        return [_mbcs_to_unicode(x) for x in obj]
-    elif isinstance(obj, six.integer_types):
-        return obj
-    else:
-        return _mbcs_to_unicode(obj)
-
-
-class Registry(object):  # pylint: disable=R0903
-    '''
-    Delay '_winreg' usage until this module is used
-    '''
-    def __init__(self):
-        self.hkeys = {
-            'HKEY_CURRENT_USER':  _winreg.HKEY_CURRENT_USER,
-            'HKEY_LOCAL_MACHINE': _winreg.HKEY_LOCAL_MACHINE,
-            'HKEY_USERS': _winreg.HKEY_USERS,
-            'HKCU': _winreg.HKEY_CURRENT_USER,
-            'HKLM': _winreg.HKEY_LOCAL_MACHINE,
-            'HKU':  _winreg.HKEY_USERS,
-        }
-        self.vtype = {
-            'REG_BINARY':    _winreg.REG_BINARY,
-            'REG_DWORD':     _winreg.REG_DWORD,
-            'REG_EXPAND_SZ': _winreg.REG_EXPAND_SZ,
-            'REG_MULTI_SZ':  _winreg.REG_MULTI_SZ,
-            'REG_SZ':        _winreg.REG_SZ
-        }
-        self.opttype = {
-            'REG_OPTION_NON_VOLATILE': _winreg.REG_OPTION_NON_VOLATILE,
-            'REG_OPTION_VOLATILE':     _winreg.REG_OPTION_VOLATILE
-        }
-        # Return Unicode due to from __future__ import unicode_literals
-        self.vtype_reverse = {
-            _winreg.REG_BINARY:    'REG_BINARY',
-            _winreg.REG_DWORD:     'REG_DWORD',
-            _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
-            _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
-            _winreg.REG_SZ:        'REG_SZ',
-            # REG_QWORD isn't in the winreg library
-            11:                    'REG_QWORD'
-        }
-        self.opttype_reverse = {
-            _winreg.REG_OPTION_NON_VOLATILE: 'REG_OPTION_NON_VOLATILE',
-            _winreg.REG_OPTION_VOLATILE:     'REG_OPTION_VOLATILE'
-        }
-        # delete_key_recursive uses this to check the subkey contains enough \
-        # as we do not want to remove all or most of the registry
-        self.subkey_slash_check = {
-            _winreg.HKEY_CURRENT_USER:  0,
-            _winreg.HKEY_LOCAL_MACHINE: 1,
-            _winreg.HKEY_USERS:         1
-        }
-
-        self.registry_32 = {
-            True: _winreg.KEY_READ | _winreg.KEY_WOW64_32KEY,
-            False: _winreg.KEY_READ,
-            }
-
-    def __getattr__(self, k):
-        try:
-            return self.hkeys[k]
-        except KeyError:
-            msg = 'No hkey named \'{0}. Try one of {1}\''
-            hkeys = ', '.join(self.hkeys)
-            raise CommandExecutionError(msg.format(k, hkeys))
-
-
-def _key_exists(hive, key, use_32bit_registry=False):
-    '''
-    Check that the key is found in the registry
+    Check that the key is found in the registry. This refers to keys and not
+    value/data pairs.
 
     :param str hive: The hive to connect to.
     :param str key: The key to check
@@ -189,24 +67,9 @@ def _key_exists(hive, key, use_32bit_registry=False):
     :return: Returns True if found, False if not found
     :rtype: bool
     '''
-
-    if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-    else:
-        local_hive = hive
-        local_key = key
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry]
-
-    try:
-        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
-        _winreg.CloseKey(handle)
-        return True
-    except WindowsError:  # pylint: disable=E0602
-        return False
+    return __utils__['reg.key_exists'](hive=hive,
+                                       key=key,
+                                       use_32bit_registry=use_32bit_registry)
 
 
 def broadcast_change():
@@ -221,8 +84,7 @@ def broadcast_change():
 
         salt '*' reg.broadcast_change
     '''
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
-    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0))
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def list_keys(hive, key=None, use_32bit_registry=False):
@@ -234,6 +96,8 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the keys under the hive will be returned.
@@ -250,37 +114,9 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         salt '*' reg.list_keys HKLM 'SOFTWARE'
     '''
-
-    if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-    else:
-        local_hive = hive
-        local_key = key
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry]
-
-    subkeys = []
-    try:
-        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
-
-        for i in range(_winreg.QueryInfoKey(handle)[0]):
-            subkey = _winreg.EnumKey(handle, i)
-            if PY2:
-                subkeys.append(_mbcs_to_unicode(subkey))
-            else:
-                subkeys.append(subkey)
-
-        handle.Close()
-
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
-        return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
-
-    return subkeys
+    return __utils__['reg.list_keys'](hive=hive,
+                                      key=key,
+                                      use_32bit_registry=use_32bit_registry)
 
 
 def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
@@ -292,6 +128,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the values under the hive will be returned.
@@ -310,60 +148,10 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
         salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
     '''
-
-    if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-    else:
-        local_hive = hive
-        local_key = key
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry]
-    handle = None
-    values = list()
-
-    try:
-        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
-
-        for i in range(_winreg.QueryInfoKey(handle)[1]):
-            vname, vdata, vtype = _winreg.EnumValue(handle, i)
-
-            value = {'hive':   local_hive,
-                     'key':    local_key,
-                     'vname':  vname,
-                     'vdata':  vdata,
-                     'vtype':  registry.vtype_reverse[vtype],
-                     'success': True}
-            values.append(value)
-        if include_default:
-            # Get the default value for the key
-            value = {'hive':    local_hive,
-                     'key':     local_key,
-                     'vname':   '(Default)',
-                     'vdata':   None,
-                     'success': True}
-            try:
-                # QueryValueEx returns unicode data
-                vdata, vtype = _winreg.QueryValueEx(handle, '(Default)')
-                if vdata or vdata in [0, '']:
-                    value['vtype'] = registry.vtype_reverse[vtype]
-                    value['vdata'] = vdata
-                else:
-                    value['comment'] = 'Empty Value'
-            except WindowsError:  # pylint: disable=E0602
-                value['vdata'] = ('(value not set)')
-                value['vtype'] = 'REG_SZ'
-            values.append(value)
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug(r'Cannot find key: {0}\{1}'.format(hive, key))
-        return False, r'Cannot find key: {0}\{1}'.format(hive, key)
-    finally:
-        if handle:
-            handle.Close()
-    return values
+    return __utils__['reg.list_values'](hive=hive,
+                                        key=key,
+                                        use_32bit_registry=use_32bit_registry,
+                                        include_default=include_default)
 
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
@@ -375,6 +163,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -401,57 +191,10 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
         salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
     '''
-
-    # If no name is passed, the default value of the key will be returned
-    # The value name is Default
-
-    # Setup the return array
-    if PY2:
-        ret = {'hive':  _mbcs_to_unicode(hive),
-               'key':   _mbcs_to_unicode(key),
-               'vname': _mbcs_to_unicode(vname),
-               'vdata': None,
-               'success': True}
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-        local_vname = _unicode_to_mbcs(vname)
-
-    else:
-        ret = {'hive': hive,
-               'key':  key,
-               'vname': vname,
-               'vdata': None,
-               'success': True}
-        local_hive = hive
-        local_key = key
-        local_vname = vname
-
-    if not vname:
-        ret['vname'] = '(Default)'
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry]
-
-    try:
-        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
-        try:
-            # QueryValueEx returns unicode data
-            vdata, vtype = _winreg.QueryValueEx(handle, local_vname)
-            if vdata or vdata in [0, '']:
-                ret['vtype'] = registry.vtype_reverse[vtype]
-                ret['vdata'] = vdata
-            else:
-                ret['comment'] = 'Empty Value'
-        except WindowsError:  # pylint: disable=E0602
-            ret['vdata'] = ('(value not set)')
-            ret['vtype'] = 'REG_SZ'
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug('Cannot find key: {0}\\{1}'.format(local_hive, local_key))
-        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
-        ret['success'] = False
-    return ret
+    return __utils__['reg.read_value'](hive=hive,
+                                       key=key,
+                                       vname=vname,
+                                       use_32bit_registry=use_32bit_registry)
 
 
 def set_value(hive,
@@ -469,6 +212,8 @@ def set_value(hive,
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -553,44 +298,13 @@ def set_value(hive,
         salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
         vtype=REG_LIST vdata='[a,b,c]'
     '''
-
-    if PY2:
-        try:
-            local_hive = _mbcs_to_unicode(hive)
-            local_key = _mbcs_to_unicode(key)
-            local_vname = _mbcs_to_unicode(vname)
-            local_vtype = _mbcs_to_unicode(vtype)
-            local_vdata = _mbcs_to_unicode_wrap(vdata, local_vtype)
-        except TypeError as exc:  # pylint: disable=E0602
-            log.error(exc, exc_info=True)
-            return False
-    else:
-        local_hive = hive
-        local_key = key
-        local_vname = vname
-        local_vdata = vdata
-        local_vtype = vtype
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    vtype_value = registry.vtype[local_vtype]
-    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
-    if volatile:
-        create_options = registry.opttype['REG_OPTION_VOLATILE']
-    else:
-        create_options = registry.opttype['REG_OPTION_NON_VOLATILE']
-
-    try:
-        handle, _ = RegCreateKeyEx(hkey, local_key, access_mask,
-                                   Options=create_options)
-        RegSetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
-        RegFlushKey(handle)
-        RegCloseKey(handle)
-        broadcast_change()
-        return True
-    except (win32apiError, SystemError, ValueError, TypeError) as exc:  # pylint: disable=E0602
-        log.error(exc, exc_info=True)
-        return False
+    return __utils__['reg.set_value'](hive=hive,
+                                      key=key,
+                                      vname=vname,
+                                      vdata=vdata,
+                                      vtype=vtype,
+                                      use_32bit_registry=use_32bit_registry,
+                                      volatile=volatile)
 
 
 def delete_key_recursive(hive, key, use_32bit_registry=False):
@@ -604,6 +318,8 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param key: The key to remove (looks like a path)
 
@@ -623,74 +339,9 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
         salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
     '''
-
-    if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-    else:
-        local_hive = hive
-        local_key = key
-
-    # Instantiate the registry object
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    key_path = local_key
-    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
-
-    if not _key_exists(local_hive, local_key, use_32bit_registry):
-        return False
-
-    if (len(key) > 1) and (key.count('\\', 1) < registry.subkey_slash_check[hkey]):
-        log.error('Hive:{0} Key:{1}; key is too close to root, not safe to remove'.format(hive, key))
-        return False
-
-    # Functions for traversing the registry tree
-    def _subkeys(_key):
-        '''
-        Enumerate keys
-        '''
-        i = 0
-        while True:
-            try:
-                subkey = _winreg.EnumKey(_key, i)
-                yield subkey
-                i += 1
-            except WindowsError:  # pylint: disable=E0602
-                break
-
-    def _traverse_registry_tree(_hkey, _keypath, _ret, _access_mask):
-        '''
-        Traverse the registry tree i.e. dive into the tree
-        '''
-        _key = _winreg.OpenKey(_hkey, _keypath, 0, _access_mask)
-        for subkeyname in _subkeys(_key):
-            subkeypath = r'{0}\{1}'.format(_keypath, subkeyname)
-            _ret = _traverse_registry_tree(_hkey, subkeypath, _ret, access_mask)
-            _ret.append('{0}'.format(subkeypath))
-        return _ret
-
-    # Get a reverse list of registry keys to be deleted
-    key_list = []
-    key_list = _traverse_registry_tree(hkey, key_path, key_list, access_mask)
-    # Add the top level key last, all subkeys must be deleted first
-    key_list.append(r'{0}'.format(key_path))
-
-    ret = {'Deleted': [],
-           'Failed': []}
-
-    # Delete all sub_keys
-    for sub_key_path in key_list:
-        try:
-            key_handle = _winreg.OpenKey(hkey, sub_key_path, 0, access_mask)
-            _winreg.DeleteKey(key_handle, '')
-            ret['Deleted'].append(r'{0}\{1}'.format(hive, sub_key_path))
-        except WindowsError as exc:  # pylint: disable=E0602
-            log.error(exc, exc_info=True)
-            ret['Failed'].append(r'{0}\{1} {2}'.format(hive, sub_key_path, exc))
-
-    broadcast_change()
-
-    return ret
+    return __utils__['reg.delete_key_recursive'](hive=hive,
+                                                 key=key,
+                                                 use_32bit_registry=use_32bit_registry)
 
 
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
@@ -702,6 +353,8 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -720,40 +373,17 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
-
-    if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-        local_vname = _unicode_to_mbcs(vname)
-    else:
-        local_hive = hive
-        local_key = key
-        local_vname = vname
-
-    registry = Registry()
-    hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
-
-    try:
-        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
-        _winreg.DeleteValue(handle, local_vname)
-        _winreg.CloseKey(handle)
-        broadcast_change()
-        return True
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc, exc_info=True)
-        log.error('Hive: {0}'.format(local_hive))
-        log.error('Key: {0}'.format(local_key))
-        log.error('ValueName: {0}'.format(local_vname))
-        log.error('32bit Reg: {0}'.format(use_32bit_registry))
-        return False
+    return __utils__['reg.delete_value'](hive=hive,
+                                         key=key,
+                                         vname=vname,
+                                         use_32bit_registry=use_32bit_registry)
 
 
 def import_file(source, use_32bit_registry=False):
     '''
     Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Usage:
 
@@ -767,7 +397,7 @@ def import_file(source, use_32bit_registry=False):
         can be either a local file path or a URL type supported by salt
         (e.g. ``salt://salt_master_path``).
 
-    :param bool use_32bit_registry: If the value of this paramater is ``True``
+    :param bool use_32bit_registry: If the value of this parameter is ``True``
         then the ``REG`` file will be imported into the Windows 32 bit registry.
         Otherwise the Windows 64 bit registry will be used.
 

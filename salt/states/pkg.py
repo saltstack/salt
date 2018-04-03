@@ -74,7 +74,7 @@ state module
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
@@ -424,9 +424,8 @@ def _find_remove_targets(name=None,
         if not _fulfills_version_spec(cver, oper, verstr,
                                       ignore_epoch=ignore_epoch):
             log.debug(
-                'Current version ({0}) did not match desired version '
-                'specification ({1}), will not remove'
-                .format(cver, verstr)
+                'Current version (%s) did not match desired version '
+                'specification (%s), will not remove', cver, verstr
             )
         else:
             targets.append(pkgname)
@@ -439,9 +438,8 @@ def _find_remove_targets(name=None,
 
     if not targets:
         # All specified packages are already absent
-        msg = (
-            'All specified packages{0} are already absent'
-            .format(' (matching specified versions)' if version_spec else '')
+        msg = 'All specified packages{0} are already absent'.format(
+            ' (matching specified versions)' if version_spec else ''
         )
         return {'name': name,
                 'changes': {},
@@ -508,8 +506,10 @@ def _find_install_targets(name=None,
         # add it to the kwargs.
         kwargs['refresh'] = refresh
 
+    resolve_capabilities = kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__
     try:
         cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        cur_prov = resolve_capabilities and __salt__['pkg.list_provides'](**kwargs) or dict()
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
@@ -669,6 +669,9 @@ def _find_install_targets(name=None,
     failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
+        if resolve_capabilities and not cver and key in cur_prov:
+            cver = cur_pkgs.get(cur_prov.get(key)[0], [])
+
         # Package not yet installed, so add to targets
         if not cver:
             targets[key] = val
@@ -752,9 +755,9 @@ def _find_install_targets(name=None,
                     altered_files[key] = verify_result
             else:
                 log.debug(
-                    'Current version ({0}) did not match desired version '
-                    'specification ({1}), adding to installation targets'
-                    .format(cver, val)
+                    'Current version (%s) did not match desired version '
+                    'specification (%s), adding to installation targets',
+                    cver, val
                 )
                 targets[key] = val
 
@@ -786,13 +789,15 @@ def _find_install_targets(name=None,
             warnings, was_refreshed)
 
 
-def _verify_install(desired, new_pkgs, ignore_epoch=False):
+def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     '''
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
     ok = []
     failed = []
+    if not new_caps:
+        new_caps = dict()
     for pkgname, pkgver in desired.items():
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
         # Homebrew for Mac OSX does something similar with tap names
@@ -809,6 +814,8 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
             cver = new_pkgs.get(pkgname.split('=')[0])
         else:
             cver = new_pkgs.get(pkgname)
+            if not cver and pkgname in new_caps:
+                cver = new_pkgs.get(new_caps.get(pkgname)[0])
 
         if not cver:
             failed.append(pkgname)
@@ -871,6 +878,26 @@ def _nested_output(obj):
     nested.__opts__ = __opts__
     ret = nested.output(obj).rstrip()
     return ret
+
+
+def _resolve_capabilities(pkgs, refresh=False, **kwargs):
+    '''
+    Resolve capabilities in ``pkgs`` and exchange them with real package
+    names, when the result is distinct.
+    This feature can be turned on while setting the paramter
+    ``resolve_capabilities`` to True.
+
+    Return the input dictionary with replaced capability names and as
+    second return value a bool which say if a refresh need to be run.
+
+    In case of ``resolve_capabilities`` is False (disabled) or not
+    supported by the implementation the input is returned unchanged.
+    '''
+    if not pkgs or 'pkg.resolve_capabilities' not in __salt__:
+        return pkgs, refresh
+
+    ret = __salt__['pkg.resolve_capabilities'](pkgs, refresh=refresh, **kwargs)
+    return ret, False
 
 
 def installed(
@@ -1104,6 +1131,11 @@ def installed(
         Force strict package naming. Disables lookup of package alternatives.
 
         .. versionadded:: 2014.1.1
+
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
+
+        .. versionadded:: 2018.3.0
 
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
@@ -1448,6 +1480,12 @@ def installed(
 
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    if pkgs:
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1458,7 +1496,7 @@ def installed(
                 'comment': 'pkg.verify not implemented'}
 
     if not isinstance(version, six.string_types) and version is not None:
-        version = str(version)
+        version = six.text_type(version)
 
     kwargs['allow_updates'] = allow_updates
 
@@ -1496,7 +1534,7 @@ def installed(
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': str(exc)}
+                            'comment': six.text_type(exc)}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -1608,14 +1646,10 @@ def installed(
     not_modified_hold = None
     failed_hold = None
     if targets or to_reinstall:
-        force = False
-        if salt.utils.platform.is_freebsd():
-            force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name=None,
                                               refresh=refresh,
                                               version=version,
-                                              force=force,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
                                               pkgs=pkgs,
@@ -1665,7 +1699,7 @@ def installed(
                             name=name, pkgs=pkgs, sources=sources
                         )
                 except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(str(exc))
+                    comment.append(six.text_type(exc))
                     ret = {'name': name,
                            'changes': changes,
                            'result': False,
@@ -1707,8 +1741,13 @@ def installed(
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
         new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        if kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__:
+            new_caps = __salt__['pkg.list_provides'](**kwargs)
+        else:
+            new_caps = {}
         ok, failed = _verify_install(desired, new_pkgs,
-                                     ignore_epoch=ignore_epoch)
+                                     ignore_epoch=ignore_epoch,
+                                     new_caps=new_caps)
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok
                         if x not in targets
@@ -1927,6 +1966,11 @@ def downloaded(name,
                       - dos2unix
                       - salt-minion: 2015.8.5-1.el6
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
+
+        .. versionadded:: 2018.3.0
+
     CLI Example:
 
     .. code-block:: yaml
@@ -1952,10 +1996,21 @@ def downloaded(name,
         ret['comment'] = 'No packages to download provided'
         return ret
 
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and not pkgs:
+        if version:
+            pkgs = [{name: version}]
+            version = None
+        else:
+            pkgs = [name]
+
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
+
+    pkgs, _refresh = _resolve_capabilities(pkgs, **kwargs)
 
     # Only downloading not yet downloaded packages
     targets = _find_download_targets(name,
@@ -2126,7 +2181,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
                            'this platform'}
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
     return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
@@ -2203,6 +2258,10 @@ def latest(
             This parameter is available only on Debian based distributions and
             has no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
+
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -2299,6 +2358,10 @@ def latest(
             desired_pkgs = [name]
 
     kwargs['saltenv'] = __env__
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    desired_pkgs, refresh = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -2793,7 +2856,7 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
         Added support for the ``pkgin`` provider.
 
@@ -2822,6 +2885,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             This parameter available only on Debian based distributions, and
             have no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
+
+        .. versionadded:: 2018.3.0
+
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
@@ -2842,12 +2910,16 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
 
     if isinstance(refresh, bool):
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
+            expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
+                        for pkgname, pkgver in six.iteritems(packages)}
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
+                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
         except Exception as exc:
-            ret['comment'] = str(exc)
+            ret['comment'] = six.text_type(exc)
             return ret
     else:
         ret['comment'] = 'refresh must be either True or False'
@@ -2859,6 +2931,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'System update will be performed'
+        ret['changes'] = expected
         ret['result'] = None
         return ret
 
@@ -2875,8 +2948,17 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    ret['comment'] = 'Upgrade ran successfully'
-    ret['result'] = True
+    # If a package list was provided, ensure those packages were updated
+    missing = []
+    if isinstance(pkgs, list):
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+
+    if missing:
+        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Upgrade ran successfully'
+        ret['result'] = True
 
     return ret
 
@@ -2943,7 +3025,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             return ret
         for idx, item in enumerate(skip):
             if not isinstance(item, six.string_types):
-                skip[idx] = str(item)
+                skip[idx] = six.text_type(item)
 
     if include is None:
         include = []
@@ -2953,7 +3035,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             return ret
         for idx, item in enumerate(include):
             if not isinstance(item, six.string_types):
-                include[idx] = str(item)
+                include[idx] = six.text_type(item)
 
     try:
         diff = __salt__['pkg.group_diff'](name)

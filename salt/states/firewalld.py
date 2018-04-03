@@ -77,13 +77,14 @@ would allow access to the salt master from the 10.0.0.0/8 subnet:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.utils.path
 from salt.output import nested
+import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -231,8 +232,10 @@ def present(name,
     # if prune_services == None, set to True and log a deprecation warning
     if prune_services is None:
         prune_services = True
-        salt.utils.warn_until('Neon',
-                'The \'prune_services\' argument default is currently True, but will be changed to True in future releases.')
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'prune_services\' argument default is currently True, '
+            'but will be changed to True in future releases.')
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
@@ -414,7 +417,7 @@ def _present(name,
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
         else:
-            log.error('{0} is an invalid ICMP type'.format(icmp_type))
+            log.error('%s is an invalid ICMP type', icmp_type)
 
     if prune_block_icmp:
         old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)

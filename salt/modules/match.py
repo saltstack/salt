@@ -2,7 +2,7 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import inspect
@@ -11,9 +11,8 @@ import sys
 
 # Import salt libs
 import salt.minion
-import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.six import string_types
+from salt.ext import six
 
 __func_alias__ = {
     'list_': 'list'
@@ -39,8 +38,8 @@ def compound(tgt, minion_id=None):
     '''
     opts = {'grains': __grains__, 'pillar': __pillar__}
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     opts['id'] = minion_id
@@ -238,8 +237,8 @@ def list_(tgt, minion_id=None):
         salt '*' match.list 'server1,server2'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -266,8 +265,8 @@ def pcre(tgt, minion_id=None):
         salt '*' match.pcre '.*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -294,8 +293,8 @@ def glob(tgt, minion_id=None):
         salt '*' match.glob '*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -309,7 +308,6 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None,
               default='default'):
     '''
     Return the first match in a dictionary of target patterns
@@ -335,17 +333,6 @@ def filter_by(lookup,
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))
 
@@ -369,7 +356,7 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
 
     CLI Example:
 
-    .. code-block:: base
+    .. code-block:: bash
 
         salt '*' match.search_by '{web: [node1, node2], db: [node2, node]}'
 

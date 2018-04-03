@@ -17,9 +17,6 @@ import signal
 import shutil
 import logging
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 import tests.integration.utils
 from tests.support.case import ShellCase
@@ -33,6 +30,7 @@ from salt.ext import six
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -61,13 +59,11 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         config_file_name = 'minion'
         pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
         with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
 
             with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
         ret = self.run_script(
             self._call_binary_,

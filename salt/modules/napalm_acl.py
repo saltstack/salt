@@ -26,7 +26,7 @@ Please check Installation_ for complete details.
 .. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -198,7 +198,7 @@ def load_term_config(filter_name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     source_service
         A special service to choose from. This is a helper so the user is able to
@@ -544,7 +544,7 @@ def load_filter_config(filter_name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
 
@@ -744,7 +744,7 @@ def load_policy_config(filters=None,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     The output is a dictionary having the same form as :mod:`net.load_config <salt.modules.napalm_network.load_config>`.
 

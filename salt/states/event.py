@@ -2,7 +2,9 @@
 '''
 Send events through Salt's event system during state runs
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import salt libs
 import salt.utils.functools

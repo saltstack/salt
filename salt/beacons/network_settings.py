@@ -5,7 +5,7 @@ Beacon to monitor network adapter setting changes on Linux
 .. versionadded:: 2016.3.0
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import third party libs
 try:
     from pyroute2 import IPDB
@@ -150,7 +150,7 @@ def beacon(config):
         coalesce = True
         changes = {}
 
-    log.debug('_stats {}'.format(_stats))
+    log.debug('_stats %s', _stats)
     # Get list of interfaces included in config that are registered in the
     # system, including interfaces defined by wildcards (eth*, wlan*)
     for interface in _config.get('interfaces', {}):
@@ -171,14 +171,14 @@ def beacon(config):
         # config updated so update _config
         list(map(_config.update, config))
 
-    log.debug('interfaces {}'.format(interfaces))
+    log.debug('interfaces %s', interfaces)
     for interface in interfaces:
         _send_event = False
         _diff_stats = _stats[interface] - LAST_STATS[interface]
         _ret_diff = {}
         interface_config = _config['interfaces'][interface]
 
-        log.debug('_diff_stats {}'.format(_diff_stats))
+        log.debug('_diff_stats %s', _diff_stats)
         if _diff_stats:
             _diff_stats_dict = {}
             LAST_STATS[interface] = _stats[interface]

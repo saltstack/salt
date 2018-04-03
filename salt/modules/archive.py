@@ -4,7 +4,7 @@ A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib  # For < 2.7 compat
 import copy
 import errno
@@ -38,6 +38,7 @@ import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.templates
 
 if salt.utils.platform.is_windows():
@@ -156,7 +157,7 @@ def list_(name,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _xz: http://tukaani.org/xz/
@@ -454,7 +455,7 @@ def _expand_sources(sources):
     if isinstance(sources, six.string_types):
         sources = [x.strip() for x in sources.split(',')]
     elif isinstance(sources, (float, six.integer_types)):
-        sources = [str(sources)]
+        sources = [six.text_type(sources)]
     return [path
             for source in sources
             for path in _glob(source)]
@@ -533,14 +534,14 @@ def tar(options, tarfile, sources=None, dest=None,
         raise SaltInvocationError('Tar options can not be empty')
 
     cmd = ['tar']
-    if dest:
-        cmd.extend(['-C', '{0}'.format(dest)])
-
     if options:
         cmd.extend(options.split())
 
     cmd.extend(['{0}'.format(tarfile)])
     cmd.extend(_expand_sources(sources))
+    if dest:
+        cmd.extend(['-C', '{0}'.format(dest)])
+
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,
@@ -797,7 +798,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                     else:
                         rel_root = cwd if cwd is not None else '/'
                     if os.path.isdir(src):
-                        for dir_name, sub_dirs, files in os.walk(src):
+                        for dir_name, sub_dirs, files in salt.utils.path.os_walk(src):
                             if cwd and dir_name.startswith(cwd):
                                 arc_dir = os.path.relpath(dir_name, cwd)
                             else:
@@ -914,7 +915,7 @@ def cmd_unzip(zip_file,
     if isinstance(excludes, six.string_types):
         excludes = [x.strip() for x in excludes.split(',')]
     elif isinstance(excludes, (float, six.integer_types)):
-        excludes = [str(excludes)]
+        excludes = [six.text_type(excludes)]
 
     cmd = ['unzip']
     if password:
@@ -1059,7 +1060,7 @@ def unzip(zip_file,
             if isinstance(excludes, six.string_types):
                 excludes = [x.strip() for x in excludes.split(',')]
             elif isinstance(excludes, (float, six.integer_types)):
-                excludes = [str(excludes)]
+                excludes = [six.text_type(excludes)]
 
             cleaned_files.extend([x for x in files if x not in excludes])
             for target in cleaned_files:
@@ -1076,8 +1077,7 @@ def unzip(zip_file,
                         if not salt.utils.platform.is_windows():
                             perm = zfile.getinfo(target).external_attr >> 16
                             if perm == 0:
-                                umask_ = os.umask(0)
-                                os.umask(umask_)
+                                umask_ = salt.utils.files.get_umask()
                                 if target.endswith('/'):
                                     perm = 0o777 & ~umask_
                                 else:
@@ -1134,7 +1134,7 @@ def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Examples:
 
@@ -1311,7 +1311,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
-            fp_.write(contents)
+            fp_.write(salt.utils.stringutils.to_str(contents))
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,

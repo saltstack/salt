@@ -3,7 +3,7 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import textwrap
 
 # Import Salt Testing Libs
@@ -28,6 +28,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
             whitelist=['boto3', 'yamldumper'],
             context={}
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        list(utils)
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -79,12 +82,21 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
-                    --- 
-                    +++ 
+                    ---
+                    +++
                     @@ -1 +1 @@
                     -{}
                     +DelaySeconds: 20
-                ''')
+
+                ''').splitlines()
+                # Difflib adds a trailing space after the +++/--- lines,
+                # programatically add them back here. Having them in the test
+                # file itself is not feasible since a few popular plugins for
+                # vim will remove trailing whitespace.
+                for idx in (0, 1):
+                    diff[idx] += ' '
+                diff = '\n'.join(diff)
+
                 comt = [
                     'SQS queue mysqs present.',
                     'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(

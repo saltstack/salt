@@ -55,10 +55,11 @@ Value:
     - There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
     - Each value name has a corresponding value
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -67,19 +68,19 @@ def __virtual__():
     '''
     Load this state if the reg module exists
     '''
-    if 'reg.read_value' not in __salt__:
+    if 'reg.read_value' not in __utils__:
         return (False, 'reg state module failed to load: '
                        'missing module function: reg.read_value')
 
-    if 'reg.set_value' not in __salt__:
+    if 'reg.set_value' not in __utils__:
         return (False, 'reg state module failed to load: '
                        'missing module function: reg.set_value')
 
-    if 'reg.delete_value' not in __salt__:
+    if 'reg.delete_value' not in __utils__:
         return (False, 'reg state module failed to load: '
                        'missing module function: reg.delete_value')
 
-    if 'reg.delete_key_recursive' not in __salt__:
+    if 'reg.delete_key_recursive' not in __utils__:
         return (False, 'reg state module failed to load: '
                        'missing module function: reg.delete_key_recursive')
 
@@ -180,19 +181,25 @@ def present(name,
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_current = __salt__['reg.read_value'](hive=hive,
-                                             key=key,
-                                             vname=vname,
-                                             use_32bit_registry=use_32bit_registry)
+    reg_current = __utils__['reg.read_value'](hive=hive,
+                                              key=key,
+                                              vname=vname,
+                                              use_32bit_registry=use_32bit_registry)
 
     if vdata == reg_current['vdata'] and reg_current['success']:
-        ret['comment'] = '{0} in {1} is already configured'.\
-            format(vname if vname else '(Default)', name)
+        ret['comment'] = '{0} in {1} is already configured' \
+                         ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',
+                                   salt.utils.stringutils.to_unicode(name, 'utf-8'))
         return ret
 
+    try:
+        vdata_decoded = salt.utils.stringutils.to_unicode(vdata, 'utf-8')
+    except UnicodeDecodeError:
+        # vdata contains binary data that can't be decoded
+        vdata_decoded = vdata
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
-                  'Entry': '{0}'.format(vname if vname else '(Default)'),
-                  'Value': '{0}'.format(vdata)}
+                  'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
+                  'Value': vdata_decoded}
 
     # Check for test option
     if __opts__['test']:
@@ -201,12 +208,12 @@ def present(name,
         return ret
 
     # Configure the value
-    ret['result'] = __salt__['reg.set_value'](hive=hive,
-                                              key=key,
-                                              vname=vname,
-                                              vdata=vdata,
-                                              vtype=vtype,
-                                              use_32bit_registry=use_32bit_registry)
+    ret['result'] = __utils__['reg.set_value'](hive=hive,
+                                               key=key,
+                                               vname=vname,
+                                               vdata=vdata,
+                                               vtype=vtype,
+                                               use_32bit_registry=use_32bit_registry)
 
     if not ret['result']:
         ret['changes'] = {}
@@ -264,10 +271,10 @@ def absent(name, vname=None, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_check = __salt__['reg.read_value'](hive=hive,
-                                           key=key,
-                                           vname=vname,
-                                           use_32bit_registry=use_32bit_registry)
+    reg_check = __utils__['reg.read_value'](hive=hive,
+                                            key=key,
+                                            vname=vname,
+                                            use_32bit_registry=use_32bit_registry)
     if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
         ret['comment'] = '{0} is already absent'.format(name)
         return ret
@@ -282,10 +289,10 @@ def absent(name, vname=None, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    ret['result'] = __salt__['reg.delete_value'](hive=hive,
-                                                 key=key,
-                                                 vname=vname,
-                                                 use_32bit_registry=use_32bit_registry)
+    ret['result'] = __utils__['reg.delete_value'](hive=hive,
+                                                  key=key,
+                                                  vname=vname,
+                                                  use_32bit_registry=use_32bit_registry)
     if not ret['result']:
         ret['changes'] = {}
         ret['comment'] = r'Failed to remove {0} from {1}'.format(key, hive)
@@ -342,9 +349,9 @@ def key_absent(name, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not __salt__['reg.read_value'](hive=hive,
-                                      key=key,
-                                      use_32bit_registry=use_32bit_registry)['success']:
+    if not __utils__['reg.read_value'](hive=hive,
+                                       key=key,
+                                       use_32bit_registry=use_32bit_registry)['success']:
         ret['comment'] = '{0} is already absent'.format(name)
         return ret
 
@@ -359,12 +366,12 @@ def key_absent(name, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    __salt__['reg.delete_key_recursive'](hive=hive,
-                                         key=key,
-                                         use_32bit_registry=use_32bit_registry)
-    if __salt__['reg.read_value'](hive=hive,
-                                  key=key,
-                                  use_32bit_registry=use_32bit_registry)['success']:
+    __utils__['reg.delete_key_recursive'](hive=hive,
+                                          key=key,
+                                          use_32bit_registry=use_32bit_registry)
+    if __utils__['reg.read_value'](hive=hive,
+                                   key=key,
+                                   use_32bit_registry=use_32bit_registry)['success']:
         ret['result'] = False
         ret['changes'] = {}
         ret['comment'] = 'Failed to remove registry key {0}'.format(name)

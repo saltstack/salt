@@ -4,7 +4,7 @@ Support for getting and setting the environment variables
 of the current salt process.
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 

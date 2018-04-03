@@ -31,7 +31,7 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import re
@@ -308,13 +308,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     if pkgs is None:
         version_num = kwargs.get('version')
         variant_spec = kwargs.get('variant')
-        spec = None
+        spec = {}
 
         if version_num:
-            spec = (spec or '') + '@' + version_num
+            spec['version'] = version_num
 
         if variant_spec:
-            spec = (spec or '') + variant_spec
+            spec['variant'] = variant_spec
 
         pkg_params = {name: spec}
 
@@ -323,7 +323,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     formulas_array = []
     for pname, pparams in six.iteritems(pkg_params):
-        formulas_array.append(pname + (pparams or ''))
+        formulas_array.append(pname)
+
+        if pparams:
+            if 'version' in pparams:
+                formulas_array.append('@' + pparams['version'])
+
+            if 'variant' in pparams:
+                formulas_array.append(pparams['variant'])
 
     old = list_pkgs()
     cmd = ['port', 'install']

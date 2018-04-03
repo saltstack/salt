@@ -68,13 +68,11 @@ Configuration
               - fxp0
             outputter: yaml
 '''
-
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt lib
 import salt.output
+import salt.utils.network
 from salt.ext import six
 from salt.ext.six.moves import map
 
@@ -339,7 +337,7 @@ def interfaces(device=None,
         if device:
             title += ' on device {0}'.format(device)
         if ipnet:
-            title += ' that include network {net}'.format(net=str(ipnet))
+            title += ' that include network {net}'.format(net=six.text_type(ipnet))
             if best:
                 title += ' - only best match returned'
 
@@ -402,7 +400,7 @@ def interfaces(device=None,
                         interf_entry['ips'] = '\n'.join(interf_entry['ips'])
                     if ipnet:
                         inet_ips = [
-                            str(ip) for ip in ips if _ipnet_belongs(ip)
+                            six.text_type(ip) for ip in ips if _ipnet_belongs(ip)
                         ]  # filter and get only IP include ipnet
                         if inet_ips:  # if any
                             if best:
@@ -599,7 +597,7 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
                 napalm_helpers.convert(napalm_helpers.mac, mac_entry.get('mac', '')) ==
                 napalm_helpers.convert(napalm_helpers.mac, mac)) or
                 (interface and interface in mac_entry.get('interface', '')) or
-               (vlan and str(mac_entry.get('vlan', '')) == str(vlan))):
+               (vlan and six.text_type(mac_entry.get('vlan', '')) == six.text_type(vlan))):
                 rows.append({
                     'device': device,
                     'interface': mac_entry.get('interface'),
@@ -812,7 +810,25 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     ip = ''  # pylint: disable=invalid-name
     ipnet = None
 
-    results = {}
+    results = {
+        'int_net': [],
+        'int_descr': [],
+        'int_name': [],
+        'int_ip': [],
+        'int_mac': [],
+        'int_device': [],
+        'lldp_descr': [],
+        'lldp_int': [],
+        'lldp_device': [],
+        'lldp_mac': [],
+        'lldp_device_int': [],
+        'mac_device': [],
+        'mac_int': [],
+        'arp_device': [],
+        'arp_int': [],
+        'arp_mac': [],
+        'arp_ip': []
+    }
 
     if isinstance(addr, int):
         results['mac'] = findmac(vlan=addr, display=display)
@@ -826,6 +842,8 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     except IndexError:
         # no problem, let's keep searching
         pass
+    if salt.utils.network.is_ipv6(addr):
+        mac = False
     if not mac:
         try:
             ip = napalm_helpers.convert(napalm_helpers.ip, addr)  # pylint: disable=invalid-name

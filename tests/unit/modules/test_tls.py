@@ -3,7 +3,7 @@
     :codeauthor: :email:`Joe Julian <me@joejulian.name>`
 '''
 # Import the future
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Import Python libs
@@ -34,6 +34,9 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.tls as tls
 from salt.utils.versions import LooseVersion
+
+# Import 3rd party Libs
+import salt.ext as six
 
 log = logging.getLogger(__name__)
 
@@ -278,7 +281,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                     # in OpenSSL/crypto.py in the get_signature_algorithm function referencing
                     # the cert_info attribute, which doesn't exist. This was fixed in subsequent
                     # releases of PyOpenSSL with https://github.com/pyca/pyopenssl/pull/476
-                    if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == str(err):
+                    if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == six.text_type(err):
                         log.exception(err)
                         self.skipTest(
                             'Encountered an upstream error with PyOpenSSL: {0}'.format(

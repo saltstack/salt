@@ -16,10 +16,10 @@ Enable and disable apache sites.
       apache_site.disabled:
         - name: default
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def __virtual__():
@@ -48,14 +48,14 @@ def enabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2ensite'](name)['Status']
-        if isinstance(status, string_types) and 'enabled' in status:
+        if isinstance(status, six.string_types) and 'enabled' in status:
             ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = name
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to enable {0} Apache site'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
@@ -82,14 +82,14 @@ def disabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2dissite'](name)['Status']
-        if isinstance(status, string_types) and 'disabled' in status:
+        if isinstance(status, six.string_types) and 'disabled' in status:
             ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to disable {0} Apache site'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:

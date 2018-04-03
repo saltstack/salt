@@ -330,7 +330,6 @@ class Beacon(object):
         evt.fire_event({'complete': complete, 'comment': comment,
                         'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_modify_complete')
-
         return True
 
     def delete_beacon(self, name):

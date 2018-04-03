@@ -1,9 +1,10 @@
 # This file is only used for running the test suite with kitchen-salt.
 
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-gem "test-kitchen"
-gem "kitchen-salt", :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'test-kitchen', '~>1.20'
+gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'kitchen-sync'
 gem 'git'
 
 group :docker do
@@ -11,7 +12,7 @@ group :docker do
 end
 
 group :opennebula do
-  gem 'kitchen-opennebula', :git => 'https://github.com/gtmanfred/kitchen-opennebula.git'
+  gem 'kitchen-opennebula', '>=0.2.3'
   gem 'xmlrpc'
 end
 
@@ -19,5 +20,9 @@ group :windows do
   gem 'vagrant-wrapper'
   gem 'kitchen-vagrant'
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.0'
+  gem 'winrm-fs', '>=1.1.1'
+end
+
+group :ec2 do
+  gem 'kitchen-ec2'
 end

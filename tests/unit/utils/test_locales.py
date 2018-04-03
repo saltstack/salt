@@ -1,7 +1,7 @@
 # coding: utf-8
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 
 # Import Salt libs
@@ -27,8 +27,8 @@ class TestLocales(TestCase):
         reload_module(locales)
 
     def test_sdecode(self):
-        b = six.b('\xe7\xb9\x81\xe4\xbd\x93')
-        u = u'\u7e41\u4f53'
+        u = 'питон'
+        b = u.encode('utf-8')
         if six.PY2:
             # Under Py3, the above `b` as bytes, will never decode as anything even comparable using `ascii`
             # but no unicode error will be raised, as such, sdecode will return the poorly decoded string

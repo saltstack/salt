@@ -21,7 +21,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -36,7 +36,6 @@ import salt.exceptions
 import salt.output
 import salt.utils.data
 import salt.utils.event
-import salt.utils.versions
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -110,7 +109,6 @@ def state(name,
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -147,10 +145,6 @@ def state(name,
 
     tgt_type
         The target type to resolve, defaults to ``glob``
-
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
 
     ret
         Optionally set a single or a list of returners to use
@@ -271,17 +265,6 @@ def state(name,
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
@@ -322,7 +305,7 @@ def state(name,
         return state_ret
 
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -351,7 +334,6 @@ def state(name,
 
     changes = {}
     fail = set()
-    failures = {}
     no_change = set()
 
     if fail_minions is None:
@@ -393,7 +375,7 @@ def state(name,
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret or 'Minion did not respond'
+            changes[minion] = m_ret
             continue
         try:
             for state_item in six.itervalues(m_ret):
@@ -418,18 +400,6 @@ def state(name,
             state_ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
         if no_change:
             state_ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
-    if failures:
-        state_ret['comment'] += '\nFailures:\n'
-        for minion, failure in six.iteritems(failures):
-            state_ret['comment'] += '\n'.join(
-                    (' ' * 4 + l)
-                    for l in salt.output.out_format(
-                        {minion: failure},
-                        'highstate',
-                        __opts__,
-                        ).splitlines()
-                    )
-            state_ret['comment'] += '\n'
     if test or __opts__.get('test'):
         if state_ret['changes'] and state_ret['result'] is True:
             # Test mode with changes is the only case where result should ever be none
@@ -442,7 +412,6 @@ def function(
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -465,10 +434,6 @@ def function(
 
     tgt_type
         The target type, defaults to ``glob``
-
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
 
     arg
         The list of arguments to pass into the function
@@ -521,19 +486,8 @@ def function(
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -552,7 +506,7 @@ def function(
     if __opts__['test'] is True:
         func_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, str(False))
+                ).format(fun, tgt, six.text_type(False))
         func_ret['result'] = None
         return func_ret
     try:
@@ -560,7 +514,7 @@ def function(
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
         func_ret['result'] = False
-        func_ret['comment'] = str(exc)
+        func_ret['comment'] = six.text_type(exc)
         return func_ret
 
     try:
@@ -570,7 +524,6 @@ def function(
 
     changes = {}
     fail = set()
-    failures = {}
 
     if fail_minions is None:
         fail_minions = ()
@@ -598,8 +551,6 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret and m_ret or 'Minion did not respond'
-            continue
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret['result'] = False
@@ -614,18 +565,6 @@ def function(
             func_ret['comment'] = 'Function ran successfully.'
         if changes:
             func_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
-        if failures:
-            func_ret['comment'] += '\nFailures:\n'
-            for minion, failure in six.iteritems(failures):
-                func_ret['comment'] += '\n'.join(
-                        (' ' * 4 + l)
-                        for l in salt.output.out_format(
-                            {minion: failure},
-                            'highstate',
-                            __opts__,
-                            ).splitlines()
-                        )
-                func_ret['comment'] += '\n'
     return func_ret
 
 
@@ -715,23 +654,23 @@ def wait_for_event(
                 try:
                     val_idx = id_list.index(val)
                 except ValueError:
-                    log.trace("wait_for_event: Event identifier '{0}' not in "
-                            "id_list; skipping.".format(event_id))
+                    log.trace("wait_for_event: Event identifier '%s' not in "
+                              "id_list; skipping.", event_id)
                 else:
                     del id_list[val_idx]
                     del_counter += 1
                     minions_seen = ret['changes'].setdefault('minions_seen', [])
                     minions_seen.append(val)
 
-                    log.debug("wait_for_event: Event identifier '{0}' removed "
-                            "from id_list; {1} items remaining."
-                            .format(val, len(id_list)))
+                    log.debug("wait_for_event: Event identifier '%s' removed "
+                              "from id_list; %s items remaining.",
+                              val, len(id_list))
             else:
-                log.trace("wait_for_event: Event identifier '{0}' not in event "
-                        "'{1}'; skipping.".format(event_id, event['tag']))
+                log.trace("wait_for_event: Event identifier '%s' not in event "
+                          "'%s'; skipping.", event_id, event['tag'])
         else:
-            log.debug("wait_for_event: Skipping unmatched event '{0}'"
-                    .format(event['tag']))
+            log.debug("wait_for_event: Skipping unmatched event '%s'",
+                      event['tag'])
 
         if len(id_list) == 0:
             ret['result'] = True
@@ -787,28 +726,15 @@ def runner(name, **kwargs):
     runner_return = out.get('return')
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
-    if not out.get('success', True):
-        cmt = "Runner function '{0}' failed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': False,
-            'changes': {},
-            'comment': cmt,
-        }
-    else:
-        cmt = "Runner function '{0}' executed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': True,
-            'changes': {},
-            'comment': cmt,
-        }
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': runner_return},
+           'result': success}
+    ret['comment'] = "Runner function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
 
     ret['__orchestration__'] = True
     if 'jid' in out:
@@ -1039,15 +965,21 @@ def wheel(name, **kwargs):
                                      __env__=__env__,
                                      **kwargs)
 
-    ret['result'] = True
+    wheel_return = out.get('return')
+    if isinstance(wheel_return, dict) and 'Error' in wheel_return:
+        out['success'] = False
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': wheel_return},
+           'result': success}
+    ret['comment'] = "Wheel function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
+
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
-
-    runner_return = out.get('return')
-    ret['comment'] = "Wheel function '{0}' executed{1}.".format(
-        name,
-        ' with return {0}'.format(runner_return) if runner_return else '',
-    )
 
     return ret

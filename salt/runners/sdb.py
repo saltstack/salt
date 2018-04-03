@@ -2,7 +2,7 @@
 '''
 Runner for setting and querying data via the sdb API on the master
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.sdb
@@ -22,7 +22,7 @@ def get(uri):
 
     .. code-block:: bash
 
-        salt '*' sdb.get sdb://mymemcached/foo
+        salt-run sdb.get sdb://mymemcached/foo
     '''
     return salt.utils.sdb.sdb_get(uri, __opts__, __utils__)
 
@@ -37,7 +37,7 @@ def set_(uri, value):
 
     .. code-block:: bash
 
-        salt '*' sdb.set sdb://mymemcached/foo bar
+        salt-run sdb.set sdb://mymemcached/foo bar
     '''
     return salt.utils.sdb.sdb_set(uri, value, __opts__, __utils__)
 
@@ -52,7 +52,7 @@ def delete(uri):
 
     .. code-block:: bash
 
-        salt '*' sdb.delete sdb://mymemcached/foo
+        salt-run sdb.delete sdb://mymemcached/foo
     '''
     return salt.utils.sdb.sdb_delete(uri, __opts__, __utils__)
 

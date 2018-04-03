@@ -9,7 +9,7 @@
 # pylint: disable=string-substitution-usage-error
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import warnings
 
@@ -37,10 +37,10 @@ class VersionTestCase(TestCase):
         version = StrictVersion('1.2.3a1')
         self.assertEqual(version.version, (1, 2, 3))
         self.assertEqual(version.prerelease, ('a', 1))
-        self.assertEqual(str(version), '1.2.3a1')
+        self.assertEqual(six.text_type(version), '1.2.3a1')
 
         version = StrictVersion('1.2.0')
-        self.assertEqual(str(version), '1.2')
+        self.assertEqual(six.text_type(version), '1.2')
 
     def test_cmp_strict(self):
         versions = (('1.5.1', '1.5.2b2', -1),
@@ -135,14 +135,14 @@ class VersionFuncsTestCase(TestCase):
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_warning()
             self.assertEqual(
-                'Deprecation Message!', str(recorded_warnings[0].message)
+                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
             )
 
         # raise_warning should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_named_version_warning()
             self.assertEqual(
-                'Deprecation Message!', str(recorded_warnings[0].message)
+                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
             )
 
         # the deprecation warning is not issued because we passed
@@ -204,7 +204,7 @@ class VersionFuncsTestCase(TestCase):
             )
             self.assertEqual(
                 'Deprecation Message until {0}!'.format(vrs.formatted_version),
-                str(recorded_warnings[0].message)
+                six.text_type(recorded_warnings[0].message)
             )
 
     def test_kwargs_warn_until_warning_raised(self):
@@ -225,7 +225,7 @@ class VersionFuncsTestCase(TestCase):
             self.assertEqual(
                 'The following parameter(s) have been deprecated and '
                 'will be removed in \'0.17.0\': \'foo\'.',
-                str(recorded_warnings[0].message)
+                six.text_type(recorded_warnings[0].message)
             )
         # With no **kwargs, should not show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:

@@ -4,7 +4,7 @@
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
@@ -15,6 +15,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 # Import Salt libraries
 import salt.payload
 import salt.utils.cache
+import salt.utils.data
 import salt.utils.files
 
 __context__ = {'a': 'b'}
@@ -53,7 +54,7 @@ class ContextCacheTest(TestCase):
 
         # Test manual de-serialize
         with salt.utils.files.fopen(target_cache_file, 'rb') as fp_:
-            target_cache_data = salt.payload.Serial(__opts__).load(fp_)
+            target_cache_data = salt.utils.data.decode(salt.payload.Serial(__opts__).load(fp_))
         self.assertDictEqual(__context__, target_cache_data)
 
         # Test cache de-serialize

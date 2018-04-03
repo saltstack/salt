@@ -4,7 +4,7 @@ A simple beacon to watch journald for specific entries
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import salt libs
 import salt.utils.data

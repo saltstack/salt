@@ -9,7 +9,7 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 
@@ -203,8 +203,8 @@ def show_sls(name, saltenv='base'):
 
     # Return the error if any
     except SaltRenderError as exc:
-        log.debug('Failed to compile {0}.'.format(sls_file))
-        log.debug('Error: {0}.'.format(exc))
+        log.debug('Failed to compile %s.', sls_file)
+        log.debug('Error: %s.', exc)
         config['Message'] = 'Failed to compile {0}'.format(sls_file)
         config['Error'] = '{0}'.format(exc)
 

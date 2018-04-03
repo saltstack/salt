@@ -5,13 +5,11 @@ Support for haproxy
 .. versionadded:: 2014.7.0
 '''
 
-from __future__ import generators
-from __future__ import absolute_import
-
-# Import python libs
-import stat
+# Import Python libs
+from __future__ import absolute_import, generators, print_function, unicode_literals
 import os
 import logging
+import stat
 import time
 
 try:

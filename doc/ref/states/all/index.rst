@@ -63,6 +63,7 @@ state modules
     chef
     chocolatey
     chronos_job
+    cimc
     cisconso
     cloud
     cmd
@@ -124,6 +125,10 @@ state modules
     influxdb_retention_policy
     influxdb_user
     infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset
@@ -194,6 +199,7 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
     pcs
     pecl
     pdbedit

@@ -17,7 +17,7 @@ Example:
         - pattern: '.*'
         - definition: '{"ha-mode": "all"}'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -54,7 +54,7 @@ def present(name,
     priority
         Priority (defaults to 0)
     apply_to
-        Apply policy to 'queues', 'exchanges' or 'all' (defailt to 'all')
+        Apply policy to 'queues', 'exchanges' or 'all' (default to 'all')
     vhost
         Virtual host to apply to (defaults to '/')
     runas

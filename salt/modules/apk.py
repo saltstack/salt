@@ -11,7 +11,7 @@ Support for apk
 .. versionadded: 2017.7.0
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -510,9 +510,7 @@ def list_upgrades(refresh=True):
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
-        raise CommandExecutionError(
-                '{0}'.format(comment)
-        )
+        raise CommandExecutionError(comment)
     else:
         out = call['stdout']
 
