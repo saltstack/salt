@@ -26,7 +26,7 @@ def _norm_key(key):
     '''
     Normalize windows environment keys
     '''
-    if utils.is_windows():
+    if salt.utils.platform.is_windows():
         return key.upper()
     return key
 
