@@ -15,7 +15,7 @@ from tests.support.mock import (
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 import salt.modules.reg
-import salt.utils
+import salt.utils.platform
 
 
 class TestEnvironState(TestCase, LoaderModuleMockMixin):
@@ -54,7 +54,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
-    @skipIf(not salt.utils.is_windows(), 'Windows only')
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows only')
     def test_setenv_permanent(self):
         '''
         test that we can set perminent environment variables (requires pywin32)
@@ -100,7 +100,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         '''
         ret = envstate.setenv('test', 'value', clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': ''})
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertEqual(envstate.os.environ, {'TEST': 'value', 'INITIAL': ''})
         else:
             self.assertEqual(envstate.os.environ, {'test': 'value', 'INITIAL': ''})
@@ -112,7 +112,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         '''
         ret = envstate.setenv('test', 'value', false_unsets=True, clear_all=True)
         self.assertEqual(ret['changes'], {'test': 'value', 'INITIAL': None})
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertEqual(envstate.os.environ, {'TEST': 'value'})
         else:
             self.assertEqual(envstate.os.environ, {'test': 'value'})
@@ -128,7 +128,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
             ret = envstate.setenv(
                 'notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
         self.assertEqual(ret['changes'], {'test': None, 'foo': 'baz'})
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'FOO': 'baz'})
         else:
             self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
@@ -136,7 +136,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
             ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
         self.assertEqual(ret['changes'], {'test': '', 'foo': 'bax'})
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'FOO': 'bax', 'TEST': ''})
         else:
             self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})

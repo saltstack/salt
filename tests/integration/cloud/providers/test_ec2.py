@@ -6,18 +6,18 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import random
-import string
 import yaml
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-import salt.utils
+import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import expectedFailure
+from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
@@ -50,7 +50,7 @@ class EC2Test(ShellCase):
         '''
         name = win_installer.latest_installer_name()
         path = os.path.join(FILES, name)
-        with salt.utils.fopen(path, 'wb') as fp:
+        with salt.utils.files.fopen(path, 'wb') as fp:
             win_installer.download_and_verify(fp, name)
         return name
 
@@ -117,10 +117,10 @@ class EC2Test(ShellCase):
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.get_config_dir(), 'cloud.profiles.d', 'ec2.conf')
-        with salt.utils.fopen(conf_path, 'r') as fp:
+        with salt.utils.files.fopen(conf_path, 'r') as fp:
             conf = yaml.safe_load(fp)
         conf[name].update(data)
-        with salt.utils.fopen(conf_path, 'w') as fp:
+        with salt.utils.files.fopen(conf_path, 'w') as fp:
             yaml.dump(conf, fp)
 
     def copy_file(self, name):
@@ -131,8 +131,8 @@ class EC2Test(ShellCase):
         '''
         src = os.path.join(FILES, name)
         dst = os.path.join(self.get_config_dir(), name)
-        with salt.utils.fopen(src, 'rb') as sfp:
-            with salt.utils.fopen(dst, 'wb') as dfp:
+        with salt.utils.files.fopen(src, 'rb') as sfp:
+            with salt.utils.files.fopen(dst, 'wb') as dfp:
                 dfp.write(sfp.read())
         return dst
 
