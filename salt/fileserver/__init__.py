@@ -557,7 +557,7 @@ class Fileserver(object):
         if '../' in path:
             return fnd
         if salt.utils.url.is_escaped(path):
-            # don't attempt to find URL query arguements in the path
+            # don't attempt to find URL query arguments in the path
             path = salt.utils.url.unescape(path)
         else:
             if '?' in path:

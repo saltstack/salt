@@ -141,7 +141,7 @@ def show_message(message, msg_type=None,
     message
         The message to display
     msg_type
-        The type of the message. Changes the appearence of the message.
+        The type of the message. Changes the appearance of the message.
 
         Available types are::
 

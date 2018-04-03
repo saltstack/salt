@@ -764,11 +764,6 @@ class Install(install):
                 self.run_command('install-m2crypto-windows')
                 self.distribution.salt_installing_m2crypto_windows = None
 
-            # Install PyWin32
-            self.distribution.salt_installing_pywin32_windows = True
-            self.run_command('install-pywin32-windows')
-            self.distribution.salt_installing_pywin32_windows = None
-
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
             self.run_command('download-windows-dlls')
@@ -911,7 +906,6 @@ class SaltDistribution(distutils.dist.Distribution):
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
-            self.cmdclass.update({'install-pywin32-windows': InstallPyWin32Wheel})
             if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                 self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
@@ -1037,13 +1031,14 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_install_requires(self):
         install_requires = _parse_requirements_file(SALT_REQS)
 
-        if IS_WINDOWS_PLATFORM:
-            return _parse_requirements_file(SALT_WINDOWS_REQS)
-
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
         elif self.salt_transport == 'raet':
             install_requires += _parse_requirements_file(SALT_RAET_REQS)
+
+        if IS_WINDOWS_PLATFORM:
+            install_requires = _parse_requirements_file(SALT_WINDOWS_REQS)
+
         return install_requires
 
     @property

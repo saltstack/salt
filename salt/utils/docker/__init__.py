@@ -2,7 +2,7 @@
 '''
 Common logic used by the docker state and execution module
 
-This module contains logic to accomodate docker/salt CLI usage, as well as
+This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
 '''
 

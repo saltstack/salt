@@ -369,7 +369,7 @@ def running(name,
 
         .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
-            ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
+            ``shutdown_timeout`` to accommodate the ``stop_timeout`` container
             configuration setting.
 
     client_timeout : 60
