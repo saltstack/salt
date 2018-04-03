@@ -1495,6 +1495,12 @@ def os_data():
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif salt.utils.path.which('dumb-init') in init_cmdline:
+                        # https://github.com/Yelp/dumb-init
+                        grains['init'] = 'dumb-init'
+                    elif salt.utils.path.which('tini') in init_cmdline:
+                        # https://github.com/krallin/tini
+                        grains['init'] = 'tini'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
                     elif '/sbin/my_init' in init_cmdline:
