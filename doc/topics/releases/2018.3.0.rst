@@ -30,7 +30,7 @@ The :py:func:`docker_network.present <salt.states.docker_network.present>`
 state has undergone a full rewrite, which includes the following improvements:
 
 Full API Support for Network Management
----------------------------------------
+=======================================
 
 The improvements made to input handling in the
 :py:func:`docker_container.running <salt.states.docker_container.running>`
@@ -39,14 +39,14 @@ state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
 tunable configuration arguments.
 
 Custom Subnets
---------------
+==============
 
 Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
 are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
 more information.
 
 Network Configuration in :py:func:`docker_container.running` States
--------------------------------------------------------------------
+===================================================================
 
 A long-requested feature has finally been added! It is now possible to
 configure static IPv4/IPv6 addresses, as well as links and labels. See
@@ -84,174 +84,6 @@ Passing image names to the following functions must now be done using separate
 Additionally, the ``tag`` argument must now be explicitly passed to the
 :py:func:`docker_image.present <salt.states.docker_image.present>` state,
 unless the image is being pulled from a docker registry.
-
-``utils`` functions moved into separate modules
-===============================================
-
-The Salt utility functions from ``salt.utils`` have been moved into different
-modules, grouped logically based on their functionality. This change is
-backwards compatible, but the old imports will no longer be supported starting
-with release Neon.
-
-The functions have been moved as follows:
-
-- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle``
-  instead.
-- ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
-- ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
-- ``salt.utils.reinit_crypto``: use ``salt.utils.crypt.reinit_crypto`` instead.
-- ``salt.utils.pem_finger``: use ``salt.utils.crypt.pem_finger`` instead.
-- ``salt.utils.to_bytes``: use ``salt.utils.stringutils.to_bytes`` instead.
-- ``salt.utils.to_str``: use ``salt.utils.stringutils.to_str`` instead.
-- ``salt.utils.to_unicode``: use ``salt.utils.stringutils.to_unicode`` instead.
-- ``salt.utils.str_to_num``: use ``salt.utils.stringutils.to_num`` instead.
-- ``salt.utils.is_quoted``: use ``salt.utils.stringutils.is_quoted`` instead.
-- ``salt.utils.dequote``: use ``salt.utils.stringutils.dequote`` instead.
-- ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
-- ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
-- ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
-- ``salt.utils.contains_whitespace``: use
-  ``salt.utils.stringutils.contains_whitespace`` instead.
-- ``salt.utils.build_whitespace_split_regex``: use
-  ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
-- ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
-- ``salt.utils.check_whitelist_blacklist``: use
-  ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
-- ``salt.utils.check_include_exclude``: use
-  ``salt.utils.stringutils.check_include_exclude`` instead.
-- ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
-- ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
-- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs``
-  instead.
-- ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
-- ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
-- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report``
-  instead.
-- ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
-- ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
-- ``salt.utils.format_call``: use ``salt.utils.args.format_call`` instead.
-- ``salt.utils.which``: use ``salt.utils.path.which`` instead.
-- ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
-- ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
-- ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
-- ``salt.utils.sanitize_win_path_string``: use
-  ``salt.utils.path.sanitize_win_path`` instead.
-- ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
-- ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
-- ``salt.utils.is_windows``: use ``salt.utils.platform.is_windows`` instead.
-- ``salt.utils.is_proxy``: use ``salt.utils.platform.is_proxy`` instead.
-- ``salt.utils.is_linux``: use ``salt.utils.platform.is_linux`` instead.
-- ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
-- ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
-- ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
-- ``salt.utils.is_smartos_globalzone``: use
-  ``salt.utils.platform.is_smartos_globalzone`` instead.
-- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone``
-  instead.
-- ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
-- ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
-- ``salt.utils.is_openbsd``: use ``salt.utils.platform.is_openbsd`` instead.
-- ``salt.utils.is_aix``: use ``salt.utils.platform.is_aix`` instead.
-- ``salt.utils.safe_rm``: use ``salt.utils.files.safe_rm`` instead.
-- ``salt.utils.is_empty``: use ``salt.utils.files.is_empty`` instead.
-- ``salt.utils.fopen``: use ``salt.utils.files.fopen`` instead.
-- ``salt.utils.flopen``: use ``salt.utils.files.flopen`` instead.
-- ``salt.utils.fpopen``: use ``salt.utils.files.fpopen`` instead.
-- ``salt.utils.rm_rf``: use ``salt.utils.files.rm_rf`` instead.
-- ``salt.utils.mkstemp``: use ``salt.utils.files.mkstemp`` instead.
-- ``salt.utils.istextfile``: use ``salt.utils.files.is_text_file`` instead.
-- ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
-- ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
-- ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
-- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal``
-  instead.
-- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode``
-  instead.
-- ``salt.utils.human_size_to_bytes``: use
-  ``salt.utils.files.human_size_to_bytes`` instead.
-- ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
-- ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
-  instead.
-- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring``
-  instead.
-- ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
-- ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
-- ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
-- ``salt.utils.kwargs_warn_until``: use
-  ``salt.utils.versions.kwargs_warn_until`` instead.
-- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme``
-  instead.
-- ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
-- ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
-- ``salt.utils.search_onfail_requisites``: use
-  ``salt.utils.state.search_onfail_requisites`` instead.
-- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result``
-  instead.
-- ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
-- ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
-- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user``
-  instead.
-- ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
-- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask``
-  instead.
-- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group``
-  instead.
-- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list``
-  instead.
-- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict``
-  instead.
-- ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
-- ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
-- ``salt.utils.enable_ctrl_logoff_handler``: use
-  ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
-- ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
-- ``salt.utils.traverse_dict_and_list``: use
-  ``salt.utils.data.traverse_dict_and_list`` instead.
-- ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
-- ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
-- ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
-- ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
-- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist``
-  instead.
-- ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
-- ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
-- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
-- ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
-- ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
-- ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
-- ``salt.utils.is_list``: use ``salt.utils.data.is_list`` instead.
-- ``salt.utils.is_iter``: use ``salt.utils.data.is_iter`` instead.
-- ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
-- ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
-- ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
-- ``salt.utils.simple_types_filter``: use
-  ``salt.utils.data.simple_types_filter`` instead.
-- ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
-- ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
-- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes``
-  instead.
-- ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
-- ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
-- ``salt.utils.get_context``: use ``salt.utils.stringutils.get_context`` instead.
-- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key``
-  instead.
-- ``salt.utils.get_values_of_matching_keys``: use
-  ``salt.utils.master.get_values_of_matching_keys`` instead.
-- ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
-- ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
-- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds``
-  instead.
-- ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
-- ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
-- ``salt.utils.namespaced_function``: use
-  ``salt.utils.functools.namespaced_function`` instead.
-- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function``
-  instead.
-- ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
-- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile``
-  instead.
-- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile``
-  instead.
 
 State and Execution Module Support for ``docker run`` Functionality
 ===================================================================
@@ -456,16 +288,14 @@ programatically <orchestrate-runner-parsing-results-programatically>`. The
 failed returns in these cases are now included in the changes dictionary,
 making for much easier parsing.
 
-New Grains
-----------
-
-New core grains have been added to expose any storage inititator setting.
-
-The new grains added are:
-
-* ``fc_wwn``: Show all fibre channel world wide port names for a host
+Grains
+------
+* ``fc_wwn``: Show all fibre channel world wide port names for a host, must be enabled with `fibre_channel_grains`
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
+* ``virtual``:
+    * identifies reports KVM and VMM hypervisors when running an OpenBSD guest
+    * for detecting Solaris Logical Domains (LDOMs) running on T-Series SPARC hardware. The ``virtual_subtype`` grain is populated as a list of domain roles.
 
 Salt Minion Auto-discovery
 ------------------------
@@ -589,12 +419,6 @@ This feature has a couple of _temporary_ limitations that are subject to change 
   security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
   is expected to know his network and make sure it is clean.
 
-Grains Changes
---------------
-
-* The ``virtual`` grain identifies reports KVM and VMM hypervisors when running
-  an OpenBSD guest
-
 New Modules
 -----------
 
@@ -655,9 +479,42 @@ The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``te
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
 For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
 
-Windows Installer: Changes to config handling
----------------------------------------------
-Behavior with existing configuration has changed. With previous installers the
+Windows
+-------
+Python Version
+==============
+Python 2 Windows API was design when Windows did not support Unicode. Windows now supports
+Unicode however to keep backwards compatibility Python 2 Windows API has not been changed.
+Python 3 Windows API supports Unicode. Salt Python 3 installer is the recommend choice for
+users who need characters other than Non-ASCII (7bit) characters.
+
+Execution module changes
+========================
+pkg
+***
+Significate changes have been made to the :mod:`win_pkg <salt.modules.win_pkg>` execution module. Users should test this release against their existing package sls definition files. These changes are also in 2016.11.9 & 2017.7.3.
+
+- ``pkg.list_available`` no longer defaults to refreshing the winrepo meta database.
+- ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
+- ``pkg.list_pkgs`` now returns multiple versions if software installed more than once.
+- ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found instead of '(value not set)' which matches the contents of the sls definitions.
+- ``pkg.remove()`` will wait upto 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
+- ``pkg.remove()`` can remove ``latest`` software, if ``latest`` is defined in sls definition.
+- Documentation was update for the execution module to match the style in new versions, some corrections as well.
+- All install/remove commands are prefix with cmd.exe shell and cmdmod is called with a command line string instead of a list. Some sls files in saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe (i.e. the use of ``&``).
+- Some execution module functions results, now behavour more like their Unix/Linux versions.
+
+cmdmod
+******
+Linux/Unix OS command & arguments requires a python list. Windows was being treated
+the same. Windows requires commands & arguments to be a string. These changes are
+also in 2016.11.9 & 2017.7.3.
+
+Installer
+=========
+Changes to config handling
+**************************
+Behavior with existing configuration has changed. With previous windows installers the
 existing config was used and the master and minion id could be modified via the
 installer. It was problematic in that it didn't account for configuration that
 may be defined in the ``minion.d`` directory. This change gives you the option
@@ -685,17 +542,32 @@ If neither option is passed and there is an existing config, the default is to
 use the existing config. If there is no existing config (new install) the
 default config will be used.
 
-Windows Installer: Multi-master configuration
----------------------------------------------
+Multi-master configuration
+**************************
 The installer now has the ability to apply a multi-master configuration either
 from the gui or the command line. The ``master`` field in the gui can accept
 either a single master or a comma-separated list of masters. The command-line
 switch (``/master=``) can accept the same.
 
-Windows Installer: Command-line help
-------------------------------------
+Command-line help
+*****************
 The Windows installer will now display command-line help when a help switch
 (``/?``) is passed.
+
+utils.pkg.win preview
+=====================
+A new utils python module has been added, which gathers information about windows
+installed software. This is currently not used by any salt execution module or state.
+Users are encource to run this and report any issues. Running the command with the
+``detail`` option will be useful for anyone developing windows package definitions.
+With salt installed in the default location the following command will print the help
+message.
+
+.. code-block:: text
+
+    chcp 65001
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py detail system
 
 Salt Cloud Features
 -------------------
@@ -801,6 +673,21 @@ which designate a ``Vagrantfile`` on the host machine.
 The master can be a very limited machine, such as a Raspberry Pi, or a small
 VagrantBox VM.
 
+Python PyWinRM Module
+=====================
+Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
+signed certificates.  :ref:`Here<new-pywinrm>` for more information.
+
+DigitalOcean
+============
+The DigitalOcean driver has been renamed to conform to the company name.  The
+new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
+short one ``do`` will still be supported through virtual aliases, this is mostly
+cosmetic.
+
+Azure Cloud
+===========
+The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
 
 New pillar/master_tops module called saltclass
 ----------------------------------------------
@@ -989,27 +876,6 @@ Not using ``^`` as the first entry will simply merge the lists
 **Known limitation**
 
 Currently you can't have both a variable and an escaped variable in the same string as the escaped one will not be correctly rendered - '\${xx}' will stay as is instead of being rendered as '${xx}'
-
-Newer PyWinRM Versions
-----------------------
-
-Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
-signed certificates.  :ref:`Here<new-pywinrm>` for more information.
-
-DigitalOcean
-------------
-
-The DigitalOcean driver has been renamed to conform to the company name.  The
-new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
-short one ``do`` will still be supported through virtual aliases, this is mostly
-cosmetic.
-
-Solaris Logical Domains In Virtual Grain
-----------------------------------------
-
-Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
-running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is
-populated as a list of domain roles.
 
 Lists of comments in state returns
 ----------------------------------
@@ -1631,6 +1497,174 @@ removal in the Neon release, the default "box_type" has changed from
 ``secretbox`` to ``sealedbox``.  SecretBox is data encrypted using private key
 ``sk`` and Sealedbox is encrypted using public key ``pk``.
 
+``utils`` functions moved into separate modules
+-----------------------------------------------
+
+The Salt utility functions from ``salt.utils`` have been moved into different
+modules, grouped logically based on their functionality. This change is
+backwards compatible, but the old imports will no longer be supported starting
+with release Neon.
+
+The functions have been moved as follows:
+
+- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle``
+  instead.
+- ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
+- ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
+- ``salt.utils.reinit_crypto``: use ``salt.utils.crypt.reinit_crypto`` instead.
+- ``salt.utils.pem_finger``: use ``salt.utils.crypt.pem_finger`` instead.
+- ``salt.utils.to_bytes``: use ``salt.utils.stringutils.to_bytes`` instead.
+- ``salt.utils.to_str``: use ``salt.utils.stringutils.to_str`` instead.
+- ``salt.utils.to_unicode``: use ``salt.utils.stringutils.to_unicode`` instead.
+- ``salt.utils.str_to_num``: use ``salt.utils.stringutils.to_num`` instead.
+- ``salt.utils.is_quoted``: use ``salt.utils.stringutils.is_quoted`` instead.
+- ``salt.utils.dequote``: use ``salt.utils.stringutils.dequote`` instead.
+- ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
+- ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
+- ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
+- ``salt.utils.contains_whitespace``: use
+  ``salt.utils.stringutils.contains_whitespace`` instead.
+- ``salt.utils.build_whitespace_split_regex``: use
+  ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
+- ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
+- ``salt.utils.check_whitelist_blacklist``: use
+  ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
+- ``salt.utils.check_include_exclude``: use
+  ``salt.utils.stringutils.check_include_exclude`` instead.
+- ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
+- ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
+- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs``
+  instead.
+- ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
+- ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
+- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report``
+  instead.
+- ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
+- ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
+- ``salt.utils.format_call``: use ``salt.utils.args.format_call`` instead.
+- ``salt.utils.which``: use ``salt.utils.path.which`` instead.
+- ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
+- ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
+- ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
+- ``salt.utils.sanitize_win_path_string``: use
+  ``salt.utils.path.sanitize_win_path`` instead.
+- ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
+- ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
+- ``salt.utils.is_windows``: use ``salt.utils.platform.is_windows`` instead.
+- ``salt.utils.is_proxy``: use ``salt.utils.platform.is_proxy`` instead.
+- ``salt.utils.is_linux``: use ``salt.utils.platform.is_linux`` instead.
+- ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
+- ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
+- ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
+- ``salt.utils.is_smartos_globalzone``: use
+  ``salt.utils.platform.is_smartos_globalzone`` instead.
+- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone``
+  instead.
+- ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
+- ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
+- ``salt.utils.is_openbsd``: use ``salt.utils.platform.is_openbsd`` instead.
+- ``salt.utils.is_aix``: use ``salt.utils.platform.is_aix`` instead.
+- ``salt.utils.safe_rm``: use ``salt.utils.files.safe_rm`` instead.
+- ``salt.utils.is_empty``: use ``salt.utils.files.is_empty`` instead.
+- ``salt.utils.fopen``: use ``salt.utils.files.fopen`` instead.
+- ``salt.utils.flopen``: use ``salt.utils.files.flopen`` instead.
+- ``salt.utils.fpopen``: use ``salt.utils.files.fpopen`` instead.
+- ``salt.utils.rm_rf``: use ``salt.utils.files.rm_rf`` instead.
+- ``salt.utils.mkstemp``: use ``salt.utils.files.mkstemp`` instead.
+- ``salt.utils.istextfile``: use ``salt.utils.files.is_text_file`` instead.
+- ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
+- ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
+- ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
+- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal``
+  instead.
+- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode``
+  instead.
+- ``salt.utils.human_size_to_bytes``: use
+  ``salt.utils.files.human_size_to_bytes`` instead.
+- ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
+- ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
+  instead.
+- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring``
+  instead.
+- ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
+- ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
+- ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
+- ``salt.utils.kwargs_warn_until``: use
+  ``salt.utils.versions.kwargs_warn_until`` instead.
+- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme``
+  instead.
+- ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
+- ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
+- ``salt.utils.search_onfail_requisites``: use
+  ``salt.utils.state.search_onfail_requisites`` instead.
+- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result``
+  instead.
+- ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
+- ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
+- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user``
+  instead.
+- ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
+- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask``
+  instead.
+- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group``
+  instead.
+- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list``
+  instead.
+- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict``
+  instead.
+- ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
+- ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
+- ``salt.utils.enable_ctrl_logoff_handler``: use
+  ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
+- ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
+- ``salt.utils.traverse_dict_and_list``: use
+  ``salt.utils.data.traverse_dict_and_list`` instead.
+- ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
+- ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
+- ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
+- ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
+- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist``
+  instead.
+- ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
+- ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
+- ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
+- ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
+- ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
+- ``salt.utils.is_list``: use ``salt.utils.data.is_list`` instead.
+- ``salt.utils.is_iter``: use ``salt.utils.data.is_iter`` instead.
+- ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
+- ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
+- ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
+- ``salt.utils.simple_types_filter``: use
+  ``salt.utils.data.simple_types_filter`` instead.
+- ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
+- ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
+- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes``
+  instead.
+- ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
+- ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
+- ``salt.utils.get_context``: use ``salt.utils.stringutils.get_context`` instead.
+- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key``
+  instead.
+- ``salt.utils.get_values_of_matching_keys``: use
+  ``salt.utils.master.get_values_of_matching_keys`` instead.
+- ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
+- ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
+- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds``
+  instead.
+- ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
+- ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
+- ``salt.utils.namespaced_function``: use
+  ``salt.utils.functools.namespaced_function`` instead.
+- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function``
+  instead.
+- ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
+- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile``
+  instead.
+- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile``
+  instead.
+
 Deprecations
 ------------
 
@@ -1646,10 +1680,7 @@ Profitbricks Cloud Updated Dependency
 The minimum version of the ``profitbrick`` python package for the ``profitbricks``
 cloud driver has changed from 3.0.0 to 3.1.0.
 
-Azure Cloud Updated Dependency
-------------------------------
 
-The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
 
 Module Deprecations
 ===================
