@@ -837,13 +837,10 @@ def set_multiprocessing_logging_level_by_opts(opts):
     '''
     global __MP_LOGGING_LEVEL
 
-    log_levels = []
-    log_levels.append(
-        LOG_LEVELS.get(opts.get('log_level', '').lower(), logging.ERROR)
-    )
-    log_levels.append(
+    log_levels = [
+        LOG_LEVELS.get(opts.get('log_level', '').lower(), logging.ERROR),
         LOG_LEVELS.get(opts.get('log_level_logfile', '').lower(), logging.ERROR)
-    )
+    ]
     for level in six.itervalues(opts.get('log_granular_levels', {})):
         log_levels.append(
             LOG_LEVELS.get(level.lower(), logging.ERROR)

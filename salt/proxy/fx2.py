@@ -283,8 +283,7 @@ def find_credentials():
     Cycle through all the possible credentials and return the first one that
     works
     '''
-    usernames = []
-    usernames.append(__pillar__['proxy'].get('admin_username', 'root'))
+    usernames = [__pillar__['proxy'].get('admin_username', 'root')]
     if 'fallback_admin_username' in __pillar__.get('proxy'):
         usernames.append(__pillar__['proxy'].get('fallback_admin_username'))
 
