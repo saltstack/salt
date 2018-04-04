@@ -156,8 +156,10 @@ class StateRunnerTest(ShellCase):
         test orchestration state using subset
         '''
         ret = self.run_run('state.orchestrate orch.subset')
+
         def count(thing, listobj):
             return sum([obj.strip() == thing for obj in listobj])
+
         self.assertEqual(count('ID: test subset', ret), 1)
         self.assertEqual(count('Succeeded: 1', ret), 1)
         self.assertEqual(count('Failed:    0', ret), 1)
