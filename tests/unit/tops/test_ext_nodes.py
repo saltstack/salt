@@ -18,6 +18,7 @@ import salt.utils.stringutils
 import salt.tops.ext_nodes as ext_nodes
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
