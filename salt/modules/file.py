@@ -3131,10 +3131,14 @@ def touch(name, atime=None, mtime=None):
     '''
     name = os.path.expanduser(name)
 
-    if atime and atime.isdigit():
+    try:
         atime = int(atime)
-    if mtime and mtime.isdigit():
+    except:
+        atime = None
+    try:
         mtime = int(mtime)
+    except:
+        mtime = None
     try:
         if not os.path.exists(name):
             with salt.utils.files.fopen(name, 'a'):
