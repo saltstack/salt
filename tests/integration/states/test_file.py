@@ -33,6 +33,7 @@ from tests.support.helpers import (
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

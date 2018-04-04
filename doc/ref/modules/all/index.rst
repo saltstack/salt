@@ -334,6 +334,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group

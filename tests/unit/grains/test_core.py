@@ -26,6 +26,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
@@ -49,6 +50,7 @@ IP4_ADD2 = '10.0.0.2'
 IP6_LOCAL = '::1'
 IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
+IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 
 
@@ -560,58 +562,6 @@ PATCHLEVEL = 3
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
-    def test_windows_iscsi_iqn_grains(self):
-        cmd_run_mock = MagicMock(
-            return_value={'stdout': 'iSCSINodeName\niqn.1991-05.com.microsoft:simon-x1\n'}
-        )
-
-        with patch.object(salt.utils.platform, 'is_linux',
-                          MagicMock(return_value=False)):
-            with patch.object(salt.utils.platform, 'is_windows',
-                              MagicMock(return_value=True)):
-                with patch.dict(core.__salt__, {'run_all': cmd_run_mock}):
-                    with patch.object(salt.utils.path, 'which',
-                                      MagicMock(return_value=True)):
-                        with patch.dict(core.__salt__, {'cmd.run_all': cmd_run_mock}):
-                            _grains = core.iscsi_iqn()
-
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1991-05.com.microsoft:simon-x1'])
-
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
-    def test_aix_iscsi_iqn_grains(self):
-        cmd_run_mock = MagicMock(
-            return_value='initiator_name iqn.localhost.hostid.7f000001'
-        )
-
-        with patch.object(salt.utils.platform, 'is_linux',
-                          MagicMock(return_value=False)):
-            with patch.object(salt.utils.platform, 'is_aix',
-                              MagicMock(return_value=True)):
-                with patch.dict(core.__salt__, {'cmd.run': cmd_run_mock}):
-                    _grains = core.iscsi_iqn()
-
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.localhost.hostid.7f000001'])
-
-    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
-    @patch('salt.grains.core.os.access', MagicMock(return_value=True))
-    def test_linux_iscsi_iqn_grains(self):
-        _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
-                      '## If you remove this file, the iSCSI daemon will not start.\n' \
-                      '## If you change the InitiatorName, existing access control lists\n' \
-                      '## may reject this initiator.  The InitiatorName must be unique\n' \
-                      '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
-                      'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
-
-        with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
-            iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
-            iqn = core._linux_iqn()
-
-        assert isinstance(iqn, list)
-        assert len(iqn) == 1
-        assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
-
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
@@ -897,16 +847,20 @@ SwapTotal:       4789244 kB'''
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
                    [ipaddress.IPv4Address(IP4_ADD1),
-                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                    ipaddress.IPv6Address(IP6_ADD1),
+                    IP6_ADD_SCOPE], 'ip4_nameservers':
                    [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1),
+                    IP6_ADD_SCOPE], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
-                       [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
+                       [IP4_ADD1, IP6_ADD1,
+                        IP6_ADD_SCOPE], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],
-                       'ip6_nameservers': [IP6_ADD1], 'options':
-                       []}}
-        self._run_dns_test(resolv_mock, ret)
+                       'ip6_nameservers': [IP6_ADD1, IP6_ADD_SCOPE],
+                       'options': []}}
+        with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
+            assert core.dns() == ret
 
     def _run_dns_test(self, resolv_mock, ret):
         with patch.object(salt.utils, 'is_windows',
@@ -918,51 +872,21 @@ SwapTotal:       4789244 kB'''
                     self.assertEqual(get_dns, ret)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
     def test_fqdns_return(self):
         '''
         test the return for a dns grain. test for issue:
         https://github.com/saltstack/salt/issues/41230
         '''
         reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
-        ('rinzler.evil-corp.com', [], ['5.6.7.8']),
-        ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
-        ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
-        ret = {'fqdns': ['rinzler.evil-corp.com', 'foo.bar.baz', 'bluesniff.foo.bar']}
-        self._run_fqdns_test(reverse_resolv_mock, ret)
-
-    def _run_fqdns_test(self, reverse_resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows', MagicMock(return_value=False)):
-            with patch('salt.utils.network.ip_addrs',
-            MagicMock(return_value=['1.2.3.4', '5.6.7.8'])),\
-            patch('salt.utils.network.ip_addrs6',
-            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef'])):
-                with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
-                    fqdns = core.fqdns()
-                    self.assertEqual(fqdns, ret)
-
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
-                                                                   'The cables are not the same length.')))
-    @patch('salt.grains.core.log', MagicMock())
-    def test_linux_iqn_non_root(self):
-        '''
-        Test if linux_iqn is running on salt-master as non-root
-        and handling access denial properly.
-        :return:
-        '''
-        assert core._linux_iqn() == []
-        core.log.debug.assert_called()
-        assert 'Error while accessing' in core.log.debug.call_args[0][0]
-        assert 'cables are not the same' in core.log.debug.call_args[0][2].strerror
-        assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
-        assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
-
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
-    @patch('salt.grains.core.log', MagicMock())
-    def test_linux_iqn_no_iscsii_initiator(self):
-        '''
-        Test if linux_iqn is running on salt-master as root.
-        iscsii initiator is not there accessible or is not supported.
-        :return:
-        '''
-        assert core._linux_iqn() == []
-        core.log.debug.assert_not_called()
+                               ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+        ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            self.assertEqual(fqdns, ret)

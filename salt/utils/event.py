@@ -75,6 +75,7 @@ import salt.payload
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -171,9 +172,9 @@ def fire_args(opts, jid, tag_data, prefix=''):
     except NameError:
         pass
     else:
+        tag = tagify(tag_suffix, prefix)
         try:
             _event = get_master_event(opts, opts['sock_dir'], listen=False)
-            tag = tagify(tag_suffix, prefix)
             _event.fire_event(tag_data, tag=tag)
         except Exception as exc:
             # Don't let a problem here hold up the rest of the orchestration
@@ -200,6 +201,12 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
+
+    for index, _ in enumerate(parts):
+        try:
+            parts[index] = salt.utils.stringutils.to_str(parts[index])
+        except TypeError:
+            parts[index] = str(parts[index])
     return TAGPARTER.join([part for part in parts if part])
 
 
@@ -1018,12 +1025,9 @@ class AsyncEventPublisher(object):
         )
 
         log.info('Starting pull socket on {0}'.format(epull_uri))
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
-        finally:
-            os.umask(old_umask)
 
     def handle_publish(self, package, _):
         '''
@@ -1056,8 +1060,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts, log_queue=None):
-        super(EventPublisher, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(EventPublisher, self).__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1067,11 +1071,18 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -1106,8 +1117,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             # Start the master event publisher
-            old_umask = os.umask(0o177)
-            try:
+            with salt.utils.files.set_umask(0o177):
                 self.publisher.start()
                 self.puller.start()
                 if (self.opts['ipc_mode'] != 'tcp' and (
@@ -1115,8 +1125,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
-            finally:
-                os.umask(old_umask)
 
             # Make sure the IO loop and respective sockets are closed and
             # destroyed
@@ -1171,13 +1179,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
         return instance
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__(log_queue=log_queue)
+        super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -1192,11 +1200,18 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):
         # Flush and terminate

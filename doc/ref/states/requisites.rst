@@ -263,7 +263,7 @@ The use of ``require_any`` demands that one of the required states executes befo
 dependent state. The state containing the ``require_any`` requisite is defined as the
 dependent state. The states specified in the ``require_any`` statement are defined as the
 required states. If at least one of the required state's execution succeeds, the dependent state
-will then execute. If at least one of the required state's execution fails, the dependent state
+will then execute.  If all of the executions by the required states fail, the dependent state
 will not execute.
 
 .. code-block:: yaml

@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.1' %>
+<% version = '2017.7.4' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
@@ -34,15 +34,16 @@ provisioner:
   log_level: info
   sudo: true
   require_chef: false
+  retry_on_exit_code:
+    - 139
+  max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: oxygen
+    branch: 2018.3
     repo: git
     testingdir: /testing
   salt_copy_filter:
     - .bundle
-    - .git
-    - .gitignore
     - .kitchen
     - .kitchen.yml
     - Gemfile
@@ -56,6 +57,20 @@ provisioner:
         - prep_windows
       "*":
         - git.salt
+  pillars:
+    top.sls:
+      base:
+        "*":
+          - jenkins
+        "os:Windows":
+          - match: grain
+          - windows
+    jenkins.sls:
+      testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
+      clone_repo: false
+      salttesting_namespec: salttesting==2017.6.1
+    windows.sls:
+      virtualenv_path: 'c:\Python27\Scripts\pip.exe'
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -119,29 +134,6 @@ platforms:
     provisioner:
       salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
 <% if vagrant != false %>
-  - name: windows-2012r2
-    driver:
-      box: mwrock/Windows2012R2
-      name: vagrant
-      gui: true
-      customize:
-        cpus: 4
-        memory: 8192
-    transport:
-      name: winrm
-      username: Vagrant
-      password: vagrant
-    provisioner:
-      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
-      salt_bootstrap_options: -version <%= version %>
-    verifier:
-      windows: true
-      types:
-        - unit
-      coverage_xml: false
-      save:
-        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
-        /salt/var/log/salt/minion: artifacts/logs/minion
   - name: windows-2016
     driver:
       box: mwrock/Windows2016
@@ -157,6 +149,13 @@ platforms:
     provisioner:
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: -version <%= version %>
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
     verifier:
       windows: true
       types:
@@ -171,21 +170,6 @@ suites:
   - name: py2
     verifier:
       python_bin: python2.7
-    provisioner:
-      pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
-        jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
-          salttesting_namespec: salttesting==2017.6.1
-        windows.sls:
-          virtualenv_path: 'c:\Python27\Scripts\pip.exe'
   - name: py3
     excludes:
       - centos-6
@@ -194,18 +178,8 @@ suites:
       python_bin: python3
     provisioner:
       pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
         jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
           py3: true
-          salttesting_namespec: salttesting==2017.6.1
         windows.sls:
           virtualenv_path: 'c:\Python35\Scripts\pip.exe'
 

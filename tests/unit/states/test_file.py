@@ -21,6 +21,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
+    Mock,
     MagicMock,
     call,
     mock_open,
@@ -83,6 +84,20 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
+
+            mock_serializer = Mock(return_value='')
+            with patch.dict(filestate.__serializers__,
+                            {'json.serialize': mock_serializer}):
+                filestate.serialize(
+                    '/tmp',
+                    dataset,
+                    formatter='json',
+                    serializer_opts=[{'indent': 8}])
+                mock_serializer.assert_called_with(
+                    dataset,
+                    indent=8,
+                    separators=(',', ': '),
+                    sort_keys=True)
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):

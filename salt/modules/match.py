@@ -11,7 +11,6 @@ import sys
 
 # Import salt libs
 import salt.minion
-import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext import six
 
@@ -309,7 +308,6 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None,
               default='default'):
     '''
     Return the first match in a dictionary of target patterns
@@ -335,17 +333,6 @@ def filter_by(lookup,
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))
 

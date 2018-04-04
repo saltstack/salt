@@ -250,9 +250,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2017.7.4'  # latest release
-previous_release = '2016.11.9'  # latest release from previous branch
-previous_release_dir = '2016.11'  # path on web server for previous branch
+latest_release = '2018.3.0'  # latest release
+previous_release = '2017.7.5'  # latest release from previous branch
+previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -341,10 +341,15 @@ rst_prolog = """\
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 
-.. |osxdownload| raw:: html
+.. |osxdownloadpy2| raw:: html
 
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg"><strong>salt-{release}-py2-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg.md5"><strong>md5</strong></a></p>
+
+.. |osxdownloadpy3| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -365,7 +370,7 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack2' #change to 'saltstack' to use previous theme
+html_theme = os.environ.get('HTML_THEME', 'saltstack2') # set 'HTML_THEME=saltstack' to use previous theme
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'

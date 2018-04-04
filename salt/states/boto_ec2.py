@@ -893,6 +893,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                     allocation_id=allocation_id, region=region, key=key,
                     keyid=keyid, profile=profile)
             if r:
+                if 'new' not in ret['changes']:
+                    ret['changes']['new'] = {}
                 ret['changes']['new']['public_ip'] = ip
             else:
                 ret['result'] = False

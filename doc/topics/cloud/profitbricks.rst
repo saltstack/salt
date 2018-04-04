@@ -104,13 +104,18 @@ Here is an example of a profile:
     profitbricks_production:
       provider: my-profitbricks-config
       image: Ubuntu-15.10-server-2016-05-01
+      image_password: MyPassword1
       disk_type: SSD
       disk_size: 40
       cores: 8
       cpu_family: INTEL_XEON
       ram: 32768
       public_lan: 1
+      public_ips:
+        - 172.217.18.174
       private_lan: 2
+      private_ips:
+        - 192.168.100.10
       public_firewall_rules:
         Allow SSH:
           protocol: TCP
@@ -185,6 +190,14 @@ disk_type
     This option allow the disk type to be set to HDD or SSD. The default is
     HDD.
 
+.. versionadded:: Fluorine
+image_password
+    A password is set on the image for the "root" or "Administrator" account.
+    This field may only be set during volume creation. Only valid with 
+    ProfitBricks supplied HDD (not ISO) images. The password must contain at 
+    least 8 and no more than 50 characters. Only these characters are 
+    allowed: [a-z][A-Z][0-9]
+
 cores
     This option allows you to override the number of CPU cores as defined by
     the size.
@@ -198,6 +211,10 @@ public_lan
     This option will connect the server to the specified public LAN. If no
     LAN exists, then a new public LAN will be created. The value accepts a LAN
     ID (integer).
+
+.. versionadded:: Fluorine
+public_ips
+    Public IPs assigned to the NIC in the public LAN.
 
 public_firewall_rules
     This option allows for a list of firewall rules assigned to the public
@@ -217,6 +234,10 @@ private_lan
     This option will connect the server to the specified private LAN. If no
     LAN exists, then a new private LAN will be created. The value accepts a LAN
     ID (integer).
+
+.. versionadded:: Fluorine
+private_ips
+    Private IPs assigned in the private LAN. NAT setting is ignored when this setting is active.
 
 private_firewall_rules
     This option allows for a list of firewall rules assigned to the private

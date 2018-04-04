@@ -131,6 +131,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
 
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_bytes(name)
+    value = salt.utils.stringutils.to_bytes(value)
+
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
@@ -316,7 +320,7 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_unicode(fp_.read())
+            return salt.utils.stringutils.to_bytes(fp_.read())
     else:
         return input_
 
@@ -493,7 +497,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return ret.encode('ascii')
 
 
 def get_pem_entries(glob_path):
@@ -756,28 +760,27 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." \\
             path=/etc/pki/mycert.crt
     '''
-    old_umask = os.umask(0o77)
-    text = get_pem_entry(text, pem_type=pem_type)
-    _dhparams = ''
-    _private_key = ''
-    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-            not overwrite:
-        _filecontents = _text_or_file(path)
-        try:
-            _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-        except salt.exceptions.SaltInvocationError:
-            pass
-        try:
-            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-        except salt.exceptions.SaltInvocationError:
-            pass
-    with salt.utils.files.fopen(path, 'w') as _fp:
-        if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-            _fp.write(salt.utils.stringutils.to_str(_private_key))
-        _fp.write(text)
-        if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-            _fp.write(salt.utils.stringutils.to_str(_dhparams))
-    os.umask(old_umask)
+    with salt.utils.files.set_umask(0o077):
+        text = get_pem_entry(text, pem_type=pem_type)
+        _dhparams = ''
+        _private_key = ''
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
+                not overwrite:
+            _filecontents = _text_or_file(path)
+            try:
+                _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
+            except salt.exceptions.SaltInvocationError:
+                pass
+            try:
+                _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
+            except salt.exceptions.SaltInvocationError:
+                pass
+        with salt.utils.files.fopen(path, 'w') as _fp:
+            if pem_type and pem_type == 'CERTIFICATE' and _private_key:
+                _fp.write(salt.utils.stringutils.to_str(_private_key))
+            _fp.write(text)
+            if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
+                _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
 
 
