@@ -215,10 +215,10 @@ def returner(ret):
 
     returns = ret.get('return')
     if changes is True:
-        returns = {key, value for key, value in returns.items() if value['result'] is not True or value['changes']}
+        returns = {(key, value) for key, value in returns.items() if value['result'] is not True or value['changes']}
 
     if only_show_failed is True:
-        returns = {key, value for key, value in returns.items() if value['result'] is not True}
+        returns = {(key, value) for key, value in returns.items() if value['result'] is not True}
 
     if yaml_format is True:
         returns = salt.utils.yaml.safe_dump(returns)
