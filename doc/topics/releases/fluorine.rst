@@ -9,26 +9,61 @@ Minion Startup Events
 ---------------------
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
 sent.
 
 The new :conf_minion:`enable_legacy_startup_events` minion config option
 defaults to ``True``, but will be set to default to ``False`` beginning with
 the Neon release of Salt.
 
-The Salt Syndic currently sends an old style  `syndic_start` event as well. The
+The Salt Syndic currently sends an old style ``syndic_start`` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
+
+
+Pass Through Options to :py:func:`file.serialize <salt.states.file.serialize>` State
+------------------------------------------------------------------------------------
+
+This allows for more granular control over the way in which the dataset is
+serialized. See the documentation for the new ``serializer_opts`` option in the
+:py:func:`file.serialize <salt.states.file.serialize>` state for more
+information.
 
 
 Deprecations
 ------------
 
+API Deprecations
+================
+
+Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
+been removed. Please use ``tgt_type`` instead. This change was made due to
+numerous reports of confusion among community members, since the targeting
+method is published to minions as ``tgt_type``, and appears as ``tgt_type``
+in the job cache as well.
+
+Those who are using the :ref:`LocalClient <local-client>` (either directly,
+or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
+their code to use ``tgt_type``.
+
+.. code-block:: python
+
+    >>> import salt.client
+    >>> local = salt.client.LocalClient()
+    >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
+    {'jerry': 'root'}
+
 Module Deprecations
 ===================
+
+The ``napalm_network`` module had the following changes:
+
+- Support for the ``template_path`` has been removed in the ``load_template``
+  function. This is because support for NAPALM native templates has been
+  dropped.
 
 The ``trafficserver`` module had the following changes:
 
@@ -123,9 +158,23 @@ instead:
 - The ``k8s.label_folder_absent`` function was removed. Please update applicable
   SLS files to use the ``kubernetes.node_label_folder_absent`` function instead.
 
+The ``netconfig`` state had the following changes:
+
+- Support for the ``template_path`` option in the ``managed`` state has been
+  removed. This is because support for NAPALM native templates has been dropped.
+
 The ``trafficserver`` state had the following changes:
 
 - Support for the ``set_var`` function was removed. Please use the ``config``
   function instead.
 
 The ``win_update`` state has been removed. Please use the ``win_wua`` state instead.
+
+Utils Deprecations
+==================
+
+The ``vault`` utils module had the following changes:
+
+- Support for specifying Vault connection data within a 'profile' has been removed.
+  Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
+  details on the new configuration schema.

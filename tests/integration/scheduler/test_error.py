@@ -3,10 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 import copy
-import datetime
 import logging
 import os
-import random
 
 import dateutil.parser as dateutil_parser
 
@@ -261,4 +259,3 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
                      'range must be specified as a '
                      'dictionary. Ignoring job job1.')
         self.assertEqual(ret['_error'], _expected)
-

@@ -9,7 +9,7 @@ import re
 import sys
 import platform
 
-# linux_distribution depreacted in py3.7
+# linux_distribution deprecated in py3.7
 try:
     from platform import linux_distribution
 except ImportError:

@@ -110,7 +110,7 @@ def managed(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?
@@ -219,7 +219,7 @@ def configured(name,
         configuration on the device and the expected
         configuration. Depending on the platform and hardware
         capabilities, one could be more optimal than the other.
-        Additionally, the output of the ``managed`` is diferent,
+        Additionally, the output of the ``managed`` is different,
         in such a way that the ``pchange`` field in the output
         contains structured data, rather than text.
 
@@ -243,7 +243,7 @@ def configured(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?
