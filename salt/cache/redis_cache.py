@@ -392,7 +392,7 @@ def flush(bank, key=None):
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitely allow Salt inject scripts in their Redis instance.
+    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     '''
     redis_server = _get_redis_server()
     redis_pipe = redis_server.pipeline()

@@ -163,6 +163,13 @@ def auth(profile=None, **connection_args):
 
         salt '*' keystone.auth
     '''
+    __utils__['versions.warn_until'](
+        'Neon',
+        (
+            'The keystone module has been deprecated and will be removed in {version}.  '
+            'Please update to using the keystoneng module',
+        ),
+    )
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
     disc = discover.Discover(auth_url=kwargs['auth_url'])

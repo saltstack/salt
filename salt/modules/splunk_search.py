@@ -280,8 +280,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
                 continue
             name = prefix + name
         # put name in the OrderedDict first
-        d = []
-        d.append({"name": name})
+        d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
         description = ''
         for (k, v) in sorted(search.content.items()):

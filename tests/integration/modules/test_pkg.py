@@ -174,6 +174,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         available = self.run_function('sys.doc', ['pkg.hold'])
 
         if available:
+            self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
                 lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
                 versionlock = self.run_function('pkg.version', [lock_pkg])
@@ -186,11 +187,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
             unhold_ret = self.run_function('pkg.unhold', [self.pkg])
             self.assertIn(self.pkg, unhold_ret)
-            self.assertTrue(hold_ret[self.pkg]['result'])
+            self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
                 if not versionlock:
                     self.run_function('pkg.remove', [lock_pkg])
+            self.run_function('pkg.remove', [self.pkg])
 
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']

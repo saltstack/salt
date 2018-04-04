@@ -22,6 +22,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.syspaths
 import salt.utils.context
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -651,7 +652,7 @@ def _load_cached_grains(opts, cfn):
     try:
         serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, 'rb') as fp_:
-            cached_grains = serial.load(fp_)
+            cached_grains = salt.utils.data.decode(serial.load(fp_), preserve_tuples=True)
         if not cached_grains:
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
             return None
@@ -791,35 +792,34 @@ def grains(opts, force_refresh=False, proxy=None):
     grains_data.update(opts['grains'])
     # Write cache if enabled
     if opts.get('grains_cache', False):
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Late import
-                import salt.modules.cmdmod
-                # Make sure cache file isn't read-only
-                salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
-            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-                try:
-                    serial = salt.payload.Serial(opts)
-                    serial.dump(grains_data, fp_)
-                except TypeError as e:
-                    log.error('Failed to serialize grains cache: %s', e)
-                    raise  # re-throw for cleanup
-        except Exception as e:
-            log.error('Unable to write to grains cache file %s: %s', cfn, e)
-            # Based on the original exception, the file may or may not have been
-            # created. If it was, we will remove it now, as the exception means
-            # the serialized data is not to be trusted, no matter what the
-            # exception is.
-            if os.path.isfile(cfn):
-                os.unlink(cfn)
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Late import
+                    import salt.modules.cmdmod
+                    # Make sure cache file isn't read-only
+                    salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
+                with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        serial = salt.payload.Serial(opts)
+                        serial.dump(grains_data, fp_)
+                    except TypeError as e:
+                        log.error('Failed to serialize grains cache: %s', e)
+                        raise  # re-throw for cleanup
+            except Exception as e:
+                log.error('Unable to write to grains cache file %s: %s', cfn, e)
+                # Based on the original exception, the file may or may not have been
+                # created. If it was, we will remove it now, as the exception means
+                # the serialized data is not to be trusted, no matter what the
+                # exception is.
+                if os.path.isfile(cfn):
+                    os.unlink(cfn)
 
     if grains_deep_merge:
         salt.utils.dictupdate.update(grains_data, opts['grains'])
     else:
         grains_data.update(opts['grains'])
-    return grains_data
+    return salt.utils.data.decode(grains_data, preserve_tuples=True)
 
 
 # TODO: get rid of? Does anyone use this? You should use raw() instead

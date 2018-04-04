@@ -36,7 +36,6 @@ import salt.exceptions
 import salt.output
 import salt.utils.data
 import salt.utils.event
-import salt.utils.versions
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -110,7 +109,6 @@ def state(name,
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -147,10 +145,6 @@ def state(name,
 
     tgt_type
         The target type to resolve, defaults to ``glob``
-
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
 
     ret
         Optionally set a single or a list of returners to use
@@ -270,17 +264,6 @@ def state(name,
         state_ret['result'] = False
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
-
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
 
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
@@ -429,7 +412,6 @@ def function(
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -452,10 +434,6 @@ def function(
 
     tgt_type
         The target type, defaults to ``glob``
-
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
 
     arg
         The list of arguments to pass into the function
@@ -507,17 +485,6 @@ def function(
         arg = arg.split()
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
-
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
 
     if batch is not None:
         cmd_kw['batch'] = six.text_type(batch)
