@@ -635,7 +635,7 @@ class CPModuleTest(ModuleCase):
             os.unlink(tgt)
 
     @with_tempfile
-    def test_get_file_from_env_in_url(self):
+    def test_get_file_from_env_in_url(self, tgt):
         tgt = os.path.join(paths.TMP, 'cheese')
         try:
             self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
