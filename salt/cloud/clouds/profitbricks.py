@@ -120,7 +120,7 @@ try:
     import profitbricks
     from profitbricks.client import (
         ProfitBricksService, Server,
-        NIC, Volume, FirewallRule,
+        NIC, Volume, FirewallRule, IPBlock,
         Datacenter, LoadBalancer, LAN,
         PBNotFoundError, PBError
     )
@@ -622,6 +622,39 @@ def list_nodes_full(conn=None, call=None):
         __active_provider_name__.split(':')[0],
         __opts__
     )
+
+    return ret
+
+
+def reserve_ipblock(call=None, kwargs=None):
+    '''
+    Reserve the IP Block
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The reserve_ipblock function must be called with -f or '
+            '--function.'
+        )
+
+    conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    ret['ips'] = []
+
+    if kwargs.get('location') is None:
+        raise SaltCloudExecutionFailure('The "location" parameter is required')
+    location = kwargs.get('location')
+
+    size = 1
+    if kwargs.get('size') is not None:
+        size = kwargs.get('size')
+
+    block = conn.reserve_ipblock(IPBlock(size=size, location=location))
+    for item in block['properties']['ips']:
+        ret['ips'].append(item)
 
     return ret
 
