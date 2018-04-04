@@ -722,7 +722,11 @@ them have never been used, much less tested, by the Salt Stack team.
 
 
 NOTE: If ``image`` of a profile does not start with ``ami-``, latest
-image with that name will be used.
+image with that name will be used. For example, to create a CentOS 7
+profile, instead of using the AMI like ``image: ami-1caef165``, we 
+can use its name like ``image: 'CentOS Linux 7 x86_64 HVM EBS ENA 1803_01'``.
+We can also use a pattern like below to get the latest CentOS 7:
+
 
 .. code-block:: yaml
 
