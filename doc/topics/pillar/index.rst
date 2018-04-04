@@ -89,7 +89,7 @@ by their ``os`` grain:
         - servers
 
 Pillar definitions can also take a keyword argument ``ignore_missing``.
-When the value of ``ignore missing`` is ``True``, all errors for missing
+When the value of ``ignore_missing`` is ``True``, all errors for missing
 pillar files are ignored. The default value for ``ignore_missing`` is
 ``False``.
 
