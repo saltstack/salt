@@ -311,14 +311,6 @@ class OrchEventTest(ShellCase):
                         - name: test.sleep
                         - length: 10
                         - parallel: True
-                        - prereq:
-                            - module: sleep 1
-
-                sleep 22:
-                    module.run:
-                        - name: test.sleep
-                        - length: 10
-                        - parallel: True
                         - require:
                             - module: sleep 1
             '''))
