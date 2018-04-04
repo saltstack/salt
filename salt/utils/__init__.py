@@ -1586,7 +1586,7 @@ def subdict_match(data,
                            exact_match=exact_match):
                 return True
             continue
-        if isinstance(match, list):
+        if isinstance(match, (list, tuple)):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
