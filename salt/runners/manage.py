@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '', listen=True)
 
     if not pub_data:
         return pub_data
@@ -67,6 +67,15 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
+def _warn_expr_form():
+    salt.utils.warn_until(
+        'Fluorine',
+        'the target type should be passed using the \'tgt_type\' '
+        'argument instead of \'expr_form\'. Support for using '
+        '\'expr_form\' will be removed in Salt Fluorine.'
+    )
+
+
 def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
@@ -86,12 +95,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
+        _warn_expr_form()
         tgt_type = expr_form
 
     ret = {}
@@ -175,6 +179,12 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
@@ -199,6 +209,12 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
         salt-run manage.up tgt="webservers" tgt_type="nodegroup"
         salt-run manage.up timeout=5 gather_job_timeout=10
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(
         output=False,
         tgt=tgt,
@@ -246,7 +262,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
                 minions = [m for m in minions if m in subset]
     else:
         # Always return 'present' for 0MQ for now
-        # TODO: implement other states spport for 0MQ
+        # TODO: implement other states support for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
         minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
@@ -593,6 +609,12 @@ def safe_accept(target, tgt_type='glob', expr_form=None):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 

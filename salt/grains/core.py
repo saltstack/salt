@@ -714,17 +714,6 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'chroot'
             except (IOError, OSError):
                 pass
-        if os.path.isfile('/proc/1/cgroup'):
-            try:
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
-                    if ':/lxc/' in fhr.read():
-                        grains['virtual_subtype'] = 'LXC'
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
-                    fhr_contents = fhr.read()
-                    if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
-                        grains['virtual_subtype'] = 'Docker'
-            except IOError:
-                pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -774,6 +763,20 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile('/proc/1/cgroup'):
+            try:
+                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                    fhr_contents = fhr.read()
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
+                        grains['virtual_subtype'] = 'Docker'
+            except IOError:
+                pass
         if os.path.isfile('/proc/cpuinfo'):
             with salt.utils.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
@@ -1216,19 +1219,22 @@ def _get_interfaces():
     return _INTERFACES
 
 
-def _parse_os_release():
+def _parse_os_release(os_release_files):
     '''
-    Parse /etc/os-release and return a parameter dictionary
+    Parse os-release and return a parameter dictionary
 
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     '''
 
-    filename = '/etc/os-release'
-    if not os.path.isfile(filename):
-        filename = '/usr/lib/os-release'
-
     data = dict()
+    for filename in os_release_files:
+        if os.path.isfile(filename):
+            break
+    else:
+        # None of the specified os-release files exist
+        return data
+
     with salt.utils.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
@@ -1412,13 +1418,15 @@ def os_data():
                 # to be incorrectly set to "Arch".
                 grains['osfullname'] = 'Antergos Linux'
             elif 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
-                    os_release = _parse_os_release()
+                os_release = _parse_os_release(['/etc/os-release', '/usr/lib/os-release'])
+                if os_release:
                     if 'NAME' in os_release:
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
-                    if 'PRETTY_NAME' in os_release:
+                    if 'VERSION_CODENAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['VERSION_CODENAME']
+                    elif 'PRETTY_NAME' in os_release:
                         codename = os_release['PRETTY_NAME']
                         # https://github.com/saltstack/salt/issues/44108
                         if os_release['ID'] == 'debian':
@@ -1687,7 +1695,7 @@ def os_data():
                 grains['osrelease_info']
             )
         os_name = grains['os' if grains.get('os') in (
-            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(
             os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 
@@ -2397,7 +2405,30 @@ def get_server_id():
 
     if salt.utils.is_proxy():
         return {}
-    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        py_bin = 'python{0}.{1}'.format(*py_ver)
+        id_hash = __salt__['cmd.run'](
+            [py_bin, '-c', 'print(hash("{0}"))'.format(id_)],
+            env={'PYTHONHASHSEED': '0'}
+        )
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug(
+                'Failed to hash the ID to get the server_id grain. Result of '
+                'hash command: %s', id_hash
+            )
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return {'server_id': abs(id_hash % (2 ** 31))}
 
 
 def get_master():

@@ -328,10 +328,12 @@ def mounted(name,
                 mount_invisible_keys = [
                     'actimeo',
                     'comment',
+                    'credentials',
                     'direct-io-mode',
                     'password',
-                    'retry',
                     'port',
+                    'retry',
+                    'secretfile',
                 ]
 
                 if extra_mount_invisible_keys:

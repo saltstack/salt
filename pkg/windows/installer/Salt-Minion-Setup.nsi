@@ -267,7 +267,7 @@ Section -Prerequisites
             # /qb! used by 2008 installer
             # It just ignores the unrecognized switches...
             ClearErrors
-            ExecWait '"$INSTDIR\vcredist.exe" /qb! /passive /norestart' $0
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /quiet /norestart' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \
@@ -403,7 +403,6 @@ Section -Post
     nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe -E -s $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
-    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
@@ -588,7 +587,7 @@ FunctionEnd
 #   Push "this is some string"
 #   Push "some"
 #   Call StrStr
-#   Pop $0 ; "some string"
+#   Pop $0 # "some string"
 #------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
@@ -694,7 +693,7 @@ Function AddToPath
 
     # Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
-        DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
+        DetailPrint "AddToPath Failed: new length $2 > ${NSIS_MAX_STRLEN}"
         MessageBox MB_OK \
             "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
             /SD IDOK

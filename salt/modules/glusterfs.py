@@ -124,7 +124,7 @@ def peer_status():
     The return value is a dictionary with peer UUIDs as keys and dicts of peer
     information as values. Hostnames are listed in one list. GlusterFS separates
     one of the hostnames but the only reason for this seems to be which hostname
-    happens to be used firts in peering.
+    happens to be used first in peering.
 
     CLI Example:
 

@@ -20,6 +20,7 @@ try:
 except ImportError:
     HAS_GLIB = False
 
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +51,17 @@ class _GSettings(object):
         self.UID = None
         self.HOME = None
 
+    @property
+    def gsetting_command(self):
+        '''
+        return the command to run the gsettings binary
+        '''
+        if salt.utils.which_bin(['dbus-run-session']):
+            cmd = ['dbus-run-session', '--', 'gsettings']
+        else:
+            cmd = ['dbus-launch', '--exit-with-session', 'gsettings']
+        return cmd
+
     def _get(self):
         '''
         get the value for user in gsettings
@@ -62,7 +74,7 @@ class _GSettings(object):
             log.info('User does not exist')
             return False
 
-        cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}'.format(self.SCHEMA, self.KEY)
+        cmd = self.gsetting_command + ['get', str(self.SCHEMA), str(self.KEY)]
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
@@ -90,7 +102,7 @@ class _GSettings(object):
             result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 
-        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
+        cmd = self.gsetting_command + ['set', str(self.SCHEMA), str(self.KEY), str(value)]
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)

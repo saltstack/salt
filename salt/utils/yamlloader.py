@@ -30,7 +30,7 @@ warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(yaml.SafeLoader, object):
+class SaltYamlSafeLoader(yaml.SafeLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt

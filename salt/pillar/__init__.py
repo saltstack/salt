@@ -374,6 +374,15 @@ class Pillar(object):
                 opts['ext_pillar'].append(self.ext)
             else:
                 opts['ext_pillar'] = [self.ext]
+        if '__env__' in opts['file_roots']:
+            env = opts.get('pillarenv') or opts.get('saltenv') or 'base'
+            if env not in opts['file_roots']:
+                log.debug("pillar environment '%s' maps to __env__ pillar_roots directory", env)
+                opts['file_roots'][env] = opts['file_roots'].pop('__env__')
+            else:
+                log.debug("pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
+                          env)
+                opts['file_roots'].pop('__env__')
         return opts
 
     def _get_envs(self):
@@ -664,6 +673,8 @@ class Pillar(object):
                         log.error(msg)
                         errors.append(msg)
                     else:
+                        # render included state(s)
+                        include_states = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -685,16 +696,34 @@ class Pillar(object):
                                             nstate = {
                                                 key_fragment: nstate
                                             }
+                                    if not self.opts.get('pillar_includes_override_sls', False):
+                                        include_states.append(nstate)
+                                    else:
+                                        state = merge(
+                                            state,
+                                            nstate,
+                                            self.merge_strategy,
+                                            self.opts.get('renderer', 'yaml'),
+                                            self.opts.get('pillar_merge_lists', False))
+                                if err:
+                                    errors += err
 
+                        if not self.opts.get('pillar_includes_override_sls', False):
+                            # merge included state(s) with the current state
+                            # merged last to ensure that its values are
+                            # authoritative.
+                            include_states.append(state)
+                            state = None
+                            for s in include_states:
+                                if state is None:
+                                    state = s
+                                else:
                                     state = merge(
                                         state,
-                                        nstate,
+                                        s,
                                         self.merge_strategy,
                                         self.opts.get('renderer', 'yaml'),
                                         self.opts.get('pillar_merge_lists', False))
-
-                                if err:
-                                    errors += err
         return state, mods, errors
 
     def render_pillar(self, matches, errors=None):
@@ -783,7 +812,8 @@ class Pillar(object):
                 git_pillar.init_remotes(
                     self.ext['git'],
                     salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

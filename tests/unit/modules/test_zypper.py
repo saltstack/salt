@@ -49,8 +49,8 @@ def get_test_data(filename):
     with salt.utils.fopen(
             os.path.join(
                 os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
-        return rfh.read()
+                    os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename), mode='rb') as rfh:
+        return salt.utils.to_str(rfh.read(), 'utf-8')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -710,7 +710,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that a named directory is present and has the right perms
         '''
-        name = '/etc/grub.conf'
+        name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
 
@@ -809,12 +809,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                        p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        p_chg = {'/etc/testdir': {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
                             'pchanges': p_chg,
-                            'changes': {'/etc/grub.conf': {'directory': 'new'}}
+                            'changes': {'/etc/testdir': {'directory': 'new'}}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -1843,3 +1843,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+
+class TestFindKeepFiles(TestCase):
+
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    def test__find_keep_files_unix(self):
+        keep = filestate._find_keep_files(
+            '/test/parent_folder',
+            ['/test/parent_folder/meh.txt']
+        )
+        expected = [
+            '/',
+            '/test',
+            '/test/parent_folder',
+            '/test/parent_folder/meh.txt',
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual
+
+    @skipIf(not salt.utils.is_windows(), 'Only run on Windows')
+    def test__find_keep_files_win32(self):
+        keep = filestate._find_keep_files(
+            'c:\\test\\parent_folder',
+            ['C:\\test\\parent_folder\\meh-2.txt']
+        )
+        expected = [
+            'c:\\',
+            'c:\\test',
+            'c:\\test\\parent_folder',
+            'c:\\test\\parent_folder\\meh-2.txt'
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual

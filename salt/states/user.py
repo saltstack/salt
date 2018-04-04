@@ -67,7 +67,7 @@ def _changes(name,
              workphone='',
              homephone='',
              loginclass=None,
-             date=0,
+             date=None,
              mindays=0,
              maxdays=999999,
              inactdays=0,
@@ -134,7 +134,7 @@ def _changes(name,
                     change['passwd'] = password
         if empty_password and lshad['passwd'] != '':
             change['empty_password'] = True
-        if date and date is not 0 and lshad['lstchg'] != date:
+        if date is not None and lshad['lstchg'] != date:
             change['date'] = date
         if mindays and mindays is not 0 and lshad['min'] != mindays:
             change['mindays'] = mindays
@@ -240,7 +240,8 @@ def present(name,
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user, Default is ``False``.
+        the same name as the user. If the group does not exist the state will
+        fail. Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -455,6 +456,10 @@ def present(name,
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+        if gid == '':
+            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
+            ret['result'] = False
+            return ret
 
     changes = _changes(name,
                        uid,
@@ -686,7 +691,7 @@ def present(name,
                                          'empty password'.format(name)
                         ret['result'] = False
                     ret['changes']['password'] = ''
-                if date:
+                if date is not None:
                     __salt__['shadow.set_date'](name, date)
                     spost = __salt__['shadow.info'](name)
                     if spost['lstchg'] != date:

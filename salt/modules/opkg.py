@@ -1284,5 +1284,5 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret

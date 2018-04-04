@@ -112,6 +112,9 @@ TEST_SUITES = {
     'client':
        {'display_name': 'Client',
         'path': 'integration/client'},
+    'doc':
+       {'display_name': 'Documentation',
+        'path': 'integration/doc'},
     'ext_pillar':
        {'display_name': 'External Pillar',
         'path': 'integration/pillar'},
@@ -276,6 +279,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run tests for client'
+        )
+        self.test_selection_group.add_option(
+            '-d',
+            '--doc',
+            '--doc-tests',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help='Run tests for documentation'
         )
         self.test_selection_group.add_option(
             '-I',
@@ -694,6 +706,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
+                return status
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
                     status.append(self.run_integration_suite(**TEST_SUITES[suite]))

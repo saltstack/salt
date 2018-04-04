@@ -9,7 +9,7 @@ Management of Solaris Zones
 
 .. versionadded:: 2017.7.0
 
-Bellow are some examples of how to use this state.
+Below are some examples of how to use this state.
 Lets start with creating a zone and installing it.
 
 .. code-block:: yaml
@@ -47,7 +47,7 @@ Lets start with creating a zone and installing it.
 
 A zone without network access is not very useful. We could update
 the zone.present state in the example above to add a network interface
-or we could use a seperate state for this.
+or we could use a separate state for this.
 
 .. code-block:: yaml
 
@@ -836,7 +836,7 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
 
 def present(name, brand, zonepath, properties=None, resources=None):
     '''
-    Ensure a zone with certain properties and resouces
+    Ensure a zone with certain properties and resources
 
     name : string
         name of the zone

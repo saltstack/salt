@@ -36,7 +36,7 @@ def _table_attrs(table):
     '''
     Helper function to find valid table attributes
     '''
-    cmd = ['osqueryi'] + ['--json'] + ['pragma table_info{0}'.format(table)]
+    cmd = ['osqueryi'] + ['--json'] + ['pragma table_info({0})'.format(table)]
     res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         attrs = []
@@ -62,6 +62,7 @@ def _osquery(sql, format='json'):
     else:
         ret['result'] = False
         ret['error'] = res['stderr']
+    log.debug('== {} =='.format(ret))
     return ret
 
 
@@ -119,9 +120,13 @@ def version():
 
         salt '*' osquery.version
     '''
+    _false_return = {'result': False,
+                     'comment': 'OSQuery version unavailable.'}
     res = _osquery_cmd(table='osquery_info', attrs=['version'])
-    if res and isinstance(res, list):
-        return res[0].get('version', '') or False
+    if 'result' in res and res['result']:
+        if 'data' in res and isinstance(res['data'], list):
+            return res['data'][0].get('version', '') or _false_return
+    return _false_return
 
 
 def rpm_packages(attrs=None, where=None):
@@ -136,7 +141,8 @@ def rpm_packages(attrs=None, where=None):
     '''
     if __grains__['os_family'] == 'RedHat':
         return _osquery_cmd(table='rpm_packages', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on Red Hat based systems.'}
+    return {'result': False,
+            'comment': 'Only available on Red Hat based systems.'}
 
 
 def kernel_integrity(attrs=None, where=None):

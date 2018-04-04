@@ -34,6 +34,8 @@ import salt.utils
 import salt.utils.args
 import salt.utils.xdg
 import salt.utils.jid
+import salt.utils.files
+import salt.utils.win_functions
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -261,6 +263,8 @@ class OptionParser(optparse.OptionParser, object):
                     )
                 )
         if self._setup_mp_logging_listener_ is True:
+            # Stop logging through the queue
+            log.shutdown_multiprocessing_logging()
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener(daemonizing=True)
         if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
@@ -716,9 +720,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # verify the default
             if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                 # Logfile is not using Syslog, verify
-                current_umask = os.umask(0o027)
-                verify_files([logfile], self.config['user'])
-                os.umask(current_umask)
+                with salt.utils.files.set_umask(0o027):
+                    verify_files([logfile], self.config['user'])
 
         if logfile is None:
             # Use the default setting if the logfile wasn't explicity set
@@ -969,7 +972,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 try:
                     os.unlink(self.config['pidfile'])
                 except OSError as err:
-                    self.info(
+                    logging.getLogger(__name__).info(
                         'PIDfile could not be deleted: {0}'.format(
                             self.config['pidfile']
                         )
@@ -1015,11 +1018,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         if self.check_pidfile():
             pid = self.get_pidfile()
             if not salt.utils.is_windows():
-                if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+                if self.check_pidfile() and self.is_daemonized(pid) and os.getppid() != pid:
                     return True
             else:
-                # We have no os.getppid() on Windows. Best effort.
-                if self.check_pidfile() and self.is_daemonized(pid):
+                # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
+                if self.check_pidfile() and self.is_daemonized(pid) and salt.utils.win_functions.get_parent_pid() != pid:
                     return True
         return False
 

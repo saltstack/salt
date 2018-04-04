@@ -10,7 +10,7 @@ import sys
 import locale
 import platform
 
-# linux_distribution depreacted in py3.7
+# linux_distribution deprecated in py3.7
 try:
     from platform import linux_distribution
 except ImportError:
@@ -512,6 +512,9 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        if six.PY3:
+            out = out.decode()
+            err = err.decode()
         out = out.strip()
         err = err.strip()
 

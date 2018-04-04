@@ -155,7 +155,7 @@ def term(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     source_service
         A special service to choose from. This is a helper so the user is able to
@@ -406,7 +406,7 @@ def term(name,
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::
@@ -526,7 +526,7 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     CLI Example:
 
@@ -636,7 +636,7 @@ def filter(name,  # pylint: disable=redefined-builtin
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::
@@ -710,7 +710,7 @@ def managed(name,
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     merge_pillar: ``False``
-        Merge the ``filters`` wil the corresponding values from the pillar. Default: ``False``.
+        Merge the ``filters`` will the corresponding values from the pillar. Default: ``False``.
 
         .. note::
             By default this state does not merge, to avoid any unexpected behaviours.
@@ -746,7 +746,7 @@ def managed(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     CLI Example:
 
@@ -933,7 +933,7 @@ def managed(name,
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::

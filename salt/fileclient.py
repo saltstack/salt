@@ -138,22 +138,20 @@ class Client(object):
                                     saltenv,
                                     path)
         destdir = os.path.dirname(dest)
-        cumask = os.umask(63)
+        with salt.utils.files.set_umask(0o077):
+            # remove destdir if it is a regular file to avoid an OSError when
+            # running os.makedirs below
+            if os.path.isfile(destdir):
+                os.remove(destdir)
 
-        # remove destdir if it is a regular file to avoid an OSError when
-        # running os.makedirs below
-        if os.path.isfile(destdir):
-            os.remove(destdir)
+            # ensure destdir exists
+            try:
+                os.makedirs(destdir)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:  # ignore if it was there already
+                    raise
 
-        # ensure destdir exists
-        try:
-            os.makedirs(destdir)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:  # ignore if it was there already
-                raise
-
-        yield dest
-        os.umask(cumask)
+            yield dest
 
     def get_cachedir(self, cachedir=None):
         if cachedir is None:
@@ -1241,7 +1239,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''

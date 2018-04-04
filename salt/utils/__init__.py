@@ -484,7 +484,7 @@ def daemonize(redirect_out=True):
     os.chdir('/')
     # noinspection PyArgumentList
     os.setsid()
-    os.umask(18)
+    os.umask(0o022)  # pylint: disable=blacklisted-function
 
     # do second fork
     try:
@@ -1586,7 +1586,7 @@ def subdict_match(data,
                            exact_match=exact_match):
                 return True
             continue
-        if isinstance(match, list):
+        if isinstance(match, (list, tuple)):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
@@ -3130,7 +3130,7 @@ def chugid_and_umask(runas, umask):
     if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def rand_string(size=32):

@@ -124,6 +124,10 @@ class RunnerReturnsTest(ShellCase):
         self.clean_return(deserialized)
 
         # Now we have something sane we can reliably compare in an assert.
+        if 'SUDO_USER' in os.environ:
+            user = 'sudo_{0}'.format(os.environ['SUDO_USER'])
+        else:
+            user = RUNTIME_VARS.RUNNING_TESTS_USER
         self.assertEqual(
             deserialized,
             {'fun': 'runner.test.arg',
@@ -131,5 +135,5 @@ class RunnerReturnsTest(ShellCase):
              'jid': jid,
              'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
              'success': True,
-             'user': RUNTIME_VARS.RUNNING_TESTS_USER}
+             'user': user}
         )

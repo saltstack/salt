@@ -127,16 +127,21 @@ def _linux_disks():
     ret = {'disks': [], 'SSDs': []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
-        with salt.utils.fopen(entry) as entry_fp:
-            device = entry.split('/')[3]
-            flag = entry_fp.read(1)
-            if flag == '0':
-                ret['SSDs'].append(device)
-                log.trace('Device {0} reports itself as an SSD'.format(device))
-            elif flag == '1':
-                ret['disks'].append(device)
-                log.trace('Device {0} reports itself as an HDD'.format(device))
-            else:
-                log.trace('Unable to identify device {0} as an SSD or HDD.'
-                          ' It does not report 0 or 1'.format(device))
+        try:
+            with salt.utils.fopen(entry) as entry_fp:
+                device = entry.split('/')[3]
+                flag = entry_fp.read(1)
+                if flag == '0':
+                    ret['SSDs'].append(device)
+                    log.trace('Device %s reports itself as an SSD', device)
+                elif flag == '1':
+                    ret['disks'].append(device)
+                    log.trace('Device %s reports itself as an HDD', device)
+                else:
+                    log.trace(
+                        'Unable to identify device %s as an SSD or HDD. It does '
+                        'not report 0 or 1', device
+                    )
+        except IOError:
+            pass
     return ret

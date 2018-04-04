@@ -700,7 +700,7 @@ def _query_node_data(vm_, data, floating, conn):
     if not result and ssh_interface(vm_) == 'private_ips':
         for private_ip in private:
             ignore_ip = ignore_cidr(vm_, private_ip)
-            if private_ip not in data.private_ips and not ignore_ip:
+            if not ignore_ip:
                 result.append(private_ip)
 
     if result:

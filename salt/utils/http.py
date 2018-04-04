@@ -429,6 +429,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -529,8 +531,10 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result_text.decode('utf-8')
         ret['body'] = result_text
-        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
+        if 'Set-Cookie' in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
@@ -855,12 +859,10 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie:
+        for item in list(cookie):
             if item in attribs:
                 continue
-            name = item
-            value = cookie[item]
-            del cookie[name]
+            value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
@@ -868,7 +870,7 @@ def parse_cookie_header(header):
 
         # Fill in missing required fields
         for req in reqd:
-            if req not in cookie.keys():
+            if req not in cookie:
                 cookie[req] = ''
         if cookie['version'] == '':
             cookie['version'] = 0

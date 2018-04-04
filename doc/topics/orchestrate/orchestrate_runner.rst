@@ -5,10 +5,10 @@ Orchestrate Runner
 ==================
 
 Executing states or highstate on a minion is perfect when you want to ensure that
-minion configured and running the way you want. Sometimes however you want to 
+minion configured and running the way you want. Sometimes however you want to
 configure a set of minions all at once.
 
-For example, if you want to set up a load balancer in front of a cluster of web 
+For example, if you want to set up a load balancer in front of a cluster of web
 servers you can ensure the load balancer is set up first, and then the same
 matching configuration is applied consistently across the whole cluster.
 
@@ -266,7 +266,35 @@ Given the above setup, the orchestration will be carried out as follows:
 3. Finally, the ``ceph`` SLS target will be executed on all minions which have
    a grain called ``role`` with a value of ``storage``.
 
-
 .. note::
 
-    Remember, salt-run is always executed on the master.
+    Remember, salt-run is *always* executed on the master.
+
+
+Running States on the Master without a Minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The orchestrate runner can be used to execute states on the master without
+using a minion. For example, assume that ``salt://foo.sls`` contains the
+following SLS:
+
+.. code-block:: yaml
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://files/foo.conf
+        - mode: 0600
+
+In this case, running ``salt-run state.orchestrate foo`` would be the
+equivalent of running a ``state.sls foo``, but it would execute on the master
+only, and would not require a minion daemon to be running on the master.
+
+This is not technically orchestration, but it can be useful in certain use
+cases.
+
+Limitations
+^^^^^^^^^^^
+
+Only one SLS target can be run at a time using this method, while using
+:py:func:`state.sls <salt.modules.state.sls>` allows for multiple SLS files to
+be passed in a comma-separated list.

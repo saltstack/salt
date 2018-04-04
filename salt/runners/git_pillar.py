@@ -87,7 +87,8 @@ def update(branch=None, repo=None):
             pillar = salt.utils.gitfs.GitPillar(__opts__)
             pillar.init_remotes(pillar_conf,
                                 salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                                salt.pillar.git_pillar.GLOBAL_ONLY)
             for remote in pillar.remotes:
                 # Skip this remote if it doesn't match the search criteria
                 if branch is not None:

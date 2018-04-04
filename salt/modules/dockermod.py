@@ -575,6 +575,15 @@ def _scrub_links(links, name):
     return ret
 
 
+def _ulimit_sort(ulimit_val):
+    if isinstance(ulimit_val, list):
+        return sorted(ulimit_val,
+                      key=lambda x: (x.get('Name'),
+                                     x.get('Hard', 0),
+                                     x.get('Soft', 0)))
+    return ulimit_val
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -912,6 +921,9 @@ def compare_container(first, second, ignore=None):
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
+                if item == 'Ulimits':
+                    val1 = _ulimit_sort(val1)
+                    val2 = _ulimit_sort(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -935,6 +947,9 @@ def compare_container(first, second, ignore=None):
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
+                if item == 'Ulimits':
+                    val1 = _ulimit_sort(val1)
+                    val2 = _ulimit_sort(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
@@ -3023,6 +3038,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
+    auto_remove = False
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
@@ -3032,9 +3048,19 @@ def rm_(name, force=False, volumes=False, **kwargs):
             'remove this container'.format(name)
         )
     if stop_ and not force:
+        inspect_results = inspect_container(name)
+        try:
+            auto_remove = inspect_results['HostConfig']['AutoRemove']
+        except KeyError:
+            log.error(
+                'Failed to find AutoRemove in inspect results, Docker API may '
+                'have changed. Full results: %s', inspect_results
+            )
         stop(name)
     pre = ps_(all=True)
-    _client_wrapper('remove_container', name, v=volumes, force=force)
+
+    if not auto_remove:
+        _client_wrapper('remove_container', name, v=volumes, force=force)
     _clear_context()
     return [x for x in pre if x not in ps_(all=True)]
 
@@ -5439,7 +5465,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         the salt environment to use
 
     dryrun: False
-        when set to True the container will not be commited at the end of
+        when set to True the container will not be committed at the end of
         the build. The dryrun succeed also when the state contains errors.
 
     **RETURN DATA**

@@ -127,6 +127,16 @@ class NodegroupCompTest(TestCase):
         expected_ret = ['L@foo.domain.com,bar.domain.com,baz.domain.com', 'or', 'bl*.domain.com']
         self.assertListEqual(ret, expected_ret)
 
+    def test_simple_expression_nodegroup(self):
+        '''
+        Smoke test a nodegroup with a simple expression. No recursion.
+        '''
+        simple_nodegroup = {'group1': '[foo,bar,baz].domain.com'}
+
+        ret = salt.utils.minions.nodegroup_comp('group1', simple_nodegroup)
+        expected_ret = ['E@[foo,bar,baz].domain.com']
+        self.assertListEqual(ret, expected_ret)
+
     def test_simple_recurse(self):
         '''
         Test a case where one nodegroup contains a second nodegroup

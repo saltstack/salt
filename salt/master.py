@@ -67,6 +67,7 @@ import salt.log.setup
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.files
 import salt.utils.job
 import salt.utils.verify
 import salt.utils.minions
@@ -481,9 +482,8 @@ class Master(SMaster):
         # Check to see if we need to create a pillar cache dir
         if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
             try:
-                prev_umask = os.umask(0o077)
-                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
-                os.umask(prev_umask)
+                with salt.utils.files.set_umask(0o077):
+                    os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
             except OSError:
                 pass
 
@@ -504,7 +504,8 @@ class Master(SMaster):
                             git_pillar.init_remotes(
                                 repo['git'],
                                 salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                                salt.pillar.git_pillar.GLOBAL_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -1355,7 +1356,8 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
-            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
+            if self.opts.get('minion_data_cache_events') is True:
+                self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):

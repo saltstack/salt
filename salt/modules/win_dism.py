@@ -426,16 +426,27 @@ def add_package(package,
     Install a package using DISM
 
     Args:
-        package (str): The package to install. Can be a .cab file, a .msu file,
-            or a folder
-        ignore_check (Optional[bool]): Skip installation of the package if the
-            applicability checks fail
-        prevent_pending (Optional[bool]): Skip the installation of the package
-            if there are pending online actions
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        package (str):
+            The package to install. Can be a .cab file, a .msu file, or a folder
+
+            .. note::
+                An `.msu` package is supported only when the target image is
+                offline, either mounted or applied.
+
+        ignore_check (Optional[bool]):
+            Skip installation of the package if the applicability checks fail
+
+        prevent_pending (Optional[bool]):
+            Skip the installation of the package if there are pending online
+            actions
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is None.
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the install
 
     Returns:
         dict: A dictionary containing the results of the command

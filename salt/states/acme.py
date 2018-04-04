@@ -85,6 +85,7 @@ def cert(name,
             comment += 'would have been renewed'
         else:
             comment += 'would not have been touched'
+            ret['result'] = True
         ret['comment'] = comment
         return ret
 

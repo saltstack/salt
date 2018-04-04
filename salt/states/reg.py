@@ -192,9 +192,14 @@ def present(name,
                                    salt.utils.to_unicode(name, 'utf-8'))
         return ret
 
+    try:
+        vdata_decoded = salt.utils.to_unicode(vdata, 'utf-8')
+    except UnicodeDecodeError:
+        # vdata contains binary data that can't be decoded
+        vdata_decoded = vdata
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
                   'Entry': u'{0}'.format(salt.utils.to_unicode(vname, 'utf-8') if vname else u'(Default)'),
-                  'Value': salt.utils.to_unicode(vdata, 'utf-8')}
+                  'Value': vdata_decoded}
 
     # Check for test option
     if __opts__['test']:

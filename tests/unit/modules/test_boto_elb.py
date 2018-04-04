@@ -5,11 +5,16 @@ from __future__ import absolute_import
 import logging
 from copy import deepcopy
 import pkg_resources
+import os.path
+
+# imprt salt paths
+from tests.support.paths import TESTS_DIR
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
     HAS_BOTO = True
 except ImportError:

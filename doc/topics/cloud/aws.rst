@@ -1019,7 +1019,7 @@ so:-
         - AndThirdSecurityGroup
 
 Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
-and 'securitygroupname' are merged toghether to generate a single list for
+and 'securitygroupname' are merged together to generate a single list for
 SecurityGroups of instances.
 
 Specifying interface properties

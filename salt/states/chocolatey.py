@@ -101,7 +101,9 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Package installed
     else:
-        version_info = __salt__['chocolatey.version'](name, check_remote=True)
+        version_info = __salt__['chocolatey.version'](name=name,
+                                                      check_remote=True,
+                                                      source=source)
 
         full_name = name
         for pkg in version_info:

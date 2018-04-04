@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import tempfile
 import textwrap
 import threading
 import time
@@ -205,12 +206,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-            ''')
 
-        if not salt.utils.is_windows():
-            contents += os.linesep
-
-        contents += textwrap.dedent('''\
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
@@ -325,44 +321,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 os.unlink(testfile)
 
     def test_include(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'to-include-test')
-        )
-        exclude_test_file = os.path.join(
-            TMP, 'exclude-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='include-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(exclude_test_file))
-        finally:
-            for fname in list(fnames) + [exclude_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'to-include-test', 'exclude-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='include-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['to-include-test']))
+        self.assertFalse(os.path.isfile(pillar['exclude-test']))
 
     def test_exclude(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'exclude-test')
-        )
-        to_include_test_file = os.path.join(
-            TMP, 'to-include-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='exclude-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(to_include_test_file))
-        finally:
-            for fname in list(fnames) + [to_include_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'exclude-test', 'to-include-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='exclude-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['exclude-test']))
+        self.assertFalse(os.path.isfile(pillar['to-include-test']))
 
     @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
@@ -971,7 +951,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIn('Gromit', data)
                 self.assertIn('Comte', data)
         finally:
-            os.unlink(tgt)
+            if os.path.islink(tgt):
+                os.unlink(tgt)
 
     # onchanges tests
 
@@ -1035,6 +1016,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
+    def test_onchanges_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        the state will not run but results will include duration
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # Then, test the result of the state run when changes are not expected to happen
+        # and ensure duration is included in the results
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
+
     # onfail tests
 
     def test_onfail_requisite(self):
@@ -1087,6 +1082,68 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
+
+    def test_onfail_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
+
+    def test_multiple_onfail_requisite_with_required(self):
+        '''
+        test to ensure multiple states are run
+        when specified as onfails for a single state.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required')
+
+        retcode = state_run['cmd_|-b_|-echo b_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-c_|-echo c_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-d_|-echo d_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'b')
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'c')
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'd')
+
+    def test_multiple_onfail_requisite_with_required_no_run(self):
+        '''
+        test to ensure multiple states are not run
+        when specified as onfails for a single state
+        which fails.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required_no_run')
+
+        expected = 'State was not run because onfail req did not change'
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['comment']
+        self.assertEqual(stdout, expected)
 
     # listen tests
 
@@ -1148,6 +1205,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
+
+    def test_listen_in_requisite_resolution_names(self):
+        '''
+        Verify listen_in requisite lookups use ID declaration to check for changes
+        and resolves magic names state variable
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_names')
+        self.assertIn('test_|-listener_service_|-nginx_|-mod_watch', state_run)
+        self.assertIn('test_|-listener_service_|-crond_|-mod_watch', state_run)
+
+    def test_listen_requisite_resolution_names(self):
+        '''
+        Verify listen requisite lookups use ID declaration to check for changes
+        and resolves magic names state variable
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_names')
+        self.assertIn('test_|-listener_service_|-nginx_|-mod_watch', state_run)
+        self.assertIn('test_|-listener_service_|-crond_|-mod_watch', state_run)
 
     def test_issue_30820_requisite_in_match_by_name(self):
         '''
@@ -1268,22 +1347,58 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
         self.assertFalse(state_run[state_id]['result'])
 
+    def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(self):
+        '''
+        This tests the case where state C requires state A, which fails.
+        State C is a pre-required state for State B.
+        Since state A fails, state C will not run because the requisite failed,
+        therefore state B will not run because state C failed to run.
+
+        See https://github.com/saltstack/salt/issues/46762 for
+        more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='issue-46762'
+        )
+
+        state_id = 'test_|-a_|-a_|-fail_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Failure!')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-b_|-b_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.c')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-c_|-c_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.a')
+        self.assertFalse(state_run[state_id]['result'])
+
     def test_state_nonbase_environment(self):
         '''
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
+        file_name = os.path.join(TMP, 'nonbase_env')
         state_run = self.run_function(
             'state.sls',
             mods='non-base-env',
             saltenv='prod'
         )
-        state_id = 'file_|-test_file_|-/tmp/nonbase_env_|-managed'
-        self.assertEqual(state_run[state_id]['comment'], 'File /tmp/nonbase_env updated')
-        self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
-        self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
+        state_id = 'file_|-test_file_|-{0}_|-managed'.format(file_name)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'File {0} updated'.format(file_name))
+        self.assertTrue(
+            state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
+        self.assertTrue(os.path.isfile(file_name))
 
     def tearDown(self):
-        nonbase_file = '/tmp/nonbase_env'
+        nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
             os.remove(nonbase_file)

@@ -739,7 +739,11 @@ class MasterMinion(object):
             matcher=True,
             whitelist=None,
             ignore_config_errors=True):
-        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
+        self.opts = salt.config.minion_config(
+            opts['conf_file'],
+            ignore_config_errors=ignore_config_errors,
+            role='master'
+        )
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
@@ -1757,7 +1761,9 @@ class Minion(MinionBase):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
-            salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
+            if ret['jid'] == 'req':
+                ret['jid'] = salt.utils.jid.gen_jid()
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         if not self.opts['pub_ret']:
             return ''
@@ -2269,6 +2275,7 @@ class Minion(MinionBase):
                     self.opts,
                     self.functions,
                     self.returners,
+                    utils=self.utils,
                     cleanup=[master_event(type='alive')])
 
             try:

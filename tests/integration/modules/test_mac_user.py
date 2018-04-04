@@ -173,7 +173,7 @@ class MacUserModuleTest(ModuleCase):
             self.assertTrue(os.path.exists('/etc/kcpassword'))
 
             # Are the contents of the file correct
-            test_data = b'.\xf8\'B\xa0\xd9\xad\x8b\xcd\xcdl'
+            test_data = b".\xc3\xb8'B\xc2\xa0\xc3\x99\xc2\xad\xc2\x8b\xc3\x8d\xc3\x8dl"
             with salt.utils.fopen('/etc/kcpassword', 'rb') as f:
                 file_data = f.read()
             self.assertEqual(test_data, file_data)

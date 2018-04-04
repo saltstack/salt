@@ -53,7 +53,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
 try:
@@ -157,17 +157,17 @@ do
         py_cmd_path=`"$py_cmd" -c \
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
-        cmdpath=$(command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null)
+        cmdpath=`command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null`
         if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
                    'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
-            export $($py_cmd -c \
+            export `$py_cmd -c \
                   "from __future__ import print_function;
                   import sys;
                   import os;
                   map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
-                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+                  .format(x, os.environ[x]) for x in [$ex_vars]])"`
             exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
                      MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
                      PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
@@ -220,7 +220,8 @@ class SSH(object):
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
         if not salt.utils.which('ssh'):
-            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
+            raise salt.exceptions.SaltSystemExit(code=-1,
+                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
@@ -469,6 +470,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,
@@ -914,6 +928,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:

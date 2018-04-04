@@ -39,7 +39,7 @@ A more involved example involves pulling from a custom repository.
         - keyserver: keyserver.ubuntu.com
 
     logstash:
-      pkg.installed
+      pkg.installed:
         - fromrepo: ppa:wolfnet/logstash
 
 Multiple packages can also be installed with the use of the pkgs
@@ -92,7 +92,7 @@ from salt.exceptions import (
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
@@ -989,17 +989,22 @@ def installed(
         **WILDCARD VERSIONS**
 
         As of the 2017.7.0 release, this state now supports wildcards in
-        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
-        Arch Linux, and their derivatives. Using wildcards can be useful for
-        packages where the release name is built into the version in some way,
-        such as for RHEL/CentOS which typically has version numbers like
-        ``1.2.34-5.el7``. An example of the usage for this would be:
+        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu,
+        RHEL/CentOS, Arch Linux, and their derivatives. Using wildcards can be
+        useful for packages where the release name is built into the version in
+        some way, such as for RHEL/CentOS which typically has version numbers
+        like ``1.2.34-5.el7``. An example of the usage for this would be:
 
         .. code-block:: yaml
 
             mypkg:
               pkg.installed:
                 - version: '1.2.34*'
+
+        Keep in mind that using wildcard versions will result in a slower state
+        run since Salt must gather the available versions of the specified
+        packages and figure out which of them match the specified wildcard
+        expression.
 
     :param bool refresh:
         This parameter controls whether or not the package repo database is
@@ -1613,14 +1618,10 @@ def installed(
     not_modified_hold = None
     failed_hold = None
     if targets or to_reinstall:
-        force = False
-        if salt.utils.is_freebsd():
-            force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name=None,
                                               refresh=refresh,
                                               version=version,
-                                              force=force,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
                                               pkgs=pkgs,
@@ -1957,7 +1958,7 @@ def downloaded(name,
         return ret
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
 
@@ -2130,7 +2131,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
                            'this platform'}
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
     return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
@@ -2609,7 +2610,7 @@ def removed(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.removed:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2715,7 +2716,7 @@ def purged(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.purged:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2845,8 +2846,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
+            expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
+                        for pkgname, pkgver in six.iteritems(packages)}
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
+                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
@@ -2860,6 +2864,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'System update will be performed'
+        ret['changes'] = expected
         ret['result'] = None
         return ret
 
@@ -2876,8 +2881,17 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    ret['comment'] = 'Upgrade ran successfully'
-    ret['result'] = True
+    # If a package list was provided, ensure those packages were updated
+    missing = []
+    if isinstance(pkgs, list):
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+
+    if missing:
+        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Upgrade ran successfully'
+        ret['result'] = True
 
     return ret
 

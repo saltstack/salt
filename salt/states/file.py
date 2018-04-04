@@ -607,28 +607,34 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _find_keep_files(root, keep):
     '''
-    Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep) and part of exclude_pat
+    Compile a list of valid keep files (and directories).
     '''
-    removed = set()
     real_keep = set()
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
-                fn_ = os.path.dirname(fn_)
+                fn_ = os.path.abspath(os.path.dirname(fn_))
                 real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
                     break
+    return real_keep
+
+
+def _clean_dir(root, keep, exclude_pat):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep) and part of exclude_pat
+    '''
+    real_keep = _find_keep_files(root, keep)
+    removed = set()
 
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
@@ -2332,9 +2338,17 @@ def managed(name,
                 )
 
                 if salt.utils.is_windows():
-                    ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
-                        win_inheritance)
+                    try:
+                        ret = __salt__['file.check_perms'](
+                            path=name,
+                            ret=ret,
+                            owner=win_owner,
+                            grant_perms=win_perms,
+                            deny_perms=win_deny_perms,
+                            inheritance=win_inheritance)
+                    except CommandExecutionError as exc:
+                        if exc.strerror.startswith('Path not found'):
+                            ret['pchanges'] = '{0} will be created'.format(name)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
@@ -3495,7 +3509,9 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         This is only used when datetime is pulled from ``os.path.getmtime()``.
         Defaults to ``None`` which uses the timezone from the locale.
 
-    .. code-block: yaml
+    Usage example:
+
+    .. code-block:: yaml
 
         /var/backups/example_directory:
           file.retention_schedule:
@@ -3749,7 +3765,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     processing can be bypassed in order to pass an equal sign through to the
     remote shell command by manually specifying the kwarg:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
        update_config:
          file.line:
@@ -4013,11 +4029,20 @@ def blockreplace(
         append_if_not_found=False,
         prepend_if_not_found=False,
         backup='.bak',
-        show_changes=True):
+        show_changes=True,
+        append_newline=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 2017.7.5,2018.3.1
+        ``append_newline`` argument added. Additionally, to improve
+        idempotence, if the string represented by ``marker_end`` is found in
+        the middle of the line, the content preceding the marker will be
+        removed when the block is replaced. This allows one to remove
+        ``append_newline: False`` from the SLS and have the block properly
+        replaced if the end of the content block is immediately followed by the
+        ``marker_end`` (i.e. no newline before the marker).
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
@@ -4102,41 +4127,54 @@ def blockreplace(
         See the ``source_hash`` parameter description for :mod:`file.managed
         <salt.states.file.managed>` function for more details and examples.
 
-    template
-        The named templating engine will be used to render the downloaded file.
-        Defaults to ``jinja``. The following templates are supported:
+    template : jinja
+        Templating engine to be used to render the downloaded file. The
+        following engines are supported:
 
-        - :mod:`cheetah<salt.renderers.cheetah>`
-        - :mod:`genshi<salt.renderers.genshi>`
-        - :mod:`jinja<salt.renderers.jinja>`
-        - :mod:`mako<salt.renderers.mako>`
-        - :mod:`py<salt.renderers.py>`
-        - :mod:`wempy<salt.renderers.wempy>`
+        - :mod:`cheetah <salt.renderers.cheetah>`
+        - :mod:`genshi <salt.renderers.genshi>`
+        - :mod:`jinja <salt.renderers.jinja>`
+        - :mod:`mako <salt.renderers.mako>`
+        - :mod:`py <salt.renderers.py>`
+        - :mod:`wempy <salt.renderers.wempy>`
 
     context
-        Overrides default context variables passed to the template.
+        Overrides default context variables passed to the template
 
     defaults
-        Default context passed to the template.
+        Default context passed to the template
 
-    append_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be appended to the file. Default is ``False``
+    append_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be appended to the file.
 
-    prepend_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be prepended to the file. Default is ``False``
+    prepend_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be prepended to the file.
 
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``
-        return a boolean if any changes were made
+    show_changes : True
+        Controls how changes are presented. If ``True``, the ``Changes``
+        section of the state return will contain a unified diff of the changes
+        made. If False, then it will contain a boolean (``True`` if any changes
+        were made, otherwise ``False``).
+
+    append_newline
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is unspecified, then a newline will
+        only be added to the content block if it does not already end in a
+        newline.
+
+        .. versionadded:: 2017.7.5,2018.3.1
 
     Example of usage with an accumulator and with a variable:
 
@@ -4238,17 +4276,25 @@ def blockreplace(
         for index, item in enumerate(text):
             content += str(item)
 
-    changes = __salt__['file.blockreplace'](
-        name,
-        marker_start,
-        marker_end,
-        content=content,
-        append_if_not_found=append_if_not_found,
-        prepend_if_not_found=prepend_if_not_found,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes
-    )
+    try:
+        changes = __salt__['file.blockreplace'](
+            name,
+            marker_start,
+            marker_end,
+            content=content,
+            append_if_not_found=append_if_not_found,
+            prepend_if_not_found=prepend_if_not_found,
+            backup=backup,
+            dry_run=__opts__['test'],
+            show_changes=show_changes,
+            append_newline=append_newline)
+    except Exception as exc:
+        log.exception('Encountered error managing block')
+        ret['comment'] = (
+            'Encountered error managing block: {0}. '
+            'See the log for details.'.format(exc)
+        )
+        return ret
 
     if changes:
         ret['pchanges'] = {'diff': changes}
@@ -5178,9 +5224,14 @@ def copy(
         subdir=False,
         **kwargs):
     '''
-    If the source file exists on the system, copy it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the file defined by the ``source`` option exists on the minion, copy it
+    to the named path. The file will not be overwritten if it already exists,
+    unless the ``force`` option is set to ``True``.
+
+    .. note::
+        This state only copies files from one location on a minion to another
+        location on the same minion. For copying files from the master, use a
+        :py:func:`file.managed <salt.states.file.managed>` state.
 
     name
         The location of the file to copy to
@@ -6525,37 +6576,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
-
-    This function will return the cached path of the file, or an empty string
-    if the file is not present in the minion cache.
-
-    This state will in most cases not be useful in SLS files, but it is useful
-    when writing a state or remote-execution module that needs to make sure
-    that a file at a given URL has been downloaded to the cachedir. One example
-    of this is in the :py:func:`archive.extracted <salt.states.file.extracted>`
-    state:
-
-    .. code-block:: python
-
-        result = __states__['file.cached'](source_match,
-                                           source_hash=source_hash,
-                                           source_hash_name=source_hash_name,
-                                           skip_verify=skip_verify,
-                                           saltenv=__env__)
-
-    This will return a dictionary containing the state's return data, including
-    a ``result`` key which will state whether or not the state was successful.
-    Note that this will not catch exceptions, so it is best used within a
-    try/except.
-
-    Once this state has been run from within another state or remote-execution
-    module, the actual location of the cached file can be obtained using
-    :py:func:`cp.is_cached <salt.modules.cp.is_cached>`:
-
-    .. code-block:: python
-
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.

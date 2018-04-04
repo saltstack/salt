@@ -519,7 +519,7 @@ Default: ``0``
 
 Memcache is an additional cache layer that keeps a limited amount of data
 fetched from the minion data cache for a limited period of time in memory that
-makes cache operations faster. It doesn't make much sence for the ``localfs``
+makes cache operations faster. It doesn't make much sense for the ``localfs``
 cache driver but helps for more complex drivers like ``consul``.
 
 This option sets the memcache items expiration time. By default is set to ``0``
@@ -956,6 +956,38 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
 
 .. _salt-ssh-configuration:
 
@@ -3997,6 +4029,25 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillar_includes_override_sls
+
+``pillar_includes_override_sls``
+********************************
+
+.. versionadded:: 2017.7.6,2018.3.1
+
+Default: ``False``
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+Set this option to ``True`` to return to the old behavior.
+
+.. code-block:: yaml
+
+    pillar_includes_override_sls: True
+
 .. _pillar-cache-opts:
 
 Pillar Cache Options
@@ -4820,11 +4871,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 

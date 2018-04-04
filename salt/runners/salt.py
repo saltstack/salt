@@ -32,11 +32,12 @@ Execution modules are also available to salt runners:
 # import python libs
 from __future__ import absolute_import
 from __future__ import print_function
+import copy
 import logging
 
 # import salt libs
 import salt.client
-from salt.loader import minion_mods, utils
+import salt.loader
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -64,9 +65,11 @@ def cmd(fun, *args, **kwargs):
     kws = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
 
     # pylint: disable=undefined-variable
-    return minion_mods(
-        __opts__,
-        utils=utils(__opts__)).get(fun)(*args, **kws)
+    opts = copy.deepcopy(__opts__)
+    opts['grains'] = salt.loader.grains(opts)
+    utils = salt.loader.utils(opts)
+    mods = salt.loader.minion_mods(opts, utils=utils)
+    return mods.get(fun)(*args, **kws)
 
 
 def execute(tgt,

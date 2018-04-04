@@ -102,7 +102,7 @@ def version(**kwargs):
 
 def db_list(**kwargs):
     '''
-    Return the databse list created on a MS SQL server.
+    Return the database list created on a MS SQL server.
 
     CLI Example:
 

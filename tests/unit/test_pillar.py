@@ -49,6 +49,33 @@ class PillarTestCase(TestCase):
             self.assertEqual(pillar.opts['environment'], 'dev')
             self.assertEqual(pillar.opts['pillarenv'], 'dev')
 
+    def test_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
+        self.assertEqual(pillar.opts['file_roots'],
+                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
+
+    def test_ignored_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
+        self.assertEqual(pillar.opts['file_roots'], {'base': ['/srv/pillar/base']})
+
     def test_malformed_pillar_sls(self):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
@@ -126,7 +153,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using empty key directive
@@ -136,7 +163,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using simple non-nested key
@@ -157,6 +184,66 @@ class PillarTestCase(TestCase):
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
                 ({'foo': 'bar', 'nested': {'level': {'foo': 'bar2'}}}, [])
+            )
+
+    def test_includes_override_sls(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'file_roots': [],
+            'extension_modules': ''
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+        with patch('salt.pillar.compile_template') as compile_template:
+
+            # Test with option set to True
+            opts['pillar_includes_override_sls'] = True
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar2'}, [])
+            )
+
+            # Test with option set to False
+            opts['pillar_includes_override_sls'] = False
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar'}, [])
             )
 
     def test_topfile_order(self):

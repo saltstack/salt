@@ -127,7 +127,7 @@ def set_(package, question, type, value, *extra):
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
     line = "{0} {1} {2} {3}".format(package, question, type, value)
-    os.write(fd_, line)
+    os.write(fd_, salt.utils.to_bytes(line))
     os.close(fd_)
 
     _set_file(fname)

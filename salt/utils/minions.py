@@ -148,15 +148,25 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
+            regex_chars = ['(', '[', '{', '\\', '?''}])']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
-                # No group type specifiers and no wildcards. Treat this as a
-                # list of nodenames.
-                joined = 'L@' + ','.join(ret)
-                log.debug(
-                    'Nodegroup \'%s\' (%s) detected as list of nodenames. '
-                    'Assuming compound matching syntax of \'%s\'',
-                    nodegroup, ret, joined
-                )
+                # No group type specifiers and no wildcards.
+                # Treat this as an expression.
+                if [x for x in ret if x in [x for y in regex_chars if y in x]]:
+                    joined = 'E@' + ','.join(ret)
+                    log.debug(
+                        'Nodegroup \'%s\' (%s) detected as an expression. '
+                        'Assuming compound matching syntax of \'%s\'',
+                        nodegroup, ret, joined
+                    )
+                else:
+                    # Treat this as a list of nodenames.
+                    joined = 'L@' + ','.join(ret)
+                    log.debug(
+                        'Nodegroup \'%s\' (%s) detected as list of nodenames. '
+                        'Assuming compound matching syntax of \'%s\'',
+                        nodegroup, ret, joined
+                    )
                 # Return data must be a list of compound matching components
                 # to be fed into compound matcher. Enclose return data in list.
                 return [joined]

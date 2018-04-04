@@ -337,15 +337,16 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             # If nothing else is in extra, make it None
             extra = None
 
+        salt_system_encoding = __salt_system_encoding__
+        if salt_system_encoding == 'ascii':
+            # Encoding detection most likely failed, let's use the utf-8
+            # value which we defaulted before __salt_system_encoding__ was
+            # implemented
+            salt_system_encoding = 'utf-8'
+
         # Let's try to make every logging message unicode
         if isinstance(msg, six.string_types) \
                 and not isinstance(msg, six.text_type):
-            salt_system_encoding = __salt_system_encoding__
-            if salt_system_encoding == 'ascii':
-                # Encoding detection most likely failed, let's use the utf-8
-                # value which we defaulted before __salt_system_encoding__ was
-                # implemented
-                salt_system_encoding = 'utf-8'
             try:
                 _msg = msg.decode(salt_system_encoding, 'replace')
             except UnicodeDecodeError:
@@ -353,11 +354,23 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         else:
             _msg = msg
 
+        _args = []
+        for item in args:
+            if isinstance(item, six.string_types) \
+                    and not isinstance(item, six.text_type):
+                try:
+                    _args.append(item.decode(salt_system_encoding, 'replace'))
+                except UnicodeDecodeError:
+                    _args.append(item.decode(salt_system_encoding, 'ignore'))
+            else:
+                _args.append(item)
+        _args = tuple(_args)
+
         if six.PY3:
-            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, args,
+            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, _args,
                                             exc_info, func, sinfo)
         else:
-            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, args,
+            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, _args,
                                             exc_info, func)
 
         if extra is not None:
@@ -933,6 +946,12 @@ def shutdown_multiprocessing_logging():
         logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
         __MP_LOGGING_QUEUE_HANDLER = None
         __MP_LOGGING_CONFIGURED = False
+        if not logging.root.handlers:
+            # Ensure we have at least one logging root handler so
+            # something can handle logging messages. This case should
+            # only occur on Windows since on Windows we log to console
+            # and file through the Multiprocessing Logging Listener.
+            setup_console_logger()
     finally:
         logging._releaseLock()
 
@@ -946,6 +965,12 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
         # We're in the MainProcess and we're not daemonizing, return!
         # No multiprocessing logging listener shutdown shall happen
         return
+
+    if not daemonizing:
+        # Need to remove the queue handler so that it doesn't try to send
+        # data over a queue that was shut down on the listener end.
+        shutdown_multiprocessing_logging()
+
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():

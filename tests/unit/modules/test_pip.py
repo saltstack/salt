@@ -938,6 +938,27 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(ret, eggs)
 
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        # Passing env_vars passes them to underlying command?
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.freeze(env_vars={"foo": "bar"})
+                mock.assert_called_once_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                    env={"foo": "bar"}
+                )
+                self.assertEqual(ret, eggs)
+
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):

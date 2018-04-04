@@ -256,6 +256,7 @@ VALID_OPTS = {
 
     # Location of the files a minion should look for. Set to 'local' to never ask the master.
     'file_client': str,
+    'local': bool,
 
     # When using a local file_client, this parameter is used to allow the client to connect to
     # a master for remote execution.
@@ -599,10 +600,11 @@ VALID_OPTS = {
 
     # Frequency of the proxy_keep_alive, in minutes
     'proxy_keep_alive_interval': int,
-    'git_pillar_base': str,
-    'git_pillar_branch': str,
-    'git_pillar_env': str,
-    'git_pillar_root': str,
+    # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
+    # git_pillar_root omitted here because their values could conceivably be
+    # loaded as non-string types, which is OK because git_pillar will normalize
+    # them to strings. But rather than include all the possible types they
+    # could be, we'll just skip type-checking.
     'git_pillar_ssl_verify': bool,
     'git_pillar_global_lock': bool,
     'git_pillar_user': str,
@@ -614,10 +616,11 @@ VALID_OPTS = {
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
     'git_pillar_verify_config': bool,
+    # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
+    # their values could conceivably be loaded as non-string types, which is OK
+    # because gitfs will normalize them to strings. But rather than include all
+    # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
-    'gitfs_mountpoint': str,
-    'gitfs_root': str,
-    'gitfs_base': str,
     'gitfs_user': str,
     'gitfs_password': str,
     'gitfs_insecure_auth': bool,
@@ -676,6 +679,9 @@ VALID_OPTS = {
 
     # Recursively merge lists by aggregating them instead of replacing them.
     'pillar_merge_lists': bool,
+
+    # If True, values from included pillar SLS targets will override
+    'pillar_includes_override_sls': bool,
 
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
@@ -819,6 +825,10 @@ VALID_OPTS = {
     # (used by win_pkg.py, minion only)
     'winrepo_source_dir': str,
 
+    # NOTE: winrepo_branch omitted here because its value could conceivably be
+    # loaded as a non-string type, which is OK because winrepo will normalize
+    # them to strings. But rather than include all the possible types it could
+    # be, we'll just skip type-checking.
     'winrepo_dir': str,
     'winrepo_dir_ng': str,
     'winrepo_cachefile': str,
@@ -826,7 +836,6 @@ VALID_OPTS = {
     'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
-    'winrepo_branch': str,
     'winrepo_ssl_verify': bool,
     'winrepo_user': str,
     'winrepo_password': str,
@@ -938,7 +947,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) every n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of minutes. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -1081,6 +1090,15 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # Scheduler should be a dictionary
+    'schedule': dict,
+
+    # Whether to fire auth events
+    'auth_events': bool,
+
+    # Whether to fire Minion data cache refresh events
+    'minion_data_cache_events': bool,
 }
 
 # default configurations
@@ -1124,6 +1142,9 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
+    'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -1140,6 +1161,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
     'file_client': 'remote',
+    'local': False,
     'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
@@ -1346,6 +1368,7 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
+    'schedule': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1450,6 +1473,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
@@ -1474,6 +1498,7 @@ DEFAULT_MASTER_OPTS = {
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
+    'module_dirs': [],
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
@@ -1645,6 +1670,9 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'schedule': {},
+    'auth_events': True,
+    'minion_data_cache_events': True,
 }
 
 
@@ -2150,7 +2178,8 @@ def minion_config(path,
                   defaults=None,
                   cache_minion_id=False,
                   ignore_config_errors=True,
-                  minion_id=None):
+                  minion_id=None,
+                  role='minion'):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -2190,6 +2219,7 @@ def minion_config(path,
     opts = apply_minion_config(overrides, defaults,
                                cache_minion_id=cache_minion_id,
                                minion_id=minion_id)
+    opts['__role'] = role
     apply_sdb(opts)
     _validate_opts(opts)
     return opts
@@ -3470,10 +3500,6 @@ def apply_minion_config(overrides=None,
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
-
-    # if there is no schedule option yet, add an empty scheduler
-    if 'schedule' not in opts:
-        opts['schedule'] = {}
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()

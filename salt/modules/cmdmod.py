@@ -36,7 +36,6 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
@@ -47,8 +46,10 @@ except ImportError:
 
 if salt.utils.is_windows():
     from salt.utils.win_runas import runas as win_runas
+    from salt.utils.win_functions import escape_argument as _cmd_quote
     HAS_WIN_RUNAS = True
 else:
+    from salt.ext.six.moves import shlex_quote as _cmd_quote
     HAS_WIN_RUNAS = False
 
 __proxyenabled__ = ['*']
@@ -289,6 +290,7 @@ def _run(cmd,
             'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
 
+    output_loglevel = _check_loglevel(output_loglevel)
     log_callback = _check_cb(log_callback)
 
     if runas is None and '__context__' in globals():
@@ -315,6 +317,10 @@ def _run(cmd,
         # Handle edge cases where numeric/other input is entered, and would be
         # yaml-ified into non-string types
         cwd = str(cwd)
+
+    if bg:
+        ignore_retcode = True
+        use_vt = False
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
@@ -371,7 +377,7 @@ def _run(cmd,
         else:
             return cmd
 
-    if _check_loglevel(output_loglevel) is not None:
+    if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
@@ -411,10 +417,16 @@ def _run(cmd,
             )
         try:
             # Getting the environment for the runas user
+            # Use markers to thwart any stdout noise
             # There must be a better way to do this.
+            import uuid
+            marker = '<<<' + str(uuid.uuid4()) + '>>>'
+            marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
-                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
+                'sys.stdout.write(\"' + marker + '\"); '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items()))); '
+                'sys.stdout.write(\"' + marker + '\");'
             )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
@@ -425,14 +437,36 @@ def _run(cmd,
             elif __grains__['os_family'] in ['Solaris']:
                 env_cmd = ('su', '-', runas, '-c', sys.executable)
             elif __grains__['os_family'] in ['AIX']:
-                env_cmd = ('su', runas, '-c', sys.executable)
+                env_cmd = ('su', '-', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_encoded = subprocess.Popen(
+            env_encoded, env_encoded_err = subprocess.Popen(
                 env_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE
+            ).communicate(py_code.encode(__salt_system_encoding__))
+            marker_count = env_encoded.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_encoded
+                )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_encoded = b''
+            elif marker_count != 2:
+                raise CommandExecutionError(
+                    'Environment could not be retrieved for user \'{0}\'',
+                    info={'stderr': repr(env_encoded_err),
+                          'stdout': repr(env_encoded)}
+                )
+            else:
+                # Strip the marker
+                env_encoded = env_encoded.split(marker_b)[1]
+
             if six.PY2:
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
@@ -443,6 +477,10 @@ def _run(cmd,
 
             env_runas = dict((sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas))
             env_runas.update(env)
+            # Fix platforms like Solaris that don't set a USER env var in the
+            # user's default environment as obtained above.
+            if env_runas.get('USER') != runas:
+                env_runas['USER'] = runas
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
@@ -547,7 +585,7 @@ def _run(cmd,
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if _check_loglevel(output_loglevel) is not None
+                    cmd if output_loglevel is not None
                         else 'REDACTED',
                     kwargs
                 )
@@ -594,7 +632,7 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        if _check_loglevel(output_loglevel) is not None:
+        if output_loglevel is not None:
             msg = 'Running {0} in VT{1}'.format(cmd, to)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
@@ -668,6 +706,26 @@ def _run(cmd,
     except NameError:
         # Ignore the context error during grain generation
         pass
+
+    # Log the output
+    if output_loglevel is not None:
+        if not ignore_retcode and ret['retcode'] != 0:
+            if output_loglevel < LOG_LEVELS['error']:
+                output_loglevel = LOG_LEVELS['error']
+            msg = (
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
+            )
+            log.error(log_callback(msg))
+        if ret['stdout']:
+            log.log(output_loglevel, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+        if ret['stderr']:
+            log.log(output_loglevel, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+        if ret['retcode']:
+            log.log(output_loglevel, 'retcode: {0}'.format(ret['retcode']))
+
     return ret
 
 
@@ -949,21 +1007,6 @@ def run(cmd,
                encoded_cmd=encoded_cmd,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['stdout']
 
 
@@ -1315,26 +1358,6 @@ def run_stdout(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
 
 
@@ -1497,26 +1520,6 @@ def run_stderr(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
 
 
@@ -1699,26 +1702,6 @@ def run_all(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
 
 
@@ -1882,21 +1865,6 @@ def retcode(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['retcode']
 
 
@@ -2146,6 +2114,9 @@ def script(source,
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
+
+    path = _cmd_quote(path)
+
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
                stdin=stdin,
@@ -2777,9 +2748,8 @@ def shell_info(shell, list_modules=False):
                 'HKEY_LOCAL_MACHINE',
                 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
                 'Install')
-            if 'vtype' in install_data and \
-                    install_data['vtype'] == 'REG_DWORD' and \
-                    install_data['vdata'] == 1:
+            if install_data.get('vtype') == 'REG_DWORD' and \
+                    install_data.get('vdata') == 1:
                 details = __salt__['reg.list_values'](
                     'HKEY_LOCAL_MACHINE',
                     'Software\\Microsoft\\PowerShell\\{0}\\'
@@ -3115,7 +3085,6 @@ def run_bg(cmd,
         output_loglevel='debug',
         log_callback=None,
         reset_system_locale=True,
-        ignore_retcode=False,
         saltenv='base',
         password=None,
         **kwargs):
@@ -3275,7 +3244,6 @@ def run_bg(cmd,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                password=password,
                **kwargs

@@ -89,6 +89,10 @@ try:
 except ImportError:
     HAS_GETPASS = False
 
+# This is required to support international characters in AWS EC2 tags or any
+# other kind of metadata provided by particular Cloud vendor.
+MSGPACK_ENCODING = 'utf-8'
+
 NSTATES = {
     0: 'running',
     1: 'rebooting',
@@ -511,7 +515,10 @@ def bootstrap(vm_, opts=None):
             'winrm_port', vm_, opts, default=5986
         )
         deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
-        'winrm_use_ssl', vm_, opts, default=True
+            'winrm_use_ssl', vm_, opts, default=True
+        )
+        deploy_kwargs['winrm_verify_ssl'] = salt.config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, opts, default=True
         )
         if saltify_driver:
             deploy_kwargs['port_timeout'] = 1  # No need to wait/retry with Saltify
@@ -839,7 +846,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
         time.sleep(1)
 
 
-def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, verify=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -849,14 +856,20 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
             host, port
         )
     )
+    transport = 'ssl'
+    if not use_ssl:
+        transport = 'plaintext'
     trycount = 0
     while True:
         trycount += 1
         try:
-            transport = 'ssl'
-            if not use_ssl:
-                transport = 'plaintext'
-            s = winrm.Session(host, auth=(username, password), transport=transport)
+            winrm_kwargs = {'target': host,
+                            'auth': (username, password),
+                            'transport': transport}
+            if not verify:
+                log.debug("SSL validation for WinRM disabled.")
+                winrm_kwargs['server_cert_validation'] = 'ignore'
+            s = winrm.Session(**winrm_kwargs)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -1004,6 +1017,7 @@ def deploy_windows(host,
                    use_winrm=False,
                    winrm_port=5986,
                    winrm_use_ssl=True,
+                   winrm_verify_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1030,7 +1044,8 @@ def deploy_windows(host,
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                        username=username, password=password,
-                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
+                                       verify=winrm_verify_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -2557,7 +2572,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.fopen(index_file, mode) as fh_:
-            index = msgpack.load(fh_)
+            index = msgpack.load(fh_, encoding=MSGPACK_ENCODING)
     else:
         index = {}
 
@@ -2574,7 +2589,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2591,7 +2606,7 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.fopen(index_file, mode) as fh_:
-            index = msgpack.load(fh_)
+            index = msgpack.load(fh_, encoding=MSGPACK_ENCODING)
     else:
         return
 
@@ -2600,7 +2615,7 @@ def cachedir_index_del(minion_id, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2656,8 +2671,9 @@ def request_minion_cachedir(
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
-    with salt.utils.fopen(path, 'w') as fh_:
-        msgpack.dump(data, fh_)
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(path, mode) as fh_:
+        msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def change_minion_cachedir(
@@ -2689,12 +2705,12 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = msgpack.load(fh_)
+        cache_data = msgpack.load(fh_, encoding=MSGPACK_ENCODING)
 
     cache_data.update(data)
 
     with salt.utils.fopen(path, 'w') as fh_:
-        msgpack.dump(cache_data, fh_)
+        msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -2766,8 +2782,9 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                with salt.utils.fopen(fpath, 'r') as fh_:
-                    minions[driver][prov][minion_id] = msgpack.load(fh_)
+                mode = 'rb' if six.PY3 else 'r'
+                with salt.utils.fopen(fpath, mode) as fh_:
+                    minions[driver][prov][minion_id] = msgpack.load(fh_, encoding=MSGPACK_ENCODING)
 
     return minions
 
@@ -2945,8 +2962,9 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.p'.format(node))
-        with salt.utils.fopen(path, 'w') as fh_:
-            msgpack.dump(nodes[node], fh_)
+        mode = 'wb' if six.PY3 else 'w'
+        with salt.utils.fopen(path, mode) as fh_:
+            msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
 def cache_node(node, provider, opts):
@@ -2970,8 +2988,9 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
-    with salt.utils.fopen(path, 'w') as fh_:
-        msgpack.dump(node, fh_)
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(path, mode) as fh_:
+        msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -3046,7 +3065,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.fopen(path, 'r') as fh_:
         try:
-            cache_data = msgpack.load(fh_)
+            cache_data = msgpack.load(fh_, encoding=MSGPACK_ENCODING)
         except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}

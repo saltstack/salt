@@ -234,7 +234,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in list(_providers).copy():
+                for provider in _providers.copy():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts
@@ -1493,8 +1493,8 @@ class Cloud(object):
                             vm_name = vm_details['id']
                         else:
                             log.debug(
-                                'vm:{0} in provider:{1} is not in name '
-                                'list:\'{2}\''.format(vm_name, driver, names)
+                                'vm:%s in provider:%s is not in name '
+                                'list:\'%s\'', vm_name, driver, names
                             )
                             continue
 
