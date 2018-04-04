@@ -19,6 +19,7 @@ proxy modules
     marathon
     napalm
     nxos
+    panos
     philips_hue
     rest_sample
     ssh_sample
