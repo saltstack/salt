@@ -1163,7 +1163,6 @@ class Single(object):
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
             debug = '1'
         arg_str = '''
-OPTIONS = OBJ()
 OPTIONS.config = \
 """
 {0}

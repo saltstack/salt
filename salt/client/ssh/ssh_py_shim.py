@@ -30,14 +30,13 @@ EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
 
 
-class OBJ(object):
+class OptionsContainer(object):
     '''
     An empty class for holding instance attribute values.
     '''
-    pass
 
 
-OPTIONS = None
+OPTIONS = OptionsContainer()
 ARGS = None
 # The below line is where OPTIONS can be redefined with internal options
 # (rather than cli arguments) when the shim is bundled by
