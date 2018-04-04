@@ -41,10 +41,11 @@ def to_bytes(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -64,10 +65,11 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.decode(encoding, errors)
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.decode('utf-8', errors)
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return s.decode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
@@ -77,10 +79,11 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -108,10 +111,11 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
                 return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return _normalize(s.decode('utf-8', errors))
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str or bytearray')
 
 
