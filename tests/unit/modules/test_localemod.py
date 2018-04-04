@@ -89,10 +89,10 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert out['vc_keymap']['data'] == 'n/a'
         assert isinstance(out['x11_layout'], dict)
         assert 'data' in out['x11_layout']
-        assert out['x11_layout']['data']  == 'us'
+        assert out['x11_layout']['data'] == 'us'
         assert isinstance(out['x11_model'], dict)
         assert 'data' in out['x11_model']
-        assert out['x11_model']['data']  == 'pc105'
+        assert out['x11_model']['data'] == 'pc105'
 
     @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_notset)})
@@ -113,7 +113,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert out['vc_keymap']['data'] == 'n/a'
         assert isinstance(out['x11_layout'], dict)
         assert 'data' in out['x11_layout']
-        assert out['x11_layout']['data']  == 'n/a'
+        assert out['x11_layout']['data'] == 'n/a'
 
     @patch('salt.modules.localemod.dbus', MagicMock())
     def test_dbus_locale_parser_matches(self):
