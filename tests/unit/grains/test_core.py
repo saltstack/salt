@@ -872,24 +872,21 @@ SwapTotal:       4789244 kB'''
                     self.assertEqual(get_dns, ret)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
     def test_fqdns_return(self):
         '''
         test the return for a dns grain. test for issue:
         https://github.com/saltstack/salt/issues/41230
         '''
         reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
-        ('rinzler.evil-corp.com', [], ['5.6.7.8']),
-        ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
-        ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+                               ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
-        self._run_fqdns_test(reverse_resolv_mock, ret)
-
-    def _run_fqdns_test(self, reverse_resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows', MagicMock(return_value=False)):
-            with patch('salt.utils.network.ip_addrs',
-            MagicMock(return_value=['1.2.3.4', '5.6.7.8'])),\
-            patch('salt.utils.network.ip_addrs6',
-            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef'])):
-                with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
-                    fqdns = core.fqdns()
-                    self.assertEqual(fqdns, ret)
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            self.assertEqual(fqdns, ret)
