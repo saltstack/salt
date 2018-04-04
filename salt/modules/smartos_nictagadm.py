@@ -118,7 +118,7 @@ def exists(*nictag, **kwargs):
         salt '*' nictagadm.exists admin
     '''
     ret = {}
-    if len(nictag) == 0:
+    if not nictag:
         return {'Error': 'Please provide at least one nictag to check.'}
 
     cmd = 'nictagadm exists -l {0}'.format(' '.join(nictag))
@@ -159,7 +159,8 @@ def add(name, mac, mtu=1500):
     if mac != 'etherstub':
         cmd = 'dladm show-phys -m -p -o address'
         res = __salt__['cmd.run_all'](cmd)
-        if mac not in res['stdout'].splitlines():
+        # dladm prints '00' as '0', so account for that.
+        if mac.replace('00', '0') not in res['stdout'].splitlines():
             return {'Error': '{0} is not present on this system.'.format(mac)}
 
     if mac == 'etherstub':
@@ -207,7 +208,8 @@ def update(name, mac=None, mtu=None):
         else:
             cmd = 'dladm show-phys -m -p -o address'
             res = __salt__['cmd.run_all'](cmd)
-            if mac not in res['stdout'].splitlines():
+            # dladm prints '00' as '0', so account for that.
+            if mac.replace('00', '0') not in res['stdout'].splitlines():
                 return {'Error': '{0} is not present on this system.'.format(mac)}
 
     if mac and mtu:
