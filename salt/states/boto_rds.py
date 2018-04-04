@@ -733,3 +733,77 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
         else:
             ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are present.'.format(params, name)])
     return ret
+
+
+def db_cluster_present(name, engine, master_username, master_user_password, parameters=None,
+                       tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure DB cluster exists and update parameters.
+
+    .. versionadded:: Fluorine
+
+    name
+        The name for the cluster.
+
+    engine
+        The name of the database engine to be used for this instance. Supported
+        engine types are: MySQL, mariadb, oracle-se1, oracle-se, oracle-ee, sqlserver-ee,
+        sqlserver-se, sqlserver-ex, sqlserver-web, postgres and aurora. For more
+        information, please see the ``engine`` argument in the Boto3 RDS
+        `create_db_instance`_ documentation.
+
+    master_username
+        The name of master user for the client DB instance.
+
+    master_user_password
+        The password for the master database user. Can be any printable ASCII
+        character except "/", '"', or "@".
+
+    tags
+        A dict of tags.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    res = __salt__['boto_rds.db_cluster_exists'](name=name, tags=tags, region=region, key=key,
+                                                 keyid=keyid, profile=profile)
+    if 'error' in res:
+        ret['result'] = False
+        ret['comment'] = 'Error when attempting to find db cluster: {0}.'.format(
+            res['error']
+        )
+        return ret
+    if not res.get('exists'):
+        if __opts__['test']:
+            ret['comment'] = 'DB cluster {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        res = __salt__['boto_rds.create_db_cluster'](name=name, engine=engine,
+                                                     master_username=master_username,
+                                                     master_user_password=master_user_password,
+                                                     tags=tags, region=region,
+                                                     key=key, keyid=keyid, profile=profile)
+        if not res.get('created'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} db cluster.'.format(name)
+            return ret
+        ret['changes']['New DB Cluster'] = name
+        ret['comment'] = 'DB cluster {0} created.'.format(name)
+    else:
+        ret['comment'] = 'DB cluster {0} present.'.format(name)
+    return ret
