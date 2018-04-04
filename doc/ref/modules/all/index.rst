@@ -85,6 +85,67 @@ execution modules
     chronos
     cimc
     cisconso
+    citrixns_aaa
+    citrixns_appflow
+    citrixns_application_firewall
+    citrixns_appqoe
+    citrixns_audit
+    citrixns_authentication
+    citrixns_authorization
+    citrixns_autoscale
+    citrixns_basic
+    citrixns_bfd
+    citrixns_ca
+    citrixns_cache_redirection
+    citrixns_cloud
+    citrixns_cluster
+    citrixns_compression
+    citrixns_content_switching
+    citrixns_db
+    citrixns_domain_name_service
+    citrixns_filter
+    citrixns_front_end_optimization
+    citrixns_global_server_load_balancing
+    citrixns_high_availability
+    citrixns_http_dos_protection
+    citrixns_ica
+    citrixns_integrated_caching
+    citrixns_ipsec
+    citrixns_ipsecalg
+    citrixns_lldp
+    citrixns_load_balancing
+    citrixns_lsn
+    citrixns_ns
+    citrixns_nsnetwork
+    citrixns_nssystem
+    citrixns_ntp
+    citrixns_pcp
+    citrixns_policy
+    citrixns_priority_queuing
+    citrixns_protocol
+    citrixns_rdp
+    citrixns_reputation
+    citrixns_responder
+    citrixns_rewrite
+    citrixns_rise
+    citrixns_router
+    citrixns_smpp
+    citrixns_snmp
+    citrixns_spillover
+    citrixns_ssl
+    citrixns_ssl_vpn
+    citrixns_stream
+    citrixns_subscriber
+    citrixns_sure_connect
+    citrixns_traffic_management
+    citrixns_transform
+    citrixns_tunnel
+    citrixns_ulfd
+    citrixns_user
+    citrixns_utility
+    citrixns_videooptimization
+    citrixns_webinterface
+    citrixns_wf
     cloud
     cmdmod
     composer
