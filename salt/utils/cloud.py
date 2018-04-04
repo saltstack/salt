@@ -1027,10 +1027,9 @@ def deploy_windows(host,
         log.debug('SMB port %s on %s is available', port, host)
         log.debug('Logging into %s:%s as %s', host, port, username)
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-
         smb_conn = salt.utils.smb.get_conn(host, username, password)
         if smb_conn is False:
-            log.error('Please install impacket to enable SMB functionality')
+            log.error('Please install pysmb or impacket to enable SMB functionality')
             return False
 
         creds = "-U '{0}%{1}' //{2}".format(
@@ -1059,8 +1058,12 @@ def deploy_windows(host,
             # Read master-sign.pub file
             log.debug("Copying master_sign.pub file from %s to minion", master_sign_pub_file)
             try:
-                with salt.utils.files.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
-                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+                salt.utils.smb.put_file(
+                    master_sign_pub_file,
+                    'salt\\conf\\pki\\minion\\master_sign.pub',
+                    'C$',
+                    conn=smb_conn,
+                )
             except Exception as e:
                 log.debug("Exception copying master_sign.pub file %s to minion", master_sign_pub_file)
 
@@ -1071,8 +1074,12 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        with salt.utils.files.fopen(win_installer, 'rb') as inst_fh:
-            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
+        salt.utils.smb.put_file(
+            win_installer,
+            'salttemp\\{0}'.format(installer),
+            'C$',
+            conn=smb_conn,
+        )
 
         if use_winrm:
             winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
@@ -1133,8 +1140,8 @@ def deploy_windows(host,
             if use_winrm:
                 winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
             else:
-                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-                smb_conn.deleteDirectory('C$', 'salttemp')
+                salt.utils.delete_file('C$', 'salttemp/{0}'.format(installer), smb_conn)
+                salt.utils.delete_directory('C$', 'salttemp', smb_conn)
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
