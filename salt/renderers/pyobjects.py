@@ -263,7 +263,7 @@ different grain matches.
     **Ubuntu** classes, since Ubuntu has an ``os_family`` grain of **Debian**
     an an ``os`` grain of **Ubuntu**. As of the 2017.7.0 release, the order is
     dictated by the order of declaration, with classes defined later overriding
-    earlier ones. Addtionally, 2017.7.0 adds support for explicitly defining
+    earlier ones. Additionally, 2017.7.0 adds support for explicitly defining
     the ordering using an optional attribute called ``priority``.
 
     Given the above example, ``os_family`` matches will be processed first,

@@ -550,7 +550,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         '''
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name, suffix='test_*.py')
+        return self.run_suite(
+            full_path, display_name, suffix='test_*.py',
+            failfast=self.options.failfast,
+        )
 
     def start_daemons_only(self):
         if not salt.utils.platform.is_windows():
@@ -729,12 +732,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         results = self.run_suite(os.path.dirname(name),
                                                  name,
                                                  suffix=os.path.basename(name),
+                                                 failfast=self.options.failfast,
                                                  load_from_name=False)
                         status.append(results)
                         continue
                     if name.startswith(('tests.unit.', 'unit.')):
                         continue
-                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
+                    results = self.run_suite(
+                        '', name, suffix='test_*.py', load_from_name=True,
+                        failfast=self.options.failfast,
+                    )
                     status.append(results)
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
@@ -763,7 +770,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits('unit')
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py'
+                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py',
+                failfast=self.options.failfast,
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -772,7 +780,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         for name in named_unit_test:
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py', load_from_name=True
+                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py',
+                load_from_name=True, failfast=self.options.failfast,
             )
             status.append(results)
         return status
