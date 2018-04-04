@@ -618,28 +618,34 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _find_keep_files(root, keep):
     '''
-    Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep) and part of exclude_pat
+    Compile a list of valid keep files (and directories).
     '''
-    removed = set()
     real_keep = set()
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
-                fn_ = os.path.dirname(fn_)
+                fn_ = os.path.abspath(os.path.dirname(fn_))
                 real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
                     break
+    return real_keep
+
+
+def _clean_dir(root, keep, exclude_pat):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep) and part of exclude_pat
+    '''
+    real_keep = _find_keep_files(root, keep)
+    removed = set()
 
     def _delete_not_kept(nfn):
         if nfn not in real_keep:

@@ -33,7 +33,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module was successfully installed and
         removed.
         '''
-        ret = self.run_state('npm.installed', name='pm2')
+        ret = self.run_state('npm.installed', name='pm2', registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
@@ -51,7 +51,11 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             user = None
             npm_dir = None
-        ret = self.run_state('npm.installed', name='request/request#v2.81.1', runas=user, dir=npm_dir)
+        ret = self.run_state('npm.installed',
+                             name='request/request#v2.81.1',
+                             runas=user,
+                             dir=npm_dir,
+                             registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
@@ -65,7 +69,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'])
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),

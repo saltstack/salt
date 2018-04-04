@@ -59,7 +59,7 @@ class AuthTest(ShellCase):
     def setUp(self):
         for user in (self.userA, self.userB):
             try:
-                if salt.utils.is_darwin() and user not in str(self.run_call('user.list_users')):
+                if salt.utils.platform.is_darwin() and user not in str(self.run_call('user.list_users')):
                     # workaround for https://github.com/saltstack/salt-jenkins/issues/504
                     raise KeyError
                 pwd.getpwnam(user)
@@ -68,7 +68,7 @@ class AuthTest(ShellCase):
 
         # only put userB into the group for the group auth test
         try:
-            if salt.utils.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
+            if salt.utils.platform.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
                 # workaround for https://github.com/saltstack/salt-jenkins/issues/504
                 raise KeyError
             grp.getgrnam(self.group)
