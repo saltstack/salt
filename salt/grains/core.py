@@ -763,6 +763,7 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
