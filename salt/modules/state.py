@@ -13,7 +13,6 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import fnmatch
 import logging
 import os
 import shutil
