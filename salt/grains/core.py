@@ -1495,6 +1495,12 @@ def os_data():
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif salt.utils.path.which('dumb-init') in init_cmdline:
+                        # https://github.com/Yelp/dumb-init
+                        grains['init'] = 'dumb-init'
+                    elif salt.utils.path.which('tini') in init_cmdline:
+                        # https://github.com/krallin/tini
+                        grains['init'] = 'tini'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
                     elif '/sbin/my_init' in init_cmdline:
@@ -1919,16 +1925,21 @@ def fqdns():
     fqdns = set()
 
     addresses = salt.utils.network.ip_addrs(include_loopback=False,
-        interface_data=_INTERFACES)
+                                            interface_data=_INTERFACES)
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-        interface_data=_INTERFACES))
-
+                                                  interface_data=_INTERFACES))
+    err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.gethostbyaddr(ip)[0])
-        except (socket.error, socket.herror,
-            socket.gaierror, socket.timeout) as e:
-            log.info("Exception during resolving address: " + str(e))
+            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+        except socket.herror as err:
+            if err.errno == 1:
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
 
     grains['fqdns'] = sorted(list(fqdns))
     return grains
