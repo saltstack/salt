@@ -861,21 +861,30 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
     def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
-        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
-            # On Windows, all logging including console and
-            # log file logging will go through the multiprocessing
-            # logging listener if it exists.
-            # This will allow log file rotation on Windows
-            # since only one process can own the log file
-            # for log file rotation to work.
-            log.setup_multiprocessing_logging(
-                self._get_mp_logging_listener_queue()
-            )
-            # Remove the temp logger and any other configured loggers since all of
-            # our logging is going through the multiprocessing logging listener.
-            log.shutdown_temp_logging()
-            log.shutdown_console_logging()
-            log.shutdown_logfile_logging()
+        if self._setup_mp_logging_listener_:
+            # Set multiprocessing logging level even in non-Windows
+            # environments. In non-Windows environments, this setting will
+            # propogate from process to process via fork behavior and will be
+            # used by child processes if they invoke the multiprocessing
+            # logging client.
+            log.set_multiprocessing_logging_level_by_opts(self.config)
+
+            if salt.utils.platform.is_windows():
+                # On Windows, all logging including console and
+                # log file logging will go through the multiprocessing
+                # logging listener if it exists.
+                # This will allow log file rotation on Windows
+                # since only one process can own the log file
+                # for log file rotation to work.
+                log.setup_multiprocessing_logging(
+                    self._get_mp_logging_listener_queue()
+                )
+                # Remove the temp logger and any other configured loggers since
+                # all of our logging is going through the multiprocessing
+                # logging listener.
+                log.shutdown_temp_logging()
+                log.shutdown_console_logging()
+                log.shutdown_logfile_logging()
 
     def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
         # Since we're not going to be a daemon, setup the console logger
