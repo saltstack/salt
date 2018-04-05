@@ -13,7 +13,6 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import fnmatch
 import logging
 import os
 import shutil
@@ -2287,15 +2286,17 @@ def _disabled(funs):
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='minion'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='minion'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+        ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.
@@ -2303,7 +2304,7 @@ def event(tagmatch='*',
     Enable debug logging to see ignored events.
 
     :param tagmatch: the event is written to stdout for each tag that matches
-        this pattern; uses the same matching semantics as Salt's Reactor.
+        this glob or regular expression.
     :param count: this number is decremented for each event that matches the
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
@@ -2319,18 +2320,18 @@ def event(tagmatch='*',
         salt-call --local state.event pretty=True
     '''
     sevent = salt.utils.event.get_event(
-            node,
-            sock_dir or __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+                 node,
+                 sock_dir or __opts__['sock_dir'],
+                 __opts__['transport'],
+                 opts=__opts__,
+                 listen=True)
 
     while True:
         ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
+        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
             if not quiet:
                 salt.utils.stringutils.print_cli(
                     str('{0}\t{1}').format(  # future lint: blacklisted-function
@@ -2343,9 +2344,9 @@ def event(tagmatch='*',
                 )
                 sys.stdout.flush()
 
-            count -= 1
-            log.debug('Remaining event matches: %s', count)
-
+            if count > -1:
+                count -= 1
+                log.debug('Remaining event matches: %s', count)
             if count == 0:
                 break
         else:

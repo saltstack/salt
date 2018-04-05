@@ -135,7 +135,7 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
 
         Warning! If you set this option to a custom web application, anything
-        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        that uses cookie-based authentication is vulnerable to XSRF attacks.
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
@@ -174,7 +174,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 

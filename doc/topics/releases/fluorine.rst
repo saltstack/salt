@@ -9,19 +9,43 @@ Minion Startup Events
 ---------------------
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
 sent.
 
 The new :conf_minion:`enable_legacy_startup_events` minion config option
 defaults to ``True``, but will be set to default to ``False`` beginning with
 the Neon release of Salt.
 
-The Salt Syndic currently sends an old style  `syndic_start` event as well. The
+The Salt Syndic currently sends an old style ``syndic_start`` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
+
+
+Failhard changes
+----------------
+
+It is now possible to override a global failhard setting with a state-level
+failhard setting. This is most useful in case where global failhard is set to
+``True`` and you want the execution not to stop for a specific state that
+could fail, by setting the state level failhard to ``False``.
+This also allows for the use of ``onfail*``-requisites, which would previously
+be ignored when a global failhard was set to ``True``.
+This is a deviation from previous behavior, where the global failhard setting
+always resulted in an immediate stop whenever any state failed (regardless
+of whether the failing state had a failhard setting of its own, or whether
+any ``onfail*``-requisites were used).
+
+
+Pass Through Options to :py:func:`file.serialize <salt.states.file.serialize>` State
+------------------------------------------------------------------------------------
+
+This allows for more granular control over the way in which the dataset is
+serialized. See the documentation for the new ``serializer_opts`` option in the
+:py:func:`file.serialize <salt.states.file.serialize>` state for more
+information.
 
 
 Deprecations
@@ -160,3 +184,12 @@ The ``trafficserver`` state had the following changes:
   function instead.
 
 The ``win_update`` state has been removed. Please use the ``win_wua`` state instead.
+
+Utils Deprecations
+==================
+
+The ``vault`` utils module had the following changes:
+
+- Support for specifying Vault connection data within a 'profile' has been removed.
+  Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
+  details on the new configuration schema.
