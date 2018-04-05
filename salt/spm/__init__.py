@@ -12,7 +12,9 @@ import tarfile
 import shutil
 import hashlib
 import logging
+import re
 import sys
+import time
 try:
     import pwd
     import grp
@@ -25,10 +27,12 @@ import salt.config
 import salt.loader
 import salt.cache
 import salt.syspaths as syspaths
+from salt.defaults import exitcodes
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import filter
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 from salt.template import compile_template
 import salt.utils.files
 import salt.utils.http as http
@@ -49,41 +53,217 @@ FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
 # s: SLS file
 # m: Salt module
 
+FORMULA_FIELDS = {
+    'name': {
+        'description': 'SPM name',
+        'type': six.string_types,
+        'required': True,
+    },
+    'version': {
+        'description': 'Verion of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'release': {
+        'description': 'Release of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'summary': {
+        'description': 'One-line summary of what the SPM does',
+        'type': six.string_types,
+        'required': True,
+    },
+    'description': {
+        'description': 'Verbose description of the SPM',
+        'type': six.string_types,
+        'required': True,
+    },
+    'files': {
+        'description': 'Files that should be included in the SPM',
+        'type': list,
+        'required': False,
+        'dont_leak': True,
+    },
+    'spm_build_exclude': {
+        'description': '(sequence) Regular expressions of files to exclude from the SPM',
+        'required': False,
+        'dont_leak': True,
+    },
+}
+
+REQUIRED_FORMULA_FIELDS = [_field for _field, _info in FORMULA_FIELDS.items() if _info.get('required')]
+DONT_LEAK_FORMULA_FIELDS = [_field for _field, _info in FORMULA_FIELDS.items() if _info.get('dont_leak')]
+
 
 class SPMException(Exception):
     '''
     Base class for SPMClient exceptions
     '''
+    status = exitcodes.EX_SOFTWARE
+
+    def __init__(self, status=None):
+        super(SPMException, self).__init__()
+        if status is not None:
+            self.status = status
+
+
+class SPMFormulaError(SPMException):
+    '''
+    FORMUAL does not verify: e.g. missing or incorrect field types.
+    '''
+    status = exitcodes.EX_DATAERR
+
+    def __init__(self, missing=None, bad_types=None, status=None):
+        self.missing = missing or ()
+        self.bad_types = bad_types or ()
+        super(SPMFormulaError, self).__init__(status=status)
+
+    def __str__(self):
+        msgs = []
+        if self.missing:
+            msgs.append('Missing FORMULA fields: {0}'.format(', '.join(self.missing)))
+        if self.bad_types:
+            msgs.append(
+                'Incorrect FORMULA field types: {0}'.format(
+                    ', '.join(['{0} ({1})'.format(f, str(FORMULA_FIELDS[f]['type'])) for f in self.bad_types])
+                )
+            )
+        return '; '.join(msgs)
 
 
 class SPMInvocationError(SPMException):
     '''
     Wrong number of arguments or other usage error
     '''
+    status = exitcodes.EX_USAGE
 
 
 class SPMPackageError(SPMException):
     '''
     Problem with package file or package installation
     '''
+    status = exitcodes.EX_NOINPUT
 
 
 class SPMDatabaseError(SPMException):
     '''
     SPM database not found, etc
     '''
+    status = exitcodes.EX_SOFTWARE
 
 
 class SPMOperationCanceled(SPMException):
     '''
     SPM install or uninstall was canceled
     '''
+    status = exitcodes.EX_CANTCREAT
+
+
+def verify_formula(formula):
+    '''
+    Verify the existence and types of fields in a FORMULA
+    '''
+    missing = []
+    bad_types = []
+    for fname, finfo in FORMULA_FIELDS.items():
+        if fname in formula:
+            if not isinstance(formula[fname], finfo.get('type')):
+                bad_types.append(fname)
+        elif finfo.get('required'):
+            missing.append(fname)
+
+    if missing or bad_types:
+        raise SPMFormulaError(missing=missing, bad_types=bad_types)
+
+
+def spm_create(path, formula_conf):
+    '''
+    Write the FORMULA file detailed by formula_conf to an SPM tar object
+    '''
+
+    verify_formula(formula_conf)
+
+    now = time.time()
+    _formula_conf = dict([(k, v) for k, v in formula_conf.items() if k not in DONT_LEAK_FORMULA_FIELDS])
+
+    try:
+        tarobj = tarfile.open(path, 'w:bz2')
+    except Exception as err:
+        raise SPMPackageError('Failed to create SPM: {0}: {1}'.format(path, err))
+
+    fdir = tarfile.TarInfo(_formula_conf['name'])
+    fdir.type = tarfile.DIRTYPE
+    fdir.mode = 0755
+    fdir.mtime = now
+    tarobj.addfile(fdir)
+
+    fpath = '{0}/FORMULA'.format(_formula_conf['name'])
+    fc_str = salt.utils.yaml.safe_dump(_formula_conf, default_flow_style=False) + '\n'
+    fc_fobj = StringIO(fc_str)
+    ffile = tarfile.TarInfo(fpath)
+    ffile.size = len(fc_str)
+    ffile.type = tarfile.REGTYPE
+    ffile.mode = 0444
+    ffile.mtime = now
+    tarobj.addfile(ffile, fc_fobj)
+    fc_fobj.close()
+
+    return tarobj
+
+
+def spm_open(spm_path):
+    '''
+    Open an SPM file and return the tar object and formula_conf.
+    '''
+
+    tarobj = None
+    formula_conf = None
+
+    try:
+        # Only use 'r' so that compression is auto-detected - leaves
+        # open-ended to future payload compression types.
+        _tarobj = tarfile.open(spm_path, 'r')
+    except Exception as err:
+        raise SPMPackageError('Unable to open SPM file "{0}": {1}'.format(spm_path, str(err)))
+
+    for member in _tarobj.getmembers():
+        if member.name.count('/') != 1:
+            continue
+
+        if not member.name.endswith('/FORMULA'):
+            continue
+
+        formula_ref = _tarobj.extractfile(member.name)
+        try:
+            formula_def = salt.utils.yaml.safe_load(formula_ref)
+        except salt.utils.yaml.reader.ReaderError:
+            continue
+
+        try:
+            verify_formula(formula_def)
+        except SPMFormulaError as err:
+            log.warning('SPM member %s does not verify as an SPM FORMULA: %s', member.name, str(err))
+            continue
+
+        if member.name != '{0}/FORMULA'.format(formula_def['name']):
+            log.warning('SPM member %s is mismatched with SPM metadata %s/FORMULA', member.name, formula_def['name'])
+            continue
+
+        tarobj = _tarobj
+        formula_conf = formula_def
+        break
+    else:
+        raise SPMPackageError('Unable to locate a valid FORMULA member in the SPM')
+
+    return tarobj, formula_conf
 
 
 class SPMClient(object):
     '''
     Provide an SPM Client
     '''
+
     def __init__(self, ui, opts=None):  # pylint: disable=W0231
         self.ui = ui
         if not opts:
@@ -111,6 +291,7 @@ class SPMClient(object):
         '''
         Run the SPM command
         '''
+        ret = exitcodes.EX_OK
         command = args[0]
         try:
             if command == 'install':
@@ -137,6 +318,9 @@ class SPMClient(object):
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
             self.ui.error(six.text_type(exc))
+            ret = exc.status
+
+        return ret
 
     def _pkgdb_fun(self, func, *args, **kwargs):
         try:
@@ -248,13 +432,8 @@ class SPMClient(object):
         for pkg in packages:
             if pkg.endswith('.spm'):
                 if self._pkgfiles_fun('path_exists', pkg):
-                    comps = pkg.split('-')
-                    comps = '-'.join(comps[:-2]).split('/')
-                    pkg_name = comps[-1]
-
-                    formula_tar = tarfile.open(pkg, 'r:bz2')
-                    formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-                    formula_def = salt.utils.yaml.safe_load(formula_ref)
+                    _, formula_def = spm_open(pkg)
+                    pkg_name = formula_def['name']
 
                     file_map[pkg_name] = pkg
                     to_, op_, re_ = self._check_all_deps(
@@ -334,7 +513,7 @@ class SPMClient(object):
                             )
                             out_file = os.path.join(
                                 cache_path,
-                                repo_info['packages'][package]['filename']
+                                os.path.basename(repo_info['packages'][package]['filename'])
                             )
                             dl_list[package] = {
                                 'version': repo_ver,
@@ -355,7 +534,7 @@ class SPMClient(object):
 
             # Download the package
             if dl_url.startswith('file://'):
-                dl_url = dl_url.replace('file://', '')
+                dl_url = os.path.abspath(dl_url.replace('file://', ''))
                 shutil.copyfile(dl_url, out_file)
             else:
                 with salt.utils.files.fopen(out_file, 'w') as outf:
@@ -456,9 +635,7 @@ class SPMClient(object):
         Install one individual package
         '''
         self.ui.status('... installing {0}'.format(pkg_name))
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-        formula_def = salt.utils.yaml.safe_load(formula_ref)
+        formula_tar, formula_def = spm_open(pkg_file)
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -733,11 +910,8 @@ class SPMClient(object):
                 spm_path = '{0}/{1}'.format(repo_path, spm_file)
                 if not tarfile.is_tarfile(spm_path):
                     continue
-                comps = spm_file.split('-')
-                spm_name = '-'.join(comps[:-2])
-                spm_fh = tarfile.open(spm_path, 'r:bz2')
-                formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
-                formula_conf = salt.utils.yaml.safe_load(formula_handle.read())
+                _, formula_conf = spm_open(spm_path)
+                spm_name = formula_conf['name']
 
                 use_formula = True
                 if spm_name in repo_metadata:
@@ -892,13 +1066,7 @@ class SPMClient(object):
         if not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
-        comps = pkg_file.split('-')
-        comps = '-'.join(comps[:-2]).split('/')
-        name = comps[-1]
-
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
-        formula_def = salt.utils.yaml.safe_load(formula_ref)
+        _, formula_def = spm_open(pkg_file)
 
         self.ui.status(self._get_info(formula_def))
 
@@ -960,13 +1128,10 @@ class SPMClient(object):
             raise SPMInvocationError('A package filename must be specified')
 
         pkg_file = args[1]
-        if not os.path.exists(pkg_file):
-            raise SPMPackageError('Package file {0} not found'.format(pkg_file))
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        pkg_files = formula_tar.getmembers()
+        formula_tar, _ = spm_open(pkg_file)
 
-        for member in pkg_files:
-            self.ui.status(member.name)
+        for name in formula_tar.getnames():
+            self.ui.status(name)
 
     def _list_packages(self, args):
         '''
@@ -1016,8 +1181,9 @@ class SPMClient(object):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
         with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = salt.utils.yaml.safe_load(fp_)
+            verify_formula(formula_conf)
 
-        for field in ('name', 'version', 'release', 'summary', 'description'):
+        for field in REQUIRED_FORMULA_FIELDS:
             if field not in formula_conf:
                 raise SPMPackageError('Invalid package: a {0} must be defined'.format(field))
 
@@ -1033,7 +1199,7 @@ class SPMClient(object):
 
         self.formula_conf = formula_conf
 
-        formula_tar = tarfile.open(out_path, 'w:bz2')
+        formula_tar = spm_create(out_path, formula_conf)
 
         if 'files' in formula_conf:
             # This allows files to be added to the SPM file in a specific order.
@@ -1041,9 +1207,6 @@ class SPMClient(object):
             # RPM files. This tag is ignored here, but is used when installing
             # the SPM file.
             if isinstance(formula_conf['files'], list):
-                formula_dir = tarfile.TarInfo(formula_conf['name'])
-                formula_dir.type = tarfile.DIRTYPE
-                formula_tar.addfile(formula_dir)
                 for file_ in formula_conf['files']:
                     for ftype in FILE_TYPES:
                         if file_.startswith('{0}|'.format(ftype)):
@@ -1055,10 +1218,8 @@ class SPMClient(object):
         else:
             # If no files are specified, then the whole directory will be added.
             try:
-                formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
                 formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
             except TypeError:
-                formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
                 formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
@@ -1069,14 +1230,33 @@ class SPMClient(object):
         Exclude based on opts
         '''
         if isinstance(member, string_types):
+            mpath = member
+            ret_exclude = True
+            ret_include = False
+        elif isinstance(member, tarfile.TarInfo):
+            mpath = member.name
+            ret_exclude = None
+            ret_include = member
+        else:
             return None
 
-        for item in self.opts['spm_build_exclude']:
-            if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
-                return None
-            elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
-                return None
-        return member
+        # parent directory and FORMULA are explicitly written into the
+        # archive - don't passively include them.
+        if mpath in (
+                '{0}'.format(self.formula_conf['name']),
+                '{0}'.format(self.abspath),
+                '{0}/FORMULA'.format(self.formula_conf['name']),
+                '{0}/FORMULA'.format(self.abspath)
+        ):
+            return ret_exclude
+
+        for pat in self.formula_conf.get('spm_build_exclude', self.opts['spm_build_exclude']):
+            if re.match('{0}/{1}'.format(self.formula_conf['name'], pat), mpath):
+                return ret_exclude
+            elif re.match('{0}/{1}'.format(self.abspath, pat), mpath):
+                return ret_exclude
+
+        return ret_include
 
     def _render(self, data, formula_def):
         '''

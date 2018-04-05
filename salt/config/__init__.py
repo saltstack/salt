@@ -1906,7 +1906,15 @@ DEFAULT_SPM_OPTS = {
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
     'spm_build_dir': '/srv/spm_build',
-    'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
+    'spm_build_exclude': [      # Regular expressions to exclude files
+        r'(.*/)?\.bzr(/.*)?$',   # ".bzr" dirs and contents at any depth in source
+        r'(.*/)?CVS(/.*)?$',     # ".CVS" dirs and contents at any depth in source
+        r'(.*/)?\.hg(/.*)?$',    # ".hg" dirs and contents at any depth in source
+        r'(.*/)?\.git(/.*)?$',   # ".git" dirs and contents at any depth in source
+        r'(.*/)?\.svn(/.*)?$',   # ".svn" dirs and contents at any depth in source
+        r'.*~$',                 # any file that ends with a "~" (backup files)
+        r'.*#$',                 # any file that ends with a "#" (backup files)
+    ],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
     'spm_repo_dups': 'ignore',

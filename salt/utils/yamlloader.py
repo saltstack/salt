@@ -9,6 +9,7 @@ import re
 import warnings
 
 import yaml  # pylint: disable=blacklisted-import
+from yaml import reader
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:

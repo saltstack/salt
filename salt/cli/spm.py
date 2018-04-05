@@ -11,6 +11,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import sys
+
 # Import Salt libs
 import salt.spm
 import salt.utils.parsers as parsers
@@ -38,4 +40,4 @@ class SPM(parsers.SPMParser):
                    )
         verify_log(self.config)
         client = salt.spm.SPMClient(ui, self.config)
-        client.run(self.args)
+        sys.exit(client.run(self.args))

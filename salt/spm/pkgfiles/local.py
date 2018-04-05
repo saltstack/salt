@@ -7,6 +7,7 @@ This module allows SPM to use the local filesystem to install files for SPM.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import os
 import os.path
 import logging
@@ -48,54 +49,80 @@ def init(**kwargs):
     }
 
 
-def check_existing(package, pkg_files, formula_def, conn=None):
+def map_path(path, formula, parent_dir=None, conn=None):
     '''
-    Check the filesystem for existing files
+    Translate a path from the SPM into a filesystem path.
     '''
     if conn is None:
         conn = init()
 
-    node_type = six.text_type(__opts__.get('spm_node_type'))
+    out_path = path
+    _parent_dir = parent_dir or '{0}/'.format(formula.get('top_level_dir', formula.get('name', '')))
+
+    if not path.startswith(_parent_dir):
+        return (None, None)
+
+    trimmed_path = path.replace(_parent_dir, '', 1)
+    file_path = trimmed_path
+
+    if trimmed_path == 'FORMULA':
+        base_path = None
+        file_path = None
+
+    elif trimmed_path.startswith('_'):
+        file_path = trimmed_path[1:]
+        node_type = six.text_type(__opts__.get('spm_node_type'))
+        if node_type in ('master', 'minion'):
+            # Module files are distributed via extmods directory
+            base_path = os.path.join(
+                salt.syspaths.CACHE_DIR,
+                node_type,
+                'extmods',
+            )
+        else:
+            # Module files are distributed via _modules, _states, etc
+            base_path = conn['formula_path']
+
+    elif trimmed_path == 'pillar.example':
+        # Pillars are automatically put in the pillar_path
+        base_path = conn['pillar_path']
+        file_path = '{0}.sls.orig'.format(formula['name'])
+
+    elif formula['name'].endswith('-conf'):
+        # Configuration files go into /etc/salt/
+        base_path = salt.syspaths.CONFIG_DIR
+
+    elif formula['name'].endswith('-reactor'):
+        # Reactor files go into /srv/reactor/
+        base_path = conn['reactor_path']
+
+    else:
+        base_path = conn['formula_path']
+
+    return (base_path, file_path)
+
+
+def check_existing(package, pkg_files, formula_def, conn=None):
+    '''
+    Check the filesystem for existing files
+    '''
+    _ = package  # Unused
 
     existing_files = []
     for member in pkg_files:
         if member.isdir():
             continue
 
-        tld = formula_def.get('top_level_dir', package)
-        new_name = member.name.replace('{0}/'.format(package), '')
-        if not new_name.startswith(tld):
+        (base_path, file_path) = map_path(member.name, formula_def, conn=conn)
+        if not base_path or not file_path:
+            log.warning('%s not in top level directory', member.name)
             continue
+        new_path = os.path.sep.join(base_path, file_path)
 
-        if member.name.startswith('{0}/_'.format(package)):
-            if node_type in ('master', 'minion'):
-                # Module files are distributed via extmods directory
-                out_file = os.path.join(
-                    salt.syspaths.CACHE_DIR,
-                    node_type,
-                    'extmods',
-                    new_name.replace('_', ''),
-                )
-            else:
-                # Module files are distributed via _modules, _states, etc
-                out_file = os.path.join(conn['formula_path'], new_name)
-        elif member.name == '{0}/pillar.example'.format(package):
-            # Pillars are automatically put in the pillar_path
-            new_name = '{0}.sls.orig'.format(package)
-            out_file = os.path.join(conn['pillar_path'], new_name)
-        elif package.endswith('-conf'):
-            # Configuration files go into /etc/salt/
-            out_file = os.path.join(salt.syspaths.CONFIG_DIR, new_name)
-        elif package.endswith('-reactor'):
-            # Reactor files go into /srv/reactor/
-            out_file = os.path.join(conn['reactor_path'], member.name)
-        else:
-            out_file = os.path.join(conn['formula_path'], member.name)
-
-        if os.path.exists(out_file):
-            existing_files.append(out_file)
+        if os.path.exists(new_path):
+            existing_files.append(new_path)
             if not __opts__['force']:
-                log.error('%s already exists, not installing', out_file)
+                log.warning('%s already exists, not installing', new_path)
 
     return existing_files
 
@@ -107,66 +134,16 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if member.name == package:
         return False
 
-    if conn is None:
-        conn = init()
-
-    node_type = six.text_type(__opts__.get('spm_node_type'))
-
-    out_path = conn['formula_path']
-
-    tld = formula_def.get('top_level_dir', package)
-    new_name = member.name.replace('{0}/'.format(package), '', 1)
-    if not new_name.startswith(tld) and not new_name.startswith('_') and not \
-            new_name.startswith('pillar.example') and not new_name.startswith('README'):
-        log.debug('%s not in top level directory, not installing', new_name)
+    (base_path, file_path) = map_path(member.name, formula_def, conn=conn)
+    if not base_path or not file_path:
+        log.warning('%s not in top level directory, not installing', member.name)
         return False
+    new_path = os.path.sep.join(base_path, file_path)
 
-    for line in formula_def.get('files', []):
-        tag = ''
-        for ftype in FILE_TYPES:
-            if line.startswith('{0}|'.format(ftype)):
-                tag = line.split('|', 1)[0]
-                line = line.split('|', 1)[1]
-        if tag and new_name == line:
-            if tag in ('c', 'd', 'g', 'l', 'r'):
-                out_path = __opts__['spm_share_dir']
-            elif tag in ('s', 'm'):
-                pass
+    log.debug('Installing package file %s to %s', member.name, new_path)
+    formula_tar.extract(member, base_path)
 
-    if new_name.startswith('{0}/_'.format(package)):
-        if node_type in ('master', 'minion'):
-            # Module files are distributed via extmods directory
-            member.name = new_name.name.replace('{0}/_'.format(package), '')
-            out_path = os.path.join(
-                salt.syspaths.CACHE_DIR,
-                node_type,
-                'extmods',
-            )
-        else:
-            # Module files are distributed via _modules, _states, etc
-            member.name = new_name.name.replace('{0}/'.format(package), '')
-    elif new_name == '{0}/pillar.example'.format(package):
-        # Pillars are automatically put in the pillar_path
-        member.name = '{0}.sls.orig'.format(package)
-        out_path = conn['pillar_path']
-    elif package.endswith('-conf'):
-        # Configuration files go into /etc/salt/
-        member.name = member.name.replace('{0}/'.format(package), '')
-        out_path = salt.syspaths.CONFIG_DIR
-    elif package.endswith('-reactor'):
-        # Reactor files go into /srv/reactor/
-        out_path = __opts__['reactor_path']
-
-    # This ensures that double directories (i.e., apache/apache/) don't
-    # get created
-    comps = member.path.split('/')
-    if len(comps) > 1 and comps[0] == comps[1]:
-        member.path = '/'.join(comps[1:])
-
-    log.debug('Installing package file %s to %s', member.name, out_path)
-    formula_tar.extract(member, out_path)
-
-    return out_path
+    return base_path
 
 
 def remove_file(path, conn=None):
@@ -177,7 +154,11 @@ def remove_file(path, conn=None):
         conn = init()
 
     log.debug('Removing package file %s', path)
-    os.remove(path)
+    try:
+        os.remove(path)
+    except OSError as err:
+        if errno.ENOENT != err.errno:
+            raise err
 
 
 def hash_file(path, hashobj, conn=None):
@@ -187,9 +168,15 @@ def hash_file(path, hashobj, conn=None):
     if os.path.isdir(path):
         return ''
 
-    with salt.utils.files.fopen(path, 'r') as f:
-        hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
-        return hashobj.hexdigest()
+    try:
+        with salt.utils.fopen(path, 'r') as fobj:
+            hashobj.update(salt.utils.to_bytes(fobj.read()))
+            return hashobj.hexdigest()
+    except IOError as err:
+        if errno.ENOENT == err.errno:
+            return ''
+        else:
+            raise err
 
 
 def path_exists(path):

@@ -68,7 +68,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_repos_config': os.path.join(self._tmp_spm, 'etc', 'spm.repos'),
             'spm_cache_dir': os.path.join(self._tmp_spm, 'cache'),
             'spm_build_dir': os.path.join(self._tmp_spm, 'build'),
-            'spm_build_exclude': ['.git'],
+            'spm_build_exclude': [r'(.*/)?\.git(/.*)?$'],
             'spm_db_provider': 'sqlite3',
             'spm_files_provider': 'local',
             'spm_db': os.path.join(self._tmp_spm, 'packages.db'),

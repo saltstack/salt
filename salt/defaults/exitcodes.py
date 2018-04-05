@@ -27,6 +27,8 @@ EX_AGGREGATE = 20
 
 EX_OK = 0                 # successful termination
 EX_USAGE = 64             # command line usage error
+EX_DATAERR = 65           # data format error
+EX_NOINPUT = 66           # input file missing or unreadable
 EX_NOUSER = 67            # addressee unknown
 EX_UNAVAILABLE = 69       # service unavailable
 EX_SOFTWARE = 70          # internal software error
