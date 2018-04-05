@@ -362,6 +362,28 @@ def item(*args, **kwargs):
 
         .. versionadded:: 2015.8.0
 
+    pillarenv
+        If specified, this function will query the master to generate fresh
+        pillar data on the fly, specifically from the requested pillar
+        environment. Note that this can produce different pillar data than
+        executing this function without an environment, as its normal behavior
+        is just to return a value from minion's pillar data in memory (which
+        can be sourced from more than one pillar environment).
+
+        Using this argument will not affect the pillar data in memory. It will
+        however be slightly slower and use more resources on the master due to
+        the need for the master to generate and send the minion fresh pillar
+        data. This tradeoff in performance however allows for the use case
+        where pillar data is desired only from a single environment.
+
+        .. versionadded:: 2017.7.6,2018.3.1
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: 2017.7.6,2018.3.1
+
     CLI Examples:
 
     .. code-block:: bash
@@ -373,10 +395,16 @@ def item(*args, **kwargs):
     ret = {}
     default = kwargs.get('default', '')
     delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
+    pillarenv = kwargs.get('pillarenv', None)
+    saltenv = kwargs.get('saltenv', None)
+
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
+            ret[arg] = salt.utils.traverse_dict_and_list(pillar_dict,
                                                          arg,
                                                          default,
                                                          delimiter)

@@ -32,6 +32,9 @@ cp "$busybox" "$rootfsDir/bin/busybox"
 	unset IFS
 
 	for module in "${modules[@]}"; do
+		# Don't stomp on the busybox binary (newer busybox releases
+		# include busybox in the --list-modules output)
+		test "$module" == "bin/busybox" && continue
 		mkdir -p "$(dirname "$module")"
 		ln -sf /bin/busybox "$module"
 	done

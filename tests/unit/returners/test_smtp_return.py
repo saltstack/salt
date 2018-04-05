@@ -64,8 +64,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.gnupg'), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
@@ -77,8 +77,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
                 self._test_returner(mocked_smtplib)
