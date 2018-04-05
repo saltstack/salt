@@ -29,7 +29,7 @@ Significate changes (PR #43708 & #45390, damon-atkins) have been made to the pkg
 - ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
 - ``pkg.list_pkgs`` now returns multiple versions if software installed more than once.
 - ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found instead of '(value not set)' which matches the contents of the sls definitions.
-- ``pkg.remove()`` will wait upto 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
+- ``pkg.remove()`` will wait up to 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
 - ``pkg.remove()`` can remove ``latest`` software, if ``latest`` is defined in sls definition.
 - Documentation was update for the execution module to match the style in new versions, some corrections as well.
 - All install/remove commands are prefix with cmd.exe shell and cmdmod is called with a command line string instead of a list. Some sls files in saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe (i.e. the use of ``&``).
@@ -407,7 +407,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   @ *2017-11-28T21:50:19Z*
 
   * 998d714ee7 Merge pull request `#44517`_ from whytewolf/publish_port_doc_missing
-  * 4b5855283a missed one place where i didnt chanbge master_port from my copy to publish_port
+  * 4b5855283a missed one place where i didn't change master_port from my copy to publish_port
 
   * e4610baea5 update doc to have publish port
 
@@ -598,7 +598,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   @ *2017-10-31T17:56:34Z*
 
   * cab54e34b5 Merge pull request `#44173`_ from twangboy/win_system_docs
-  * 8e111b413d Fix some of the wording and grammer errors
+  * 8e111b413d Fix some of the wording and grammar errors
 
   * a12bc5ae41 Use google style docstrings
 
@@ -831,7 +831,7 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 
   - **ISSUE** `#43581`_: (*jcourington*) cherrypy stats issue
     | refs: `#44021`_
-  - **PR** `#42655`_: (*whiteinge*) Reenable cpstats for rest_cherrypy
+  - **PR** `#42655`_: (*whiteinge*) Re-enable cpstats for rest_cherrypy
     | refs: `#44021`_
   - **PR** `#33806`_: (*cachedout*) Work around upstream cherrypy bug
     | refs: `#42655`_
@@ -1001,13 +1001,13 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
   * ea8d273c2b Merge pull request `#43768`_ from vutny/fix-pylint-deprecation-warnings
   * f8b3fa9da1 Merge branch '2016.11' into fix-pylint-deprecation-warnings
 
-- **PR** `#43772`_: (*gtmanfred*) dont print Minion not responding with quiet
+- **PR** `#43772`_: (*gtmanfred*) don't print Minion not responding with quiet
   @ *2017-09-27T15:39:18Z*
 
   - **ISSUE** `#40311`_: (*cralston0*) --hide-timeout used with --output json --static produces unparseable JSON
     | refs: `#43772`_
   * 1a8cc60bb4 Merge pull request `#43772`_ from gtmanfred/2016.11
-  * 0194c60960 dont print Minion not responding with quiet
+  * 0194c60960 don't print Minion not responding with quiet
 
 - **PR** `#43747`_: (*rallytime*) Add GPG Verification section to Contributing Docs
   @ *2017-09-26T21:25:37Z*

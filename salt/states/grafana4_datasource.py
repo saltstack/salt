@@ -27,7 +27,7 @@ Manage Grafana v4.0 data sources
           grafana_token: token
           grafana_timeout: 3
 
-The bahavior of this module is to create data sources if the do not exists, and
+The behavior of this module is to create data sources if the do not exists, and
 to update data sources if the already exists.
 
 .. code-block:: yaml

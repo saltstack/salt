@@ -2642,7 +2642,7 @@ def _maybe_set_tags(tags, obj):
 def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_support:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
-        log.debug('DNS spport was set to: %s on vpc %s', dns_support, vpcid)
+        log.debug('DNS support was set to: %s on vpc %s', dns_support, vpcid)
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: %s on vpc %s', dns_hostnames, vpcid)
