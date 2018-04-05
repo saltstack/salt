@@ -857,7 +857,7 @@ def _virtual(osdata):
         # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
                     grains['virtual_subtype'] = 'LXC'
