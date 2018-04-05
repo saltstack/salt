@@ -11,7 +11,6 @@ import re
 import shutil
 import subprocess
 import time
-import urllib
 
 # Import salt libs
 import salt.utils
@@ -20,6 +19,12 @@ from salt.exceptions import CommandExecutionError, FileLockError, MinionError
 
 # Import 3rd-party libs
 from salt.ext import six
+
+if six.PY2:
+    from urllib import quote
+elif six.PY3:
+    from urllib.parse import quote  # pylint: disable=no-name-in-module
+
 
 log = logging.getLogger(__name__)
 
@@ -312,7 +317,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe=u'')
+        return quote(re_obj.group(0), safe=u'')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',

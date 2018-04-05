@@ -40,6 +40,7 @@ import salt.utils.process
 import salt.utils.files
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
+from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
     SaltException,
@@ -56,7 +57,6 @@ import salt.utils.yamlloader as yamlloader
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -1731,7 +1731,7 @@ class State(object):
                 # and the attempt, we are safe to pass
                 pass
         with salt.utils.fopen(tfile, 'wb+') as fp_:
-            fp_.write(msgpack.dumps(ret))
+            fp_.write(msgpack_serialize(ret))
 
     def call_parallel(self, cdata, low):
         '''
@@ -2094,7 +2094,7 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = msgpack_deserialize(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',

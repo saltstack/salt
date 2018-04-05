@@ -334,6 +334,7 @@ class OrchEventTest(ShellCase):
 
         signal.signal(signal.SIGALRM, self.alarm_handler)
         signal.alarm(self.timeout)
+        received = False
         try:
             while True:
                 event = listener.get_event(full=True)
@@ -344,6 +345,7 @@ class OrchEventTest(ShellCase):
                 # the test is implicitly sucessful; if it were happening in serial it would be
                 # atleast 110 seconds.
                 if event['tag'] == 'salt/run/{0}/ret'.format(jid):
+                    received = True
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
                     ret = event['data']['return']['data']['master']
@@ -356,5 +358,6 @@ class OrchEventTest(ShellCase):
                 # self confirm that the total runtime is roughly 30s (left 10s for buffer)
                 self.assertTrue((time.time() - start_time) < 40)
         finally:
+            self.assertTrue(received)
             del listener
             signal.alarm(0)
