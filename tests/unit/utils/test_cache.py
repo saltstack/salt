@@ -77,7 +77,7 @@ class CacheContextTestCase(TestCase):
     def test_context_wrapper(self):
         '''
         Test to ensure that a module which decorates itself
-        with a context cache can store and retreive its contextual
+        with a context cache can store and retrieve its contextual
         data
         '''
         opts = salt.config.DEFAULT_MINION_OPTS

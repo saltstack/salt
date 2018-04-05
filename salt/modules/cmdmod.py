@@ -12,7 +12,6 @@ import functools
 import glob
 import logging
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -37,6 +36,7 @@ import salt.utils.timed_subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
+import salt.utils.win_reg
 import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
@@ -3103,9 +3103,9 @@ def shell_info(shell, list_modules=False):
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {'installed': False}
     if salt.utils.platform.is_windows() and shell == 'powershell':
-        pw_keys = __salt__['reg.list_keys'](
-            'HKEY_LOCAL_MACHINE',
-            'Software\\Microsoft\\PowerShell')
+        pw_keys = salt.utils.win_reg.list_keys(
+            hive='HKEY_LOCAL_MACHINE',
+            key='Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
             return {
@@ -3114,16 +3114,16 @@ def shell_info(shell, list_modules=False):
                 'installed': False,
             }
         for reg_ver in pw_keys:
-            install_data = __salt__['reg.read_value'](
-                'HKEY_LOCAL_MACHINE',
-                'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
-                'Install')
+            install_data = salt.utils.win_reg.read_value(
+                hive='HKEY_LOCAL_MACHINE',
+                key='Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
+                vname='Install')
             if install_data.get('vtype') == 'REG_DWORD' and \
                     install_data.get('vdata') == 1:
-                details = __salt__['reg.list_values'](
-                    'HKEY_LOCAL_MACHINE',
-                    'Software\\Microsoft\\PowerShell\\{0}\\'
-                    'PowerShellEngine'.format(reg_ver))
+                details = salt.utils.win_reg.list_values(
+                    hive='HKEY_LOCAL_MACHINE',
+                    key='Software\\Microsoft\\PowerShell\\{0}\\'
+                        'PowerShellEngine'.format(reg_ver))
 
                 # reset data, want the newest version details only as powershell
                 # is backwards compatible
@@ -3418,11 +3418,9 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    # ConvertTo-JSON is only available on Versions of Windows greater than
-    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
-    # because this function is called by `salt/grains/core.py` before
-    # `__grains__` is populated
-    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+    # ConvertTo-JSON is only available on PowerShell 3.0 and later
+    psversion = shell_info('powershell')['psversion']
+    if salt.utils.versions.version_cmp(psversion, '2.0') == 1:
         cmd += ' | ConvertTo-JSON'
         if depth is not None:
             cmd += ' -Depth {0}'.format(depth)

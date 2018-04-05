@@ -1369,7 +1369,7 @@ def login(*registries):
     # information is added to the config.json, since docker-py isn't designed
     # to do so.
     registry_auth = __pillar__.get('docker-registries', {})
-    ret = {}
+    ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
         errors.append('\'docker-registries\' Pillar value must be a dictionary')
@@ -1427,6 +1427,8 @@ def login(*registries):
                     errors.append(login_cmd['stderr'])
                 elif login_cmd['stdout']:
                     errors.append(login_cmd['stdout'])
+    if errors:
+        ret['retcode'] = 1
     return ret
 
 
@@ -3798,6 +3800,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
     kwargs = __utils__['args.clean_kwargs'](**kwargs)
     stop_ = kwargs.pop('stop', False)
     timeout = kwargs.pop('timeout', None)
+    auto_remove = False
     if kwargs:
         __utils__['args.invalid_kwargs'](kwargs)
 
@@ -3807,9 +3810,19 @@ def rm_(name, force=False, volumes=False, **kwargs):
             'remove this container'.format(name)
         )
     if stop_ and not force:
+        inspect_results = inspect_container(name)
+        try:
+            auto_remove = inspect_results['HostConfig']['AutoRemove']
+        except KeyError:
+            log.error(
+                'Failed to find AutoRemove in inspect results, Docker API may '
+                'have changed. Full results: %s', inspect_results
+            )
         stop(name, timeout=timeout)
     pre = ps_(all=True)
-    _client_wrapper('remove_container', name, v=volumes, force=force)
+
+    if not auto_remove:
+        _client_wrapper('remove_container', name, v=volumes, force=force)
     _clear_context()
     return [x for x in pre if x not in ps_(all=True)]
 
@@ -4505,7 +4518,7 @@ def pull(image,
 
     time_started = time.time()
     response = _client_wrapper('pull', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4538,6 +4551,7 @@ def pull(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4600,7 +4614,7 @@ def push(image,
 
     time_started = time.time()
     response = _client_wrapper('push', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4632,6 +4646,7 @@ def push(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4703,9 +4718,11 @@ def rmi(*names, **kwargs):
 
     _clear_context()
     ret = {'Layers': [x for x in pre_images if x not in images(all=True)],
-           'Tags': [x for x in pre_tags if x not in list_tags()]}
+           'Tags': [x for x in pre_tags if x not in list_tags()],
+           'retcode': 0}
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -6848,7 +6865,7 @@ def sls_build(repository,
         .. versionadded:: 2018.3.0
 
     dryrun: False
-        when set to True the container will not be commited at the end of
+        when set to True the container will not be committed at the end of
         the build. The dryrun succeed also when the state contains errors.
 
     **RETURN DATA**

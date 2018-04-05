@@ -53,7 +53,7 @@ Configuration
 
         By default, the following extra fields are returned (displayed):
 
-        - ``connection_stats``: connection stats, as descibed below
+        - ``connection_stats``: connection stats, as described below
         - ``import_policy``: the name of the import policy
         - ``export_policy``: the name of the export policy
 

@@ -125,6 +125,10 @@ state modules
     influxdb_retention_policy
     influxdb_user
     infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset

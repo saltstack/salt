@@ -4,6 +4,22 @@
 Salt 2018.3.0 Release Notes - Codename Oxygen
 =============================================
 
+Unicode/Python 3 Compatibility Improvements
+-------------------------------------------
+
+This release fixes a number of nagging issues with Unicode strings in Salt
+under Python 2 (ex.  ``'ascii' codec can't decode byte 0xd0``). For best
+results, use a UTF-8 locale (such as by setting the ``LANG`` environment
+variable to one which supports UTF-8. For example ``en_US.UTF-8``,
+``de_DE.UTF-8``, ``ru_RU.UTF-8``, ``C.UTF-8``).
+
+Additionally, a number of Python 3 compatibility fixes have been made, many of
+them having to do with file I/O and str/bytes mismatches.
+
+We continue to work toward improving both Unicode and Python 3 compatibility
+and welcome any feedback.
+
+
 Lots of Docker Improvements
 ---------------------------
 
@@ -465,9 +481,9 @@ Configuration
 
 By default, automatic discovery is disabled.
 
-..warning::
-   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
-   make sure your network is secured and trusted.
+.. warning::
+    Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+    make sure your network is secured and trusted.
 
 Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
 as follows:
@@ -521,6 +537,8 @@ In addition to the ``mapping`` and ``port`` options, the following additional op
   match a given Master. If set to ``any`` (the default), then any match to a
   key/value mapping will constitute a match.
 - ``pause`` - The interval in seconds between attempts (default: 5).
+- ``fibre_channel_grains`` - Enables the ``fc_wwn`` grain. (Default: False)
+- ``iscsi_grains`` - Enables the ``iscsi_iqn`` grain. (Default: False)
 
 Connection to a type instead of DNS
 ===================================
@@ -1522,7 +1540,7 @@ The use of ``require_any`` demands that one of the required states executes befo
 dependent state. The state containing the ``require_any`` requisite is defined as the
 dependent state. The states specified in the ``require_any`` statement are defined as the
 required states. If at least one of the required state's execution succeeds, the dependent state
-will then execute. If at least one of the required state's execution fails, the dependent state
+will then execute. If all of the executions by the required states fail, the dependent state
 will not execute.
 
 - ``watch_any``
