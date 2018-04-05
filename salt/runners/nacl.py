@@ -121,6 +121,7 @@ import os
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.win_functions
 import salt.utils.win_dacl
 import salt.syspaths
@@ -219,7 +220,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
 
     if 'keyfile' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'The \'keyfile\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk_file\' argument instead.'
         )
@@ -288,7 +289,7 @@ def enc(data, **kwargs):
 
     if 'keyfile' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'The \'keyfile\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk_file\' argument instead.'
         )
@@ -296,7 +297,7 @@ def enc(data, **kwargs):
 
     if 'key' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'The \'key\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk\' argument instead.'
         )
@@ -353,7 +354,7 @@ def dec(data, **kwargs):
     '''
     if 'keyfile' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'The \'keyfile\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk_file\' argument instead.'
         )
@@ -364,7 +365,7 @@ def dec(data, **kwargs):
 
     if 'key' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'The \'key\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk\' argument instead.'
         )

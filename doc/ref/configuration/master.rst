@@ -4515,6 +4515,25 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillar_includes_override_sls
+
+``pillar_includes_override_sls``
+********************************
+
+.. versionadded:: 2017.7.6,2018.3.1
+
+Default: ``False``
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+Set this option to ``True`` to return to the old behavior.
+
+.. code-block:: yaml
+
+    pillar_includes_override_sls: True
+
 .. _pillar-cache-opts:
 
 Pillar Cache Options

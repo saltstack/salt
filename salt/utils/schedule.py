@@ -110,10 +110,11 @@ class Schedule(object):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None, standalone=False):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.utils = utils
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
@@ -595,10 +596,11 @@ class Schedule(object):
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
+            utils = self.utils or salt.loader.utils(self.opts)
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts)
+                self.functions = salt.loader.runner(self.opts, utils=utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=utils)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
@@ -1613,6 +1615,7 @@ class Schedule(object):
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
+                self.utils = utils
 
 
 def clean_proc_dir(opts):

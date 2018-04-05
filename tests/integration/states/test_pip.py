@@ -14,6 +14,7 @@ import os
 import pwd
 import glob
 import shutil
+import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -525,6 +526,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    @skipIf(sys.version_info[:2] >= (3, 6), 'Old version of virtualenv too old for python3.6')
     def test_46127_pip_env_vars(self):
         '''
         Test that checks if env_vars passed to pip.installed are also passed

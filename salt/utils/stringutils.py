@@ -41,10 +41,11 @@ def to_bytes(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -64,10 +65,11 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.decode(encoding, errors)
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.decode('utf-8', errors)
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return s.decode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
@@ -77,10 +79,11 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -108,10 +111,11 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
                 return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return _normalize(s.decode('utf-8', errors))
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str or bytearray')
 
 
@@ -294,20 +298,29 @@ def build_whitespace_split_regex(text):
 
 def expr_match(line, expr):
     '''
-    Evaluate a line of text against an expression. First try a full-string
-    match, next try globbing, and then try to match assuming expr is a regular
-    expression. Originally designed to match minion IDs for
-    whitelists/blacklists.
+    Checks whether or not the passed value matches the specified expression.
+    Tries to match expr first as a glob using fnmatch.fnmatch(), and then tries
+    to match expr as a regular expression. Originally designed to match minion
+    IDs for whitelists/blacklists.
+
+    Note that this also does exact matches, as fnmatch.fnmatch() will return
+    ``True`` when no glob characters are used and the string is an exact match:
+
+    .. code-block:: python
+
+        >>> fnmatch.fnmatch('foo', 'foo')
+        True
     '''
-    if line == expr:
-        return True
-    if fnmatch.fnmatch(line, expr):
-        return True
     try:
-        if re.match(r'\A{0}\Z'.format(expr), line):
+        if fnmatch.fnmatch(line, expr):
             return True
-    except re.error:
-        pass
+        try:
+            if re.match(r'\A{0}\Z'.format(expr), line):
+                return True
+        except re.error:
+            pass
+    except TypeError:
+        log.exception('Value %r or expression %r is not a string', line, expr)
     return False
 
 
@@ -337,22 +350,16 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if blacklist is not None:
         if not hasattr(blacklist, '__iter__'):
             blacklist = [blacklist]
-        try:
-            for expr in blacklist:
-                if expr_match(value, expr):
-                    return False
-        except TypeError:
-            log.error('Non-iterable blacklist %s', blacklist)
+        for expr in blacklist:
+            if expr_match(value, expr):
+                return False
 
     if whitelist:
         if not hasattr(whitelist, '__iter__'):
             whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    return True
-        except TypeError:
-            log.error('Non-iterable whitelist %s', whitelist)
+        for expr in whitelist:
+            if expr_match(value, expr):
+                return True
     else:
         return True
 
