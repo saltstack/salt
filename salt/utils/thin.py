@@ -101,9 +101,9 @@ namespaces = %namespaces%
 
 # Default system paths alongside the namespaces
 syspaths = %dirs%
-syspaths.append('py{0}'.format(sys.version_info.major))
+syspaths.append('py{0}'.format(sys.version_info[0]))
 
-curr_ver = (sys.version_info.major, sys.version_info.minor,)
+curr_ver = (sys.version_info[0], sys.version_info[1],)
 
 namespace = ''
 for ns in namespaces:

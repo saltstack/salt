@@ -228,10 +228,12 @@ def get_executable():
 
     pycmds = (sys.executable, 'python3', 'python27', 'python2.7', 'python26', 'python2.6', 'python2', 'python')
     for py_cmd in pycmds:
-        cmd = py_cmd + (' -c  "import sys; sys.stdout.write(\'{}:{}\''
-                        '.format(sys.version_info.major, sys.version_info.minor))"')
+        cmd = py_cmd + ' -c  "import sys; sys.stdout.write(\'%s:%s\' % (sys.version_info[0], sys.version_info[1]))"'
         stdout, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
-        stdout = stdout.decode(encoding=get_system_encoding(), errors="replace").strip()
+        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+            stdout = stdout.decode(get_system_encoding(), "replace").strip()
+        else:
+            stdout = stdout.decode(encoding=get_system_encoding(), errors="replace").strip()
         if not stdout:
             continue
         c_vn = tuple([int(x) for x in stdout.split(':')])
@@ -346,7 +348,10 @@ def main(argv):  # pylint: disable=W0613
     if OPTIONS.tty:
         # Returns bytes instead of string on python 3
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-        sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
+        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+            sys.stdout.write(stdout.decode(get_system_encoding(), "replace"))
+        else:
+            sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
         sys.stdout.flush()
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
