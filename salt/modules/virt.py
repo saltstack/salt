@@ -1697,19 +1697,31 @@ def undefine(vm_):
     return dom.undefine() == 0
 
 
-def purge(vm_, dirs=False):
+def purge(vm_, dirs=False, removables=None):
     '''
     Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
     USE WITH EXTREME CAUTION!
 
+    Pass removables=False to avoid deleting cdrom and floppy images. To avoid
+    disruption, the default but dangerous value is True. This will be changed
+    to the safer False default value in Sodium.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.purge <domain>
+        salt '*' virt.purge <domain> removables=False
     '''
     disks = get_disks(vm_)
+    if removables is None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'removables argument default value is True, but will be changed '
+            'to False by default in {version}. Please set to True to maintain '
+            'the current behavior in the future.'
+        )
+        removables = True
     try:
         if not stop(vm_):
             return False
@@ -1718,6 +1730,8 @@ def purge(vm_, dirs=False):
         pass
     directories = set()
     for disk in disks:
+        if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
+            continue
         os.remove(disks[disk]['file'])
         directories.add(os.path.dirname(disks[disk]['file']))
     if dirs:
