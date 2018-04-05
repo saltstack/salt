@@ -1273,7 +1273,7 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
         _cmd = client.cmd_subset
         cmd_kwargs = {
             'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
-            'ret': ret, 'kwarg': kwarg, 'sub': kwargs['subset'],
+            'ret': ret, 'cli': True, 'kwarg': kwarg, 'sub': kwargs['subset'],
         }
         del kwargs['subset']
     else:
