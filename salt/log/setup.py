@@ -338,6 +338,13 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             # If nothing else is in extra, make it None
             extra = None
 
+        salt_system_encoding = __salt_system_encoding__
+        if salt_system_encoding == 'ascii':
+            # Encoding detection most likely failed, let's use the utf-8
+            # value which we defaulted before __salt_system_encoding__ was
+            # implemented
+            salt_system_encoding = 'utf-8'
+
         # Let's try to make every logging message unicode
         salt_system_encoding = __salt_system_encoding__
         if salt_system_encoding == 'ascii':

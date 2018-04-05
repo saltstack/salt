@@ -249,7 +249,7 @@ class LocalClient(object):
 
         return pub_data
 
-    def _check_pub_data(self, pub_data):
+    def _check_pub_data(self, pub_data, listen=True):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
@@ -282,7 +282,13 @@ class LocalClient(object):
                 print('No minions matched the target. '
                       'No command was sent, no jid was assigned.')
                 return {}
-        else:
+
+        # don't install event subscription listeners when the request is async
+        # and doesn't care. this is important as it will create event leaks otherwise
+        if not listen:
+            return pub_data
+
+        if self.opts.get('order_masters'):
             self.event.subscribe('syndic/.*/{0}'.format(pub_data['jid']), 'regex')
 
         self.event.subscribe('salt/job/{0}'.format(pub_data['jid']))
@@ -346,7 +352,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        return self._check_pub_data(pub_data)
+        return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
         _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
@@ -412,7 +418,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise tornado.gen.Return(self._check_pub_data(pub_data))
+        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
             self,
@@ -453,6 +459,7 @@ class LocalClient(object):
                                 tgt_type,
                                 ret,
                                 jid=jid,
+                                listen=False,
                                 **kwargs)
         try:
             return pub_data['jid']
@@ -478,6 +485,8 @@ class LocalClient(object):
         following exceptions.
 
         :param sub: The number of systems to execute on
+        :param cli: When this is set to True, a generator is returned,
+                    otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
