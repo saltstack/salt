@@ -1120,7 +1120,8 @@ def get_disks(vm_):
                         source.getAttribute('name'))
             if qemu_target:
                 disks[target.getAttribute('dev')] = {
-                    'file': qemu_target}
+                    'file': qemu_target,
+                    'type': elem.getAttribute('device')}
     for dev in disks:
         try:
             hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
