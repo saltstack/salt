@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
+Proxy Minion interface module for managing Cisco Integrated Management Controller devices
+=========================================================================================
 
-Proxy Minion interface module for managing Cisco Integrated Management Controller devices.
+.. versionadded:: 2018.3.0
 
 :codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
 :maturity:   new
@@ -21,6 +23,7 @@ documentation.
 
 Configuration
 =============
+
 To use this integration proxy module, please configure the following:
 
 Pillar
@@ -40,6 +43,7 @@ the ID.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -48,16 +52,18 @@ own proxy module, for example). To use this cimc Proxy Module, set this to
 
 host
 ^^^^
+
 The location, or ip/dns, of the cimc host. Required.
 
 username
 ^^^^^^^^
+
 The username used to login to the cimc host. Required.
 
 password
 ^^^^^^^^
-The password used to login to the cimc host. Required.
 
+The password used to login to the cimc host. Required.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
