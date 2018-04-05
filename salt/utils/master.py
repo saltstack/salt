@@ -567,13 +567,13 @@ class ConnectedCache(MultiprocessingProcess):
 
         # the socket for incoming cache-updates from workers
         cupd_in = context.socket(zmq.SUB)
-        cupd_in.setsockopt(zmq.SUBSCRIBE, '')
+        cupd_in.setsockopt(zmq.SUBSCRIBE, b'')
         cupd_in.setsockopt(zmq.LINGER, 100)
         cupd_in.bind('ipc://' + self.update_sock)
 
         # the socket for the timer-event
         timer_in = context.socket(zmq.SUB)
-        timer_in.setsockopt(zmq.SUBSCRIBE, '')
+        timer_in.setsockopt(zmq.SUBSCRIBE, b'')
         timer_in.setsockopt(zmq.LINGER, 100)
         timer_in.connect('ipc://' + self.upd_t_sock)
 
