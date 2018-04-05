@@ -174,17 +174,20 @@ YAML can be used at the CLI in function arguments:
     salt-call event.send 'myco/mytag/success' '{success: True, message: "It works!"}'
 
 If a process is listening on the minion, it may be useful for a user on the
-master to fire an event to it:
+master to fire an event to it. An example of listening local events on
+a minion:
 
 .. code-block:: python
 
     # Job on minion
     import salt.utils.event
 
-    event = salt.utils.event.MinionEvent(**__opts__)
+    opts = salt.config.minion_config('/etc/salt/minion')
+    event = salt.utils.event.MinionEvent(opts)
 
-    for evdata in event.iter_events(tag='customtag/'):
-        return evdata # do your processing here...
+    for evdata in event.iter_events(match_type = 'regex',
+                                    tag = 'custom/.*'):
+        # do your processing here...
 
 .. code-block:: bash
 
@@ -231,10 +234,10 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    caller.sminion.functions['event.send'](
-        'myco/myevent/success',
-        {
-            'success': True,
-            'message': "It works!",
-        }
-    )
+    ret = called.cmd('event.send',
+                     'myco/event/success'
+                     { 'success': True,
+                       'message': "It works!" })
+
+    if not ret:
+        # the event could not be sent, process the error here
