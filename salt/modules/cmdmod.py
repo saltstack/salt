@@ -443,7 +443,7 @@ def _run(cmd,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0]
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))
             marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
@@ -482,10 +482,11 @@ def _run(cmd,
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
             env = env_runas
-        except ValueError:
+        except ValueError as exc:
+            log.exception('Error raised retrieving environment for user %s', runas)
             raise CommandExecutionError(
-                'Environment could not be retrieved for User \'{0}\''.format(
-                    runas
+                'Environment could not be retrieved for user \'{0}\': {1}'.format(
+                    runas, exc
                 )
             )
 
@@ -609,7 +610,7 @@ def _run(cmd,
             ret['retcode'] = 1
             return ret
 
-        if output_encoding is not None:
+        if output_loglevel != 'quiet' and output_encoding is not None:
             log.debug('Decoding output from command %s using %s encoding',
                       cmd, output_encoding)
 
@@ -625,10 +626,11 @@ def _run(cmd,
                 proc.stdout,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stdout from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stdout from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         try:
             err = salt.utils.stringutils.to_unicode(
@@ -642,10 +644,11 @@ def _run(cmd,
                 proc.stderr,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stderr from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stderr from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         if rstrip:
             if out is not None:
