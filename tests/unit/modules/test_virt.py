@@ -508,6 +508,35 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual('bridge', nic['type'])
             self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    def test_get_disks(self, mock_communicate, mock_popen):
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        ''')
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            disks = virt.get_disks('test-vm')
+            disk = disks[list(disks)[0]]
+            self.assertEqual('/disks/test.qcow2', disk['file'])
+            self.assertEqual('disk', disk['type'])
+            cdrom = disks[list(disks)[1]]
+            self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
+            self.assertEqual('cdrom', cdrom['type'])
+
     def test_network(self):
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
         root = ET.fromstring(xml_data)
