@@ -19,11 +19,7 @@ from salt.exceptions import CommandExecutionError, FileLockError, MinionError
 
 # Import 3rd-party libs
 from salt.ext import six
-
-if six.PY2:
-    from urllib import quote
-elif six.PY3:
-    from urllib.parse import quote  # pylint: disable=no-name-in-module
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 
 
 log = logging.getLogger(__name__)

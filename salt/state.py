@@ -174,7 +174,7 @@ def _calculate_fake_duration():
     start_time = local_start_time.time().isoformat()
     delta = (utc_finish_time - utc_start_time)
     # duration in milliseconds.microseconds
-    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
 
     return start_time, duration
 
@@ -1718,7 +1718,7 @@ class State(object):
         utc_finish_time = datetime.datetime.utcnow()
         delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
@@ -1742,11 +1742,8 @@ class State(object):
         # enough to not raise another KeyError as the name is easily
         # guessable and fallback in all cases to present the real
         # exception to the user
-        if 'args' in cdata and cdata['args']:
-            name = cdata['args'][0]
-        elif 'name' in cdata['kwargs']:
-            name = cdata['kwargs']['name']
-        else:
+        name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+        if not name:
             name = low.get('name', low.get('__id__'))
 
         proc = salt.utils.process.MultiprocessingProcess(
@@ -1891,12 +1888,10 @@ class State(object):
             # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
-            if 'args' in cdata and cdata['args']:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
+            name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+            if not name:
                 name = low.get('name', low.get('__id__'))
+
             ret = {
                 'result': False,
                 'name': name,
@@ -1935,7 +1930,7 @@ class State(object):
         ret['start_time'] = local_start_time.time().isoformat()
         delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2060,7 +2055,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.01)
+            time.sleep(0.0001)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2192,7 +2187,7 @@ class State(object):
             while True:
                 if self.reconcile_procs(run_dict):
                     break
-                time.sleep(0.01)
+                time.sleep(0.0001)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
