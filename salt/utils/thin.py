@@ -346,6 +346,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
     pymap_cfg = os.path.join(thindir, 'supported-versions')
+    code_checksum = os.path.join(thindir, 'code-checksum')
+    digest_collector = salt.utils.hashutils.DigestCollector()
 
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
         fp_.write(_get_salt_call('pyall', **_get_ext_namespaces(extended_cfg)))
@@ -471,6 +473,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
+                    if name.endswith('.py'):
+                        digest_collector.add(os.path.join(root, name))
                     if not name.endswith(('.pyc', '.pyo')):
                         arcname = os.path.join(site_pkg_dir, root, name)
                         if hasattr(tfp, 'getinfo'):
@@ -505,6 +509,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
+                    if name.endswith('.py'):
+                        digest_collector.add(os.path.join(root, name))
                     if not name.endswith(('.pyc', '.pyo')):
                         arcname = os.path.join(ns, site_pkg_dir, root, name)
                         if hasattr(tfp, 'getinfo'):
@@ -521,9 +527,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, 'w+') as fp_:
         fp_.write(str(sys.version_info.major))  # future lint: disable=blacklisted-function
+    with salt.utils.files.fopen(code_checksum, 'w+') as fp_:
+        fp_.write(digest_collector.digest())
     os.chdir(os.path.dirname(thinver))
 
-    for fname in ['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']:
+    for fname in ['version', '.thin-gen-py-version', 'salt-call', 'supported-versions', 'code-checksum']:
         tfp.add(fname)
 
     if start_dir:
