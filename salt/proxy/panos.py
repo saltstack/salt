@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
+Proxy Minion interface module for managing Palo Alto firewall devices
+=====================================================================
 
-Proxy Minion interface module for managing Palo Alto firewall devices.
+.. versionadded:: 2018.3.0
 
 :codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
 :maturity:   new
@@ -22,6 +24,7 @@ documentation.
 
 Configuration
 =============
+
 To use this integration proxy module, please configure the following:
 
 Pillar
@@ -53,6 +56,7 @@ the device with username and password.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -61,14 +65,17 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 host
 ^^^^
+
 The location, or ip/dns, of the panos host. Required.
 
 username
 ^^^^^^^^
+
 The username used to login to the panos host. Required.
 
 password
 ^^^^^^^^
+
 The password used to login to the panos host. Required.
 
 Direct Device (API Key)
@@ -88,6 +95,7 @@ instead of username and password.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -96,14 +104,16 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 host
 ^^^^
+
 The location, or ip/dns, of the panos host. Required.
 
 apikey
-^^^^^^^^
+^^^^^^
+
 The generated XML API key for the panos host. Required.
 
 Panorama Pass-Through (Password)
-------------------------
+--------------------------------
 
 The Panorama pass-through method sends all connections through the Panorama
 management system. It passes the connections to the appropriate device using
@@ -126,6 +136,7 @@ not the panos device.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -134,22 +145,26 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 serial
 ^^^^^^
+
 The serial number of the panos host. Required.
 
 host
 ^^^^
+
 The location, or ip/dns, of the Panorama server. Required.
 
 username
 ^^^^^^^^
+
 The username used to login to the Panorama server. Required.
 
 password
 ^^^^^^^^
+
 The password used to login to the Panorama server. Required.
 
 Panorama Pass-Through (API Key)
-------------------------
+-------------------------------
 
 The Panorama server can also utilize a generated 'API key'_ for authentication.
 
@@ -165,6 +180,7 @@ The Panorama server can also utilize a generated 'API key'_ for authentication.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -173,16 +189,18 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 serial
 ^^^^^^
+
 The serial number of the panos host. Required.
 
 host
 ^^^^
+
 The location, or ip/dns, of the Panorama server. Required.
 
 apikey
 ^^^^^^^^
-The generated XML API key for the Panorama server. Required.
 
+The generated XML API key for the Panorama server. Required.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals

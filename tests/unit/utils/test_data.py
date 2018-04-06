@@ -240,7 +240,6 @@ class DataTestCase(TestCase):
 
         ret = salt.utils.data.decode(
             self.test_data,
-            encoding='utf-8',
             keep=True,
             normalize=True,
             preserve_dict_class=True,
@@ -253,7 +252,6 @@ class DataTestCase(TestCase):
             UnicodeDecodeError,
             salt.utils.data.decode,
             self.test_data,
-            encoding='utf-8',
             keep=False,
             normalize=True,
             preserve_dict_class=True,
@@ -267,7 +265,6 @@ class DataTestCase(TestCase):
 
         ret = salt.utils.data.decode(
             self.test_data,
-            encoding='utf-8',
             keep=True,
             normalize=True,
             preserve_dict_class=False,

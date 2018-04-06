@@ -13,7 +13,10 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt import client
-from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
+import salt.utils.platform
+from salt.exceptions import (
+    EauthAuthenticationError, SaltInvocationError, SaltClientError, SaltReqTimeoutError
+)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -67,12 +70,42 @@ class LocalClientTestCase(TestCase,
                                                     kwarg=None, tgt_type='list',
                                                     ret='')
 
+    @skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
     def test_pub(self):
+        '''
+        Tests that the client cleanly returns when the publisher is not running
+
+        Note: Requires ZeroMQ's IPC transport which is not supported on windows.
+        '''
         if self.get_config('minion')['transport'] != 'zeromq':
             self.skipTest('This test only works with ZeroMQ')
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
             self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))
+
+        # Check nodegroups behavior
+        with patch('os.path.exists', return_value=True):
+            with patch.dict(self.client.opts,
+                            {'nodegroups':
+                                 {'group1': 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'}}):
+                # Do we raise an exception if the nodegroup can't be matched?
+                self.assertRaises(SaltInvocationError,
+                                  self.client.pub,
+                                  'non_existent_group', 'test.ping', tgt_type='nodegroup')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows only test')
+    def test_pub_win32(self):
+        '''
+        Tests that the client raises a timeout error when using ZeroMQ's TCP
+        transport and publisher is not running.
+
+        Note: Requires ZeroMQ's TCP transport, this is only the default on Windows.
+        '''
+        if self.get_config('minion')['transport'] != 'zeromq':
+            self.skipTest('This test only works with ZeroMQ')
+        # Make sure we cleanly return if the publisher isn't running
+        with patch('os.path.exists', return_value=False):
+            self.assertRaises(SaltReqTimeoutError, lambda: self.client.pub('*', 'test.ping'))
 
         # Check nodegroups behavior
         with patch('os.path.exists', return_value=True):

@@ -97,7 +97,6 @@ class StringutilsTestCase(TestCase):
         self.assertEqual(
             salt.utils.stringutils.to_unicode(
                 EGGS,
-                encoding='utf=8',
                 normalize=True
             ),
             'яйца'
@@ -105,7 +104,6 @@ class StringutilsTestCase(TestCase):
         self.assertNotEqual(
             salt.utils.stringutils.to_unicode(
                 EGGS,
-                encoding='utf=8',
                 normalize=False
             ),
             'яйца'
@@ -120,9 +118,12 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_unicode(str('xyzzy'), 'utf-8'), 'xyzzy')  # future lint: disable=blacklisted-function
             self.assertEqual(salt.utils.stringutils.to_unicode(BYTES, 'utf-8'), UNICODE)
 
-            # Test utf-8 fallback with ascii default encoding
+            # Test that unicode chars are decoded properly even when using
+            # locales which are not UTF-8 compatible
             with patch.object(builtins, '__salt_system_encoding__', 'ascii'):
-                self.assertEqual(salt.utils.stringutils.to_unicode(u'Ψ'.encode('utf-8')), u'Ψ')
+                self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
+            with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
+                self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
 
     def test_build_whitespace_split_regex(self):
         expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
@@ -169,3 +170,12 @@ class StringutilsTestCase(TestCase):
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2, marker=' <---')
         expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
         self.assertEqual(expected, context)
+
+    def test_expr_match(self):
+        val = 'foo/bar/baz'
+        # Exact match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, val))
+        # Glob match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
+        # Glob non-match
+        self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))
