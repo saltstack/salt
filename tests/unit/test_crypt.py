@@ -3,6 +3,8 @@
 # python libs
 from __future__ import absolute_import
 import os
+import tempfile
+import shutil
 
 # salt testing libs
 from tests.support.unit import TestCase, skipIf
@@ -206,3 +208,38 @@ class M2CryptTestCase(TestCase):
         encrypted = salt.crypt.private_encrypt(priv_key, b'salt')
         decrypted = salt.crypt.public_decrypt(pub_key, encrypted)
         self.assertEqual(b'salt', decrypted)
+
+
+class LoadBadCryptodomePubKey(TestCase):
+    '''
+    Test that we can load public keys exported by pycrpytodome<=3.4.6
+    '''
+
+    TEST_KEY = (
+        '-----BEGIN RSA PUBLIC KEY-----\n'
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzLtFhsvfbFDFaUgulSEX\n'
+        'Gl12XriL1DT78Ef2/u8HHaSMmPie37BLWas/zaHwI6066bIyYQJ/nUCahTaoHM7L\n'
+        'GlWc0wOU6zyfpihCRQHil05Y6F+olFBoZuYbFPvtp7/hJx/D7I/0n2o/c7M5i3Y2\n'
+        '3sBxAYNooIQHXHUmPQW6C9iu95ylZDW8JQzYy/EI4vCC8yQMdTK8jK1FQV0Sbwny\n'
+        'qcMxSyAWDoFbnhh2P2TnO8HOWuUOaXR8ZHOJzVcDl+a6ew+medW090x3K5O1f80D\n'
+        '+WjgnG6b2HG7VQpOCfM2GALD/FrxicPilvZ38X1aLhJuwjmVE4LAAv8DVNJXohaO\n'
+        'WQIDAQAB\n'
+        '-----END RSA PUBLIC KEY-----\n'
+    )
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.key_path = os.path.join(self.test_dir, 'cryptodom-3.4.6.pub')
+        with salt.utils.files.fopen(self.key_path, 'wb') as fd:
+            fd.write(self.TEST_KEY.encode())
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2_bad_key(self):
+        '''
+        Load public key with an invalid header using m2crypto and validate it
+        '''
+        key = salt.crypt.get_rsa_pub_key(self.key_path)
+        assert key.check_key() == 1
