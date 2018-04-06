@@ -159,7 +159,7 @@ def install(pkg=None,
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
@@ -238,7 +238,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'uninstall', '"{0}"'.format(pkg)]
     if not dir:
@@ -297,7 +297,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'list', '--json', '--silent']
 
@@ -360,7 +360,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'clean']
     if path:
@@ -407,7 +407,7 @@ def cache_list(path=None, runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'ls']
     if path:
@@ -447,7 +447,7 @@ def cache_path(runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = 'npm config get cache'
 
