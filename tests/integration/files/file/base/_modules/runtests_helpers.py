@@ -66,6 +66,8 @@ def get_invalid_docs():
         'log.warning',
         'lowpkg.bin_pkg_info',
         'lxc.run_cmd',
+        'mantest.install',
+        'mantest.search',
         'nspawn.restart',
         'nspawn.stop',
         'pkg.expand_repo_def',

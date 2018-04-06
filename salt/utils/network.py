@@ -193,8 +193,7 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = []
-    l.append(socket.getfqdn())
+    l = [socket.getfqdn()]
 
     # try socket.getaddrinfo
     try:

@@ -208,9 +208,7 @@ def _command(source, command, flags=None, opts=None,
 
     '''
     # NOTE: start with the zfs binary and command
-    cmd = []
-    cmd.append(_zpool_cmd() if source == 'zpool' else _zfs_cmd())
-    cmd.append(command)
+    cmd = [_zpool_cmd() if source == 'zpool' else _zfs_cmd(), command]
 
     # NOTE: append flags if we have any
     if flags is None:
