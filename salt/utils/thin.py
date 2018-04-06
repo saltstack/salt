@@ -473,9 +473,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
-                    if name.endswith('.py'):
-                        digest_collector.add(os.path.join(root, name))
                     if not name.endswith(('.pyc', '.pyo')):
+                        digest_collector.add(os.path.join(root, name))
                         arcname = os.path.join(site_pkg_dir, root, name)
                         if hasattr(tfp, 'getinfo'):
                             try:
@@ -509,9 +508,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
-                    if name.endswith('.py'):
-                        digest_collector.add(os.path.join(root, name))
                     if not name.endswith(('.pyc', '.pyo')):
+                        digest_collector.add(os.path.join(root, name))
                         arcname = os.path.join(ns, site_pkg_dir, root, name)
                         if hasattr(tfp, 'getinfo'):
                             try:
