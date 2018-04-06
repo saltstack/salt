@@ -210,7 +210,7 @@ class M2CryptTestCase(TestCase):
         self.assertEqual(b'salt', decrypted)
 
 
-class LoadBadCryptodomePubKey(TestCase):
+class TestBadCryptodomePubKey(TestCase):
     '''
     Test that we can load public keys exported by pycrpytodome<=3.4.6
     '''
@@ -243,3 +243,11 @@ class LoadBadCryptodomePubKey(TestCase):
         '''
         key = salt.crypt.get_rsa_pub_key(self.key_path)
         assert key.check_key() == 1
+
+    @skipIf(HAS_M2, "Skip when m2crypto is installed")
+    def test_crypto_bad_key(self):
+        '''
+        Load public key with an invalid header using m2crypto and validate it
+        '''
+        key = salt.crypt.get_rsa_pub_key(self.key_path)
+        assert key.can_encrypt()
