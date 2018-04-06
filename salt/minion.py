@@ -2524,6 +2524,7 @@ class Minion(MinionBase):
                     self.opts,
                     self.functions,
                     self.returners,
+                    utils=self.utils,
                     cleanup=[master_event(type='alive')])
 
             try:

@@ -33,6 +33,8 @@ A good example of this would be setting up a package manager early on:
 In this situation, the yum repo is going to be configured before other states,
 and if it fails to lay down the config file, than no other states will be
 executed.
+It is possible to override a Global Failhard (see below) by explicitly setting
+it to ``False`` in the state.
 
 Global Failhard
 ===============
