@@ -50,6 +50,8 @@ provisioner:
     - Gemfile.lock
     - README.rst
     - .travis.yml
+    - '*.pyc'
+    - __pycache__
   state_top:
     base:
       "os:Windows":
