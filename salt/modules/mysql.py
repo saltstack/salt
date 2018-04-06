@@ -1691,11 +1691,11 @@ def __grant_generate(grant,
     table = db_part[2]
 
     if escape:
-        if dbc is not '*':
+        if dbc != '*':
             # _ and % are authorized on GRANT queries and should get escaped
             # on the db name, but only if not requesting a table level grant
-            dbc = quote_identifier(dbc, for_grants=(table is '*'))
-        if table is not '*':
+            dbc = quote_identifier(dbc, for_grants=(table == '*'))
+        if table != '*':
             table = quote_identifier(table)
     # identifiers cannot be used as values, and same thing for grants
     qry = 'GRANT {0} ON {1}.{2} TO %(user)s@%(host)s'.format(grant, dbc, table)
@@ -1893,16 +1893,16 @@ def grant_revoke(grant,
     db_part = database.rpartition('.')
     dbc = db_part[0]
     table = db_part[2]
-    if dbc is not '*':
+    if dbc != '*':
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
-        s_database = quote_identifier(dbc, for_grants=(table is '*'))
-    if dbc is '*':
+        s_database = quote_identifier(dbc, for_grants=(table == '*'))
+    if dbc == '*':
         # add revoke for *.*
         # before the modification query send to mysql will looks like
         # REVOKE SELECT ON `*`.* FROM %(user)s@%(host)s
         s_database = dbc
-    if table is not '*':
+    if table != '*':
         table = quote_identifier(table)
     # identifiers cannot be used as values, same thing for grants
     qry = 'REVOKE {0} ON {1}.{2} FROM %(user)s@%(host)s;'.format(
