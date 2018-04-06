@@ -244,8 +244,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             self.assertEqual(
                 ret[next(iter(ret))]['comment'],
-                ('Repository {0} is up-to-date, but with local changes. Set '
-                 '\'force_reset\' to True to purge local changes.'.format(name))
+                ('Repository {0} is up-to-date, but with uncommitted changes. '
+                 'Set \'force_reset\' to True to purge uncommitted changes.'
+                 .format(name))
             )
 
             # Now run the state with force_reset=True
@@ -560,43 +561,228 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Tests which do no require connectivity to github.com
     '''
+    def setUp(self):
+        self.repo = tempfile.mkdtemp(dir=TMP)
+        self.admin = tempfile.mkdtemp(dir=TMP)
+        self.target = tempfile.mkdtemp(dir=TMP)
+        for dirname in (self.repo, self.admin, self.target):
+            self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
+
+        # Create bare repo
+        self.run_function('git.init', [self.repo], bare=True)
+        # Clone bare repo
+        self.run_function('git.clone', [self.admin], url=self.repo)
+        self._commit(self.admin, '', message='initial commit')
+        self._push(self.admin)
+
+    def _commit(self, repo_path, content, message):
+        with salt.utils.files.fopen(os.path.join(repo_path, 'foo'), 'a') as fp_:
+            fp_.write(content)
+        self.run_function('git.add', [repo_path, '.'])
+        self.run_function(
+            'git.commit', [repo_path, message],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+        )
+
+    def _push(self, repo_path, remote='origin', ref='master'):
+        self.run_function('git.push', [repo_path], remote=remote, ref=ref)
+
+    def _test_latest_force_reset_setup(self):
+        # Perform the initial clone
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target)
+        self.assertSaltTrueReturn(ret)
+
+        # Make and push changes to remote repo
+        self._commit(self.admin,
+                     content='Hello world!\n',
+                     message='added a line')
+        self._push(self.admin)
+
+        # Make local changes to clone, but don't commit them
+        with salt.utils.files.fopen(os.path.join(self.target, 'foo'), 'a') as fp_:
+            fp_.write('Local changes!\n')
+
+    def test_latest_force_reset_remote_changes(self):
+        '''
+        This tests that an otherwise fast-forward change with local chanegs
+        will not reset local changes when force_reset='remote_changes'
+        '''
+        self._test_latest_force_reset_setup()
+
+        # This should fail because of the local changes
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target)
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('there are uncommitted changes', ret['comment'])
+        self.assertIn(
+            'Set \'force_reset\' to True (or \'remote-changes\')',
+            ret['comment']
+        )
+        self.assertEqual(ret['changes'], {})
+
+        # Now run again with force_reset='remote_changes', the state should
+        # succeed and discard the local changes
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset='remote-changes')
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Uncommitted changes were discarded', ret['comment'])
+        self.assertIn('Repository was fast-forwarded', ret['comment'])
+        self.assertNotIn('forced update', ret['changes'])
+        self.assertIn('revision', ret['changes'])
+
+        # Add new local changes, but don't commit them
+        with salt.utils.files.fopen(os.path.join(self.target, 'foo'), 'a') as fp_:
+            fp_.write('More local changes!\n')
+
+        # Now run again with force_reset='remote_changes', the state should
+        # succeed with an up-to-date message and mention that there are local
+        # changes, telling the user how to discard them.
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset='remote-changes')
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('up-to-date, but with uncommitted changes', ret['comment'])
+        self.assertIn(
+            'Set \'force_reset\' to True to purge uncommitted changes',
+            ret['comment']
+        )
+        self.assertEqual(ret['changes'], {})
+
+    def test_latest_force_reset_true_fast_forward(self):
+        '''
+        This tests that an otherwise fast-forward change with local chanegs
+        does reset local changes when force_reset=True
+        '''
+        self._test_latest_force_reset_setup()
+
+        # Test that local changes are discarded and that we fast-forward
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Uncommitted changes were discarded', ret['comment'])
+        self.assertIn('Repository was fast-forwarded', ret['comment'])
+
+        # Add new local changes
+        with salt.utils.files.fopen(os.path.join(self.target, 'foo'), 'a') as fp_:
+            fp_.write('More local changes!\n')
+
+        # Running without setting force_reset should mention uncommitted changes
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('up-to-date, but with uncommitted changes', ret['comment'])
+        self.assertIn(
+            'Set \'force_reset\' to True to purge uncommitted changes',
+            ret['comment']
+        )
+        self.assertEqual(ret['changes'], {})
+
+        # Test that local changes are discarded
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Uncommitted changes were discarded', ret['comment'])
+        self.assertIn('Repository was hard-reset', ret['comment'])
+        self.assertIn('forced update', ret['changes'])
+
+    def test_latest_force_reset_true_non_fast_forward(self):
+        '''
+        This tests that a non fast-forward change with divergent commits fails
+        unless force_reset=True.
+        '''
+        self._test_latest_force_reset_setup()
+
+        # Reset to remote HEAD
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Uncommitted changes were discarded', ret['comment'])
+        self.assertIn('Repository was fast-forwarded', ret['comment'])
+
+        # Make and push changes to remote repo
+        self._commit(self.admin,
+                     content='New line\n',
+                     message='added another line')
+        self._push(self.admin)
+
+        # Make different changes to local file and commit locally
+        self._commit(self.target,
+                     content='Different new line\n',
+                     message='added a different line')
+
+        # This should fail since the local clone has diverged and cannot
+        # fast-forward to the remote rev
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target)
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('this is not a fast-forward merge', ret['comment'])
+        self.assertIn(
+            'Set \'force_reset\' to True to force this update',
+            ret['comment']
+        )
+        self.assertEqual(ret['changes'], {})
+
+        # Repeat the state with force_reset=True and confirm that the hard
+        # reset was performed
+        ret = self.run_state(
+            'git.latest',
+            name=self.repo,
+            target=self.target,
+            force_reset=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Repository was hard-reset', ret['comment'])
+        self.assertIn('forced update', ret['changes'])
+        self.assertIn('revision', ret['changes'])
+
     def test_renamed_default_branch(self):
         '''
         Test the case where the remote branch has been removed
         https://github.com/saltstack/salt/issues/36242
         '''
-        repo = tempfile.mkdtemp(dir=TMP)
-        admin = tempfile.mkdtemp(dir=TMP)
-        name = tempfile.mkdtemp(dir=TMP)
-        for dirname in (repo, admin, name):
-            self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
-
-        # Create bare repo
-        self.run_function('git.init', [repo], bare=True)
-        # Clone bare repo
-        self.run_function('git.clone', [admin], url=repo)
-        # Create, add, commit, and push file
-        with salt.utils.files.fopen(os.path.join(admin, 'foo'), 'w'):
-            pass
-        self.run_function('git.add', [admin, '.'])
-        self.run_function(
-            'git.commit', [admin, 'initial commit'],
-            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
-        )
-        self.run_function('git.push', [admin], remote='origin', ref='master')
-
         # Rename remote 'master' branch to 'develop'
         os.rename(
-            os.path.join(repo, 'refs', 'heads', 'master'),
-            os.path.join(repo, 'refs', 'heads', 'develop')
+            os.path.join(self.repo, 'refs', 'heads', 'master'),
+            os.path.join(self.repo, 'refs', 'heads', 'develop')
         )
 
         # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
             'git.latest',
-            name=repo,
-            target=name,
+            name=self.repo,
+            target=self.target,
             rev='develop',
         )
         self.assertSaltFalseReturn(ret)
@@ -610,19 +796,19 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             '(which will ensure that the named branch is created '
             'if it does not already exist).\n\n'
             'Changes already made: {0} cloned to {1}'
-            .format(repo, name)
+            .format(self.repo, self.target)
         )
         self.assertEqual(
             ret[next(iter(ret))]['changes'],
-            {'new': '{0} => {1}'.format(repo, name)}
+            {'new': '{0} => {1}'.format(self.repo, self.target)}
         )
 
         # Run git.latest state again. This should fail again, with a different
         # error in the comment field, and should not change anything.
         ret = self.run_state(
             'git.latest',
-            name=repo,
-            target=name,
+            name=self.repo,
+            target=self.target,
             rev='develop',
         )
         self.assertSaltFalseReturn(ret)
@@ -643,8 +829,8 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # checkout a new branch and the state should pass.
         ret = self.run_state(
             'git.latest',
-            name=repo,
-            target=name,
+            name=self.repo,
+            target=self.target,
             rev='develop',
             branch='develop',
         )

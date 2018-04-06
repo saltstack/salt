@@ -225,15 +225,17 @@ orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='master'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='master'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Fluorine
+        ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.
@@ -241,7 +243,7 @@ def event(tagmatch='*',
     Enable debug logging to see ignored events.
 
     :param tagmatch: the event is written to stdout for each tag that matches
-        this pattern; uses the same matching semantics as Salt's Reactor.
+        this glob or regular expression.
     :param count: this number is decremented for each event that matches the
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
@@ -279,9 +281,9 @@ def event(tagmatch='*',
     statemod = salt.loader.raw_mod(__opts__, 'state', None)
 
     return statemod['state.event'](
-            tagmatch=tagmatch,
-            count=count,
-            quiet=quiet,
-            sock_dir=sock_dir,
-            pretty=pretty,
-            node=node)
+               tagmatch=tagmatch,
+               count=count,
+               quiet=quiet,
+               sock_dir=sock_dir,
+               pretty=pretty,
+               node=node)
