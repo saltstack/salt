@@ -115,6 +115,7 @@ from datetime import datetime
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
+from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -266,11 +267,8 @@ def _get_basic_info(ca_name, cert, ca_dir=None):
 
     index_file = "{0}/index.txt".format(ca_dir)
 
-    expire_date = _four_digit_year_to_two_digit(
-        datetime.strptime(
-            salt.utils.stringutils.to_str(cert.get_notAfter()),
-            four_digit_year_fmt)
-    )
+    cert = _read_cert(cert)
+    expire_date = _four_digit_year_to_two_digit(_get_expiration_date(cert))
     serial_number = format(cert.get_serial_number(), 'X')
 
     # gotta prepend a /
@@ -546,6 +544,66 @@ def get_ca_signed_key(ca_name,
             with salt.utils.files.fopen(keyp) as fic:
                 keyp = salt.utils.stringutils.to_unicode(fic.read())
     return keyp
+
+
+def _read_cert(cert):
+    if isinstance(cert, six.string_types):
+        try:
+            with salt.utils.files.fopen(cert) as rfh:
+                return OpenSSL.crypto.load_certificate(
+                    OpenSSL.crypto.FILETYPE_PEM,
+                    rfh.read()
+                )
+        except Exception as exc:
+            log.error('Failed to read cert from path %s: %s', cert, exc)
+            return None
+    else:
+        if not hasattr(cert, 'get_notAfter'):
+            log.error('%s is not a valid cert path/object', cert)
+            return None
+        else:
+            return cert
+
+
+def _get_expiration_date(cert):
+    '''
+    Returns a datetime.datetime object
+    '''
+    cert_obj = _read_cert(cert)
+
+    if cert_obj is None:
+        raise CommandExecutionError(
+            'Failed to read cert from {0}, see log for details'.format(cert)
+        )
+
+    return datetime.strptime(
+        salt.utils.stringutils.to_str(cert_obj.get_notAfter()),
+        four_digit_year_fmt
+    )
+
+
+def get_expiration_date(cert, date_format='%Y-%m-%d'):
+    '''
+    .. versionadded:: Fluorine
+
+    Get a certificate's expiration date
+
+    cert
+        Full path to the certificate
+
+    date_format
+        By default this will return the expiration date in YYYY-MM-DD format,
+        use this to specify a different strftime format string. Note that the
+        expiration time will be in UTC.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' tls.get_expiration_date /path/to/foo.crt
+        salt '*' tls.get_expiration_date /path/to/foo.crt date_format='%d/%m/%Y'
+    '''
+    return _get_expiration_date(cert).strftime(date_format)
 
 
 def _check_onlyif_unless(onlyif, unless):
@@ -1814,14 +1872,8 @@ def revoke_cert(
     except IOError:
         return 'There is no CA named "{0}"'.format(ca_name)
 
-    try:
-        with salt.utils.files.fopen('{}/{}.crt'.format(cert_path,
-                                                 cert_filename)) as rfh:
-            client_cert = OpenSSL.crypto.load_certificate(
-                OpenSSL.crypto.FILETYPE_PEM,
-                rfh.read()
-            )
-    except IOError:
+    client_cert = _read_cert('{0}/{1}.crt'.format(cert_path, cert_filename))
+    if client_cert is None:
         return 'There is no client certificate named "{0}"'.format(CN)
 
     index_file, expire_date, serial_number, subject = _get_basic_info(
