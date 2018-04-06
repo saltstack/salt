@@ -117,6 +117,7 @@ class Schedule(object):
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
+        self.splay = None
         self.enabled = True
         if isinstance(intervals, dict):
             self.intervals = intervals
@@ -283,6 +284,7 @@ class Schedule(object):
         self.skip_function = None
         self.skip_during_range = None
         self.enabled = True
+        self.splay = None
         self.opts['schedule'] = {}
 
     def delete_job_prefix(self, name, persist=True):
@@ -1297,10 +1299,13 @@ class Schedule(object):
             self.skip_during_range = schedule['skip_during_range']
         if 'enabled' in schedule:
             self.enabled = schedule['enabled']
+        if 'splay' in schedule:
+            self.splay = schedule['splay']
 
         _hidden = ['enabled',
                    'skip_function',
-                   'skip_during_range']
+                   'skip_during_range',
+                   'splay']
         for job, data in six.iteritems(schedule):
 
             # Skip anything that is a global setting
@@ -1404,7 +1409,12 @@ class Schedule(object):
 
             seconds = int((data['_next_fire_time'] - now).total_seconds())
 
-            if 'splay' in data:
+            # If there is no job specific splay available,
+            # grab the global which defaults to None.
+            if 'splay' not in data:
+                data['splay'] = self.splay
+
+            if 'splay' in data and data['splay']:
                 # Got "splay" configured, make decision to run a job based on that
                 if not data['_splay']:
                     # Try to add "splay" time only if next job fire time is
