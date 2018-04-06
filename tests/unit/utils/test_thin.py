@@ -358,7 +358,7 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        assert thin.thin_sum('/cachedir', form='sha256') == 12345
+        assert thin.thin_sum('/cachedir', form='sha256')[1] == 12345
         thin.salt.utils.hashutils.get_hash.assert_called()
         assert thin.salt.utils.hashutils.get_hash.call_count == 1
 

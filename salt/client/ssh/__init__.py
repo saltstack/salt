@@ -1159,7 +1159,7 @@ class Single(object):
             cachedir = self.opts['_caller_cachedir']
         else:
             cachedir = self.opts['cachedir']
-        thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
+        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
         if not self.opts.get('log_level'):
             self.opts['log_level'] = 'info'
@@ -1168,28 +1168,30 @@ class Single(object):
         arg_str = '''
 OPTIONS.config = \
 """
-{0}
+{config}
 """
-OPTIONS.delimiter = '{1}'
-OPTIONS.saltdir = '{2}'
-OPTIONS.checksum = '{3}'
-OPTIONS.hashfunc = '{4}'
-OPTIONS.version = '{5}'
-OPTIONS.ext_mods = '{6}'
-OPTIONS.wipe = {7}
-OPTIONS.tty = {8}
-OPTIONS.cmd_umask = {9}
-ARGS = {10}\n'''.format(self.minion_config,
-                        RSTR,
-                        self.thin_dir,
-                        thin_sum,
-                        'sha1',
-                        salt.version.__version__,
-                        self.mods.get('version', ''),
-                        self.wipe,
-                        self.tty,
-                        self.cmd_umask,
-                        self.argv)
+OPTIONS.delimiter = '{delimeter}'
+OPTIONS.saltdir = '{saltdir}'
+OPTIONS.checksum = '{checksum}'
+OPTIONS.hashfunc = '{hashfunc}'
+OPTIONS.version = '{version}'
+OPTIONS.ext_mods = '{ext_mods}'
+OPTIONS.wipe = {wipe}
+OPTIONS.tty = {tty}
+OPTIONS.cmd_umask = {cmd_umask}
+OPTIONS.code_checksum = {code_checksum}
+ARGS = {arguments}\n'''.format(config=self.minion_config,
+                               delimeter=RSTR,
+                               saltdir=self.thin_dir,
+                               checksum=thin_sum,
+                               hashfunc='sha1',
+                               version=salt.version.__version__,
+                               ext_mods=self.mods.get('version', ''),
+                               wipe=self.wipe,
+                               tty=self.tty,
+                               cmd_umask=self.cmd_umask,
+                               code_checksum=thin_code_digest,
+                               arguments=self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         if six.PY2:
             py_code_enc = py_code.encode('base64')

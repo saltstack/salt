@@ -546,7 +546,14 @@ def thin_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     thintar = gen_thin(cachedir)
-    return salt.utils.hashutils.get_hash(thintar, form)
+    code_checksum_path = os.path.join(cachedir, 'thin', 'code-checksum')
+    if os.path.isfile(code_checksum_path):
+        with open(code_checksum_path, 'r') as fh:
+            code_checksum = "'{0}'".format(fh.read().strip())
+    else:
+        code_checksum = "'0'"
+
+    return code_checksum, salt.utils.hashutils.get_hash(thintar, form)
 
 
 def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
