@@ -29,6 +29,29 @@ events will be relayed.
 Be aware that the list of events increases with libvirt versions, for example
 network events have been added in libvirt 1.2.1.
 
+Running the engine on non-root
+------------------------------
+
+Running this engine as non root requires a special attention, which is surely
+the case for the master running as user `salt`. The engine is likely to fail
+to connect to libvirt with an error like this one:
+
+    [ERROR   ] authentication unavailable: no polkit agent available to authenticate action 'org.libvirt.unix.monitor'
+
+
+To fix this, the user running the engine, for example the salt-master, needs
+to have the rights to connect to libvirt in the machine polkit config.
+A polkit rule like the following one will allow `salt` user to connect to libvirt:
+
+.. code-block:: javascript
+
+    polkit.addRule(function(action, subject) {
+        if (action.id.indexOf("org.libvirt") == 0 &&
+            subject.user == "salt") {
+            return polkit.Result.YES;
+        }
+    });
+
 :depends: libvirt 1.0.0+ python binding
 
 .. versionadded:: Fluorine
@@ -195,7 +218,7 @@ def _salt_send_event(opaque, conn, data):
     if __opts__.get('__role') == 'master':
         salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir']).fire_event(tag, all_data)
+            __opts__['sock_dir']).fire_event(all_data, tag)
     else:
         __salt__['event.send'](tag, all_data)
 
