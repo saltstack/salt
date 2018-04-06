@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 
-class JinjaFiltersTest():
+class JinjaFiltersTest(object):
     '''
     testing Jinja filters are available via state system
     '''
