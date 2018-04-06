@@ -182,6 +182,7 @@ def get_ext_tops(config):
 
     :return:
     '''
+    config = copy.deepcopy(config)
     alternatives = {}
     required = ['jinja2', 'yaml', 'tornado', 'msgpack']
     tops = []
