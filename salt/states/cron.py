@@ -606,6 +606,7 @@ def file(name,
             user,
             group,
             mode,
+            [],
             __env__,
             context,
             defaults,
@@ -634,6 +635,7 @@ def file(name,
             user,
             group,
             mode,
+            [],
             __env__,
             backup
         )
@@ -650,7 +652,7 @@ def file(name,
         if cron_ret['retcode'] == 0:
             ret['comment'] = 'Crontab for user {0} was updated'.format(user)
             ret['result'] = True
-            ret['changes'] = ret['changes']['diff']
+            ret['changes'] = ret['changes']
         else:
             ret['comment'] = 'Unable to update user {0} crontab {1}.' \
                              ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
