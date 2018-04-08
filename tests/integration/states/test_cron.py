@@ -13,15 +13,12 @@ log = logging.getLogger(__name__)
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP, TMP_STATE_TREE
-from tests.support.helpers import (
-    skip_if_not_root,
-    with_system_user_and_group,
-    with_tempfile,
-    Webserver,
-)
+
+# Import Salt libs
+import salt.utils.platform
 
 
+@skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 class CronTest(ModuleCase):
     '''
     Validate the file state
