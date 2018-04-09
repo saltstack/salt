@@ -77,7 +77,6 @@ class SSHThinTestCase(TestCase):
 
         return tf
 
-
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.path.isfile', MagicMock(return_value=False))
