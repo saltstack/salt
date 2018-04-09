@@ -5,12 +5,16 @@ Support for Linux LVM2
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os.path
 
 # Import salt libs
 import salt.utils.path
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
+
+# Set up logger
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -490,7 +494,8 @@ def lvresize(size=None, lvpath=None, extents=None):
 
     '''
     if size and extents:
-        return 'Error: Please specify only one of size or extents'
+        log.error('Error: Please specify only one of size or extents')
+        return {}
 
     cmd = ['lvresize']
 
@@ -499,7 +504,8 @@ def lvresize(size=None, lvpath=None, extents=None):
     elif extents:
         cmd.extend(['-l', '{0}'.format(extents)])
     else:
-        return 'Error: Either size or extents must be specified'
+        log.error('Error: Either size or extents must be specified')
+        return {}
 
     cmd.append(lvpath)
     cmd_ret = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
