@@ -2434,6 +2434,7 @@ class State(object):
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
                 }
+                self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -2817,6 +2818,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
+            self.opts['environment'] = self.opts['default_top']
 
         if self.opts['environment']:
             contents = self.client.cache_file(
