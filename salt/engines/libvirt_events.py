@@ -229,7 +229,8 @@ def _domain_event_lifecycle_cb(conn, domain, event, detail, opaque):
     '''
     event_str, detail_str = _get_domain_event_detail(event, detail)
 
-    _salt_send_domain_event(opaque, conn, domain, event_str, {
+    _salt_send_domain_event(opaque, conn, domain, opaque['event'], {
+        'event':  event_str,
         'detail': detail_str
     })
 
