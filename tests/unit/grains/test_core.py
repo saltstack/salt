@@ -890,4 +890,3 @@ SwapTotal:       4789244 kB'''
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
             self.assertCountEqual(fqdns['fqdns'], ret['fqdns'])
-
