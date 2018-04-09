@@ -198,8 +198,7 @@ class M2CryptTestCase(TestCase):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
 
     def test_verify_signature(self):
-        key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA)))
-        with patch('M2Crypto.RSA.load_pub_key', return_value=key):
+        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
 
     def test_encrypt_decrypt_bin(self):
@@ -247,7 +246,7 @@ class TestBadCryptodomePubKey(TestCase):
     @skipIf(HAS_M2, "Skip when m2crypto is installed")
     def test_crypto_bad_key(self):
         '''
-        Load public key with an invalid header using m2crypto and validate it
+        Load public key with an invalid header and validate it without m2crypto
         '''
         key = salt.crypt.get_rsa_pub_key(self.key_path)
         assert key.can_encrypt()
