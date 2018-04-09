@@ -56,6 +56,8 @@ from salt.exceptions import (
 # Import third party libs
 from salt.ext import six
 # pylint: disable=import-error
+from salt.performance.payloads import taken_by_master
+from salt.performance.time_provider import TimestampProvider
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -1680,13 +1682,20 @@ class LocalClient(object):
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
-
         try:
             # Ensure that the event subscriber is connected.
             # If not, we won't get a response, so error out
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
+
+            # [KN] Just a side note: jid seems to be non empty only when the job is submitted via raas.
+            # In CLI case, jid = '' here (which is a bit meaningless for the Aggregator).
+            self.event.fire_event(
+                data=taken_by_master(jid=jid, ts=TimestampProvider.get_now(), master_id=self.opts['id']),
+                tag='perf/master')
+            
             payload = channel.send(payload_kwargs, timeout=timeout)
+
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
