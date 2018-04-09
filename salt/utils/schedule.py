@@ -91,7 +91,12 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             instance = object.__new__(cls)
-            instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
+            instance.__singleton_init__(opts, functions,
+                                        returners=returners,
+                                        intervals=intervals,
+                                        cleanup=cleanup,
+                                        proxy=proxy,
+                                        standalone=standalone)
             if new_instance is True:
                 return instance
             cls.instance = instance
