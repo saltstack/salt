@@ -355,7 +355,8 @@ def clear_git_lock(role, remote=None, **kwargs):
                     __opts__,
                     ext_pillar['git'],
                     per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_objects.append(obj)
     elif role == 'winrepo':
         winrepo_dir = __opts__['winrepo_dir']
@@ -371,6 +372,7 @@ def clear_git_lock(role, remote=None, **kwargs):
                 remotes,
                 per_remote_overrides=salt.runners.winrepo.PER_REMOTE_OVERRIDES,
                 per_remote_only=salt.runners.winrepo.PER_REMOTE_ONLY,
+                global_only=salt.runners.winrepo.GLOBAL_ONLY,
                 cache_root=base_dir)
             git_objects.append(obj)
     else:

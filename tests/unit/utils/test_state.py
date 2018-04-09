@@ -482,7 +482,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             res = salt.utils.state.merge_subreturn(m, s)
             self.assertFalse(res['result'])
 
-        # False result cannot be overriden
+        # False result cannot be overridden
         for any_result in [True, None, False]:
             m = copy.deepcopy(self.main_ret)
             m['result'] = False

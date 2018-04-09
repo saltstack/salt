@@ -129,7 +129,10 @@ def assign(name, value):
         tran_tab = name.translate(''.maketrans('./', '/.'))
     else:
         if isinstance(name, unicode):  # pylint: disable=incompatible-py3-code
-            trans_args = ({ord(x): None for x in ''.join(['./', '/.'])},)
+            trans_args = ({
+                ord('/'): '.',
+                ord('.'): '/'
+            },)
         else:
             trans_args = string.maketrans('./', '/.')
         tran_tab = name.translate(*trans_args)

@@ -659,6 +659,8 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
@@ -772,6 +774,8 @@ class SSH(object):
                         self.opts)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
@@ -1027,6 +1031,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:

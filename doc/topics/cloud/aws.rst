@@ -296,7 +296,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
           SecurityGroupId:
             - sg-750af413
       del_root_vol_on_destroy: True
-      del_all_vol_on_destroy: True
+      del_all_vols_on_destroy: True
       volumes:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }

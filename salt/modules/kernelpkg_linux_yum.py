@@ -182,7 +182,7 @@ def upgrade(reboot=False, at_time=None):
 def upgrade_available():
     '''
     Detect if a new kernel version is available in the repositories.
-    Returns True if a new kernel is avaliable, False otherwise.
+    Returns True if a new kernel is available, False otherwise.
 
     CLI Example:
 

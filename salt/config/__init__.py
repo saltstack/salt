@@ -252,7 +252,7 @@ VALID_OPTS = {
     # Force the minion into a single environment when it fetches files from the master
     'saltenv': (type(None), six.string_types),
 
-    # Prevent saltenv from being overriden on the command line
+    # Prevent saltenv from being overridden on the command line
     'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
@@ -432,6 +432,9 @@ VALID_OPTS = {
 
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
+
+    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
     'test': bool,
@@ -650,10 +653,11 @@ VALID_OPTS = {
     's3fs_update_interval': int,
     'svnfs_update_interval': int,
 
-    'git_pillar_base': six.string_types,
-    'git_pillar_branch': six.string_types,
-    'git_pillar_env': six.string_types,
-    'git_pillar_root': six.string_types,
+    # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
+    # git_pillar_root omitted here because their values could conceivably be
+    # loaded as non-string types, which is OK because git_pillar will normalize
+    # them to strings. But rather than include all the possible types they
+    # could be, we'll just skip type-checking.
     'git_pillar_ssl_verify': bool,
     'git_pillar_global_lock': bool,
     'git_pillar_user': six.string_types,
@@ -665,12 +669,11 @@ VALID_OPTS = {
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
     'git_pillar_verify_config': bool,
+    # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
+    # their values could conceivably be loaded as non-string types, which is OK
+    # because gitfs will normalize them to strings. But rather than include all
+    # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
-    'gitfs_mountpoint': six.string_types,
-    'gitfs_root': six.string_types,
-    'gitfs_base': six.string_types,
-    'gitfs_user': six.string_types,
-    'gitfs_password': six.string_types,
     'gitfs_insecure_auth': bool,
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
@@ -885,11 +888,14 @@ VALID_OPTS = {
     'winrepo_dir': six.string_types,
     'winrepo_dir_ng': six.string_types,
     'winrepo_cachefile': six.string_types,
+    # NOTE: winrepo_branch omitted here because its value could conceivably be
+    # loaded as a non-string type, which is OK because winrepo will normalize
+    # them to strings. But rather than include all the possible types it could
+    # be, we'll just skip type-checking.
     'winrepo_cache_expire_max': int,
     'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
-    'winrepo_branch': six.string_types,
     'winrepo_ssl_verify': bool,
     'winrepo_user': six.string_types,
     'winrepo_password': six.string_types,
@@ -1360,6 +1366,7 @@ DEFAULT_MINION_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
+    'enable_legacy_startup_events': True,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -1635,6 +1642,7 @@ DEFAULT_MASTER_OPTS = {
     'eauth_acl_module': '',
     'eauth_tokens': 'localfs',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
+    'module_dirs': [],
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
@@ -2132,10 +2140,6 @@ def _read_conf_file(path):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
-        for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, six.text_type) and six.PY2:
-                # We do not want unicode settings
-                conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
 
@@ -2228,7 +2232,6 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     main config file.
     '''
     # Protect against empty option
-
     if not include:
         return {}
 
@@ -2321,7 +2324,7 @@ def prepend_root_dir(opts, path_options):
                 # drive is not prefixed on a config option
                 pass
             elif os.path.isabs(path):
-                # Absolute path (not default or overriden root_dir)
+                # Absolute path (not default or overridden root_dir)
                 # No prepending required
                 continue
             # Prepending the root dir
@@ -3587,7 +3590,7 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.files.fopen(id_cache) as idf:
-                name = idf.readline().strip()
+                name = salt.utils.stringutils.to_unicode(idf.readline().strip())
                 bname = salt.utils.stringutils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
                     name = salt.utils.stringutils.to_str(bname.replace(codecs.BOM, '', 1))
@@ -3709,7 +3712,9 @@ def apply_minion_config(overrides=None,
             )
             opts['fileserver_backend'][idx] = new_val
 
-    opts['__cli'] = os.path.basename(sys.argv[0])
+    opts['__cli'] = salt.utils.stringutils.to_unicode(
+        os.path.basename(sys.argv[0])
+    )
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
@@ -3843,10 +3848,10 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False),
-                     exit_on_config_errors=exit_on_config_errors)
-    overrides.update(include_config(include, path, verbose=True),
-                     exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(default_include, path, verbose=False,
+                     exit_on_config_errors=exit_on_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                     exit_on_config_errors=exit_on_config_errors))
     opts = apply_master_config(overrides, defaults)
     _validate_ssh_minion_opts(opts)
     _validate_opts(opts)
@@ -3894,6 +3899,10 @@ def apply_master_config(overrides=None, defaults=None):
                 opts['environment']
             )
             opts['saltenv'] = opts['environment']
+
+    if six.PY2 and 'rest_cherrypy' in opts:
+        # CherryPy is not unicode-compatible
+        opts['rest_cherrypy'] = salt.utils.data.encode(opts['rest_cherrypy'])
 
     for idx, val in enumerate(opts['fileserver_backend']):
         if val in ('git', 'hg', 'svn', 'minion'):

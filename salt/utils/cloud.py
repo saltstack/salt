@@ -2263,7 +2263,7 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
         ret = event.get_event(full=True)
         if ret is None:
             continue
-        if ret['tag'] == 'minion_start' and ret['data']['id'] == name:
+        if ret['tag'] == 'salt/minion/{0}/start'.format(name):
             queue.put(name)
             newtimeout = 0
             log.debug('Minion %s is ready to receive commands', name)

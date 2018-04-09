@@ -147,7 +147,8 @@ class GitModuleTest(ModuleCase):
         TODO: maybe move this behavior to ModuleCase itself?
         '''
         return salt.utils.data.decode(
-            super(GitModuleTest, self).run_function(*args, **kwargs)
+            super(GitModuleTest, self).run_function(*args, **kwargs),
+            encoding='utf-8'
         )
 
     def tearDown(self):
@@ -206,7 +207,8 @@ class GitModuleTest(ModuleCase):
             self.run_function('cmd.run', ['cp ' + tar_archive + ' /root/'])
             with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
                 self.assertEqual(
-                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted(salt.utils.data.decode(tar_obj.getnames(),
+                                                  encoding='utf-8')),
                     sorted([
                         'foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон',
                         'foo/qux', 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo',
@@ -236,7 +238,8 @@ class GitModuleTest(ModuleCase):
             self.assertTrue(tarfile.is_tarfile(tar_archive))
             with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
                 self.assertEqual(
-                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted(salt.utils.data.decode(tar_obj.getnames(),
+                                                  encoding='utf-8')),
                     sorted(['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон'])
                 )
         finally:

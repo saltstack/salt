@@ -1564,14 +1564,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits: nofile=1024:1024,nproc=60
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits:
                   - nofile=1024:1024

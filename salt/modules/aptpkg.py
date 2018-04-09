@@ -1084,7 +1084,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         <value> seconds
 
     download_only
-        Only donwload the packages, don't unpack or install them
+        Only download the packages, don't unpack or install them
 
         .. versionadded:: 2018.3.0
 

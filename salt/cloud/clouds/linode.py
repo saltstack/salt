@@ -1500,6 +1500,24 @@ def _query(action=None,
         hide_fields=['api_key', 'rootPass'],
         opts=__opts__,
     )
+
+    if 'ERRORARRAY' in result['dict']:
+        if len(result['dict']['ERRORARRAY']):
+            error_list = []
+
+            for error in result['dict']['ERRORARRAY']:
+                msg = error['ERRORMESSAGE']
+
+                if msg == "Authentication failed":
+                    raise SaltCloudSystemExit(
+                        'Linode API Key is expired or invalid'
+                    )
+                else:
+                    error_list.append(msg)
+            raise SaltCloudException(
+                'Linode API reported error(s): {}'.format(", ".join(error_list))
+            )
+
     LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
     log.debug('Linode Response Status Code: %s', result['status'])
 

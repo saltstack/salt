@@ -426,23 +426,27 @@ class Schedule(object):
 
         # Grab run, assume True
         run = data.get('run', True)
+        run_schedule_jobs_in_background = self.opts.get('run_schedule_jobs_in_background', True)
         if run:
-            multiprocessing_enabled = self.opts.get('multiprocessing', True)
-            if multiprocessing_enabled:
-                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-            else:
-                thread_cls = threading.Thread
+            if run_schedule_jobs_in_background:
+                multiprocessing_enabled = self.opts.get('multiprocessing', True)
+                if multiprocessing_enabled:
+                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                else:
+                    thread_cls = threading.Thread
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                if multiprocessing_enabled:
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                    proc.join()
+                else:
                     proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
                     proc.start()
-                proc.join()
             else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
+                func(data)
 
     def enable_schedule(self):
         '''
@@ -907,40 +911,30 @@ class Schedule(object):
                                               'must be a dict. '
                                               'Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
-                        __when = self.opts['pillar']['whens'][i]
-                        try:
-                            when__ = dateutil_parser.parse(__when)
-                        except ValueError:
-                            data['_error'] = ('Invalid date string. '
-                                              'Ignoring job {0}.'.format(job))
-                            log.error(data['_error'])
                             return data
+                        when_ = self.opts['pillar']['whens'][i]
                     elif ('whens' in self.opts['grains'] and
                           i in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'],
                                           dict):
-                            data['_error'] = ('Grain "whens" must be dict.'
+                            data['_error'] = ('Grain "whens" must be a dict.'
                                               'Ignoring job {0}.'.format(job))
                             log.error(data['_error'])
                             return data
-                        __when = self.opts['grains']['whens'][i]
-                        try:
-                            when__ = dateutil_parser.parse(__when)
-                        except ValueError:
-                            data['_error'] = ('Invalid date string. '
-                                              'Ignoring job {0}.'.format(job))
-                            log.error(data['_error'])
-                            return data
+                        when_ = self.opts['grains']['whens'][i]
                     else:
+                        when_ = i
+
+                    if not isinstance(when_, datetime.datetime):
                         try:
-                            when__ = dateutil_parser.parse(i)
+                            when_ = dateutil_parser.parse(when_)
                         except ValueError:
                             data['_error'] = ('Invalid date string {0}. '
                                               'Ignoring job {1}.'.format(i, job))
                             log.error(data['_error'])
                             return data
 
-                    _when.append(when__)
+                    _when.append(when_)
 
                 if data['_splay']:
                     _when.append(data['_splay'])
@@ -988,32 +982,21 @@ class Schedule(object):
                                           'Ignoring job {0}.'.format(job))
                         log.error(data['_error'])
                         return data
-                    _when = self.opts['pillar']['whens'][data['when']]
-                    try:
-                        when = dateutil_parser.parse(_when)
-                    except ValueError:
-                        data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
+                    when = self.opts['pillar']['whens'][data['when']]
                 elif ('whens' in self.opts['grains'] and
                       data['when'] in self.opts['grains']['whens']):
                     if not isinstance(self.opts['grains']['whens'], dict):
-                        data['_error'] = ('Grain "whens" must be dict. '
+                        data['_error'] = ('Grain "whens" must be a dict. '
                                           'Ignoring job {0}.'.format(job))
                         log.error(data['_error'])
                         return data
-                    _when = self.opts['grains']['whens'][data['when']]
-                    try:
-                        when = dateutil_parser.parse(_when)
-                    except ValueError:
-                        data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
+                    when = self.opts['grains']['whens'][data['when']]
                 else:
+                    when = data['when']
+
+                if not isinstance(when, datetime.datetime):
                     try:
-                        when = dateutil_parser.parse(data['when'])
+                        when = dateutil_parser.parse(when)
                     except ValueError:
                         data['_error'] = ('Invalid date string. '
                                           'Ignoring job {0}.'.format(job))
@@ -1142,22 +1125,26 @@ class Schedule(object):
                 return data
             else:
                 if isinstance(data['skip_during_range'], dict):
-                    try:
-                        start = dateutil_parser.parse(data['skip_during_range']['start'])
-                    except ValueError:
-                        data['_error'] = ('Invalid date string for start in '
-                                          'skip_during_range. Ignoring '
-                                          'job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
-                    try:
-                        end = dateutil_parser.parse(data['skip_during_range']['end'])
-                    except ValueError:
-                        data['_error'] = ('Invalid date string for end in '
-                                          'skip_during_range. Ignoring '
-                                          'job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
+                    start = data['skip_during_range']['start']
+                    end = data['skip_during_range']['end']
+                    if not isinstance(start, datetime.datetime):
+                        try:
+                            start = dateutil_parser.parse(start)
+                        except ValueError:
+                            data['_error'] = ('Invalid date string for start in '
+                                              'skip_during_range. Ignoring '
+                                              'job {0}.'.format(job))
+                            log.error(data['_error'])
+                            return data
+                    if not isinstance(end, datetime.datetime):
+                        try:
+                            end = dateutil_parser.parse(end)
+                        except ValueError:
+                            data['_error'] = ('Invalid date string for end in '
+                                              'skip_during_range. Ignoring '
+                                              'job {0}.'.format(job))
+                            log.error(data['_error'])
+                            return data
 
                     # Check to see if we should run the job immediately
                     # after the skip_during_range is over
@@ -1192,7 +1179,7 @@ class Schedule(object):
                         return data
                 else:
                     data['_error'] = ('schedule.handle_func: Invalid, range '
-                                      'must be specified as a dictionary '
+                                      'must be specified as a dictionary. '
                                       'Ignoring job {0}.'.format(job))
                     log.error(data['_error'])
                     return data
@@ -1209,20 +1196,24 @@ class Schedule(object):
                 return data
             else:
                 if isinstance(data['range'], dict):
-                    try:
-                        start = dateutil_parser.parse(data['range']['start'])
-                    except ValueError:
-                        data['_error'] = ('Invalid date string for start. '
-                                          'Ignoring job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
-                    try:
-                        end = dateutil_parser.parse(data['range']['end'])
-                    except ValueError:
-                        data['_error'] = ('Invalid date string for end.'
-                                          ' Ignoring job {0}.'.format(job))
-                        log.error(data['_error'])
-                        return data
+                    start = data['range']['start']
+                    end = data['range']['end']
+                    if not isinstance(start, datetime.datetime):
+                        try:
+                            start = dateutil_parser.parse(start)
+                        except ValueError:
+                            data['_error'] = ('Invalid date string for start. '
+                                              'Ignoring job {0}.'.format(job))
+                            log.error(data['_error'])
+                            return data
+                    if not isinstance(end, datetime.datetime):
+                        try:
+                            end = dateutil_parser.parse(end)
+                        except ValueError:
+                            data['_error'] = ('Invalid date string for end.'
+                                              ' Ignoring job {0}.'.format(job))
+                            log.error(data['_error'])
+                            return data
                     if end > start:
                         if 'invert' in data['range'] and data['range']['invert']:
                             if now <= start or now >= end:
@@ -1262,7 +1253,9 @@ class Schedule(object):
                                   'Ignoring job {0}'.format(job))
                 log.error(data['_error'])
             else:
-                after = dateutil_parser.parse(data['after'])
+                after = data['after']
+                if not isinstance(after, datetime.datetime):
+                    after = dateutil_parser.parse(after)
 
                 if after >= now:
                     log.debug(
@@ -1286,7 +1279,9 @@ class Schedule(object):
                                   'Ignoring job {0}'.format(job))
                 log.error(data['_error'])
             else:
-                until = dateutil_parser.parse(data['until'])
+                until = data['until']
+                if not isinstance(until, datetime.datetime):
+                    until = dateutil_parser.parse(until)
 
                 if until <= now:
                     log.debug(
@@ -1474,7 +1469,7 @@ class Schedule(object):
 
                 # If there is no job specific skip_during_range available,
                 # grab the global which defaults to None.
-                if 'skip_during_range' not in data:
+                if 'skip_during_range' not in data and self.skip_during_range:
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:

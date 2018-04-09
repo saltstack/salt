@@ -737,6 +737,45 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
     return ret
 
 
+def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Sync serializers from ``salt://_serializers`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for serializer modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new serializer modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_serializers
+        salt '*' saltutil.sync_serializers saltenv=dev
+        salt '*' saltutil.sync_serializers saltenv=base,dev
+    '''
+    ret = _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def list_extmods():
     '''
     .. versionadded:: 2017.7.0
@@ -904,6 +943,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['serializers'] = sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:

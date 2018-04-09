@@ -1438,7 +1438,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion.
 
 Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
-documentation for more infomation.
+documentation for more information.
 
 .. code-block:: yaml
 
@@ -2212,7 +2212,7 @@ This allows the following more convenient syntax to be used:
     # (this comment remains in the rendered template)
     ## ensure all the formula services are running
     % for service in formula_services:
-    enable_service_{{ serivce }}:
+    enable_service_{{ service }}:
       service.running:
         name: {{ service }}
     % endfor
@@ -5339,11 +5339,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 

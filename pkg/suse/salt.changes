@@ -70,7 +70,7 @@ Mon Oct 12 08:48:25 UTC 2015 - dmacvicar@suse.de
 -------------------------------------------------------------------
 Mon Oct 12 08:19:45 UTC 2015 - dmacvicar@suse.de
 
-- allow to disable docs in preparation for building
+- allow one to disable docs in preparation for building
   on other platforms without all dependencies.
 
 -------------------------------------------------------------------

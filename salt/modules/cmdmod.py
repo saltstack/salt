@@ -12,6 +12,7 @@ import functools
 import glob
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -3334,9 +3335,14 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd += ' | ConvertTo-JSON'
-    if depth is not None:
-        cmd += ' -Depth {0}'.format(depth)
+    # ConvertTo-JSON is only available on Versions of Windows greater than
+    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
+    # because this function is called by `salt/grains/core.py` before
+    # `__grains__` is populated
+    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+        cmd += ' | ConvertTo-JSON'
+        if depth is not None:
+            cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -3353,7 +3359,7 @@ def powershell(cmd,
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+    cmd = 'try {' + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -3425,10 +3431,10 @@ def powershell_all(cmd,
     empty Powershell output (which would result in an exception). Instead we
     treat this as a special case and one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field of the return dictionary will be an empty list.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the
+    - If the value of the ``force_list`` parameter is ``False``, then the
       return dictionary **will not have a result key added to it**. We aren't
       setting ``result`` to ``None`` in this case, because ``None`` is the
       Python representation of "null" in JSON. (We likewise can't use ``False``
@@ -3441,20 +3447,20 @@ def powershell_all(cmd,
     content, and the type of the resulting Python object is other than ``list``
     then one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field will be a singleton list with the Python object as its
       sole member.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the value
+    - If the value of the ``force_list`` parameter is ``False``, then the value
       of ``result`` will be the unmodified Python object.
 
     If Powershell's output is not an empty string, Python is able to parse its
     content, and the type of the resulting Python object is ``list``, then the
     value of ``result`` will be the unmodified Python object. The
-    ``force_list`` paramater has no effect in this case.
+    ``force_list`` parameter has no effect in this case.
 
     .. note::
-         An example of why the ``force_list`` paramater is useful is as
+         An example of why the ``force_list`` parameter is useful is as
          follows: The Powershell command ``dir x | Convert-ToJson`` results in
 
          - no output when x is an empty directory.
@@ -3602,7 +3608,7 @@ def powershell_all(cmd,
         where characters may be dropped or incorrectly converted when executed.
         Default is False.
 
-    :param bool force_list: The purpose of this paramater is described in the
+    :param bool force_list: The purpose of this parameter is described in the
         preamble of this function's documentation. Default value is False.
 
     :param list success_retcodes: This parameter will be allow a list of

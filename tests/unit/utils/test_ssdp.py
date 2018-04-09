@@ -305,7 +305,7 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.log.debug.called
             assert factory.disable_hidden
             assert factory._sendto.called
-            assert factory._sendto.call_args[0][0] == "{}:@:{{}}".format(signature)
+            assert factory._sendto.call_args[0][0] == salt.utils.stringutils.to_bytes("{}:@:{{}}".format(signature))
             assert 'Received "%s" from %s:%s' in factory.log.debug.call_args[0][0]
 
 

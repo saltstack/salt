@@ -1133,7 +1133,7 @@ def installed(
         .. versionadded:: 2014.1.1
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 
@@ -1967,7 +1967,7 @@ def downloaded(name,
                       - salt-minion: 2015.8.5-1.el6
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 
@@ -2259,7 +2259,7 @@ def latest(
             has no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 
@@ -2886,7 +2886,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             have no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 

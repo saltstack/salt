@@ -1927,9 +1927,9 @@ def fqdns():
             fqdns.add(socket.gethostbyaddr(ip)[0])
         except (socket.error, socket.herror,
             socket.gaierror, socket.timeout) as e:
-            log.error("Exception during resolving address: " + str(e))
+            log.info("Exception during resolving address: " + str(e))
 
-    grains['fqdns'] = list(fqdns)
+    grains['fqdns'] = sorted(list(fqdns))
     return grains
 
 
@@ -2212,7 +2212,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read()
+                        grains[key] = ifile.read().strip()
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:

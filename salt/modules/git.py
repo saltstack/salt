@@ -67,6 +67,7 @@ def _config_getter(get_opt,
                    user=None,
                    password=None,
                    ignore_retcode=False,
+                   output_encoding=None,
                    **kwargs):
     '''
     Common code for config.get_* functions, builds and runs the git CLI command
@@ -94,7 +95,8 @@ def _config_getter(get_opt,
         value_regex = None
 
     command = ['git', 'config']
-    command.extend(_which_git_config(global_, cwd, user, password))
+    command.extend(_which_git_config(global_, cwd, user, password,
+                                     output_encoding=output_encoding))
     command.append(get_opt)
     command.append(key)
     if value_regex is not None:
@@ -104,7 +106,8 @@ def _config_getter(get_opt,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    failhard=False)
+                    failhard=False,
+                    output_encoding=output_encoding)
 
 
 def _expand_path(cwd, user):
@@ -210,7 +213,7 @@ def _find_ssh_exe():
 
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
-             saltenv='base', **kwargs):
+             saltenv='base', output_encoding=None, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -218,6 +221,9 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
     'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
+    if salt.utils.platform.is_windows() and output_encoding is None:
+        output_encoding = 'utf-8'
+
     env = {}
 
     if identity:
@@ -312,6 +318,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     log_callback=salt.utils.url.redact_http_basic_auth,
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=redirect_stderr,
+                    output_encoding=output_encoding,
                     **kwargs)
             finally:
                 if tmp_ssh_wrapper:
@@ -378,6 +385,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             log_callback=salt.utils.url.redact_http_basic_auth,
             ignore_retcode=ignore_retcode,
             redirect_stderr=redirect_stderr,
+            output_encoding=output_encoding,
             **kwargs)
 
         if result['retcode'] == 0:
@@ -399,7 +407,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             return result
 
 
-def _get_toplevel(path, user=None, password=None):
+def _get_toplevel(path, user=None, password=None, output_encoding=None):
     '''
     Use git rev-parse to return the top level of a repo
     '''
@@ -407,10 +415,11 @@ def _get_toplevel(path, user=None, password=None):
         ['git', 'rev-parse', '--show-toplevel'],
         cwd=path,
         user=user,
-        password=password)['stdout']
+        password=password,
+        output_encoding=output_encoding)['stdout']
 
 
-def _git_config(cwd, user, password):
+def _git_config(cwd, user, password, output_encoding=None):
     '''
     Helper to retrieve git config options
     '''
@@ -420,7 +429,8 @@ def _git_config(cwd, user, password):
                             opts=['--git-dir'],
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
         if not os.path.isabs(git_dir):
             paths = (cwd, git_dir, 'config')
         else:
@@ -429,7 +439,7 @@ def _git_config(cwd, user, password):
     return __context__[contextkey]
 
 
-def _which_git_config(global_, cwd, user, password):
+def _which_git_config(global_, cwd, user, password, output_encoding=None):
     '''
     Based on whether global or local config is desired, return a list of CLI
     args to include in the git config command.
@@ -442,7 +452,8 @@ def _which_git_config(global_, cwd, user, password):
         return ['--local']
     else:
         # For earlier versions, need to specify the path to the git config file
-        return ['--file', _git_config(cwd, user, password)]
+        return ['--file', _git_config(cwd, user, password,
+                                      output_encoding=output_encoding)]
 
 
 def add(cwd,
@@ -451,7 +462,8 @@ def add(cwd,
         git_opts='',
         user=None,
         password=None,
-        ignore_retcode=False):
+        ignore_retcode=False,
+        output_encoding=None):
     '''
     .. versionchanged:: 2015.8.0
         The ``--verbose`` command line argument is now implied
@@ -498,8 +510,31 @@ def add(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-add(1)`: http://git-scm.com/docs/git-add
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-add(1)`: http://git-scm.com/docs/git-add
 
     CLI Examples:
 
@@ -519,7 +554,8 @@ def add(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def archive(cwd,
@@ -530,6 +566,7 @@ def archive(cwd,
             user=None,
             password=None,
             ignore_retcode=False,
+            output_encoding=None,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -621,8 +658,31 @@ def archive(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-archive(1)`: http://git-scm.com/docs/git-archive
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-archive(1)`: http://git-scm.com/docs/git-archive
 
     CLI Example:
 
@@ -657,7 +717,8 @@ def archive(cwd,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     # No output (unless --verbose is used, and we don't want all files listed
     # in the output in case there are thousands), so just return True. If there
     # was an error in the git command, it will have already raised an exception
@@ -671,7 +732,8 @@ def branch(cwd,
            git_opts='',
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-branch(1)`_
 
@@ -722,8 +784,31 @@ def branch(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-branch(1)`: http://git-scm.com/docs/git-branch
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-branch(1)`: http://git-scm.com/docs/git-branch
 
     CLI Examples:
 
@@ -748,7 +833,8 @@ def branch(cwd,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     return True
 
 
@@ -759,7 +845,8 @@ def checkout(cwd,
              git_opts='',
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Interface to `git-checkout(1)`_
 
@@ -810,8 +897,31 @@ def checkout(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-checkout(1)`: http://git-scm.com/docs/git-checkout
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-checkout(1)`: http://git-scm.com/docs/git-checkout
 
     CLI Examples:
 
@@ -847,7 +957,8 @@ def checkout(cwd,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def clone(cwd,
@@ -861,7 +972,8 @@ def clone(cwd,
           https_user=None,
           https_pass=None,
           ignore_retcode=False,
-          saltenv='base'):
+          saltenv='base',
+          output_encoding=None):
     '''
     Interface to `git-clone(1)`_
 
@@ -951,6 +1063,30 @@ def clone(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-clone(1)`: http://git-scm.com/docs/git-clone
 
     CLI Example:
@@ -996,7 +1132,8 @@ def clone(cwd,
              password=password,
              identity=identity,
              ignore_retcode=ignore_retcode,
-             saltenv=saltenv)
+             saltenv=saltenv,
+             output_encoding=output_encoding)
     return True
 
 
@@ -1007,7 +1144,8 @@ def commit(cwd,
            user=None,
            password=None,
            filename=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-commit(1)`_
 
@@ -1066,8 +1204,31 @@ def commit(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-commit(1)`: http://git-scm.com/docs/git-commit
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-commit(1)`: http://git-scm.com/docs/git-commit
 
     CLI Examples:
 
@@ -1088,7 +1249,8 @@ def commit(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def config_get(key,
@@ -1096,6 +1258,7 @@ def config_get(key,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     Get the value of a key in the git configuration file
@@ -1140,6 +1303,29 @@ def config_get(key,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -1160,6 +1346,7 @@ def config_get(key,
                             user=user,
                             password=password,
                             ignore_retcode=ignore_retcode,
+                            output_encoding=output_encoding,
                             **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1182,6 +1369,7 @@ def config_get_regexp(key,
                       user=None,
                       password=None,
                       ignore_retcode=False,
+                      output_encoding=None,
                       **kwargs):
     r'''
     .. versionadded:: 2015.8.0
@@ -1226,6 +1414,29 @@ def config_get_regexp(key,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -1245,6 +1456,7 @@ def config_get_regexp(key,
                             user=user,
                             password=password,
                             ignore_retcode=ignore_retcode,
+                            output_encoding=output_encoding,
                             **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1269,6 +1481,7 @@ def config_set(key,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -1326,7 +1539,31 @@ def config_set(key,
     global : False
         If ``True``, set a global variable
 
-    CLI Example:
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1382,7 +1619,8 @@ def config_set(key,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     else:
         for idx, target in enumerate(multivar):
             command = copy.copy(command_prefix)
@@ -1395,12 +1633,14 @@ def config_set(key,
                      cwd=cwd,
                      user=user,
                      password=password,
-                     ignore_retcode=ignore_retcode)
+                     ignore_retcode=ignore_retcode,
+                     output_encoding=output_encoding)
     return config_get(key,
                       user=user,
                       password=password,
                       cwd=cwd,
                       ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding,
                       **{'all': True, 'global': global_})
 
 
@@ -1410,6 +1650,7 @@ def config_unset(key,
                  user=None,
                  password=None,
                  ignore_retcode=False,
+                 output_encoding=None,
                  **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -1449,6 +1690,29 @@ def config_unset(key,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -1476,7 +1740,8 @@ def config_unset(key,
         command.append('--unset-all')
     else:
         command.append('--unset')
-    command.extend(_which_git_config(global_, cwd, user, password))
+    command.extend(_which_git_config(global_, cwd, user, password,
+                                     output_encoding=output_encoding))
 
     command.append(key)
     if value_regex is not None:
@@ -1486,7 +1751,8 @@ def config_unset(key,
                    user=user,
                    password=password,
                    ignore_retcode=ignore_retcode,
-                   failhard=False)
+                   failhard=False,
+                   output_encoding=output_encoding)
     retcode = ret['retcode']
     if retcode == 0:
         return True
@@ -1497,7 +1763,8 @@ def config_unset(key,
                       key,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode) is None:
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding) is None:
             raise CommandExecutionError(
                 'Key \'{0}\' does not exist'.format(key)
             )
@@ -1521,7 +1788,8 @@ def config_unset(key,
 def current_branch(cwd,
                    user=None,
                    password=None,
-                   ignore_retcode=False):
+                   ignore_retcode=False,
+                   output_encoding=None):
     '''
     Returns the current branch name of a local checkout. If HEAD is detached,
     return the SHA1 of the revision which is currently checked out.
@@ -1545,6 +1813,29 @@ def current_branch(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -1558,14 +1849,16 @@ def current_branch(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def describe(cwd,
              rev='HEAD',
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Returns the `git-describe(1)`_ string (or the SHA1 hash if there are no
     tags) for the given revision.
@@ -1592,8 +1885,31 @@ def describe(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-describe(1)`: http://git-scm.com/docs/git-describe
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-describe(1)`: http://git-scm.com/docs/git-describe
 
     CLI Examples:
 
@@ -1611,7 +1927,8 @@ def describe(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def diff(cwd,
@@ -1623,7 +1940,8 @@ def diff(cwd,
          password=None,
          no_index=False,
          cached=False,
-         paths=None):
+         paths=None,
+         output_encoding=None):
     '''
     .. versionadded:: 2015.8.12,2016.3.3,2016.11.0
 
@@ -1691,8 +2009,31 @@ def diff(cwd,
         File paths to pass to the ``git diff`` command. Can be passed as a
         comma-separated list or a Python list.
 
-    .. _`git-diff(1)`: http://git-scm.com/docs/git-diff
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-diff(1)`: http://git-scm.com/docs/git-diff
 
     CLI Example:
 
@@ -1770,7 +2111,8 @@ def diff(cwd,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=failhard,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def fetch(cwd,
@@ -1783,7 +2125,8 @@ def fetch(cwd,
           password=None,
           identity=None,
           ignore_retcode=False,
-          saltenv='base'):
+          saltenv='base',
+          output_encoding=None):
     '''
     .. versionchanged:: 2015.8.2
         Return data is now a dictionary containing information on branches and
@@ -1873,8 +2216,31 @@ def fetch(cwd,
 
         .. versionadded:: 2016.3.1
 
-    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
     CLI Example:
 
@@ -1908,7 +2274,8 @@ def fetch(cwd,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
                       redirect_stderr=True,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
 
     update_re = re.compile(
         r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
@@ -1946,7 +2313,8 @@ def init(cwd,
          git_opts='',
          user=None,
          password=None,
-         ignore_retcode=False):
+         ignore_retcode=False,
+         output_encoding=None):
     '''
     Interface to `git-init(1)`_
 
@@ -2008,6 +2376,30 @@ def init(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
 
@@ -2045,12 +2437,14 @@ def init(cwd,
     return _git_run(command,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def is_worktree(cwd,
                 user=None,
-                password=None):
+                password=None,
+                output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2071,6 +2465,29 @@ def is_worktree(cwd,
 
       .. versionadded:: 2016.3.4
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -2080,7 +2497,8 @@ def is_worktree(cwd,
     '''
     cwd = _expand_path(cwd, user)
     try:
-        toplevel = _get_toplevel(cwd, user=user, password=password)
+        toplevel = _get_toplevel(cwd, user=user, password=password,
+                                 output_encoding=output_encoding)
     except CommandExecutionError:
         return False
     gitdir = os.path.join(toplevel, '.git')
@@ -2111,7 +2529,8 @@ def list_branches(cwd,
                   remote=False,
                   user=None,
                   password=None,
-                  ignore_retcode=False):
+                  ignore_retcode=False,
+                  output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2146,6 +2565,29 @@ def list_branches(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -2161,13 +2603,15 @@ def list_branches(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout'].splitlines()
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout'].splitlines()
 
 
 def list_tags(cwd,
               user=None,
               password=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2192,6 +2636,29 @@ def list_tags(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -2206,13 +2673,15 @@ def list_tags(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout'].splitlines()
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout'].splitlines()
 
 
 def list_worktrees(cwd,
                    stale=False,
                    user=None,
                    password=None,
+                   output_encoding=None,
                    **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -2255,8 +2724,31 @@ def list_worktrees(cwd,
     .. note::
         Only one of ``all`` and ``stale`` can be set to ``True``.
 
-    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
 
     CLI Examples:
 
@@ -2279,14 +2771,16 @@ def list_worktrees(cwd,
             '\'all\' and \'stale\' cannot both be set to True'
         )
 
-    def _git_tag_points_at(cwd, rev, user=None, password=None):
+    def _git_tag_points_at(cwd, rev, user=None, password=None,
+                           output_encoding=None):
         '''
         Get any tags that point at a
         '''
         return _git_run(['git', 'tag', '--points-at', rev],
                         cwd=cwd,
                         user=user,
-                        password=password)['stdout'].splitlines()
+                        password=password,
+                        output_encoding=output_encoding)['stdout'].splitlines()
 
     def _desired(is_stale, all_, stale):
         '''
@@ -2323,7 +2817,8 @@ def list_worktrees(cwd,
         out = _git_run(['git', 'worktree', 'list', '--porcelain'],
                        cwd=cwd,
                        user=user,
-                       password=password)
+                       password=password,
+                       output_encoding=output_encoding)
         if out['retcode'] != 0:
             msg = 'Failed to list worktrees'
             if out['stderr']:
@@ -2393,7 +2888,8 @@ def list_worktrees(cwd,
                 tags_found = _git_tag_points_at(cwd,
                                                 wt_ptr['HEAD'],
                                                 user=user,
-                                                password=password)
+                                                password=password,
+                                                output_encoding=output_encoding)
                 if tags_found:
                     wt_ptr['tags'] = tags_found
             else:
@@ -2403,12 +2899,14 @@ def list_worktrees(cwd,
         return ret
 
     else:
-        toplevel = _get_toplevel(cwd, user=user, password=password)
+        toplevel = _get_toplevel(cwd, user=user, password=password,
+                                 output_encoding=output_encoding)
         try:
             worktree_root = rev_parse(cwd,
                                       opts=['--git-path', 'worktrees'],
                                       user=user,
-                                      password=password)
+                                      password=password,
+                                      output_encoding=output_encoding)
         except CommandExecutionError as exc:
             msg = 'Failed to find worktree location for ' + cwd
             log.error(msg, exc_info_on_loglevel=logging.DEBUG)
@@ -2474,7 +2972,8 @@ def list_worktrees(cwd,
                 wt_head = rev_parse(cwd,
                                     rev=head_ref,
                                     user=user,
-                                    password=password)
+                                    password=password,
+                                    output_encoding=output_encoding)
                 wt_detached = False
             else:
                 wt_branch = None
@@ -2492,7 +2991,8 @@ def list_worktrees(cwd,
                 tags_found = _git_tag_points_at(cwd,
                                                 wt_head,
                                                 user=user,
-                                                password=password)
+                                                password=password,
+                                                output_encoding=output_encoding)
                 if tags_found:
                     wt_ptr['tags'] = tags_found
 
@@ -2510,6 +3010,7 @@ def ls_remote(cwd=None,
               https_user=None,
               https_pass=None,
               ignore_retcode=False,
+              output_encoding=None,
               saltenv='base'):
     '''
     Interface to `git-ls-remote(1)`_. Returns the upstream hash for a remote
@@ -2609,8 +3110,31 @@ def ls_remote(cwd=None,
 
         .. versionadded:: 2016.3.1
 
-    .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
 
     CLI Example:
 
@@ -2640,7 +3164,8 @@ def ls_remote(cwd=None,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
     ret = {}
     for line in output.splitlines():
         try:
@@ -2658,6 +3183,7 @@ def merge(cwd,
           user=None,
           password=None,
           ignore_retcode=False,
+          output_encoding=None,
           **kwargs):
     '''
     Interface to `git-merge(1)`_
@@ -2705,8 +3231,31 @@ def merge(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-merge(1)`: http://git-scm.com/docs/git-merge
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-merge(1)`: http://git-scm.com/docs/git-merge
 
     CLI Example:
 
@@ -2733,7 +3282,8 @@ def merge(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def merge_base(cwd,
@@ -2747,6 +3297,7 @@ def merge_base(cwd,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -2833,9 +3384,32 @@ def merge_base(cwd,
         if ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-merge-base(1)`: http://git-scm.com/docs/git-merge-base
     .. _here: http://git-scm.com/docs/git-merge-base#_discussion
-
 
     CLI Examples:
 
@@ -2898,13 +3472,15 @@ def merge_base(cwd,
                                      opts=['--verify'],
                                      user=user,
                                      password=password,
-                                     ignore_retcode=ignore_retcode)
+                                     ignore_retcode=ignore_retcode,
+                                     output_encoding=output_encoding)
             return merge_base(cwd,
                               refs=refs,
                               is_ancestor=False,
                               user=user,
                               password=password,
-                              ignore_retcode=ignore_retcode) == first_commit
+                              ignore_retcode=ignore_retcode,
+                              output_encoding=output_encoding) == first_commit
 
     command = ['git'] + _format_git_opts(git_opts)
     command.append('merge-base')
@@ -2925,7 +3501,8 @@ def merge_base(cwd,
                       user=user,
                       password=password,
                       ignore_retcode=ignore_retcode,
-                      failhard=False if is_ancestor else True)
+                      failhard=False if is_ancestor else True,
+                      output_encoding=output_encoding)
     if is_ancestor:
         return result['retcode'] == 0
     all_bases = result['stdout'].splitlines()
@@ -2940,7 +3517,8 @@ def merge_tree(cwd,
                base=None,
                user=None,
                password=None,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2975,8 +3553,31 @@ def merge_tree(cwd,
         if ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
-    .. _`git-merge-tree(1)`: http://git-scm.com/docs/git-merge-tree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-merge-tree(1)`: http://git-scm.com/docs/git-merge-tree
 
     CLI Examples:
 
@@ -2989,7 +3590,8 @@ def merge_tree(cwd,
     command = ['git', 'merge-tree']
     if base is None:
         try:
-            base = merge_base(cwd, refs=[ref1, ref2])
+            base = merge_base(cwd, refs=[ref1, ref2],
+                              output_encoding=output_encoding)
         except (SaltInvocationError, CommandExecutionError):
             raise CommandExecutionError(
                 'Unable to determine merge base for {0} and {1}'
@@ -3000,7 +3602,8 @@ def merge_tree(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def pull(cwd,
@@ -3010,7 +3613,8 @@ def pull(cwd,
          password=None,
          identity=None,
          ignore_retcode=False,
-         saltenv='base'):
+         saltenv='base',
+         output_encoding=None):
     '''
     Interface to `git-pull(1)`_
 
@@ -3079,6 +3683,30 @@ def pull(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-pull(1)`: http://git-scm.com/docs/git-pull
 
     CLI Example:
@@ -3097,7 +3725,8 @@ def pull(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def push(cwd,
@@ -3110,6 +3739,7 @@ def push(cwd,
          identity=None,
          ignore_retcode=False,
          saltenv='base',
+         output_encoding=None,
          **kwargs):
     '''
     Interface to `git-push(1)`_
@@ -3191,6 +3821,30 @@ def push(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-push(1)`: http://git-scm.com/docs/git-push
     .. _refspec: http://git-scm.com/book/en/v2/Git-Internals-The-Refspec
 
@@ -3220,7 +3874,8 @@ def push(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rebase(cwd,
@@ -3229,7 +3884,8 @@ def rebase(cwd,
            git_opts='',
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-rebase(1)`_
 
@@ -3273,6 +3929,30 @@ def rebase(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
 
 
@@ -3298,7 +3978,8 @@ def rebase(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def remote_get(cwd,
@@ -3306,7 +3987,8 @@ def remote_get(cwd,
                user=None,
                password=None,
                redact_auth=True,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     Get the fetch and push URL for a specific remote
 
@@ -3344,6 +4026,29 @@ def remote_get(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -3357,7 +4062,8 @@ def remote_get(cwd,
                           user=user,
                           password=password,
                           redact_auth=redact_auth,
-                          ignore_retcode=ignore_retcode)
+                          ignore_retcode=ignore_retcode,
+                          output_encoding=output_encoding)
     if remote not in all_remotes:
         raise CommandExecutionError(
             'Remote \'{0}\' not present in git checkout located at {1}'
@@ -3375,6 +4081,7 @@ def remote_refs(url,
                 https_user=None,
                 https_pass=None,
                 ignore_retcode=False,
+                output_encoding=None,
                 saltenv='base'):
     '''
     .. versionadded:: 2015.8.0
@@ -3438,6 +4145,30 @@ def remote_refs(url,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -3461,7 +4192,8 @@ def remote_refs(url,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
     ret = {}
     for line in salt.utils.itertools.split(output, '\n'):
         try:
@@ -3482,7 +4214,8 @@ def remote_set(cwd,
                push_url=None,
                push_https_user=None,
                push_https_pass=None,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     cwd
         The path to the git checkout
@@ -3536,6 +4269,29 @@ def remote_set(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -3546,7 +4302,8 @@ def remote_set(cwd,
         salt myminion git.remote_set /path/to/repo https://github.com/user/repo.git remote=upstream push_url=git@github.com:user/repo.git
     '''
     # Check if remote exists
-    if remote in remotes(cwd, user=user, password=password):
+    if remote in remotes(cwd, user=user, password=password,
+                         output_encoding=output_encoding):
         log.debug(
             'Remote \'%s\' already exists in git checkout located at %s, '
             'removing so it can be re-added', remote, cwd
@@ -3556,7 +4313,8 @@ def remote_set(cwd,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     # Add remote
     try:
         url = salt.utils.url.add_http_basic_auth(url,
@@ -3570,7 +4328,8 @@ def remote_set(cwd,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     if push_url:
         if not isinstance(push_url, six.string_types):
             push_url = six.text_type(push_url)
@@ -3586,19 +4345,22 @@ def remote_set(cwd,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     return remote_get(cwd=cwd,
                       remote=remote,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)
 
 
 def remotes(cwd,
             user=None,
             password=None,
             redact_auth=True,
-            ignore_retcode=False):
+            ignore_retcode=False,
+            output_encoding=None):
     '''
     Get fetch and push URLs for each remote in a git checkout
 
@@ -3634,6 +4396,29 @@ def remotes(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -3648,7 +4433,8 @@ def remotes(cwd,
                       cwd=cwd,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)['stdout']
     for remote_line in salt.utils.itertools.split(output, '\n'):
         try:
             remote, remote_info = remote_line.split(None, 1)
@@ -3677,7 +4463,8 @@ def reset(cwd,
           git_opts='',
           user=None,
           password=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          output_encoding=None):
     '''
     Interface to `git-reset(1)`_, returns the stdout from the git command
 
@@ -3718,8 +4505,31 @@ def reset(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-reset(1)`: http://git-scm.com/docs/git-reset
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-reset(1)`: http://git-scm.com/docs/git-reset
 
     CLI Examples:
 
@@ -3738,7 +4548,8 @@ def reset(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rev_parse(cwd,
@@ -3747,7 +4558,8 @@ def rev_parse(cwd,
               git_opts='',
               user=None,
               password=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3791,10 +4603,33 @@ def rev_parse(cwd,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-rev-parse(1)`: http://git-scm.com/docs/git-rev-parse
     .. _`SPECIFYING REVISIONS`: http://git-scm.com/docs/git-rev-parse#_specifying_revisions
     .. _`Options for Files`: http://git-scm.com/docs/git-rev-parse#_options_for_files
-
 
     CLI Examples:
 
@@ -3821,7 +4656,8 @@ def rev_parse(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def revision(cwd,
@@ -3829,7 +4665,8 @@ def revision(cwd,
              short=False,
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Returns the SHA1 hash of a given identifier (hash, branch, tag, HEAD, etc.)
 
@@ -3858,6 +4695,30 @@ def revision(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -3873,7 +4734,8 @@ def revision(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rm_(cwd,
@@ -3882,7 +4744,8 @@ def rm_(cwd,
         git_opts='',
         user=None,
         password=None,
-        ignore_retcode=False):
+        ignore_retcode=False,
+        output_encoding=None):
     '''
     Interface to `git-rm(1)`_
 
@@ -3930,8 +4793,31 @@ def rm_(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-rm(1)`: http://git-scm.com/docs/git-rm
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-rm(1)`: http://git-scm.com/docs/git-rm
 
     CLI Examples:
 
@@ -3950,7 +4836,8 @@ def rm_(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def stash(cwd,
@@ -3959,7 +4846,8 @@ def stash(cwd,
           git_opts='',
           user=None,
           password=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          output_encoding=None):
     '''
     Interface to `git-stash(1)`_, returns the stdout from the git command
 
@@ -3999,8 +4887,31 @@ def stash(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-stash(1)`: http://git-scm.com/docs/git-stash
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-stash(1)`: http://git-scm.com/docs/git-stash
 
     CLI Examples:
 
@@ -4019,13 +4930,15 @@ def stash(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def status(cwd,
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     .. versionchanged:: 2015.8.0
         Return data has changed from a list of lists to a dictionary
@@ -4051,6 +4964,29 @@ def status(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -4071,7 +5007,8 @@ def status(cwd,
                       cwd=cwd,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)['stdout']
     for line in output.split('\0'):
         try:
             state, filename = line.split(None, 1)
@@ -4090,6 +5027,7 @@ def submodule(cwd,
               identity=None,
               ignore_retcode=False,
               saltenv='base',
+              output_encoding=None,
               **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -4181,6 +5119,30 @@ def submodule(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-submodule(1)`: http://git-scm.com/docs/git-submodule
 
     CLI Example:
@@ -4222,7 +5184,8 @@ def submodule(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def symbolic_ref(cwd,
@@ -4232,7 +5195,8 @@ def symbolic_ref(cwd,
                  git_opts='',
                  user=None,
                  password=None,
-                 ignore_retcode=False):
+                 ignore_retcode=False,
+                 output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4282,8 +5246,31 @@ def symbolic_ref(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-symbolic-ref(1)`: http://git-scm.com/docs/git-symbolic-ref
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-symbolic-ref(1)`: http://git-scm.com/docs/git-symbolic-ref
 
     CLI Examples:
 
@@ -4313,7 +5300,8 @@ def symbolic_ref(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def version(versioninfo=False):
@@ -4325,7 +5313,6 @@ def version(versioninfo=False):
     versioninfo : False
         If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
         0]``)
-
 
     CLI Example:
 
@@ -4377,6 +5364,7 @@ def worktree_add(cwd,
                  user=None,
                  password=None,
                  ignore_retcode=False,
+                 output_encoding=None,
                  **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -4453,8 +5441,31 @@ def worktree_add(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
 
     CLI Examples:
 
@@ -4500,7 +5511,8 @@ def worktree_add(cwd,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def worktree_prune(cwd,
@@ -4511,7 +5523,8 @@ def worktree_prune(cwd,
                    git_opts='',
                    user=None,
                    password=None,
-                   ignore_retcode=False):
+                   ignore_retcode=False,
+                   output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4574,9 +5587,32 @@ def worktree_prune(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
     .. _`git-config(1)`: http://git-scm.com/docs/git-config/2.5.1
-
 
     CLI Examples:
 
@@ -4601,10 +5637,11 @@ def worktree_prune(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
-def worktree_rm(cwd, user=None):
+def worktree_rm(cwd, user=None, output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4629,6 +5666,29 @@ def worktree_rm(cwd, user=None):
         running. Setting this option will change the home directory from which
         path expansion is performed.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -4640,7 +5700,7 @@ def worktree_rm(cwd, user=None):
     cwd = _expand_path(cwd, user)
     if not os.path.exists(cwd):
         raise CommandExecutionError(cwd + ' does not exist')
-    elif not is_worktree(cwd):
+    elif not is_worktree(cwd, output_encoding=output_encoding):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
         salt.utils.files.rm_rf(cwd)
