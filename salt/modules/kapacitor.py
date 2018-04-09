@@ -11,7 +11,7 @@ Kapacitor execution module.
 
     .. versionadded:: 2016.11.0
 
-    Also protocol and ssl settings could be configured::
+    Also protocol and SSL settings could be configured::
 
         kapacitor.unsafe_ssl: 'false'
         kapacitor.protocol: 'http'
