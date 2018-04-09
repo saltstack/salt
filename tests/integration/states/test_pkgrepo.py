@@ -98,17 +98,13 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             # Run the state to add the repo
             ret = self.run_state('pkgrepo.managed', **kwargs)
-            import logging
-            log = logging.getLogger(__name__)
             self.assertSaltTrueReturn(ret)
 
             # Run again with modified comments
             kwargs['comments'].append('This is another comment')
             ret = self.run_state('pkgrepo.managed', **kwargs)
-            log.debug('=== ret %s ===', ret)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            log.debug('=== ret %s ===', ret)
             self.assertEqual(
                 ret['changes'],
                 {
