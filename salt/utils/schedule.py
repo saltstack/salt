@@ -105,6 +105,7 @@ class Schedule(object):
                  intervals=None,
                  cleanup=None,
                  proxy=None,
+                 utils=None,
                  standalone=False,
                  new_instance=False):
         pass
