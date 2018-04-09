@@ -2387,6 +2387,7 @@ def template_clone(call=None, kwargs=None):
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
+    clone_images = kwargs.get('clone_images', False)
 
     if name is None:
         raise SaltCloudSystemExit(
@@ -2410,7 +2411,7 @@ def template_clone(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    response = server.one.template.clone(auth, int(template_id), name)
+    response = server.one.template.clone(auth, int(template_id), name, clone_images)
 
     data = {
         'action': 'template.clone',
