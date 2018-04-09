@@ -237,7 +237,8 @@ def _salt_send_domain_event(opaque, conn, domain, event, event_data):
     data = {
         'domain': {
             'name': domain.name(),
-            'id': domain.ID()
+            'id': domain.ID(),
+            'uuid': domain.UUIDString()
         },
         'event': event
     }
@@ -251,7 +252,8 @@ def _domain_event_lifecycle_cb(conn, domain, event, detail, opaque):
     '''
     event_str, detail_str = _get_domain_event_detail(event, detail)
 
-    _salt_send_domain_event(opaque, conn, domain, event_str, {
+    _salt_send_domain_event(opaque, conn, domain, opaque['event'], {
+        'event':  event_str,
         'detail': detail_str
     })
 
@@ -491,7 +493,10 @@ def _network_event_lifecycle_cb(conn, net, event, detail, opaque):
     '''
 
     _salt_send_event(opaque, conn, {
-        'network': net.name(),
+        'network': {
+            'name': net.name(),
+            'uuid': net.UUIDString()
+        },
         'event': _get_libvirt_enum_string('VIR_NETWORK_EVENT_', event),
         'detail': 'unknown'  # currently unused
     })
@@ -502,7 +507,10 @@ def _pool_event_lifecycle_cb(conn, pool, event, detail, opaque):
     Storage pool lifecycle events handler
     '''
     _salt_send_event(opaque, conn, {
-        'pool': pool.name(),
+        'pool': {
+            'name': pool.name(),
+            'uuid': pool.UUIDString()
+        },
         'event': _get_libvirt_enum_string('VIR_STORAGE_POOL_EVENT_', event),
         'detail': 'unknown'  # currently unused
     })
@@ -513,7 +521,10 @@ def _pool_event_refresh_cb(conn, pool, opaque):
     Storage pool refresh events handler
     '''
     _salt_send_event(opaque, conn, {
-        'pool': pool.name(),
+        'pool': {
+            'name': pool.name(),
+            'uuid': pool.UUIDString()
+        },
         'event': opaque['event']
     })
 
@@ -523,7 +534,9 @@ def _nodedev_event_lifecycle_cb(conn, dev, event, detail, opaque):
     Node device lifecycle events handler
     '''
     _salt_send_event(opaque, conn, {
-        'nodedev': dev.name(),
+        'nodedev': {
+            'name': dev.name()
+        },
         'event': _get_libvirt_enum_string('VIR_NODE_DEVICE_EVENT_', event),
         'detail': 'unknown'  # currently unused
     })
@@ -534,7 +547,9 @@ def _nodedev_event_update_cb(conn, dev, opaque):
     Node device update events handler
     '''
     _salt_send_event(opaque, conn, {
-        'nodedev': dev.name(),
+        'nodedev': {
+            'name': dev.name()
+        },
         'event': opaque['event']
     })
 
@@ -544,7 +559,9 @@ def _secret_event_lifecycle_cb(conn, secret, event, detail, opaque):
     Secret lifecycle events handler
     '''
     _salt_send_event(opaque, conn, {
-        'secret': secret.UUIDString(),
+        'secret': {
+            'uuid': secret.UUIDString()
+        },
         'event': _get_libvirt_enum_string('VIR_SECRET_EVENT_', event),
         'detail': 'unknown'  # currently unused
     })
@@ -555,7 +572,9 @@ def _secret_event_value_changed_cb(conn, secret, opaque):
     Secret value change events handler
     '''
     _salt_send_event(opaque, conn, {
-        'secret': secret.UUIDString(),
+        'secret': {
+            'uuid': secret.UUIDString()
+        },
         'event': opaque['event']
     })
 
