@@ -32,7 +32,7 @@ network events have been added in libvirt 1.2.1.
 Running the engine on non-root
 ------------------------------
 
-Running this engine as non root requires a special attention, which is surely
+Running this engine as non-root requires a special attention, which is surely
 the case for the master running as user `salt`. The engine is likely to fail
 to connect to libvirt with an error like this one:
 
