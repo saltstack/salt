@@ -175,7 +175,7 @@ YAML can be used at the CLI in function arguments:
 
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it. An example of listening local events on
-a minion:
+a minion on a non-Windows system:
 
 .. code-block:: python
 
@@ -183,6 +183,20 @@ a minion:
     import salt.utils.event
 
     opts = salt.config.minion_config('/etc/salt/minion')
+    event = salt.utils.event.MinionEvent(opts)
+
+    for evdata in event.iter_events(match_type = 'regex',
+                                    tag = 'custom/.*'):
+        # do your processing here...
+
+And an example of listening local events on a Windows system:
+
+.. code-block:: python
+
+    # Job on minion
+    import salt.utils.event
+
+    opts = salt.config.minion_config(salt.minion.DEFAULT_MINION_OPTS)
     event = salt.utils.event.MinionEvent(opts)
 
     for evdata in event.iter_events(match_type = 'regex',
