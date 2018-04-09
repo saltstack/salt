@@ -141,7 +141,11 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
+                try:
+                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
+                except UnicodeDecodeError:
+                    # msg contains binary data
+                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             else:
                 ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             if six.PY3 and encoding is None and not raw:
