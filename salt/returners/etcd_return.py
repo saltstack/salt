@@ -11,7 +11,7 @@ configuration file:
 
     my_etcd_config:
       etcd.host: 127.0.0.1
-      etcd.port: 4001
+      etcd.port: 2379
 
 It is technically possible to configure etcd without using a profile, but this
 is not considered to be a best practice, especially when multiple etcd servers
@@ -20,7 +20,7 @@ or clusters are available.
 .. code-block:: yaml
 
     etcd.host: 127.0.0.1
-    etcd.port: 4001
+    etcd.port: 2379
 
 Additionally, two more options must be specified in the top-level configuration
 in order to use the etcd returner:
@@ -77,9 +77,6 @@ try:
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -192,8 +189,9 @@ def get_jid(jid):
             continue
         comps = str(item.key).split('/')
         data = client.get('/'.join((path, 'jobs', jid, comps[-1], 'return'))).value
-        ret[comps[-1]] = {'return': json.loads(data)}
+        ret[comps[-1]] = {'return': salt.utils.json.loads(data)}
     return ret
+
 
 def get_fun(fun):
     '''
@@ -205,7 +203,7 @@ def get_fun(fun):
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
         comps = str(item.key).split('/')
-        efun = json.loads(client.get('/'.join((path, 'jobs', str(item.value), comps[-1], 'fun'))).value)
+        efun = salt.utils.json.loads(client.get('/'.join((path, 'jobs', str(item.value), comps[-1], 'fun'))).value)
         if efun == fun:
             ret[comps[-1]] = str(efun)
     return ret
