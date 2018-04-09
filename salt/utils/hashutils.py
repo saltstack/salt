@@ -199,4 +199,4 @@ class DigestCollector(object):
         :return:
         '''
 
-        return salt.utils.stringutils.to_bytes(self.__digest.hexdigest() + os.linesep)
+        return salt.utils.stringutils.to_str(self.__digest.hexdigest() + os.linesep)
