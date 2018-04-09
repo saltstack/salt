@@ -5414,30 +5414,25 @@ def manage_file(name,
 
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
-            if mode:
-                current_umask = os.umask(0o77)
-
-            # Create a new file when test is False and source is None
-            if contents is None:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['new'] = 'file {0} created'.format(name)
-                        ret['comment'] = 'Empty file'
-                    else:
-                        return _error(
-                            ret, 'Empty file {0} not created'.format(name)
-                        )
-            else:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['diff'] = 'New file'
-                    else:
-                        return _error(
-                            ret, 'File {0} not created'.format(name)
-                        )
-
-            if mode:
-                os.umask(current_umask)
+            with salt.utils.files.set_umask(0o077 if mode else None):
+                # Create a new file when test is False and source is None
+                if contents is None:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['new'] = 'file {0} created'.format(name)
+                            ret['comment'] = 'Empty file'
+                        else:
+                            return _error(
+                                ret, 'Empty file {0} not created'.format(name)
+                            )
+                else:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['diff'] = 'New file'
+                        else:
+                            return _error(
+                                ret, 'File {0} not created'.format(name)
+                            )
 
         if contents is not None:
             # Write the static contents to a temporary file
@@ -5471,8 +5466,7 @@ def manage_file(name,
         # out what mode to use for the new file.
         if mode is None and not salt.utils.platform.is_windows():
             # Get current umask
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
             # Calculate the mode value that results from the umask
             mode = oct((0o777 ^ mask) & 0o666)
 

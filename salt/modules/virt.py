@@ -410,8 +410,7 @@ def _qemu_image_create(vm_name,
                 log.debug('Copying %s to %s', sfn, img_dest)
                 salt.utils.files.copyfile(sfn, img_dest)
 
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
 
             if disk_size and qcow2:
                 log.debug('Resize qcow2 image to %sM', disk_size)
@@ -433,8 +432,7 @@ def _qemu_image_create(vm_name,
     else:
         # Create empty disk
         try:
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
 
             if disk_size:
                 log.debug('Create empty image with size %sM', disk_size)

@@ -83,6 +83,9 @@ def _to_unicode(vdata):
     Converts from current users character encoding to unicode. Use this for
     parameters being pass to reg functions
     '''
+    # None does not convert to Unicode
+    if vdata is None:
+        return None
     return salt.utils.stringutils.to_unicode(vdata, 'utf-8')
 
 
@@ -526,13 +529,13 @@ def set_value(hive,
     # https://www.python.org/dev/peps/pep-0237/
 
     # String Types to Unicode
-    if vtype_value in [1, 2]:
+    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
         local_vdata = _to_unicode(vdata)
     # Don't touch binary...
-    elif vtype_value == 3:
+    elif vtype_value == win32con.REG_BINARY:
         local_vdata = vdata
     # Make sure REG_MULTI_SZ is a list of strings
-    elif vtype_value == 7:
+    elif vtype_value == win32con.REG_MULTI_SZ:
         local_vdata = [_to_unicode(i) for i in vdata]
     # Everything else is int
     else:
@@ -686,7 +689,6 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
-
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
     local_vname = _to_unicode(vname)

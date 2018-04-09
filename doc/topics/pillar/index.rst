@@ -409,7 +409,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function

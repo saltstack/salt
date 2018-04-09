@@ -60,7 +60,9 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 from salt.ext import six
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.templates
+import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import TimeoutError
 from salt.ext.six.moves import range  # pylint: disable=import-error
@@ -223,11 +225,11 @@ def _cleanup_old(**kwargs):
         cert = kubernetes.client.configuration.cert_file
         key = kubernetes.client.configuration.key_file
         if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-            salt.utils.safe_rm(cert)
+            salt.utils.files.safe_rm(cert)
         if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-            salt.utils.safe_rm(key)
+            salt.utils.files.safe_rm(key)
         if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-            salt.utils.safe_rm(ca)
+            salt.utils.files.safe_rm(ca)
     except Exception:
         pass
 

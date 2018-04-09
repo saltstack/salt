@@ -106,9 +106,11 @@ def need_deployment():
     '''
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
-    old_umask = os.umask(0o077)
-    os.makedirs(OPTIONS.saltdir)
-    os.umask(old_umask)
+    old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
+    try:
+        os.makedirs(OPTIONS.saltdir)
+    finally:
+        os.umask(old_umask)  # pylint: disable=blacklisted-function
     # Verify perms on saltdir
     if not is_windows():
         euid = os.geteuid()
@@ -158,10 +160,10 @@ def unpack_thin(thin_path):
     Unpack the Salt thin archive.
     '''
     tfile = tarfile.TarFile.gzopen(thin_path)
-    old_umask = os.umask(0o077)
+    old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
-    os.umask(old_umask)
+    os.umask(old_umask)  # pylint: disable=blacklisted-function
     try:
         os.unlink(thin_path)
     except OSError:
@@ -189,10 +191,10 @@ def unpack_ext(ext_path):
             'minion',
             'extmods')
     tfile = tarfile.TarFile.gzopen(ext_path)
-    old_umask = os.umask(0o077)
+    old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
     tfile.extractall(path=modcache)
     tfile.close()
-    os.umask(old_umask)
+    os.umask(old_umask)  # pylint: disable=blacklisted-function
     os.unlink(ext_path)
     ver_path = os.path.join(modcache, 'ext_version')
     ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
@@ -299,7 +301,7 @@ def main(argv):  # pylint: disable=W0613
         sys.stderr.write(OPTIONS.delimiter + '\n')
         sys.stderr.flush()
     if OPTIONS.cmd_umask is not None:
-        old_umask = os.umask(OPTIONS.cmd_umask)
+        old_umask = os.umask(OPTIONS.cmd_umask)  # pylint: disable=blacklisted-function
     if OPTIONS.tty:
         # Returns bytes instead of string on python 3
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
@@ -313,7 +315,7 @@ def main(argv):  # pylint: disable=W0613
     else:
         subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
-        os.umask(old_umask)
+        os.umask(old_umask)  # pylint: disable=blacklisted-function
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

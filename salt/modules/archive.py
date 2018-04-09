@@ -1077,8 +1077,7 @@ def unzip(zip_file,
                         if not salt.utils.platform.is_windows():
                             perm = zfile.getinfo(target).external_attr >> 16
                             if perm == 0:
-                                umask_ = os.umask(0)
-                                os.umask(umask_)
+                                umask_ = salt.utils.files.get_umask()
                                 if target.endswith('/'):
                                     perm = 0o777 & ~umask_
                                 else:

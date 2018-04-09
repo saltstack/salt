@@ -665,6 +665,37 @@ The Windows installer will now display command-line help when a help switch
 Salt Cloud Features
 -------------------
 
+OpenStack Revamp
+================
+
+The OpenStack Driver has been rewritten mostly from scratch.  Salt is now using
+the `shade driver <https://docs.openstack.org/shade/latest/>`.
+
+With this, the ``nova`` driver is being deprecated.
+
+:mod:`openstack driver <salt.cloud.clouds.openstack>`
+
+There have also been several new modules and states added for managing OpenStack
+setups using shade as well.
+
+:mod:`keystone <salt.modules.keystoneng>`
+:mod:`keystone role grant <salt.states.keystone_role_grant>`
+:mod:`keystone group <salt.states.keystone_group>`
+:mod:`keystone role <salt.states.keystone_role>`
+:mod:`keystone service <salt.states.keystone_service>`
+:mod:`keystone user <salt.states.keystone_user>`
+:mod:`keystone domain <salt.states.keystone_domain>`
+:mod:`keystone project <salt.states.keystone_project>`
+:mod:`keystone endpoint <salt.states.keystone_endpoint>`
+:mod:`glance <salt.modules.glanceng>`
+:mod:`glance_image <salt.states.glance_image>`
+:mod:`neutron <salt.modules.neutronng>`
+:mod:`neutron subnet <salt.states.neutron_subnet>`
+:mod:`neutron secgroup <salt.states.neutron_secgroup>`
+:mod:`neutron secgroup rule <salt.states.neutron_secgroup_rule>`
+:mod:`neutron network <salt.states.neutron_network>`
+
+
 Pre-Flight Commands
 ===================
 
@@ -1557,6 +1588,14 @@ PyCrypto is used as it was in the previous releases. M2Crypto is used in the
 same way as PyCrypto so there would be no compatibility issues, different nodes
 could use different backends.
 
+NaCL Module and Runner changes
+------------------------------
+
+In addition to argument changes in both the NaCL module and runner for future
+deprecation in the Fluorine release, the default box_type has changed from
+`secretbox` to `sealedbox`.  SecretBox is data encrypted using private key
+`sk` and Sealedbox is encrypted using public key `pk`
+
 Deprecations
 ------------
 
@@ -1617,6 +1656,15 @@ The ``win_service`` module had the following changes:
 - The ``type`` option was removed from the ``create`` function. Please use
   ``service_type`` instead.
 
+The ``nacl`` module had the following changes:
+
+- The ``key_file`` option was replaced in the ``keygen``, ``enc`` and ``dec``
+functions.  Please use the ``sk_file`` option instead.
+
+- The ``key`` option was replaced in the ``keygen``, ``enc`` and ``dec``
+functions.  Please use the ``sk`` option instead.
+
+
 Runner Deprecations
 ===================
 
@@ -1624,6 +1672,14 @@ The ``manage`` runner had the following changes:
 
 - The ``root_user`` kwarg was removed from the ``bootstrap`` function. Please
   use ``salt-ssh`` roster entries for the host instead.
+
+The ``nacl`` runner had the following changes:
+
+- The ``key_file`` option was replaced in the ``keygen``, ``enc`` and ``dec``
+functions.  Please use the ``sk_file`` option instead.
+
+- The ``key`` option was replaced in the ``keygen``, ``enc`` and ``dec``
+functions.  Please use the ``sk`` option instead.
 
 State Deprecations
 ==================
