@@ -439,7 +439,7 @@ class SaltEvent(object):
 
         if six.PY2:
             mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-            data = serial.loads(mdata)
+            data = serial.loads(mdata, encoding='utf-8')
         else:
             mtag, sep, mdata = raw.partition(salt.utils.stringutils.to_bytes(TAGEND))  # split tag from data
             mtag = salt.utils.stringutils.to_str(mtag)

@@ -303,7 +303,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 environment = os.environ.copy()
 
                 popen_mock.return_value = Mock(
-                    communicate=lambda *args, **kwags: ['{}', None],
+                    communicate=lambda *args, **kwags: [b'', None],
                     pid=lambda: 1,
                     retcode=0
                 )

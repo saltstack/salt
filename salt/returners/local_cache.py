@@ -441,7 +441,7 @@ def clean_old_jobs():
                     shutil.rmtree(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (time.time()- jid_ctime) / 3600.0
+                    hours_difference = (time.time() - jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
                         # Remove the entire f_path from the original JID dir
                         shutil.rmtree(f_path)

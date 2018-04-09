@@ -87,7 +87,7 @@ def _localectl_status():
                         ret[ctl_key] = {}
                     ret[ctl_key][loc_set[0]] = loc_set[1]
             else:
-                ret[ctl_key] = ctl_data
+                ret[ctl_key] = {'data': ctl_data}
     if not ret:
         log.debug("Unable to find any locale information inside the following data:\n%s", locale_ctl_out)
         raise CommandExecutionError('Unable to parse result of "localectl"')
