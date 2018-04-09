@@ -124,7 +124,7 @@ def _determine_auth(**kwargs):
 
     subscription_id = kwargs['subscription_id']
 
-    return credentials, subscription_id, cloud_env
+    return credentials, subscription_id.encode(), cloud_env
 
 
 def get_client(client_type, **kwargs):
@@ -163,7 +163,6 @@ def get_client(client_type, **kwargs):
         )
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
-
     if client_type == 'subscription':
         client = Client(
             credentials=credentials,
