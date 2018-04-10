@@ -571,9 +571,9 @@ class SSHThinTestCase(TestCase):
                  'namespace/py2/root2/r4', 'namespace/py2/root2/r5', 'namespace/py2/root2/r6'
         ]
         for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
-             arcname = cl[2].get('arcname')
-             assert arcname in files
-             files.pop(files.index(arcname))
+            arcname = cl[2].get('arcname')
+            assert arcname in files
+            files.pop(files.index(arcname))
         assert not bool(files)
 
     def test_get_supported_py_config_typecheck(self):
