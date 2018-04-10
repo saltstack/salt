@@ -812,23 +812,6 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'chroot'
             except (IOError, OSError):
                 pass
-        if os.path.isfile('/proc/1/cgroup'):
-            try:
-                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
-                    fhr_contents = fhr.read()
-                if ':/lxc/' in fhr_contents:
-                    grains['virtual_subtype'] = 'LXC'
-                elif ':/kubepods/' in fhr_contents:
-                    grains['virtual_subtype'] = 'kubernetes'
-                elif ':/libpod_parent/' in fhr_contents:
-                    grains['virtual_subtype'] = 'libpod'
-                else:
-                    if any(x in fhr_contents
-                           for x in (':/system.slice/docker', ':/docker/',
-                                     ':/docker-ce/')):
-                        grains['virtual_subtype'] = 'Docker'
-            except IOError:
-                pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -878,6 +861,24 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile('/proc/1/cgroup'):
+            try:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
+                    fhr_contents = fhr.read()
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
+                        grains['virtual_subtype'] = 'Docker'
+            except IOError:
+                pass
         if os.path.isfile('/proc/cpuinfo'):
             with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():

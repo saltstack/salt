@@ -457,6 +457,8 @@ class LocalClient(object):
         following exceptions.
 
         :param sub: The number of systems to execute on
+        :param cli: When this is set to True, a generator is returned,
+                    otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
