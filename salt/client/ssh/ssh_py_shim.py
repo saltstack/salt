@@ -270,22 +270,15 @@ def main(argv):  # pylint: disable=W0613
         if not os.path.exists(OPTIONS.saltdir):
             need_deployment()
 
-        version_path = os.path.normpath(os.path.join(OPTIONS.saltdir, 'version'))
-        if not os.path.exists(version_path) or not os.path.isfile(version_path):
-            sys.stderr.write(
-                'WARNING: Unable to locate current thin '
-                ' version: {0}.\n'.format(version_path)
-            )
+        code_checksum_path = os.path.normpath(os.path.join(OPTIONS.saltdir, 'code-checksum'))
+        if not os.path.exists(code_checksum_path) or not os.path.isfile(code_checksum_path):
+            sys.stderr.write('WARNING: Unable to locate current code checksum: {0}.\n'.format(code_checksum_path))
             need_deployment()
-        with open(version_path, 'r') as vpo:
-            cur_version = vpo.readline().strip()
-        if cur_version != OPTIONS.version:
-            sys.stderr.write(
-                'WARNING: current thin version {0}'
-                ' is not up-to-date with {1}.\n'.format(
-                    cur_version, OPTIONS.version
-                )
-            )
+        with open(code_checksum_path, 'r') as vpo:
+            cur_code_cs = vpo.readline().strip()
+        if cur_code_cs != OPTIONS.code_checksum:
+            sys.stderr.write('WARNING: current code checksum {0} is different to {1}.\n'.format(cur_code_cs,
+                                                                                                OPTIONS.code_checksum))
             need_deployment()
         # Salt thin exists and is up-to-date - fall through and use it
 
