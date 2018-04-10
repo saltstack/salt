@@ -2057,21 +2057,13 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path,
-        pkg_sum,
-        hash_type,
-        test=None,
-        **kwargs):
+def _pkg(pkg_path,
+         pkg_sum,
+         hash_type,
+         test=None,
+         **kwargs):
     '''
-    Execute a packaged state run, the packaged state run will exist in a
-    tarball available locally. This packaged state
-    can be generated using salt-ssh.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
+    Main logic of pkg() without package file removal functionality.
     '''
     # TODO - Add ability to download from salt master or other source
     popts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
@@ -2131,6 +2123,46 @@ def pkg(pkg_path,
     _set_retcode(ret)
     _snapper_post(popts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
+
+
+def _cleanup_debug_pkgs(pkg_dir):
+    '''
+    Remove previously uploaded salt-ssh state packages.
+    Keep the most recent 10 packages for debugging purposes.
+    '''
+    pkgs = []
+    for s in os.listdir(pkg_dir):
+        if not (s.startswith('debug_salt_state') and s.endswith('.tgz')):
+            continue
+        pkg_path = os.path.join(pkg_dir, s)
+        pkgs.append((pkg_path, os.stat(pkg_path).st_mtime))
+    n_to_keep = 10
+    for pkg_path, _ in sorted(pkgs, key=lambda pkg: pkg[1])[:-n_to_keep]:
+        os.unlink(pkg_path)
+
+
+def pkg(pkg_path, remove_pkg=False, *args, **kwargs):
+    '''
+    Execute a packaged state run, the packaged state run will exist in a
+    tarball available locally. This packaged state
+    can be generated using salt-ssh.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
+    '''
+    try:
+        return _pkg(pkg_path, *args, **kwargs)
+    finally:
+        if remove_pkg:
+            # Keep the copy for debugging purposes.
+            pkg_dir = os.path.dirname(pkg_path)
+            debug_pkg_path = os.path.join(
+                pkg_dir, 'debug_%s' % os.path.basename(pkg_path))
+            os.rename(pkg_path, debug_pkg_path)
+            _cleanup_debug_pkgs(pkg_dir)
 
 
 def disable(states):
