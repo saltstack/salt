@@ -191,7 +191,11 @@ class SSHThinTestCase(TestCase):
                                               'yaml': '/yaml/',
                                               'tornado': '/tornado/tornado.py',
                                               'msgpack': 'msgpack.py'}}}
-        assert cfg == thin.get_ext_tops(cfg)
+        out = thin.get_ext_tops(cfg)
+        assert out['namespace']['py-version'] == cfg['namespace']['py-version']
+        assert out['namespace']['path'] == cfg['namespace']['path']
+        assert sorted(out['namespace']['dependencies']) == sorted(['/tornado/tornado.py',
+                                                                   '/jinja/foo.py', '/yaml/', 'msgpack.py'])
 
     @patch('salt.utils.thin.sys.argv', [None, '{"foo": "bar"}'])
     @patch('salt.utils.thin.get_tops', lambda **kw: kw)
@@ -500,6 +504,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    @patch('salt.utils.hashutils.DigestCollector', MagicMock())
     def test_gen_thin_main_content_files_written_py3(self):
         '''
         Test thin.gen_thin function if main content files are written.
@@ -514,7 +519,7 @@ class SSHThinTestCase(TestCase):
             'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
             'pyall/root/r1', 'pyall/root/r2', 'pyall/root/r3', 'pyall/root2/r4', 'pyall/root2/r5', 'pyall/root2/r6'
         ]
-        for cl in thin.tarfile.open().method_calls[:-5]:
+        for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get('arcname')
             assert arcname in files
             files.pop(files.index(arcname))
@@ -549,6 +554,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    @patch('salt.utils.hashutils.DigestCollector', MagicMock())
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
         '''
         Test thin.gen_thin function if external alternative content files are written.
@@ -564,10 +570,10 @@ class SSHThinTestCase(TestCase):
                  'namespace/py2/root/r1', 'namespace/py2/root/r2', 'namespace/py2/root/r3',
                  'namespace/py2/root2/r4', 'namespace/py2/root2/r5', 'namespace/py2/root2/r6'
         ]
-        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-5]):
-            arcname = cl[2].get('arcname')
-            assert arcname in files
-            files.pop(files.index(arcname))
+        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
+             arcname = cl[2].get('arcname')
+             assert arcname in files
+             files.pop(files.index(arcname))
         assert not bool(files)
 
     def test_get_supported_py_config_typecheck(self):
