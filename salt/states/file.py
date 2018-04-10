@@ -5141,15 +5141,13 @@ def patch(name,
           dry_run_first=True,
           **kwargs):
     '''
-    Apply a patch to a file or directory.
+    Ensure that a patch has been applied to the specified file
 
     .. note::
-
-        A suitable ``patch`` executable must be available on the minion when
-        using this state function.
+        A suitable ``patch`` executable must be available on the minion
 
     name
-        The file or directory to which the patch will be applied.
+        The file to which the patch should be applied
 
     source
         The source patch to download to the minion, this source file must be
