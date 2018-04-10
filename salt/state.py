@@ -1506,24 +1506,8 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
-            'require_in',
-            'watch_in',
-            'onfail_in',
-            'onchanges_in',
-            'use',
-            'use_in',
-            'prereq',
-            'prereq_in',
-            ])
-        req_in_all = req_in.union(
-                set([
-                    'require',
-                    'watch',
-                    'onfail',
-                    'onfail_stop',
-                    'onchanges',
-                    ]))
+        req_in = {'require_in', 'watch_in', 'onfail_in', 'onchanges_in', 'use', 'use_in', 'prereq', 'prereq_in'}
+        req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
         for id_, body in six.iteritems(high):
@@ -2157,7 +2141,7 @@ class State(object):
         tag = _gen_tag(low)
         if self.opts.get('test', False):
             return False
-        if (low.get('failhard', False) or self.opts['failhard']) and tag in running:
+        if low.get('failhard', self.opts['failhard']) and tag in running:
             if running[tag]['result'] is None:
                 return False
             return not running[tag]['result']
@@ -2371,7 +2355,8 @@ class State(object):
                     if not r_state.startswith('prerequired'):
                         req_stats.add('pre')
                 else:
-                    req_stats.add('met')
+                    if run_dict[tag].get('__state_ran__', True):
+                        req_stats.add('met')
             if r_state.endswith('_any'):
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
@@ -2620,6 +2605,7 @@ class State(object):
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
                 }
+                self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -2649,6 +2635,7 @@ class State(object):
                             'duration': duration,
                             'start_time': start_time,
                             'comment': 'State was not run because onfail req did not change',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -2659,6 +2646,7 @@ class State(object):
                             'duration': duration,
                             'start_time': start_time,
                             'comment': 'State was not run because none of the onchanges reqs changed',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -3014,6 +3002,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
+            self.opts['environment'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(

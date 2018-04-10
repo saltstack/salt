@@ -2449,7 +2449,30 @@ def get_server_id():
 
     if salt.utils.platform.is_proxy():
         return {}
-    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        py_bin = 'python{0}.{1}'.format(*py_ver)
+        id_hash = __salt__['cmd.run'](
+            [py_bin, '-c', 'print(hash("{0}"))'.format(id_)],
+            env={'PYTHONHASHSEED': '0'}
+        )
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug(
+                'Failed to hash the ID to get the server_id grain. Result of '
+                'hash command: %s', id_hash
+            )
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return {'server_id': abs(id_hash % (2 ** 31))}
 
 
 def get_master():

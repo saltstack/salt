@@ -338,6 +338,52 @@ def _gen_vol_xml(vmname,
     return template.render(**context)
 
 
+def _gen_net_xml(name,
+                 bridge,
+                 forward,
+                 vport,
+                 tag=None):
+    '''
+    Generate the XML string to define a libvirt network
+    '''
+    context = {
+        'name': name,
+        'bridge': bridge,
+        'forward': forward,
+        'vport': vport,
+        'tag': tag,
+    }
+    fn_ = 'libvirt_network.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template %s', fn_)
+        return ''
+    return template.render(**context)
+
+
+def _gen_pool_xml(name,
+                  ptype,
+                  target,
+                  source=None):
+    '''
+    Generate the XML string to define a libvirt storage pool
+    '''
+    context = {
+        'name': name,
+        'ptype': ptype,
+        'target': target,
+        'source': source,
+    }
+    fn_ = 'libvirt_pool.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template %s', fn_)
+        return ''
+    return template.render(**context)
+
+
 def _qemu_image_info(path):
     '''
     Detect information for the image at path
@@ -1074,7 +1120,8 @@ def get_disks(vm_):
                         source.getAttribute('name'))
             if qemu_target:
                 disks[target.getAttribute('dev')] = {
-                    'file': qemu_target}
+                    'file': qemu_target,
+                    'type': elem.getAttribute('device')}
     for dev in disks:
         try:
             hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
@@ -1650,19 +1697,31 @@ def undefine(vm_):
     return dom.undefine() == 0
 
 
-def purge(vm_, dirs=False):
+def purge(vm_, dirs=False, removables=None):
     '''
     Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
     USE WITH EXTREME CAUTION!
 
+    Pass removables=False to avoid deleting cdrom and floppy images. To avoid
+    disruption, the default but dangerous value is True. This will be changed
+    to the safer False default value in Sodium.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.purge <domain>
+        salt '*' virt.purge <domain> removables=False
     '''
     disks = get_disks(vm_)
+    if removables is None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'removables argument default value is True, but will be changed '
+            'to False by default in {version}. Please set to True to maintain '
+            'the current behavior in the future.'
+        )
+        removables = True
     try:
         if not stop(vm_):
             return False
@@ -1671,6 +1730,8 @@ def purge(vm_, dirs=False):
         pass
     directories = set()
     for disk in disks:
+        if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
+            continue
         os.remove(disks[disk]['file'])
         directories.add(os.path.dirname(disks[disk]['file']))
     if dirs:
@@ -2195,3 +2256,130 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
             'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
             'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
         }
+
+
+def net_define(name, bridge, forward, **kwargs):
+    '''
+    Create libvirt network.
+
+    :param name: Network name
+    :param bridge: Bridge name
+    :param forward: Forward mode(bridge, router, nat)
+    :param vport: Virtualport type
+    :param tag: Vlan tag
+    :param autostart: Network autostart (default True)
+    :param start: Network start (default True)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.net_define network main bridge openvswitch
+    '''
+    conn = __get_conn()
+    vport = kwargs.get('vport', None)
+    tag = kwargs.get('tag', None)
+    autostart = kwargs.get('autostart', True)
+    starting = kwargs.get('start', True)
+    xml = _gen_net_xml(
+        name,
+        bridge,
+        forward,
+        vport,
+        tag,
+    )
+    try:
+        conn.networkDefineXML(xml)
+    except libvirtError as err:
+        log.warning(err)
+        raise err  # a real error we should report upwards
+
+    try:
+        network = conn.networkLookupByName(name)
+    except libvirtError as err:
+        log.warning(err)
+        raise err  # a real error we should report upwards
+
+    if network is None:
+        return False
+
+    if (starting is True or autostart is True) and network.isActive() != 1:
+        network.create()
+
+    if autostart is True and network.autostart() != 1:
+        network.setAutostart(int(autostart))
+    elif autostart is False and network.autostart() == 1:
+        network.setAutostart(int(autostart))
+
+    return True
+
+
+def pool_define_build(name, **kwargs):
+    '''
+    Create libvirt pool.
+
+    :param name: Pool name
+    :param ptype: Pool type
+    :param target: Pool path target
+    :param source: Pool dev source
+    :param autostart: Pool autostart (default True)
+    :param start: Pool start (default True)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_defin base logical base
+    '''
+    exist = False
+    update = False
+    conn = __get_conn()
+    ptype = kwargs.pop('ptype', None)
+    target = kwargs.pop('target', None)
+    source = kwargs.pop('source', None)
+    autostart = kwargs.pop('autostart', True)
+    starting = kwargs.pop('start', True)
+    xml = _gen_pool_xml(
+        name,
+        ptype,
+        target,
+        source,
+    )
+    try:
+        conn.storagePoolDefineXML(xml)
+    except libvirtError as err:
+        log.warning(err)
+        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
+            exist = True
+        else:
+            raise err  # a real error we should report upwards
+    try:
+        pool = conn.storagePoolLookupByName(name)
+    except libvirtError as err:
+        log.warning(err)
+        raise err  # a real error we should report upwards
+
+    if pool is None:
+        return False
+
+    if (starting is True or autostart is True) and pool.isActive() != 1:
+        if exist is True:
+            update = True
+            pool.create()
+        else:
+            pool.create(libvirt.VIR_STORAGE_POOL_CREATE_WITH_BUILD)
+
+    if autostart is True and pool.autostart() != 1:
+        if exist is True:
+            update = True
+        pool.setAutostart(int(autostart))
+    elif autostart is False and pool.autostart() == 1:
+        if exist is True:
+            update = True
+        pool.setAutostart(int(autostart))
+    if exist is True:
+        if update is True:
+            return (True, 'Pool exist', 'Pool update')
+        return (True, 'Pool exist')
+
+    return True

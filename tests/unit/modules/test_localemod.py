@@ -40,6 +40,11 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
       X11 Layout: us
        X11 Model: pc105
     '''
+    locale_ctl_notset = '''
+   System Locale: n/a
+       VC Keymap: n/a
+      X11 Layout: n/a
+    '''
     locale_ctl_out_empty = ''
     locale_ctl_out_broken = '''
     System error:Recursive traversal of loopback mount points
@@ -79,9 +84,36 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert 'LANG' in out['system_locale']
         assert 'LANGUAGE' in out['system_locale']
         assert out['system_locale']['LANG'] == out['system_locale']['LANGUAGE'] == 'de_DE.utf8'
-        assert out['vc_keymap'] == 'n/a'
-        assert out['x11_layout'] == 'us'
-        assert out['x11_model'] == 'pc105'
+        assert isinstance(out['vc_keymap'], dict)
+        assert 'data' in out['vc_keymap']
+        assert out['vc_keymap']['data'] == 'n/a'
+        assert isinstance(out['x11_layout'], dict)
+        assert 'data' in out['x11_layout']
+        assert out['x11_layout']['data'] == 'us'
+        assert isinstance(out['x11_model'], dict)
+        assert 'data' in out['x11_model']
+        assert out['x11_model']['data'] == 'pc105'
+
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_notset)})
+    def test_localectl_status_parser_notset(self):
+        '''
+        Test localectl status parser.
+        :return:
+        '''
+        out = localemod._localectl_status()
+        assert isinstance(out, dict)
+        for key in ['system_locale', 'vc_keymap', 'x11_layout']:
+            assert key in out
+        assert isinstance(out['system_locale'], dict)
+        assert 'data' in out['system_locale']
+        assert out['system_locale']['data'] == 'n/a'
+        assert isinstance(out['vc_keymap'], dict)
+        assert 'data' in out['vc_keymap']
+        assert out['vc_keymap']['data'] == 'n/a'
+        assert isinstance(out['x11_layout'], dict)
+        assert 'data' in out['x11_layout']
+        assert out['x11_layout']['data'] == 'n/a'
 
     @patch('salt.modules.localemod.dbus', MagicMock())
     def test_dbus_locale_parser_matches(self):
@@ -154,7 +186,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert isinstance(out[key], dict)
             for in_key in out[key]:
                 assert isinstance(out[key][in_key], six.text_type)
-        assert isinstance(out['reason'], six.text_type)
+        assert isinstance(out['reason']['data'], six.text_type)
 
     @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})

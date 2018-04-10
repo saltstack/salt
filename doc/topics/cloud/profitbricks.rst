@@ -156,6 +156,13 @@ command:
 
     # salt-cloud --list-sizes my-profitbricks-config
 
+.. versionadded:: Fluorine
+One or more public IP address can be reserved with the following command:
+
+.. code-block:: bash
+
+    # salt-cloud -f reserve_ipblock  my-profitbricks-config location='us/ewr' size=1
+
 Profile Specifics:
 ------------------
 

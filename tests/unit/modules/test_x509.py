@@ -78,7 +78,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         '''
-        ca_key = '''-----BEGIN RSA PRIVATE KEY-----
+        ca_key = b'''-----BEGIN RSA PRIVATE KEY-----
 MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
 pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
 2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
@@ -163,4 +163,4 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       authorityKeyIdentifier='keyid,issuer:always',
                                       days_valid=3650,
                                       days_remaining=0)
-        self.assertIn('BEGIN CERTIFICATE', ret)
+        self.assertIn(b'BEGIN CERTIFICATE', ret)
