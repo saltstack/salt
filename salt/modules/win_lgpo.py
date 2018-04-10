@@ -4647,20 +4647,21 @@ def _getScriptSettingsFromIniFile(policy_info):
             try:
                 _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
                 log.debug('Have deserialized data {0}'.format(_existingData))
-                if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
-                    if 'SettingName' in policy_info['ScriptIni']:
-                        log.debug('Need to look for {0}'.format(policy_info['ScriptIni']['SettingName']))
-                        if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
-                            return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
-                        else:
-                            return None
-                    else:
-                        return _existingData[policy_info['ScriptIni']['Section']]
-                else:
-                    return None
             except Exception as error:
-                log.error('An error occurred attempting to get {0}'.format(policy_info['Policy']))
+                log.error('An error occurred attempting to deserialize data for {0}'.format(policy_info['Policy']))
                 raise CommandExecutionError(error)
+            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
+                if 'SettingName' in policy_info['ScriptIni']:
+                    log.debug('Need to look for {0}'.format(policy_info['ScriptIni']['SettingName']))
+                    if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
+                        return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
+                    else:
+                        return None
+                else:
+                    return _existingData[policy_info['ScriptIni']['Section']]
+            else:
+                return None
+
     return None
 
 
