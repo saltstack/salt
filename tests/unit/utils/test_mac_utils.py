@@ -17,6 +17,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -317,7 +318,7 @@ class MacUtilsTestCase(TestCase):
     @patch('os.path.exists')
     @patch('plistlib.readPlist')
     @patch('salt.modules.cmdmod.run')
-    @patch('plistlib.readPlistFromString')
+    @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
     def test_available_services_non_xml(self,
                                         mock_read_plist_from_string,
                                         mock_run,
@@ -404,13 +405,13 @@ class MacUtilsTestCase(TestCase):
     @patch('os.path.exists')
     @patch('plistlib.readPlist')
     @patch('salt.modules.cmdmod.run')
-    @patch('plistlib.readPlistFromString')
+    @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
     def test_available_services_non_xml_malformed_plist(self,
-                                        mock_read_plist_from_string,
-                                        mock_run,
-                                        mock_read_plist,
-                                        mock_exists,
-                                        mock_os_walk):
+                                                        mock_read_plist_from_string,
+                                                        mock_run,
+                                                        mock_read_plist,
+                                                        mock_exists,
+                                                        mock_os_walk):
         '''
         test available_services
         '''
