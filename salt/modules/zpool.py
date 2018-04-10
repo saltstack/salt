@@ -405,7 +405,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='list',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(properties)},
             target=zpool
         ),
@@ -476,7 +476,7 @@ def get(zpool, prop=None, show_source=False, parsable=True):
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='get',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(value_properties)},
             property_name=prop if prop else 'all',
             target=zpool,
