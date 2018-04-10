@@ -75,7 +75,7 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     '''
     client = _get_conn(profile)
     result = client.get(key)
-    return result.value
+    return result
 
 
 def delete(key, service=None, profile=None):  # pylint: disable=W0613
