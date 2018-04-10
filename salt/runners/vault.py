@@ -40,7 +40,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         True. This happens when the master generates minion pillars.
     '''
     log.debug(
-        'Token generation request for %s (impersonated by master: %s)'.
+        'Token generation request for %s (impersonated by master: %s)',
         minion_id, impersonated_by_master
     )
     _validate_signature(minion_id, signature, impersonated_by_master)

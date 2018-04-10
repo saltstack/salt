@@ -169,9 +169,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
                 continue
             name = prefix + alarm["name"]
         del alarm["name"]
-        alarm_sls = []
-        alarm_sls.append({"name": name})
-        alarm_sls.append({"attributes": alarm})
+        alarm_sls = [{"name": name}, {"attributes": alarm}]
         results["manage alarm " + name] = {"boto_cloudwatch_alarm.present":
                                            alarm_sls}
     return _safe_dump(results)
