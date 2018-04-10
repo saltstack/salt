@@ -572,18 +572,18 @@ def file(name,
         return ret
 
     if __opts__['test']:
-        fcm = __salt__['file.check_managed'](cron_path,
-                                             source,
-                                             source_hash,
-                                             source_hash_name,
-                                             user,
-                                             group,
-                                             mode,
-                                             [],  # no special attrs for cron
-                                             template,
-                                             context,
-                                             defaults,
-                                             __env__,
+        fcm = __salt__['file.check_managed'](name=cron_path,
+                                             source=source,
+                                             source_hash=source_hash,
+                                             source_hash_name=source_hash_name,
+                                             user=user,
+                                             group=group,
+                                             mode=mode,
+                                             attrs=[],  # no special attrs for cron
+                                             template=template,
+                                             context=context,
+                                             defaults=defaults,
+                                             saltenv=__env__,
                                              **kwargs
                                              )
         ret['result'], ret['comment'] = fcm
@@ -598,19 +598,19 @@ def file(name,
     # Gather the source file from the server
     try:
         sfn, source_sum, comment = __salt__['file.get_managed'](
-            cron_path,
-            template,
-            source,
-            source_hash,
-            source_hash_name,
-            user,
-            group,
-            mode,
-            [],
-            __env__,
-            context,
-            defaults,
-            False,        # skip_verify
+            name=cron_path,
+            template=template,
+            source=source,
+            source_hash=source_hash,
+            source_hash_name=source_hash_name,
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=[],
+            saltenv=__env__,
+            context=context,
+            defaults=defaults,
+            skip_verify=False,        # skip_verify
             **kwargs
         )
     except Exception as exc:
@@ -627,17 +627,17 @@ def file(name,
 
     try:
         ret = __salt__['file.manage_file'](
-            cron_path,
-            sfn,
-            ret,
-            source,
-            source_sum,
-            user,
-            group,
-            mode,
-            [],
-            __env__,
-            backup
+            name=cron_path,
+            sfn=sfn,
+            ret=ret,
+            source=source,
+            source_sum=source_sum,
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=[],
+            saltenv=__env__,
+            backup=backup
         )
     except Exception as exc:
         ret['result'] = False
