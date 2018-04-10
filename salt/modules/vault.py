@@ -32,6 +32,12 @@ Functions to interact with Hashicorp Vault.
                 - saltstack/minions
                 - saltstack/minion/{minion}
                 .. more policies
+            keys:
+                - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+                - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+                - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+                - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+                - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
 
     url
         Url to your Vault installation. Required.
@@ -91,6 +97,9 @@ Functions to interact with Hashicorp Vault.
 
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
+
+    keys
+        List of keys to use to unseal vault server with the vault.unseal runner.
 
 
     Add this segment to the master configuration file, or
