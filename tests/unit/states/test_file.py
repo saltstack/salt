@@ -21,6 +21,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
+    Mock,
     MagicMock,
     call,
     mock_open,
@@ -83,6 +84,20 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
+
+            mock_serializer = Mock(return_value='')
+            with patch.dict(filestate.__serializers__,
+                            {'json.serialize': mock_serializer}):
+                filestate.serialize(
+                    '/tmp',
+                    dataset,
+                    formatter='json',
+                    serializer_opts=[{'indent': 8}])
+                mock_serializer.assert_called_with(
+                    dataset,
+                    indent=8,
+                    separators=(',', ': '),
+                    sort_keys=True)
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -1846,3 +1861,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+
+class TestFindKeepFiles(TestCase):
+
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    def test__find_keep_files_unix(self):
+        keep = filestate._find_keep_files(
+            '/test/parent_folder',
+            ['/test/parent_folder/meh.txt']
+        )
+        expected = [
+            '/',
+            '/test',
+            '/test/parent_folder',
+            '/test/parent_folder/meh.txt',
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual
+
+    @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
+    def test__find_keep_files_win32(self):
+        keep = filestate._find_keep_files(
+            'c:\\test\\parent_folder',
+            ['C:\\test\\parent_folder\\meh-2.txt']
+        )
+        expected = [
+            'c:\\',
+            'c:\\test',
+            'c:\\test\\parent_folder',
+            'c:\\test\\parent_folder\\meh-2.txt'
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual

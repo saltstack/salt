@@ -103,12 +103,12 @@ def thin_path(cachedir):
 
 def get_tops(extra_mods='', so_mods=''):
     tops = [
-            os.path.dirname(salt.__file__),
-            os.path.dirname(jinja2.__file__),
-            os.path.dirname(yaml.__file__),
-            os.path.dirname(tornado.__file__),
-            os.path.dirname(msgpack.__file__),
-            ]
+        os.path.dirname(salt.__file__),
+        os.path.dirname(jinja2.__file__),
+        os.path.dirname(yaml.__file__),
+        os.path.dirname(tornado.__file__),
+        os.path.dirname(msgpack.__file__),
+    ]
 
     tops.append(_six.__file__.replace('.pyc', '.py'))
     tops.append(backports_abc.__file__.replace('.pyc', '.py'))

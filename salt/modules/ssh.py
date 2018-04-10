@@ -173,7 +173,8 @@ def _replace_auth_key(
             # Re-open the file writable after properly closing it
             with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
-                _fh.writelines(lines)
+                for line in lines:
+                    _fh.write(line)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem reading or writing to key file: {0}'.format(exc)

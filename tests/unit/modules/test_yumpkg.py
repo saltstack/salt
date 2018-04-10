@@ -546,10 +546,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 yumpkg.install(
                     refresh=False,
                     fromrepo='good',
-                    branch='foo')
+                    branch='foo',
+                    setopt='obsoletes=0,plugins=0')
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=*', '--enablerepo=good',
-                     '--branch=foo', 'install', 'foo'],
+                     '--branch=foo', '--setopt', 'obsoletes=0',
+                     '--setopt', 'plugins=0', 'install', 'foo'],
                     output_loglevel='trace',
                     python_shell=False,
                     redirect_stderr=True)
@@ -561,10 +563,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     refresh=False,
                     enablerepo='good',
                     disablerepo='bad',
-                    branch='foo')
+                    branch='foo',
+                    setopt='obsoletes=0,plugins=0')
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=bad', '--enablerepo=good',
-                     '--branch=foo', 'install', 'foo'],
+                     '--branch=foo', '--setopt', 'obsoletes=0',
+                     '--setopt', 'plugins=0', 'install', 'foo'],
                     output_loglevel='trace',
                     python_shell=False,
                     redirect_stderr=True)
@@ -580,10 +584,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     refresh=False,
                     fromrepo='good',
                     exclude='kernel*',
-                    branch='foo')
+                    branch='foo',
+                    setopt='obsoletes=0,plugins=0')
                 cmd.assert_called_once_with(
-                    ['yum', '--quiet', '-y', '--disablerepo=*', '--enablerepo=good',
-                     '--branch=foo', '--exclude=kernel*', 'upgrade'],
+                    ['yum', '--quiet', '-y', '--disablerepo=*',
+                     '--enablerepo=good', '--branch=foo',
+                     '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
+                     '--exclude=kernel*', 'upgrade'],
                     output_loglevel='trace',
                     python_shell=False)
 
@@ -595,9 +602,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     enablerepo='good',
                     disablerepo='bad',
                     exclude='kernel*',
-                    branch='foo')
+                    branch='foo',
+                    setopt='obsoletes=0,plugins=0')
                 cmd.assert_called_once_with(
-                    ['yum', '--quiet', '-y', '--disablerepo=bad', '--enablerepo=good',
-                     '--branch=foo', '--exclude=kernel*', 'upgrade'],
+                    ['yum', '--quiet', '-y', '--disablerepo=bad',
+                     '--enablerepo=good', '--branch=foo',
+                     '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
+                     '--exclude=kernel*', 'upgrade'],
                     output_loglevel='trace',
                     python_shell=False)

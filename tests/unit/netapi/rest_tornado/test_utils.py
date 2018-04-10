@@ -91,7 +91,7 @@ class TestEventListener(AsyncTestCase):
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
             self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(self, 'evt1', self.stop)  # get an event future
+            event_future = event_listener.get_event(self, 'evt1', callback=self.stop)  # get an event future
             me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
             me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
             self.wait()  # wait for the future

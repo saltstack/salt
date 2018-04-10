@@ -65,6 +65,26 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         docker_mod.__context__.pop('docker.client', None)
 
+    def test_failed_login(self):
+        '''
+        Check that when docker.login failed a retcode other then 0
+        is part of the return.
+        '''
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {
+            'stdout': '',
+            'stderr': 'login failed',
+            'retcode': 1
+        }
+        with patch.dict(docker_mod.__pillar__, {'docker-registries': {'portus.example.com:5000':
+                {'username': 'admin', 'password': 'linux12345', 'email': 'tux@example.com'}}}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+                    ret = docker_mod.login('portus.example.com:5000')
+                    self.assertIn('retcode', ret)
+                    self.assertNotEqual(ret['retcode'], 0)
+
     def test_ps_with_host_true(self):
         '''
         Check that docker.ps called with host is ``True``,
@@ -754,6 +774,35 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
                 ret = docker_mod.compare_containers('container1', 'container2')
                 self.assertEqual(ret, {})
+
+    def test_compare_container_ulimits_order(self):
+        '''
+        Test comparing two containers when the order of the Ulimits HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
 
     def test_resolve_tag(self):
         '''

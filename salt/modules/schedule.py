@@ -58,7 +58,7 @@ SCHEDULE_CONF = [
         'after',
         'return_config',
         'return_kwargs',
-        'run_on_start'
+        'run_on_start',
         'skip_during_range',
         'run_after_skip_range',
 ]

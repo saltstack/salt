@@ -15,9 +15,11 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.platform
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -288,6 +290,15 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
         self.assertEqual(result, expected_result)
+
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skip_if_not_root
+    def test_runas(self):
+        '''
+        Ensure that the env is the runas user's
+        '''
+        out = self.run_function('cmd.run', ['env'], runas='nobody').splitlines()
+        self.assertIn('USER=nobody', out)
 
     def test_timeout(self):
         '''

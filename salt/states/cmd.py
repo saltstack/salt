@@ -199,8 +199,7 @@ executed when the state it is watching changes. Example:
 ``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
-``cmd.wait`` will be deprecated in future due to the confusion it causes. The
-preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
+The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
 works on ``cmd.run`` as well as on any other state. The example would then look as follows:
 
 .. code-block:: yaml

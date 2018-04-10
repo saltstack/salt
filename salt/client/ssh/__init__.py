@@ -57,7 +57,7 @@ from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
 from salt.utils.zeromq import zmq
@@ -223,8 +223,8 @@ class SSH(object):
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
         if not salt.utils.path.which('ssh'):
-            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
-                                                 'installed for salt-ssh to run. Exiting.')
+            raise salt.exceptions.SaltSystemExit(code=-1,
+                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
@@ -560,6 +560,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,
@@ -659,6 +672,8 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
@@ -772,6 +787,8 @@ class SSH(object):
                         self.opts)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
@@ -1027,6 +1044,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:

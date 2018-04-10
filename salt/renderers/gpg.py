@@ -263,13 +263,12 @@ def _get_key_dir():
     return gpg_keydir
 
 
-def _decrypt_ciphertext(matchobj):
+def _decrypt_ciphertext(cipher):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cipher = matchobj.group()
     if six.PY3:
         cipher = cipher.encode(__salt_system_encoding__)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
@@ -294,7 +293,14 @@ def _decrypt_ciphertext(matchobj):
 def _decrypt_ciphertexts(cipher, translate_newlines=False):
     if translate_newlines:
         cipher = cipher.replace(r'\n', '\n')
-    return GPG_CIPHERTEXT.sub(_decrypt_ciphertext, cipher)
+    ret, num = GPG_CIPHERTEXT.subn(lambda m: _decrypt_ciphertext(m.group()), cipher)
+    if num > 0:
+        # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
+        # it will conain unexpected trailing newline.
+        return ret.rstrip('\n')
+    else:
+        # Possibly just encrypted data without begin/end marks
+        return _decrypt_ciphertext(cipher)
 
 
 def _decrypt_object(obj, translate_newlines=False):

@@ -223,6 +223,11 @@ def _get_options(**kwargs):
     enablerepo = kwargs.pop('enablerepo', '')
     disableexcludes = kwargs.pop('disableexcludes', '')
     branch = kwargs.pop('branch', '')
+    setopt = kwargs.pop('setopt', None)
+    if setopt is None:
+        setopt = []
+    else:
+        setopt = salt.utils.args.split_input(setopt)
     get_extra_options = kwargs.pop('get_extra_options', False)
 
     # Support old 'repo' argument
@@ -257,6 +262,9 @@ def _get_options(**kwargs):
     if branch:
         log.info('Adding branch \'%s\'', branch)
         ret.append('--branch={0}'.format(branch))
+
+    for item in setopt:
+        ret.extend(['--setopt', six.text_type(item)])
 
     if get_extra_options:
         # sorting here to make order uniform, makes unit testing more reliable
@@ -777,6 +785,13 @@ def list_repo_pkgs(*args, **kwargs):
 
         .. versionadded:: 2017.7.0
 
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        .. versionadded:: Fluorine
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1051,6 +1066,12 @@ def refresh_db(**kwargs):
         - ``main`` - disable excludes defined in [main] in yum.conf
         - ``repoid`` - disable excludes defined for that repo
 
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1209,6 +1230,18 @@ def install(name=None,
 
         .. versionadded:: 2016.11.0
 
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install foo setopt='obsoletes=0,plugins=0'
+
+        .. versionadded:: Fluorine
 
     Repository Options:
 
@@ -1811,15 +1844,20 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
-    .. note::
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
 
+        .. versionadded:: Fluorine
+
+    .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
         word arguments. For arguments without assignments, pass ``True``
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
-
     '''
     options = _get_options(get_extra_options=True, **kwargs)
 
@@ -2501,7 +2539,6 @@ def group_install(name,
             salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
 
     .. note::
-
         Because this is essentially a wrapper around pkg.install, any argument
         which can be passed to pkg.install may also be included here, and it
         will be passed along wholesale.
@@ -2792,20 +2829,18 @@ def mod_repo(repo, basedir=None, **kwargs):
     filerepos[repo].update(repo_opts)
     content = header
     for stanza in six.iterkeys(filerepos):
-        comments = ''
-        if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = salt.utils.pkg.rpm.combine_comments(
-                    filerepos[stanza]['comments'])
-            del filerepos[stanza]['comments']
-        content += '\n[{0}]'.format(stanza)
+        comments = salt.utils.pkg.rpm.combine_comments(
+            filerepos[stanza].pop('comments', [])
+        )
+        content += '[{0}]\n'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            content += '\n{0}={1}'.format(
+            content += '{0}={1}\n'.format(
                 line,
                 filerepos[stanza][line]
                     if not isinstance(filerepos[stanza][line], bool)
                     else _bool_to_str(filerepos[stanza][line])
             )
-        content += '\n{0}\n'.format(comments)
+        content += comments + '\n'
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
         fileout.write(salt.utils.stringutils.to_str(content))
@@ -2834,15 +2869,30 @@ def _parse_repo_file(filename):
         section_dict.pop('__name__', None)
         config[section] = section_dict
 
-    # Try to extract leading comments
+    # Try to extract header comments, as well as comments for each repo. Read
+    # from the beginning of the file and assume any leading comments are
+    # header comments. Continue to read each section header and then find the
+    # comments for each repo.
     headers = ''
-    with salt.utils.files.fopen(filename, 'r') as rawfile:
-        for line in rawfile:
+    section = None
+    with salt.utils.files.fopen(filename, 'r') as repofile:
+        for line in repofile:
             line = salt.utils.stringutils.to_unicode(line)
-            if line.strip().startswith('#'):
-                headers += '{0}\n'.format(line.strip())
-            else:
-                break
+            line = line.strip()
+            if line.startswith('#'):
+                if section is None:
+                    headers += line + '\n'
+                else:
+                    try:
+                        comments = config[section].setdefault('comments', [])
+                        comments.append(line[1:].lstrip())
+                    except KeyError:
+                        log.debug(
+                            'Found comment in %s which does not appear to '
+                            'belong to any repo section: %s', filename, line
+                        )
+            elif line.startswith('[') and line.endswith(']'):
+                section = line[1:-1]
 
     return (headers, salt.utils.data.decode(config))
 
