@@ -6787,7 +6787,7 @@ def sls_build(repository,
             'The \'name\' argument to docker.sls_build has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = name
+        repository = name
 
     create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
