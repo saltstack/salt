@@ -47,7 +47,7 @@ class PipModuleTest(ModuleCase):
         '''
         return any(w in ret for w in ['URLError', 'Download error'])
 
-    def pip_successful_install(self, target, expect=('tox', 'pep8',)):
+    def pip_successful_install(self, target, expect=('irc3-plugins-test', 'pep8',)):
         '''
         isolate regex for extracting `successful install` message from pip
         '''
@@ -102,7 +102,7 @@ class PipModuleTest(ModuleCase):
         with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.fopen(req1b_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.fopen(req2b_filename, 'w') as f:
@@ -140,7 +140,7 @@ class PipModuleTest(ModuleCase):
         with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.fopen(req1b_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.fopen(req2b_filename, 'w') as f:
@@ -173,7 +173,7 @@ class PipModuleTest(ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
         with salt.utils.fopen(req1_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('pep8\n')
 
@@ -210,7 +210,7 @@ class PipModuleTest(ModuleCase):
         req2_filepath = os.path.join(req_cwd, req2_filename)
 
         with salt.utils.fopen(req1_filepath, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.fopen(req2_filepath, 'w') as f:
             f.write('pep8\n')
 
