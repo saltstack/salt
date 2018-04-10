@@ -325,7 +325,7 @@ def _available_services():
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
-                        plist = plistlib.readPlistFromBytes(
+                        plist = plistlib.loads(
                             salt.utils.stringutils.to_bytes(plist_xml))
 
                 try:
