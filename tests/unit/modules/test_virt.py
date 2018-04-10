@@ -21,6 +21,12 @@ import salt.config
 from salt.ext import six
 
 
+class LibvirtMock(MagicMock):
+
+    class libvirtError(Exception):
+        pass
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -29,7 +35,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
-            }
+            },
+            'libvirt': LibvirtMock()
         }
         return {virt: loader_globals, config: loader_globals}
 
@@ -507,6 +514,101 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             nic = nics[list(nics)[0]]
             self.assertEqual('bridge', nic['type'])
             self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    def test_get_disks(self, mock_communicate, mock_popen):
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        ''')
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            disks = virt.get_disks('test-vm')
+            disk = disks[list(disks)[0]]
+            self.assertEqual('/disks/test.qcow2', disk['file'])
+            self.assertEqual('disk', disk['type'])
+            cdrom = disks[list(disks)[1]]
+            self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
+            self.assertEqual('cdrom', cdrom['type'])
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    @patch('salt.modules.virt.stop', return_value=True)
+    @patch('salt.modules.virt.undefine')
+    @patch('os.remove')
+    def test_purge_default(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        ''')
+        mock = MagicMock(return_value={})
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            res = virt.purge('test-vm')
+            self.assertTrue(res)
+            mock_remove.assert_any_call('/disks/test.qcow2')
+            mock_remove.assert_any_call('/disks/test-cdrom.iso')
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    @patch('salt.modules.virt.stop', return_value=True)
+    @patch('salt.modules.virt.undefine')
+    @patch('os.remove')
+    def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              <disk type='file' device='floppy'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-floppy.iso'/>
+                <target dev='hdb' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        ''')
+        mock = MagicMock(return_value={})
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            res = virt.purge('test-vm', removables=False)
+            self.assertTrue(res)
+            mock_remove.assert_called_once()
+            mock_remove.assert_any_call('/disks/test.qcow2')
 
     def test_network(self):
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
