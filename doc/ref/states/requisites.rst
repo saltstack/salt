@@ -257,13 +257,13 @@ large groups of states easily in any requisite statement.
 require_any
 ~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The use of ``require_any`` demands that one of the required states executes before the
 dependent state. The state containing the ``require_any`` requisite is defined as the
 dependent state. The states specified in the ``require_any`` statement are defined as the
 required states. If at least one of the required state's execution succeeds, the dependent state
-will then execute. If at least one of the required state's execution fails, the dependent state
+will then execute.  If all of the executions by the required states fail, the dependent state
 will not execute.
 
 .. code-block:: yaml
@@ -380,7 +380,7 @@ to Salt ensuring that the service is running.
 watch_any
 ~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The state containing the ``watch_any`` requisite is defined as the watching
 state. The states specified in the ``watch_any`` statement are defined as the watched
@@ -506,6 +506,15 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. note::
 
+    Setting failhard (:ref:`globally <global-failhard>` or in
+    :ref:`the failing state <state-level-failhard>`) to ``True`` will cause
+    ``onfail``, ``onfail_in`` and ``onfail_any`` requisites to be ignored.
+    If you want to combine a global failhard set to True with ``onfail``,
+    ``onfail_in`` or ``onfail_any``, you will have to explicitly set failhard
+    to ``False`` (overriding the global setting) in the state that could fail.
+
+.. note::
+
     Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
     multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
@@ -517,7 +526,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 onfail_any
 ~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``onfail_any`` requisite allows for reactions to happen strictly as a response
 to the failure of at least one other state. This can be used in a number of ways, such as
@@ -616,7 +625,7 @@ if any of the watched states changes.
 onchanges_any
 ~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``onchanges_any`` requisite makes a state only apply one of the required states
 generates changes, and if one of the watched state's "result" is ``True``. This can be

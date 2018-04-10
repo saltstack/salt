@@ -546,7 +546,7 @@ def _ip_route_linux():
 
             ret.append({
                 'addr_family': 'inet6',
-                'destination': '::',
+                'destination': '::/0',
                 'gateway': comps[2],
                 'netmask': '',
                 'flags': 'UG',

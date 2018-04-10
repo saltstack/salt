@@ -558,6 +558,11 @@ class IPCMessagePublisher(object):
                     io_loop=self.io_loop
                 )
             self.streams.add(stream)
+
+            def discard_after_closed():
+                self.streams.discard(stream)
+
+            stream.set_close_callback(discard_after_closed)
         except Exception as exc:
             log.error('IPC streaming error: %s', exc)
 

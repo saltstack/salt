@@ -593,7 +593,7 @@ def ping(dest_ip=None, **kwargs):
 def cli(command=None, format='text', **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
-    (default is text) The ouput can also be stored in a file.
+    (default is text) The output can also be stored in a file.
 
     Usage:
 

@@ -445,6 +445,44 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    def test_running_with_port_bindings(self, name):
+        '''
+        This tests that the ports which are being bound are also exposed, even
+        when not explicitly configured. This test will create a container with
+        only some of the ports exposed, including some which aren't even bound.
+        The resulting containers exposed ports should contain all of the ports
+        defined in the "ports" argument, as well as each of the ports which are
+        being bound.
+        '''
+        # Create the container
+        ret = self.run_state(
+            'docker_container.running',
+            name=name,
+            image=self.image,
+            command='sleep 600',
+            shutdown_timeout=1,
+            port_bindings=[1234, '1235-1236', '2234/udp', '2235-2236/udp'],
+            ports=[1235, '2235/udp', 9999],
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Check the created container's port bindings and exposed ports. The
+        # port bindings should only contain the ports defined in the
+        # port_bindings argument, while the exposed ports should also contain
+        # the extra port (9999/tcp) which was included in the ports argument.
+        cinfo = self.run_function('docker.inspect_container', [name])
+        ports = ['1234/tcp', '1235/tcp', '1236/tcp',
+                 '2234/udp', '2235/udp', '2236/udp']
+        self.assertEqual(
+            sorted(cinfo['HostConfig']['PortBindings']),
+            ports
+        )
+        self.assertEqual(
+            sorted(cinfo['Config']['ExposedPorts']),
+            ports + ['9999/tcp']
+        )
+
+    @container_name
     def test_absent_with_stopped_container(self, name):
         '''
         This tests the docker_container.absent state on a stopped container
@@ -645,7 +683,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['comment'], expected)
 
         # Update the SLS configuration to remove the last network
-        log.critical('networks = %s', kwargs['networks'])
         kwargs['networks'].pop(-1)
         ret = self.run_state('docker_container.running', **kwargs)
         self.assertSaltTrueReturn(ret)
@@ -753,6 +790,65 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(not IPV6_ENABLED, 'IPv6 not enabled')
     def test_running_mixed_ipv4_and_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
+
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_running_explicit_networks(self, container_name, net):
+        '''
+        Ensure that if we use an explicit network configuration, we remove any
+        default networks not specified (e.g. the default "bridge" network).
+        '''
+        # Create a container with no specific network configuration. The only
+        # networks connected will be the default ones.
+        ret = self.run_state(
+            'docker_container.running',
+            name=container_name,
+            image=self.image,
+            shutdown_timeout=1)
+        self.assertSaltTrueReturn(ret)
+
+        inspect_result = self.run_function('docker.inspect_container',
+                                           [container_name])
+        # Get the default network names
+        default_networks = list(inspect_result['NetworkSettings']['Networks'])
+
+        # Re-run the state with an explicit network configuration. All of the
+        # default networks should be disconnected.
+        ret = self.run_state(
+            'docker_container.running',
+            name=container_name,
+            image=self.image,
+            networks=[net.name],
+            shutdown_timeout=1)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        net_changes = ret['changes']['container']['Networks']
+
+        self.assertIn(
+            "Container '{0}' is already configured as specified.".format(
+                container_name
+            ),
+            ret['comment']
+        )
+
+        updated_networks = self.run_function(
+            'docker.inspect_container',
+            [container_name])['NetworkSettings']['Networks']
+
+        for default_network in default_networks:
+            self.assertIn(
+                "Disconnected from network '{0}'.".format(default_network),
+                ret['comment']
+            )
+            self.assertIn(default_network, net_changes)
+            # We've tested that the state return is correct, but let's be extra
+            # paranoid and check the actual connected networks.
+            self.assertNotIn(default_network, updated_networks)
+
+        self.assertIn(
+            "Connected to network '{0}'.".format(net.name),
+            ret['comment']
+        )
 
     @container_name
     def test_run_with_onlyif(self, name):

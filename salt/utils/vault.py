@@ -11,7 +11,6 @@ documented in the execution module docs.
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
-import os
 import requests
 
 import salt.crypt
@@ -98,7 +97,7 @@ def _get_vault_connection():
     Get the connection details for calling Vault, from local configuration if
     it exists, or from the master otherwise
     '''
-    if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
+    def _use_local_config():
         log.debug('Using Vault connection details from local config')
         try:
             if __opts__['vault']['auth']['method'] == 'approle':
@@ -123,19 +122,20 @@ def _get_vault_connection():
         except KeyError as err:
             errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(err.message)
             raise salt.exceptions.CommandExecutionError(errmsg)
+
+    if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
+        return _use_local_config()
+    elif any((__opts__['local'], __opts__['file_client'] == 'local', __opts__['master_type'] == 'disable')):
+        return _use_local_config()
     else:
         log.debug('Contacting master for Vault connection details')
         return _get_token_and_url_from_master()
 
 
-def make_request(method, resource, profile=None, token=None, vault_url=None, get_token_url=False, **args):
+def make_request(method, resource, token=None, vault_url=None, get_token_url=False, **args):
     '''
     Make a request to Vault
     '''
-    if profile is not None and profile.keys().remove('driver') is not None:
-        # Deprecated code path
-        return make_request_with_profile(method, resource, profile, **args)
-
     if not token or not vault_url:
         connection = _get_vault_connection()
         token, vault_url = connection['token'], connection['url']
@@ -150,34 +150,6 @@ def make_request(method, resource, profile=None, token=None, vault_url=None, get
         return response, token, vault_url
     else:
         return response
-
-
-def make_request_with_profile(method, resource, profile, **args):
-    '''
-    DEPRECATED! Make a request to Vault, with a profile including connection
-    details.
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'Specifying Vault connection data within a \'profile\' has been '
-        'deprecated. Please see the documentation for details on the new '
-        'configuration schema. Support for this function will be removed '
-        'in Salt Fluorine.'
-    )
-    url = '{0}://{1}:{2}/v1/{3}'.format(
-        profile.get('vault.scheme', 'https'),
-        profile.get('vault.host'),
-        profile.get('vault.port'),
-        resource,
-    )
-    token = os.environ.get('VAULT_TOKEN', profile.get('vault.token'))
-    if token is None:
-        raise salt.exceptions.CommandExecutionError('A token was not configured')
-
-    headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}
-    response = requests.request(method, url, headers=headers, **args)
-
-    return response
 
 
 def _selftoken_expired():

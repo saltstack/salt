@@ -367,7 +367,7 @@ def get_host_mac(name=None, allow_array=False, **api_opts):
     '''
     Get mac address from host record.
 
-    Use `allow_array` to return possible mutiple values.
+    Use `allow_array` to return possible multiple values.
 
     CLI Example:
 
@@ -390,7 +390,7 @@ def get_host_ipv4(name=None, mac=None, allow_array=False, **api_opts):
     '''
     Get ipv4 address from host record.
 
-    Use `allow_array` to return possible mutiple values.
+    Use `allow_array` to return possible multiple values.
 
     CLI Example:
 
@@ -446,7 +446,7 @@ def get_host_ipv6addr_info(ipv6addr=None, mac=None,
 def get_network(ipv4addr=None, network=None, return_fields=None, **api_opts):
     '''
     Get list of all networks.
-    This is helpfull when looking up subnets to
+    This is helpful when looking up subnets to
     use with func:nextavailableip
 
     This call is offen slow and not cached!

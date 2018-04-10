@@ -505,7 +505,7 @@ def chgrp(path, group):
 
 def _cmp_attrs(path, attrs):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Compare attributes of a given file to given attributes.
     Returns a pair (list) where first item are attributes to
@@ -534,7 +534,7 @@ def _cmp_attrs(path, attrs):
 
 def lsattr(path):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -565,7 +565,7 @@ def lsattr(path):
 
 def chattr(*args, **kwargs):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Change the attributes of files
 
@@ -2433,8 +2433,7 @@ def blockreplace(path,
         backup='.bak',
         dry_run=False,
         show_changes=True,
-        append_newline=False,
-        ):
+        append_newline=False):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2481,18 +2480,30 @@ def blockreplace(path,
         The file extension to use for a backup of the file if any edit is made.
         Set to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file.
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``,
-        return a boolean if any changes were made.
+    show_changes : True
+        Controls how changes are presented. If ``True``, this function will
+        return a unified diff of the changes made. If False, then it will
+        return a boolean (``True`` if any changes were made, otherwise
+        ``False``).
 
-    append_newline:
-        Append a newline to the content block. For more information see:
-        https://github.com/saltstack/salt/issues/33686
+    append_newline : False
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is ``None`` then a newline will only
+        be added to the content block if it does not already end in a newline.
 
         .. versionadded:: 2016.3.4
+        .. versionchanged:: 2017.7.5,2018.3.1
+            New behavior added when value is ``None``.
+        .. versionchanged:: Fluorine
+            The default value of this argument will change to ``None`` to match
+            the behavior of the :py:func:`file.blockreplace state
+            <salt.states.file.blockreplace>`
 
     CLI Example:
 
@@ -2502,15 +2513,15 @@ def blockreplace(path,
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     '''
-    path = os.path.expanduser(path)
-
-    if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
-
     if append_if_not_found and prepend_if_not_found:
         raise SaltInvocationError(
             'Only one of append and prepend_if_not_found is permitted'
         )
+
+    path = os.path.expanduser(path)
+
+    if not os.path.exists(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not __utils__['files.is_text'](path):
         raise SaltInvocationError(
@@ -2518,71 +2529,121 @@ def blockreplace(path,
             .format(path)
         )
 
-    # Search the file; track if any changes have been made for the return val
+    if append_newline is None and not content.endswith((os.linesep, '\n')):
+        append_newline = True
+
+    # Split the content into a list of lines, removing newline characters. To
+    # ensure that we handle both Windows and POSIX newlines, first split on
+    # Windows newlines, and then split on POSIX newlines.
+    split_content = []
+    for win_line in content.split('\r\n'):
+        for content_line in win_line.split('\n'):
+            split_content.append(content_line)
+
+    line_count = len(split_content)
+
     has_changes = False
     orig_file = []
     new_file = []
     in_block = False
-    old_content = ''
-    done = False
-    # we do not use in_place editing to avoid file attrs modifications when
+    block_found = False
+    linesep = None
+
+    def _add_content(linesep, lines=None, include_marker_start=True,
+                     end_line=None):
+        if lines is None:
+            lines = []
+            include_marker_start = True
+
+        if end_line is None:
+            end_line = marker_end
+        end_line = end_line.rstrip('\r\n') + linesep
+
+        if include_marker_start:
+            lines.append(marker_start + linesep)
+
+        if split_content:
+            for index, content_line in enumerate(split_content, 1):
+                if index != line_count:
+                    lines.append(content_line + linesep)
+                else:
+                    # We're on the last line of the content block
+                    if append_newline:
+                        lines.append(content_line + linesep)
+                        lines.append(end_line)
+                    else:
+                        lines.append(content_line + end_line)
+        else:
+            lines.append(end_line)
+
+        return lines
+
+    # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
-    # we could also use salt.utils.filebuffer.BufferedReader
+    #
+    # We could also use salt.utils.filebuffer.BufferedReader
     try:
-        fi_file = fileinput.input(path,
-                    inplace=False, backup=False,
-                    bufsize=1, mode='rb')
-        for line in fi_file:
+        fi_file = fileinput.input(
+            path,
+            inplace=False,
+            backup=False,
+            bufsize=1,
+            mode='rb')
 
+        for line in fi_file:
             line = salt.utils.stringutils.to_unicode(line)
-            result = line
+            write_line_to_new_file = True
+
+            if linesep is None:
+                # Auto-detect line separator
+                if line.endswith('\r\n'):
+                    linesep = '\r\n'
+                elif line.endswith('\n'):
+                    linesep = '\n'
+                else:
+                    # No newline(s) in file, fall back to system's linesep
+                    linesep = os.linesep
 
             if marker_start in line:
-                # managed block start found, start recording
+                # We've entered the content block
                 in_block = True
-
             else:
                 if in_block:
-                    if marker_end in line:
-                        # end of block detected
+                    # We're not going to write the lines from the old file to
+                    # the new file until we have exited the block.
+                    write_line_to_new_file = False
+
+                    marker_end_pos = line.find(marker_end)
+                    if marker_end_pos != -1:
+                        # End of block detected
                         in_block = False
+                        # We've found and exited the block
+                        block_found = True
 
-                        # Handle situations where there may be multiple types
-                        # of line endings in the same file. Separate the content
-                        # into lines. Account for Windows-style line endings
-                        # using os.linesep, then by linux-style line endings
-                        # using '\n'
-                        split_content = []
-                        for linesep_line in content.split(os.linesep):
-                            for content_line in linesep_line.split('\n'):
-                                split_content.append(content_line)
+                        _add_content(linesep, lines=new_file,
+                                     include_marker_start=False,
+                                     end_line=line[marker_end_pos:])
 
-                        # Trim any trailing new lines to avoid unwanted
-                        # additional new lines
-                        while not split_content[-1]:
-                            split_content.pop()
-
-                        # push new block content in file
-                        for content_line in split_content:
-                            new_file.append(content_line + os.linesep)
-
-                        done = True
-
-                    else:
-                        # remove old content, but keep a trace
-                        old_content += line
-                        result = None
-            # else: we are not in the marked block, keep saving things
-
+            # Save the line from the original file
             orig_file.append(line)
-            if result is not None:
-                new_file.append(result)
-        # end for. If we are here without block management we maybe have some problems,
-        # or we need to initialise the marked block
+            if write_line_to_new_file:
+                new_file.append(line)
 
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(
+            'Failed to read from {0}: {1}'.format(path, exc)
+        )
     finally:
-        fi_file.close()
+        if linesep is None:
+            # If the file was empty, we will not have set linesep yet. Assume
+            # the system's line separator. This is needed for when we
+            # prepend/append later on.
+            linesep = os.linesep
+        try:
+            fi_file.close()
+        except Exception:
+            pass
 
     if in_block:
         # unterminated block => bad, always fail
@@ -2590,35 +2651,27 @@ def blockreplace(path,
             'Unterminated marked block. End of file reached before marker_end.'
         )
 
-    if not done:
+    if not block_found:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + os.linesep)
-            if append_newline is True:
-                new_file.insert(0, content + os.linesep)
-            else:
-                new_file.insert(0, content)
-            new_file.insert(0, marker_start + os.linesep)
-            done = True
+            prepended_content = _add_content(linesep)
+            prepended_content.extend(new_file)
+            new_file = prepended_content
+            block_found = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(os.linesep):
-                    new_file[-1] += os.linesep
+                if not new_file[-1].endswith(linesep):
+                    new_file[-1] += linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + os.linesep)
-            if append_newline is True:
-                new_file.append(content + os.linesep)
-            else:
-                new_file.append(content)
-            new_file.append(marker_end + os.linesep)
-            done = True
+            _add_content(linesep, lines=new_file)
+            block_found = True
         else:
             raise CommandExecutionError(
                 'Cannot edit marked block. Markers were not found in file.'
             )
 
-    if done:
+    if block_found:
         diff = ''.join(difflib.unified_diff(orig_file, new_file))
         has_changes = diff is not ''
         if has_changes and not dry_run:
@@ -3974,7 +4027,7 @@ def get_managed(
     attrs
         Attributes of file
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     context
         Variables to add to the template context
@@ -4729,7 +4782,7 @@ def check_file_meta(
     attrs
         Destination file attributes
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv
         Salt environment used to resolve source files
@@ -4835,14 +4888,14 @@ def get_diff(file1,
     file1
         The first file to feed into the diff utility
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Can now be either a local or remote file. In earlier releases,
             thuis had to be a file local to the minion.
 
     file2
         The second file to feed into the diff utility
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Can now be either a local or remote file. In earlier releases, this
             had to be a file on the salt fileserver (i.e.
             ``salt://somefile.txt``)
@@ -4861,7 +4914,7 @@ def get_diff(file1,
         except for within states, with the ``obfuscate_templates`` option set
         to ``True``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     source_hash_file1
         If ``file1`` is an http(s)/ftp URL and the file exists in the minion's
@@ -4869,7 +4922,7 @@ def get_diff(file1,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     source_hash_file2
         If ``file2`` is an http(s)/ftp URL and the file exists in the minion's
@@ -4877,7 +4930,7 @@ def get_diff(file1,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Examples:
 
@@ -5015,7 +5068,7 @@ def manage_file(name,
     attrs
         attributes to be set on file: '' means remove all of them
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     makedirs
         make directories if they do not exist
@@ -5361,30 +5414,25 @@ def manage_file(name,
 
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
-            if mode:
-                current_umask = os.umask(0o77)
-
-            # Create a new file when test is False and source is None
-            if contents is None:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['new'] = 'file {0} created'.format(name)
-                        ret['comment'] = 'Empty file'
-                    else:
-                        return _error(
-                            ret, 'Empty file {0} not created'.format(name)
-                        )
-            else:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['diff'] = 'New file'
-                    else:
-                        return _error(
-                            ret, 'File {0} not created'.format(name)
-                        )
-
-            if mode:
-                os.umask(current_umask)
+            with salt.utils.files.set_umask(0o077 if mode else None):
+                # Create a new file when test is False and source is None
+                if contents is None:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['new'] = 'file {0} created'.format(name)
+                            ret['comment'] = 'Empty file'
+                        else:
+                            return _error(
+                                ret, 'Empty file {0} not created'.format(name)
+                            )
+                else:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['diff'] = 'New file'
+                        else:
+                            return _error(
+                                ret, 'File {0} not created'.format(name)
+                            )
 
         if contents is not None:
             # Write the static contents to a temporary file
@@ -5418,8 +5466,7 @@ def manage_file(name,
         # out what mode to use for the new file.
         if mode is None and not salt.utils.platform.is_windows():
             # Get current umask
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
             # Calculate the mode value that results from the umask
             mode = oct((0o777 ^ mask) & 0o666)
 

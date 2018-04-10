@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The module used to execute states in salt. A state is unlike a module
-execution in that instead of just executing a command it ensure that a
-certain state is present on the system.
+The State Compiler is used to execute states in Salt. A state is unlike
+an execution module in that instead of just executing a command, it
+ensures that a certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',
@@ -165,6 +165,23 @@ def _l_tag(name, id_):
            'state': 'Listen_Error',
            'fun': 'Listen_Error'}
     return _gen_tag(low)
+
+
+def _calculate_fake_duration():
+    '''
+    Generate a NULL duration for when states do not run
+    but we want the results to be consistent.
+    '''
+    utc_start_time = datetime.datetime.utcnow()
+    local_start_time = utc_start_time - \
+        (datetime.datetime.utcnow() - datetime.datetime.now())
+    utc_finish_time = datetime.datetime.utcnow()
+    start_time = local_start_time.time().isoformat()
+    delta = (utc_finish_time - utc_start_time)
+    # duration in milliseconds.microseconds
+    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+
+    return start_time, duration
 
 
 def get_accumulator_dir(cachedir):
@@ -703,8 +720,12 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar:
+        if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
+        else:
+            # Compile pillar data
+            self.opts['pillar'] = self._gather_pillar()
+            # Reapply overrides on top of compiled pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
                     self.opts['pillar'],
@@ -712,8 +733,6 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
-        else:
-            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -1274,7 +1293,7 @@ class State(object):
         '''
         err = []
         for chunk in chunks:
-            err += self.verify_data(chunk)
+            err.extend(self.verify_data(chunk))
         return err
 
     def order_chunks(self, chunks):
@@ -1487,24 +1506,8 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
-            'require_in',
-            'watch_in',
-            'onfail_in',
-            'onchanges_in',
-            'use',
-            'use_in',
-            'prereq',
-            'prereq_in',
-            ])
-        req_in_all = req_in.union(
-                set([
-                    'require',
-                    'watch',
-                    'onfail',
-                    'onfail_stop',
-                    'onchanges',
-                    ]))
+        req_in = {'require_in', 'watch_in', 'onfail_in', 'onchanges_in', 'use', 'use_in', 'prereq', 'prereq_in'}
+        req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
         for id_, body in six.iteritems(high):
@@ -1771,7 +1774,7 @@ class State(object):
         ret = {'name': cdata['args'][0],
                 'result': None,
                 'changes': {},
-                'comment': 'Started in a seperate process',
+                'comment': 'Started in a separate process',
                 'proc': proc}
         return ret
 
@@ -2138,7 +2141,7 @@ class State(object):
         tag = _gen_tag(low)
         if self.opts.get('test', False):
             return False
-        if (low.get('failhard', False) or self.opts['failhard']) and tag in running:
+        if low.get('failhard', self.opts['failhard']) and tag in running:
             if running[tag]['result'] is None:
                 return False
             return not running[tag]['result']
@@ -2352,7 +2355,8 @@ class State(object):
                     if not r_state.startswith('prerequired'):
                         req_stats.add('pre')
                 else:
-                    req_stats.add('met')
+                    if run_dict[tag].get('__state_ran__', True):
+                        req_stats.add('met')
             if r_state.endswith('_any'):
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
@@ -2504,8 +2508,11 @@ class State(object):
                     run_dict = self.pre
                 else:
                     run_dict = running
+                start_time, duration = _calculate_fake_duration()
                 run_dict[tag] = {'changes': {},
                                  'result': False,
+                                 'duration': duration,
+                                 'start_time': start_time,
                                  'comment': comment,
                                  '__run_num__': self.__run_num,
                                  '__sls__': low['__sls__']}
@@ -2588,13 +2595,17 @@ class State(object):
                 _cmt = 'One or more requisite failed: {0}'.format(
                     ', '.join(six.text_type(i) for i in failed_requisites)
                 )
+                start_time, duration = _calculate_fake_duration()
                 running[tag] = {
                     'changes': {},
                     'result': False,
+                    'duration': duration,
+                    'start_time': start_time,
                     'comment': _cmt,
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
                 }
+                self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -2606,8 +2617,11 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
+            start_time, duration = _calculate_fake_duration()
             pre_ret = {'changes': {},
                        'result': True,
+                       'duration': duration,
+                       'start_time': start_time,
                        'comment': 'No changes detected',
                        '__run_num__': self.__run_num,
                        '__sls__': low['__sls__']}
@@ -2615,16 +2629,24 @@ class State(object):
             self.pre[tag] = pre_ret
             self.__run_num += 1
         elif status == 'onfail':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because onfail req did not change',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'onchanges':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because none of the onchanges reqs changed',
+                            '__state_ran__': False,
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -2644,14 +2666,13 @@ class State(object):
         listeners = []
         crefs = {}
         for chunk in chunks:
-            crefs[(chunk['state'], chunk['name'])] = chunk
-            crefs[(chunk['state'], chunk['__id__'])] = chunk
+            crefs[(chunk['state'], chunk['__id__'], chunk['name'])] = chunk
             if 'listen' in chunk:
-                listeners.append({(chunk['state'], chunk['__id__']): chunk['listen']})
+                listeners.append({(chunk['state'], chunk['__id__'], chunk['name']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
                     for key, val in six.iteritems(l_in):
-                        listeners.append({(key, val): [{chunk['state']: chunk['__id__']}]})
+                        listeners.append({(key, val, 'lookup'): [{chunk['state']: chunk['__id__']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
@@ -2667,7 +2688,7 @@ class State(object):
                         if not found:
                             continue
                     for lkey, lval in six.iteritems(listen_to):
-                        if (lkey, lval) not in crefs:
+                        if not any(lkey == cref[0] and lval in cref for cref in crefs):
                             rerror = {_l_tag(lkey, lval):
                                       {
                                           'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
@@ -2677,27 +2698,32 @@ class State(object):
                                       }}
                             errors.update(rerror)
                             continue
-                        to_tag = _gen_tag(crefs[(lkey, lval)])
-                        if to_tag not in running:
-                            continue
-                        if running[to_tag]['changes']:
-                            if key not in crefs:
-                                rerror = {_l_tag(key[0], key[1]):
-                                             {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
-                                              'name': 'listen_{0}:{1}'.format(key[0], key[1]),
-                                              'result': False,
-                                              'changes': {}}}
-                                errors.update(rerror)
+                        to_tags = [
+                            _gen_tag(data) for cref, data in six.iteritems(crefs) if lkey == cref[0] and lval in cref
+                        ]
+                        for to_tag in to_tags:
+                            if to_tag not in running:
                                 continue
-                            chunk = crefs[key]
-                            low = chunk.copy()
-                            low['sfun'] = chunk['fun']
-                            low['fun'] = 'mod_watch'
-                            low['__id__'] = 'listener_{0}'.format(low['__id__'])
-                            for req in STATE_REQUISITE_KEYWORDS:
-                                if req in low:
-                                    low.pop(req)
-                            mod_watchers.append(low)
+                            if running[to_tag]['changes']:
+                                if not any(key[0] == cref[0] and key[1] in cref for cref in crefs):
+                                    rerror = {_l_tag(key[0], key[1]):
+                                                 {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
+                                                  'name': 'listen_{0}:{1}'.format(key[0], key[1]),
+                                                  'result': False,
+                                                  'changes': {}}}
+                                    errors.update(rerror)
+                                    continue
+
+                                new_chunks = [data for cref, data in six.iteritems(crefs) if key[0] == cref[0] and key[1] in cref]
+                                for chunk in new_chunks:
+                                    low = chunk.copy()
+                                    low['sfun'] = chunk['fun']
+                                    low['fun'] = 'mod_watch'
+                                    low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                                    for req in STATE_REQUISITE_KEYWORDS:
+                                        if req in low:
+                                            low.pop(req)
+                                    mod_watchers.append(low)
         ret = self.call_chunks(mod_watchers)
         running.update(ret)
         for err in errors:
@@ -2713,12 +2739,12 @@ class State(object):
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
-        errors += ext_errors
-        errors += self.verify_high(high)
+        errors.extend(ext_errors)
+        errors.extend(self.verify_high(high))
         if errors:
             return errors
         high, req_in_errors = self.requisite_in(high)
-        errors += req_in_errors
+        errors.extend(req_in_errors)
         high = self.apply_exclude(high)
         # Verify that the high data is structurally sound
         if errors:
@@ -2976,6 +3002,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
+            self.opts['environment'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
@@ -3887,24 +3914,23 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                self.state.functions['cmd.run'](
-                    ['attrib', '-R', cfn],
-                    python_shell=False,
-                    output_loglevel='quiet')
-            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-                try:
-                    self.serial.dump(high, fp_)
-                except TypeError:
-                    # Can't serialize pydsl
-                    pass
-        except (IOError, OSError):
-            log.error('Unable to write to "state.highstate" cache file %s', cfn)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    self.state.functions['cmd.run'](
+                        ['attrib', '-R', cfn],
+                        python_shell=False,
+                        output_loglevel='quiet')
+                with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        self.serial.dump(high, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                log.error('Unable to write to "state.highstate" cache file %s', cfn)
 
-        os.umask(cumask)
         return self.state.call_high(high, orchestration_jid)
 
     def compile_highstate(self):

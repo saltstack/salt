@@ -5,6 +5,7 @@ Raet Ioflo Behavior Unittests
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from salt.ext.six.moves import map
+import importlib
 # pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -43,6 +44,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         '''
         Call super if override so House Framer and Frame are setup correctly
         '''
+        behaviors = ['salt.daemons.flo', 'salt.daemons.test.plan']
+        for behavior in behaviors:
+            mod = importlib.import_module(behavior)
         super(StatsEventerTestCase, self).setUp()
 
     def tearDown(self):
@@ -723,8 +727,8 @@ if __name__ == '__main__' and __package__ is None:
 
     # console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll()  # run all unittests
+    runAll()  # run all unittests
 
-    runSome()  # only run some
+    #runSome()  # only run some
 
     #runOne('testMasterLaneStats')

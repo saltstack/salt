@@ -2,7 +2,7 @@
 '''
 Keystone module for interacting with OpenStack Keystone
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 

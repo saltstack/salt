@@ -285,7 +285,7 @@ def upgraded(name,
     '''
     Upgrades a package. Will install the package if not installed.
 
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Args:
 

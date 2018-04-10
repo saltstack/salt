@@ -3,7 +3,7 @@
 Output Module
 =============
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Execution module that processes JSON serializable data
 and returns string having the format as processed by the outputters.

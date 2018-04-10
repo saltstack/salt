@@ -18,12 +18,11 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_functions
 
 # Import 3rd-party libs
 from salt.ext.six.moves import map
 try:
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
-    from win32api import SendMessage
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -57,7 +56,14 @@ def _normalize_dir(string_):
 def rehash():
     '''
     Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
-    variables
+    variables for new processes.
+
+    .. note::
+        This will only affect new processes that aren't launched by services. To
+        apply changes to the path to services, the host must be restarted. The
+        ``salt-minion``, if running as a service, will not see changes to the
+        environment until the system is restarted. See
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
 
     CLI Example:
 
@@ -65,7 +71,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment'))
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def get_path():

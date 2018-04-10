@@ -10,6 +10,7 @@ import os
 import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
+import salt.log
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
@@ -38,9 +39,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
         self.parse_args()
 
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
+        if self.config['log_level'] not in ('quiet', ):
+            # Setup file logging!
+            self.setup_logfile_logger()
+            verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors
@@ -82,7 +84,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if 'token' in self.config:
             import salt.utils.files
             try:
-                with salt.utils.files.fopen(os.path.join(self.config['key_dir'], '.root_key'), 'r') as fp_:
+                with salt.utils.files.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
                     kwargs['key'] = fp_.readline()
             except IOError:
                 kwargs['token'] = self.config['token']

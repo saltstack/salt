@@ -22,6 +22,10 @@ def test():
     if not os.path.exists(pkiDirpath):
         os.makedirs(pkiDirpath)
 
+    keyDirpath = os.path.join('/tmp', 'raet', 'testo', 'key')
+    if not os.path.exists(keyDirpath):
+        os.makedirs(keyDirpath)
+
     acceptedDirpath = os.path.join(pkiDirpath, 'accepted')
     if not os.path.exists(acceptedDirpath):
         os.makedirs(acceptedDirpath)
@@ -64,10 +68,12 @@ def test():
             client_acl=dict(),
             publisher_acl=dict(),
             pki_dir=pkiDirpath,
+            key_dir=keyDirpath,
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,
             open_mode=True,
             auto_accept=True,
+            client_acl_verify=True,
             )
 
     master = salt.daemons.flo.IofloMaster(opts=opts)

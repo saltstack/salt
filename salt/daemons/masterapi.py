@@ -76,7 +76,8 @@ def init_git_pillar(opts):
                     opts,
                     opts_dict['git'],
                     per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY)
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
+                    global_only=git_pillar.GLOBAL_ONLY)
                 ret.append(pillar)
             except salt.exceptions.FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):
@@ -186,11 +187,11 @@ def mk_key(opts, user):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
-            opts['key_dir'], '.{0}_key'.format(user.replace('\\', '_'))
+            opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
         )
     else:
         keyfile = os.path.join(
-            opts['key_dir'], '.{0}_key'.format(user)
+            opts['cachedir'], '.{0}_key'.format(user)
         )
 
     if os.path.exists(keyfile):
@@ -201,10 +202,9 @@ def mk_key(opts, user):
         os.unlink(keyfile)
 
     key = salt.crypt.Crypticle.generate_key_string()
-    cumask = os.umask(191)
-    with salt.utils.files.fopen(keyfile, 'w+') as fp_:
-        fp_.write(salt.utils.stringutils.to_str(key))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.fopen(keyfile, 'w+') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(key))
     # 600 octal: Read and write access to the owner only.
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.

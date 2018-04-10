@@ -484,7 +484,7 @@ def status(name, sig=None, jail=None):
 
     .. versionchanged:: 2016.3.4
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

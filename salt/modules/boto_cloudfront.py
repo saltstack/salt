@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CloudFront
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: boto3
 

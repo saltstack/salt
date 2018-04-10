@@ -125,7 +125,7 @@ class FunctionWrapper(object):
                         'stderr': stderr,
                         'retcode': retcode}
             try:
-                ret = salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+                ret = salt.utils.json.loads(stdout)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
