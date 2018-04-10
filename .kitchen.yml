@@ -38,7 +38,7 @@ provisioner:
     - 139
   max_retries: 2
   remote_states:
-    name: git://github.com/saltstack/salt-jenkins.git
+    name: git://github.com/gtmanfred/salt-jenkins.git
     branch: 2017.7
     repo: git
     testingdir: /testing
@@ -151,6 +151,8 @@ platforms:
         $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
         $NewPath= $OldPath + ";" + $AddedLocation
         Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
     verifier:
@@ -178,6 +180,8 @@ platforms:
         $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
         $NewPath= $OldPath + ";" + $AddedLocation
         Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
     verifier:
@@ -185,7 +189,9 @@ platforms:
       types:
         - unit
       coverage_xml: false
+      xml: /tmp/xml-unittests-output/
       save:
+        /tmp/xml-unittests-output/: artifacts/
         $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
         /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
