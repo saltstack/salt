@@ -7,7 +7,7 @@ Module to provide Palo Alto compatibility to Salt.
 :depends:    none
 :platform:   unix
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Configuration
 =============

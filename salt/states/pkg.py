@@ -1009,17 +1009,22 @@ def installed(
         **WILDCARD VERSIONS**
 
         As of the 2017.7.0 release, this state now supports wildcards in
-        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
-        Arch Linux, and their derivatives. Using wildcards can be useful for
-        packages where the release name is built into the version in some way,
-        such as for RHEL/CentOS which typically has version numbers like
-        ``1.2.34-5.el7``. An example of the usage for this would be:
+        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu,
+        RHEL/CentOS, Arch Linux, and their derivatives. Using wildcards can be
+        useful for packages where the release name is built into the version in
+        some way, such as for RHEL/CentOS which typically has version numbers
+        like ``1.2.34-5.el7``. An example of the usage for this would be:
 
         .. code-block:: yaml
 
             mypkg:
               pkg.installed:
                 - version: '1.2.34*'
+
+        Keep in mind that using wildcard versions will result in a slower state
+        run since Salt must gather the available versions of the specified
+        packages and figure out which of them match the specified wildcard
+        expression.
 
     :param bool refresh:
         This parameter controls whether or not the package repo database is
@@ -1133,9 +1138,9 @@ def installed(
         .. versionadded:: 2014.1.1
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
@@ -1967,9 +1972,9 @@ def downloaded(name,
                       - salt-minion: 2015.8.5-1.el6
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -2006,7 +2011,7 @@ def downloaded(name,
             pkgs = [name]
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
 
@@ -2181,7 +2186,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
                            'this platform'}
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
     return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
@@ -2259,9 +2264,9 @@ def latest(
             has no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -2668,7 +2673,7 @@ def removed(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.removed:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2774,7 +2779,7 @@ def purged(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.purged:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2856,7 +2861,7 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
         Added support for the ``pkgin`` provider.
 
@@ -2886,9 +2891,9 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             have no effect on the rest.
 
     :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.

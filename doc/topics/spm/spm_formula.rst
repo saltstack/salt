@@ -178,7 +178,7 @@ that the text following it can be evaluated properly.
 
 local States
 ~~~~~~~~~~~~
-``local`` states are evaluated locally; this is analagous to issuing a state
+``local`` states are evaluated locally; this is analogous to issuing a state
 run using a ``salt-call --local`` command. These commands will be issued on the
 local machine running the ``spm`` command, whether that machine is a master or
 a minion.

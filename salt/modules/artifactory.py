@@ -388,10 +388,11 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     for snapshot_version in snapshot_versions:
         extension = snapshot_version.find('extension').text
         value = snapshot_version.find('value').text
-        extension_version_dict[extension] = value
         if snapshot_version.find('classifier') is not None:
             classifier = snapshot_version.find('classifier').text
             extension_version_dict[extension + ':' + classifier] = value
+        else:
+            extension_version_dict[extension] = value
 
     return {
         'snapshot_versions': extension_version_dict

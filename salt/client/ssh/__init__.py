@@ -57,14 +57,10 @@ from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
@@ -161,17 +157,17 @@ do
         py_cmd_path=`"$py_cmd" -c \
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
-        cmdpath=$(command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null)
+        cmdpath=`command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null`
         if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
                    'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
-            export $($py_cmd -c \
+            export `$py_cmd -c \
                   "from __future__ import print_function;
                   import sys;
                   import os;
                   map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
-                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+                  .format(x, os.environ[x]) for x in [$ex_vars]])"`
             exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
                      MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
                      PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
@@ -214,7 +210,7 @@ class SSH(object):
     def __init__(self, opts):
         self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.exists(pull_sock) and HAS_ZMQ:
+        if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -227,8 +223,8 @@ class SSH(object):
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
         if not salt.utils.path.which('ssh'):
-            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
-                                                 'installed for salt-ssh to run. Exiting.')
+            raise salt.exceptions.SaltSystemExit(code=-1,
+                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
@@ -444,7 +440,7 @@ class SSH(object):
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').count('Permission denied'):
+        if (ret[host].get('stderr') or '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -564,6 +560,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,
@@ -662,7 +671,11 @@ class SSH(object):
             host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
-                _, data = next(six.iteritems(ret))
+                id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
+                if 'id' not in data:
+                    data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,
@@ -755,7 +768,7 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
 
-            if isinstance(ret[host], dict) and ret[host].get('stderr', '').startswith('ssh:'):
+            if isinstance(ret[host], dict) and (ret[host].get('stderr') or '').startswith('ssh:'):
                 ret[host] = ret[host]['stderr']
 
             if not isinstance(ret[host], dict):
@@ -773,7 +786,11 @@ class SSH(object):
                         outputter,
                         self.opts)
             if self.event:
-                _, data = next(six.iteritems(ret))
+                id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
+                if 'id' not in data:
+                    data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,
@@ -880,6 +897,7 @@ class Single(object):
         # Pre apply changeable defaults
         self.minion_opts = {
                     'grains_cache': True,
+                    'log_file': 'salt-call.log',
                 }
         self.minion_opts.update(opts.get('ssh_minion_opts', {}))
         if minion_opts is not None:
@@ -889,7 +907,6 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
-                    'log_file': 'salt-call.log',
                     'fileserver_list_cache_time': 3,
                 })
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
@@ -1027,6 +1044,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:

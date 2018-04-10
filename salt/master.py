@@ -24,20 +24,8 @@ import salt.serializers.msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-try:
-    import zmq
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
 
 import tornado.gen  # pylint: disable=F0401
 
@@ -151,13 +139,13 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     A generalized maintenance process which performs maintenance routines.
     '''
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__(log_queue=log_queue)
+        super(Maintenance, self).__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
@@ -171,11 +159,18 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _post_fork_init(self):
         '''
@@ -498,23 +493,13 @@ class Master(SMaster):
 
         :param dict: The salt options
         '''
-        if HAS_ZMQ:
-            # Warn if ZMQ < 3.2
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]
-                )
-            if zmq_version_info < (3, 2):
-                log.warning(
-                    'You have a version of ZMQ less than ZMQ 3.2! There are '
-                    'known connection keep-alive issues with ZMQ < 3.2 which '
-                    'may result in loss of contact with minions. Please '
-                    'upgrade your ZMQ!'
-                )
+        if zmq and ZMQ_VERSION_INFO < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def __set_max_open_files(self):
@@ -600,9 +585,8 @@ class Master(SMaster):
         # Check to see if we need to create a pillar cache dir
         if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
             try:
-                prev_umask = os.umask(0o077)
-                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
-                os.umask(prev_umask)
+                with salt.utils.files.set_umask(0o077):
+                    os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
             except OSError:
                 pass
 
@@ -623,7 +607,8 @@ class Master(SMaster):
                                 new_opts,
                                 repo['git'],
                                 per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -730,6 +715,7 @@ class Master(SMaster):
             kwargs = {}
             if salt.utils.platform.is_windows():
                 kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['log_queue_level'] = salt.log.setup.get_multiprocessing_logging_level()
                 kwargs['secrets'] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -779,13 +765,13 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts, log_queue=None):
+    def __init__(self, hopts, **kwargs):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__(log_queue=log_queue)
+        super(Halite, self).__init__(**kwargs)
         self.hopts = hopts
 
     # __setstate__ and __getstate__ are only used on Windows.
@@ -793,11 +779,18 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['hopts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['hopts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'hopts': self.hopts,
-                'log_queue': self.log_queue}
+        return {
+            'hopts': self.hopts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -812,7 +805,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None, secrets=None):
+    def __init__(self, opts, key, mkey, secrets=None, **kwargs):
         '''
         Create a request server
 
@@ -823,7 +816,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :rtype: ReqServer
         :returns: Request server
         '''
-        super(ReqServer, self).__init__(log_queue=log_queue)
+        super(ReqServer, self).__init__(**kwargs)
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
@@ -835,15 +828,24 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], state['key'], state['mkey'],
-                      log_queue=state['log_queue'], secrets=state['secrets'])
+        self.__init__(
+            state['opts'],
+            state['key'],
+            state['mkey'],
+            secrets=state['secrets'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'key': self.key,
-                'mkey': self.master_key,
-                'log_queue': self.log_queue,
-                'secrets': self.secrets}
+        return {
+            'opts': self.opts,
+            'key': self.key,
+            'mkey': self.master_key,
+            'secrets': self.secrets,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -855,6 +857,8 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         if self.log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+        if self.log_queue_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
         if self.secrets is not None:
             SMaster.secrets = self.secrets
@@ -885,6 +889,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         kwargs = {}
         if salt.utils.platform.is_windows():
             kwargs['log_queue'] = self.log_queue
+            kwargs['log_queue_level'] = self.log_queue_level
             # Use one worker thread if only the TCP transport is set up on
             # Windows and we are using Python 2. There is load balancer
             # support on Windows for the TCP transport when using Python 3.
@@ -966,7 +971,10 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # non-Windows platforms.
     def __setstate__(self, state):
         self._is_child = True
-        super(MWorker, self).__init__(log_queue=state['log_queue'])
+        super(MWorker, self).__init__(
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -975,13 +983,16 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         SMaster.secrets = state['secrets']
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'req_channels': self.req_channels,
-                'mkey': self.mkey,
-                'key': self.key,
-                'k_mtime': self.k_mtime,
-                'log_queue': self.log_queue,
-                'secrets': SMaster.secrets}
+        return {
+            'opts': self.opts,
+            'req_channels': self.req_channels,
+            'mkey': self.mkey,
+            'key': self.key,
+            'k_mtime': self.k_mtime,
+            'secrets': SMaster.secrets,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, 'req_channels', ()):
@@ -993,9 +1004,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
@@ -1474,7 +1484,7 @@ class AESFuncs(object):
             if load['loc']:
                 fp_.seek(load['loc'])
 
-            fp_.write(load['data'])
+            fp_.write(salt.utils.stringutils.to_bytes(load['data']))
         return True
 
     def _pillar(self, load):
@@ -2028,6 +2038,7 @@ class ClearFuncs(object):
         )
         minions = _res.get('minions', list())
         missing = _res.get('missing', list())
+        ssh_minions = _res.get('ssh_minions', False)
 
         # Check for external auth calls and authenticate
         auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
@@ -2095,7 +2106,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
-        minions.extend(self._send_ssh_pub(payload))
+        self._send_ssh_pub(payload, ssh_minions=ssh_minions)
         self._send_pub(payload)
 
         return {
@@ -2158,20 +2169,19 @@ class ClearFuncs(object):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
 
-    def _send_ssh_pub(self, load):
+    @property
+    def ssh_client(self):
+        if not hasattr(self, '_ssh_client'):
+            self._ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        return self._ssh_client
+
+    def _send_ssh_pub(self, load, ssh_minions=False):
         '''
-        Take a load and send it across the network to connected minions
+        Take a load and send it across the network to ssh minions
         '''
-        minions = []
-        if self.opts['enable_ssh_minions'] is True and isinstance(load['tgt'], six.string_types):
-            # The isinstances makes sure that syndics work
-            log.debug('Use SSHClient for rostered minions')
-            ssh = salt.client.ssh.client.SSHClient()
-            ssh_minions = ssh._prep_ssh(**load).targets.keys()
-            if ssh_minions:
-                minions.extend(ssh_minions)
-                threading.Thread(target=ssh.cmd, kwargs=load).start()
-        return minions
+        if self.opts['enable_ssh_minions'] is True and ssh_minions is True:
+            log.debug('Send payload to ssh minions')
+            threading.Thread(target=self.ssh_client.cmd, kwargs=load).start()
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''

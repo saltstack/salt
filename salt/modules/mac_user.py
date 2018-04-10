@@ -24,6 +24,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.stringutils
@@ -571,7 +572,7 @@ def _kcpassword(password):
 
     # Convert each byte back to a character
     password = list(map(chr, password))
-    return ''.join(password)
+    return b''.join(salt.utils.data.encode(password))
 
 
 def enable_auto_login(name, password):
@@ -609,7 +610,7 @@ def enable_auto_login(name, password):
     # Create/Update the kcpassword file with an obfuscated password
     o_password = _kcpassword(password=password)
     with salt.utils.files.set_umask(0o077):
-        with salt.utils.files.fopen('/etc/kcpassword', 'w') as fd:
+        with salt.utils.files.fopen('/etc/kcpassword', 'w' if six.PY2 else 'wb') as fd:
             fd.write(o_password)
 
     return current if isinstance(current, bool) else current.lower() == name.lower()

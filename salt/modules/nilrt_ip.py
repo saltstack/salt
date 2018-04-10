@@ -147,16 +147,18 @@ def _get_service_info(service):
     '''
     service_info = pyconnman.ConnService(_add_path(service))
     data = {
-        'name': service,
+        'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
         'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
-        'HWAddress': six.text_type(service_info.get_property('Ethernet')['Address'])
+        'hwaddr': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
     if state == 'ready' or state == 'online':
         data['up'] = True
-        data['ipv4'] = {}
+        data['ipv4'] = {
+            'gateway': '0.0.0.0'
+        }
         ipv4 = 'IPv4'
         if service_info.get_property('IPv4')['Method'] == 'manual':
             ipv4 += '.Configuration'

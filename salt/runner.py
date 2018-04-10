@@ -205,7 +205,7 @@ class Runner(RunnerClient):
                 if self.opts.get('eauth'):
                     if 'token' in self.opts:
                         try:
-                            with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
+                            with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                                 low['key'] = salt.utils.stringutils.to_unicode(fp_.readline())
                         except IOError:
                             low['token'] = self.opts['token']
@@ -232,7 +232,7 @@ class Runner(RunnerClient):
                 else:
                     user = salt.utils.user.get_specific_user()
 
-                if low['fun'] == 'state.orchestrate':
+                if low['fun'] in ('state.orchestrate', 'state.orch'):
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
@@ -256,7 +256,7 @@ class Runner(RunnerClient):
                 # otherwise run it in the main process
                 if self.opts.get('eauth'):
                     ret = self.cmd_sync(low)
-                    if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                    if isinstance(ret, dict) and set(ret) == {'data', 'outputter'}:
                         outputter = ret['outputter']
                         ret = ret['data']
                     else:

@@ -6,7 +6,7 @@ Docker Swarm Module using Docker's Python SDK
 
 :codeauthor: Tyler Jones <jonestyler806@gmail.com>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The Docker Swarm Module is used to manage and create Docker Swarms.
 

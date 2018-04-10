@@ -23,7 +23,7 @@ Example single policy configuration
 
 .. code-block:: yaml
 
-    Acount lockout duration:
+    Account lockout duration:
       gpo.set:
         - setting: 120
         - policy_class: Machine

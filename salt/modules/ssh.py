@@ -173,7 +173,8 @@ def _replace_auth_key(
             # Re-open the file writable after properly closing it
             with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
-                _fh.writelines(lines)
+                for line in lines:
+                    _fh.write(line)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem reading or writing to key file: {0}'.format(exc)
@@ -843,10 +844,12 @@ def get_known_host(user,
                    port=None,
                    fingerprint_hash_type=None):
     '''
+    .. deprecated:: 2018.3.0
+        Use :py:func:`ssh.get_known_host_entries
+        <salt.modules.ssh.get_known_host_entries>` instead.
+
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
-
-    .. deprecated:: Oxygen
 
     CLI Example:
 
@@ -856,7 +859,7 @@ def get_known_host(user,
     '''
     salt.utils.versions.warn_until(
             'Neon',
-            '\'get_known_host\' has been deprecated in favour of '
+            '\'get_known_host\' has been deprecated in favor of '
             '\'get_known_host_entries\'. \'get_known_host\' will be '
             'removed in Salt Neon.'
     )
@@ -871,7 +874,7 @@ def get_known_host_entries(user,
                            port=None,
                            fingerprint_hash_type=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Return information about known host entries from the configfile, if any.
     If there are no entries for a matching hostname, return None.
@@ -909,7 +912,9 @@ def recv_known_host(hostname,
     '''
     Retrieve information about host public key from remote server
 
-    .. deprecated:: Oxygen
+    .. deprecated:: 2018.3.0
+        Use :py:func:`ssh.recv_known_host_entries
+        <salt.modules.ssh.recv_known_host_entries>` instead.
 
     hostname
         The name of the remote host (e.g. "github.com")
@@ -948,7 +953,7 @@ def recv_known_host(hostname,
     '''
     salt.utils.versions.warn_until(
             'Neon',
-            '\'recv_known_host\' has been deprecated in favour of '
+            '\'recv_known_host\' has been deprecated in favor of '
             '\'recv_known_host_entries\'. \'recv_known_host\' will be '
             'removed in Salt Neon.'
     )
@@ -964,7 +969,7 @@ def recv_known_host_entries(hostname,
                             timeout=5,
                             fingerprint_hash_type=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Retrieve information about host public keys from remote server
 
@@ -1472,18 +1477,4 @@ def key_is_encrypted(key):
 
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
-    try:
-        with salt.utils.files.fopen(key, 'r') as fp_:
-            key_data = salt.utils.stringutils.to_unicode(fp_.read())
-    except (IOError, OSError) as exc:
-        # Raise a CommandExecutionError
-        salt.utils.files.process_read_exception(exc, key)
-
-    is_private_key = re.search(r'BEGIN (?:\w+\s)*PRIVATE KEY', key_data)
-    is_encrypted = 'ENCRYPTED' in key_data
-    del key_data
-
-    if not is_private_key:
-        raise CommandExecutionError('{0} is not a private key'.format(key))
-
-    return is_encrypted
+    return __utils__['ssh.key_is_encrypted'](key)

@@ -242,6 +242,14 @@ class SaltTestingParser(optparse.OptionParser):
             self, 'Output Options'
         )
         self.output_options_group.add_option(
+            '-F',
+            '--fail-fast',
+            dest='failfast',
+            default=False,
+            action='store_true',
+            help='Stop on first failure'
+        )
+        self.output_options_group.add_option(
             '-v',
             '--verbose',
             dest='verbosity',
@@ -476,7 +484,7 @@ class SaltTestingParser(optparse.OptionParser):
                     shutil.rmtree(path)
 
     def run_suite(self, path, display_name, suffix='test_*.py',
-                  load_from_name=False, additional_test_dirs=None):
+                  load_from_name=False, additional_test_dirs=None, failfast=False):
         '''
         Execute a unit test suite
         '''
@@ -508,12 +516,15 @@ class SaltTestingParser(optparse.OptionParser):
             runner = XMLTestRunner(
                 stream=sys.stdout,
                 output=self.xml_output_dir,
-                verbosity=self.options.verbosity
+                verbosity=self.options.verbosity,
+                failfast=failfast,
             ).run(tests)
         else:
             runner = TextTestRunner(
                 stream=sys.stdout,
-                verbosity=self.options.verbosity).run(tests)
+                verbosity=self.options.verbosity,
+                failfast=failfast
+            ).run(tests)
 
         errors = []
         skipped = []
@@ -930,6 +941,8 @@ class SaltTestcaseParser(SaltTestingParser):
                          width=self.options.output_columns)
 
         runner = TextTestRunner(
-            verbosity=self.options.verbosity).run(tests)
+            verbosity=self.options.verbosity,
+            failfast=self.options.failfast,
+        ).run(tests)
         self.testsuite_results.append((header, runner))
         return runner.wasSuccessful()

@@ -21,6 +21,7 @@ import errno
 import salt.crypt
 import salt.utils.async
 import salt.utils.event
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -144,8 +145,8 @@ if USE_LOAD_BALANCER:
         # Based on default used in tornado.netutil.bind_sockets()
         backlog = 128
 
-        def __init__(self, opts, socket_queue, log_queue=None):
-            super(LoadBalancerServer, self).__init__(log_queue=log_queue)
+        def __init__(self, opts, socket_queue, **kwargs):
+            super(LoadBalancerServer, self).__init__(**kwargs)
             self.opts = opts
             self.socket_queue = socket_queue
             self._socket = None
@@ -159,13 +160,17 @@ if USE_LOAD_BALANCER:
             self.__init__(
                 state['opts'],
                 state['socket_queue'],
-                log_queue=state['log_queue']
+                log_queue=state['log_queue'],
+                log_queue_level=state['log_queue_level']
             )
 
         def __getstate__(self):
-            return {'opts': self.opts,
-                    'socket_queue': self.socket_queue,
-                    'log_queue': self.log_queue}
+            return {
+                'opts': self.opts,
+                'socket_queue': self.socket_queue,
+                'log_queue': self.log_queue,
+                'log_queue_level': self.log_queue_level
+            }
 
         def close(self):
             if self._socket is not None:
@@ -302,7 +307,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
         if HAS_M2:
-            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+            aes = key.private_decrypt(ret['key'], RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             aes = cipher.decrypt(ret['key'])
@@ -1204,7 +1209,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             clients = self.present[id_]
             clients.add(client)
         else:
-            self.present[id_] = set([client])
+            self.present[id_] = {client}
             if self.presence_events:
                 data = {'new': [id_],
                         'lost': []}
@@ -1350,14 +1355,18 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         return {'opts': self.opts,
                 'secrets': salt.master.SMaster.secrets}
 
-    def _publish_daemon(self, log_queue=None):
+    def _publish_daemon(self, **kwargs):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
+        log_queue = kwargs.get('log_queue')
         if log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+        log_queue_level = kwargs.get('log_queue_level')
+        if log_queue_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
         salt.log.setup.setup_multiprocessing_logging(log_queue)
 
         # Check if io_loop was set outside
@@ -1389,11 +1398,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Securely create socket
         log.info('Starting the Salt Puller on %s', pull_uri)
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             pull_sock.start()
-        finally:
-            os.umask(old_umask)
 
         # run forever
         try:
@@ -1411,6 +1417,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         if salt.utils.platform.is_windows():
             kwargs['log_queue'] = (
                 salt.log.setup.get_multiprocessing_logging_queue()
+            )
+            kwargs['log_queue_level'] = (
+                salt.log.setup.get_multiprocessing_logging_level()
             )
 
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)

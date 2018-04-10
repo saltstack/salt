@@ -2442,7 +2442,7 @@ class _policy_info(object):
                 elif ord(val) == 1:
                     return 'Enabled'
                 else:
-                    return 'Invalid Value'
+                    return 'Invalid Value: {0!r}'.format(val)  # pylint: disable=repr-flag-used-in-string
             else:
                 return 'Not Defined'
         except TypeError:
@@ -3440,7 +3440,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 this_element_value = b''.join([this_element_value.encode('utf-16-le'),
                                                encoded_null])
         elif etree.QName(element).localname == 'multiText':
-            this_vtype = 'REG_MULTI_SZ'
+            this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
                 this_element_value = '{0}{1}{1}'.format(chr(0).join(this_element_value), chr(0))
         elif etree.QName(element).localname == 'list':
@@ -3449,7 +3449,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(range(1, len(this_element_value) + 1))
+                element_valuenames = list([str(z) for z in range(1, len(this_element_value) + 1)])
             if 'additive' in element.attrib:
                 if element.attrib['additive'].lower() == 'false':
                     # a delete values will be added before all the other
@@ -3474,11 +3474,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 if this_element_value is not None:
                     element_valuenames = this_element_value.keys()
                     element_values = this_element_value.values()
-
-            if 'valuePrefix' in element.attrib and element.attrib['valuePrefix'] != '':
-                if this_element_value is not None:
-                    element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                          k) for k in element_valuenames]
+            if 'valuePrefix' in element.attrib:
+                # if the valuePrefix attribute exists, the valuenames are <prefix><number>
+                # most prefixes attributes are empty in the admx files, so the valuenames
+                # end up being just numbers
+                if element.attrib['valuePrefix'] != '':
+                    if this_element_value is not None:
+                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
+                                                              k) for k in element_valuenames]
+            else:
+                # if there is no valuePrefix attribute, the valuename is the value
+                if element_values is not None:
+                    element_valuenames = [str(z) for z in element_values]
             if not check_deleted:
                 if this_element_value is not None:
                     log.debug('_processValueItem has an explicit '
@@ -5066,7 +5073,10 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
                                                                          _pol['Registry']['Path'],
                                                                          _pol['Registry']['Value'])['vdata']
-                    log.debug('Value %s found for reg policy %s', class_vals[policy_name], policy_name)
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
                 elif 'Secedit' in _pol:
                     # get value from secedit
                     _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])

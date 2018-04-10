@@ -223,7 +223,7 @@ branches, and dot release branches.
 .. note::
 
     GitHub will open pull requests against Salt's main branch, ``develop``,
-    byndefault. Be sure to check which branch is selected when creating the
+    by default. Be sure to check which branch is selected when creating the
     pull request.
 
 The Develop Branch
@@ -282,9 +282,9 @@ The Salt repository follows a "Merge Forward" policy. The merge-forward
 behavior means that changes submitted to older main release branches will
 automatically be "merged-forward" into the newer branches.
 
-For example, a pull request is merged into ``2016.11``. Then, the entire
-``2016.11`` branch is merged-forward into the ``2017.7`` branch, and the
-``2017.7`` branch is merged-forward into the ``develop`` branch.
+For example, a pull request is merged into ``2017.7``. Then, the entire
+``2017.7`` branch is merged-forward into the ``2018.3`` branch, and the
+``2018.3`` branch is merged-forward into the ``develop`` branch.
 
 This process makes is easy for contributors to make only one pull-request
 against an older branch, but allows the change to propagate to all **main**

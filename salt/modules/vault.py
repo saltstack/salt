@@ -40,7 +40,7 @@ Functions to interact with Hashicorp Vault.
         For details please see
         http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     auth
         Currently only token auth is supported. The token must be able to create
@@ -108,10 +108,6 @@ Functions to interact with Hashicorp Vault.
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import Salt libs
-import salt.crypt
-import salt.exceptions
-
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +142,7 @@ def read_secret(path, key=None):
         return data
     except Exception as err:
         log.error('Failed to read secret! %s: %s', type(err).__name__, err)
-        raise salt.exceptions.CommandExecutionError(err)
+        return None
 
 
 def write_secret(path, **kwargs):
@@ -169,7 +165,7 @@ def write_secret(path, **kwargs):
         return True
     except Exception as err:
         log.error('Failed to write secret! %s: %s', type(err).__name__, err)
-        raise salt.exceptions.CommandExecutionError(err)
+        return False
 
 
 def delete_secret(path):
@@ -191,7 +187,7 @@ def delete_secret(path):
         return True
     except Exception as err:
         log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
-        raise salt.exceptions.CommandExecutionError(err)
+        return False
 
 
 def list_secrets(path):
@@ -214,4 +210,4 @@ def list_secrets(path):
         return response.json()['data']
     except Exception as err:
         log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
-        raise salt.exceptions.CommandExecutionError(err)
+        return None

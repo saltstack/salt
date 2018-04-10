@@ -2,7 +2,7 @@
 '''
 Module for sending data to OpsGenie
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration: This module can be used in Reactor System for
     posting data to OpsGenie as a remote-execution function.

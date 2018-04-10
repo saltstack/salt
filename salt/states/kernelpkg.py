@@ -31,7 +31,7 @@ Example state chaining the install and reboot operations:
         - onchanges:
           - kernel: install-latest-kernel
 
-Chaining can also be acheived using wait/listen requisites:
+Chaining can also be achieved using wait/listen requisites:
 
 .. code-block:: yaml
 
