@@ -193,7 +193,7 @@ def present(host, groups, interfaces, **kwargs):
     host_exists = __salt__['zabbix.host_exists'](host, **connection_args)
 
     if host_exists:
-        host = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
+        host = __salt__['zabbix.host_get'](host=host, **connection_args)[0]
         hostid = host['hostid']
 
         update_proxy = False
@@ -457,7 +457,7 @@ def assign_templates(host, templates, **kwargs):
         ret['comment'] = comment_host_templ_notupdated
         return ret
 
-    host_info = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
+    host_info = __salt__['zabbix.host_get'](host=host, **connection_args)[0]
     hostid = host_info['hostid']
 
     if not templates:

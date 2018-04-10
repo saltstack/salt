@@ -322,6 +322,18 @@ Optional. The path to a file to be read and submitted to Azure as user data.
 How this is used depends on the operating system that is being deployed. If
 used, any ``userdata`` setting will be ignored.
 
+userdata_sendkeys
+-------------
+Optional. Set to ``True`` in order to generate salt minion keys and provide
+them as variables to the userdata script when running it through the template
+renderer. The keys can be referenced as ``{{opts['priv_key']}}`` and
+``{{opts['pub_key']}}``.
+
+userdata_template
+-------------
+Optional. Enter the renderer, such as ``jinja``, to be used for the userdata
+script template.
+
 wait_for_ip_timeout
 -------------------
 Optional. Default is ``600``. When waiting for a VM to be created, Salt Cloud

@@ -322,7 +322,7 @@ def list_(name=None, **kwargs):
 
     ## Configure command
     # NOTE: initialize the defaults
-    flags = ['-H', '-p']
+    flags = ['-H']
     opts = {}
 
     # NOTE: set extra config from kwargs
@@ -1198,7 +1198,7 @@ def get(*dataset, **kwargs):
     '''
     ## Configure command
     # NOTE: initialize the defaults
-    flags = ['-H', '-p']
+    flags = ['-H']
     opts = {}
 
     # NOTE: set extra config from kwargs

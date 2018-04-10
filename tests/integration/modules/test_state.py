@@ -1476,6 +1476,56 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']
         self.assertIn('duration', test_data)
 
+    def test_multiple_onfail_requisite_with_required(self):
+        '''
+        test to ensure multiple states are run
+        when specified as onfails for a single state.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required')
+
+        retcode = state_run['cmd_|-b_|-echo b_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-c_|-echo c_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-d_|-echo d_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'b')
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'c')
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'd')
+
+    def test_multiple_onfail_requisite_with_required_no_run(self):
+        '''
+        test to ensure multiple states are not run
+        when specified as onfails for a single state
+        which fails.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required_no_run')
+
+        expected = 'State was not run because onfail req did not change'
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
     # listen tests
 
     def test_listen_requisite(self):
@@ -1551,6 +1601,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # Then, test the result of the state run when a listener should not trigger
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
+
+    def test_listen_in_requisite_resolution_names(self):
+        '''
+        Verify listen_in requisite lookups use ID declaration to check for changes
+        and resolves magic names state variable
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_names')
+        self.assertIn('test_|-listener_service_|-nginx_|-mod_watch', state_run)
+        self.assertIn('test_|-listener_service_|-crond_|-mod_watch', state_run)
+
+    def test_listen_requisite_resolution_names(self):
+        '''
+        Verify listen requisite lookups use ID declaration to check for changes
+        and resolves magic names state variable
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_names')
+        self.assertIn('test_|-listener_service_|-nginx_|-mod_watch', state_run)
+        self.assertIn('test_|-listener_service_|-crond_|-mod_watch', state_run)
 
     def test_issue_30820_requisite_in_match_by_name(self):
         '''
@@ -1832,6 +1904,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                       'result': True}}
         for id in _expected:
             self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
+
+    def test_state_sls_unicode_characters(self):
+        '''
+        test state.sls when state file contains non-ascii characters
+        '''
+        ret = self.run_function('state.sls', ['issue-46672'])
+        log.debug('== ret %s ==', type(ret))
+
+        _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
+        self.assertIn(_expected, ret)
 
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')

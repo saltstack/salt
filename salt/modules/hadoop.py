@@ -88,6 +88,30 @@ def dfs(command=None, *args):
         return 'Error: command must be provided'
 
 
+def dfsadmin_report(arg=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes.
+
+    arg
+        [live] [dead] [decommissioning]
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hadoop.dfsadmin -report
+    '''
+    if arg is not None:
+        if arg in ['live', 'dead', 'decommissioning']:
+            return _hadoop_cmd('dfsadmin', 'report', arg)
+        else:
+            return "Error: the arg is wrong, it must be in ['live', 'dead', 'decommissioning']"
+    else:
+        return _hadoop_cmd('dfsadmin', 'report')
+
+
 def dfs_present(path):
     '''
     Check if a file or directory is present on the distributed FS.

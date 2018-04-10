@@ -208,6 +208,28 @@ minion event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_minion:: enable_legacy_startup_events
+
+``enable_legacy_startup_events``
+--------------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``True``
+
+When a minion starts up it sends a notification on the event bus with a tag
+that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+the minion also sends a similar event with an event tag like this:
+`minion_start`. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set `enable_legacy_startup_events: False` in the
+minion config to ensure only the `salt/minion/<minion_id>/start` events are
+sent. Beginning with the `Neon` Salt release this option will default to
+`False`
+
+.. code-block:: yaml
+
+    enable_legacy_startup_events: True
+
 .. conf_minion:: master_failback
 
 ``master_failback``
@@ -785,6 +807,35 @@ A value of 10 minutes is a reasonable default.
 .. code-block:: yaml
 
     grains_refresh_every: 0
+
+.. conf_minion:: fibre_channel_grains
+
+``fibre_channel_grains``
+------------------------
+
+Default: ``False``
+
+The ``fibre_channel_grains`` setting will enable the ``fc_wwn`` grain for
+Fibre Channel WWN's on the minion. Since this grain is expensive, it is
+disabled by default.
+
+.. code-block:: yaml
+
+    fibre_channel_grains: True
+
+.. conf_minion:: iscsi_grains
+
+``iscsi_grains``
+------------------------
+
+Default: ``False``
+
+The ``iscsi_grains`` setting will enable the ``iscsi_iqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    iscsi_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -2497,7 +2548,7 @@ The grains that should be sent to the master on authentication to decide if
 the minion's key should be accepted automatically.
 
 Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
-documentation for more infomation.
+documentation for more information.
 
 .. code-block:: yaml
 

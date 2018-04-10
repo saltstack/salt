@@ -1191,6 +1191,33 @@ def get_tenancy(vm_):
     )
 
 
+def get_imageid(vm_):
+    '''
+    Returns the ImageId to use
+    '''
+    image = config.get_cloud_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
+    if image.startswith('ami-'):
+        return image
+    # a poor man's cache
+    if not hasattr(get_imageid, 'images'):
+        get_imageid.images = {}
+    elif image in get_imageid.images:
+        return get_imageid.images[image]
+    params = {'Action': 'DescribeImages',
+              'Filter.0.Name': 'name',
+              'Filter.0.Value.0': image}
+    # Query AWS, sort by 'creationDate' and get the last imageId
+    _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    image_id = sorted(aws.query(params, location=get_location(),
+                                 provider=get_provider(), opts=__opts__, sigver='4'),
+                      lambda i, j: cmp(_t(i), _t(j))
+                      )[-1]['imageId']
+    get_imageid.images[image] = image_id
+    return image_id
+
+
 def _get_subnetname_id(subnetname):
     '''
     Returns the SubnetId of a SubnetName to use
@@ -1774,7 +1801,7 @@ def request_instance(vm_=None, call=None):
         # Normal instances should have no prefix.
         spot_prefix = ''
 
-    image_id = vm_['image']
+    image_id = get_imageid(vm_)
     params[spot_prefix + 'ImageId'] = image_id
 
     userdata = None

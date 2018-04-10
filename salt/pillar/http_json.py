@@ -29,7 +29,7 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
 
 .. versionchanged:: 2018.3.0
 
-    If %s is present in the url, it will be automaticaly replaced by the minion_id:
+    If %s is present in the url, it will be automatically replaced by the minion_id:
 
     .. code-block:: yaml
 
