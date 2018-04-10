@@ -2369,6 +2369,9 @@ def template_clone(call=None, kwargs=None):
     template_name
         The name of the template to be cloned. Can be used instead of ``template_id``.
 
+    clone_images
+        Optional, defaults to False. Indicates if the images attached to the template should be cloned as well.
+
     CLI Example:
 
     .. code-block:: bash
