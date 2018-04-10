@@ -221,9 +221,6 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
     'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
-    if salt.utils.platform.is_windows() and output_encoding is None:
-        output_encoding = 'utf-8'
-
     env = {}
 
     if identity:
@@ -516,21 +513,9 @@ def add(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -664,21 +649,9 @@ def archive(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -790,21 +763,9 @@ def branch(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -903,21 +864,9 @@ def checkout(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1069,21 +1018,9 @@ def clone(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1210,21 +1147,9 @@ def commit(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1309,21 +1234,9 @@ def config_get(key,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1420,21 +1333,9 @@ def config_get_regexp(key,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1545,21 +1446,9 @@ def config_set(key,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1696,21 +1585,9 @@ def config_unset(key,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1819,21 +1696,9 @@ def current_branch(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -1891,21 +1756,9 @@ def describe(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2015,21 +1868,9 @@ def diff(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2111,6 +1952,64 @@ def diff(cwd,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=failhard,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
+def discard_local_changes(cwd,
+                          path='.',
+                          user=None,
+                          password=None,
+                          ignore_retcode=False,
+                          output_encoding=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
+
+    cwd
+        The path to the git checkout
+
+    path
+        path relative to cwd (defaults to ``.``)
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.discard_local_changes /path/to/repo
+        salt myminion git.discard_local_changes /path/to/repo path=foo
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git', 'checkout', '--', path]
+    # Checkout message goes to stderr
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
                     redirect_stderr=True,
                     output_encoding=output_encoding)['stdout']
 
@@ -2222,21 +2121,9 @@ def fetch(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2382,21 +2269,9 @@ def init(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2471,21 +2346,9 @@ def is_worktree(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2571,21 +2434,9 @@ def list_branches(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2642,21 +2493,9 @@ def list_tags(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2730,21 +2569,9 @@ def list_worktrees(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3116,21 +2943,9 @@ def ls_remote(cwd=None,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3237,21 +3052,9 @@ def merge(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3390,21 +3193,9 @@ def merge_base(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3559,21 +3350,9 @@ def merge_tree(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3689,21 +3468,9 @@ def pull(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3827,21 +3594,9 @@ def push(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3935,21 +3690,9 @@ def rebase(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4032,21 +3775,9 @@ def remote_get(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4151,21 +3882,9 @@ def remote_refs(url,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4275,21 +3994,9 @@ def remote_set(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4402,21 +4109,9 @@ def remotes(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4511,21 +4206,9 @@ def reset(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4609,21 +4292,9 @@ def rev_parse(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4701,21 +4372,9 @@ def revision(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4799,21 +4458,9 @@ def rm_(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4893,21 +4540,9 @@ def stash(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -4970,21 +4605,9 @@ def status(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -5125,21 +4748,9 @@ def submodule(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -5252,21 +4863,9 @@ def symbolic_ref(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -5447,21 +5046,9 @@ def worktree_add(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -5593,21 +5180,9 @@ def worktree_prune(cwd,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -5672,21 +5247,9 @@ def worktree_rm(cwd, user=None, output_encoding=None):
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
