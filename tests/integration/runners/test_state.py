@@ -6,10 +6,12 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import
 import errno
+import logging
 import os
 import shutil
 import signal
 import tempfile
+import time
 import textwrap
 import yaml
 import threading
@@ -23,6 +25,8 @@ from tests.support.paths import TMP
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
+
+log = logging.getLogger(__name__)
 
 
 class StateRunnerTest(ShellCase):
@@ -273,5 +277,87 @@ class OrchEventTest(ShellCase):
                         self.assertTrue('__jid__' in ret[job])
                     break
         finally:
+            del listener
+            signal.alarm(0)
+
+    def test_parallel_orchestrations(self):
+        '''
+        Test to confirm that the parallel state requisite works in orch
+        we do this by running 10 test.sleep's of 10 seconds, and insure it only takes roughly 10s
+        '''
+        self.write_conf({
+            'fileserver_backend': ['roots'],
+            'file_roots': {
+                'base': [self.base_env],
+            },
+        })
+
+        orch_sls = os.path.join(self.base_env, 'test_par_orch.sls')
+
+        with salt.utils.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                {% for count in range(1, 20) %}
+
+                sleep {{ count }}:
+                    module.run:
+                        - name: test.sleep
+                        - length: 10
+                        - parallel: True
+
+                {% endfor %}
+
+                sleep 21:
+                    module.run:
+                        - name: test.sleep
+                        - length: 10
+                        - parallel: True
+                        - require:
+                            - module: sleep 1
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'test_par_orch.sls')
+
+        listener = salt.utils.event.get_event(
+            'master',
+            sock_dir=self.master_opts['sock_dir'],
+            transport=self.master_opts['transport'],
+            opts=self.master_opts)
+
+        start_time = time.time()
+        jid = self.run_run_plus(
+            'state.orchestrate',
+            'test_par_orch',
+            __reload_config=True).get('jid')
+
+        if jid is None:
+            raise Exception('jid missing from run_run_plus output')
+
+        signal.signal(signal.SIGALRM, self.alarm_handler)
+        signal.alarm(self.timeout)
+        received = False
+        try:
+            while True:
+                event = listener.get_event(full=True)
+                if event is None:
+                    continue
+
+                # if we receive the ret for this job before self.timeout (60),
+                # the test is implicitly sucessful; if it were happening in serial it would be
+                # atleast 110 seconds.
+                if event['tag'] == 'salt/run/{0}/ret'.format(jid):
+                    received = True
+                    # Don't wrap this in a try/except. We want to know if the
+                    # data structure is different from what we expect!
+                    ret = event['data']['return']['data']['master']
+                    for state in ret:
+                        data = ret[state]
+                        # we expect each duration to be greater than 10s
+                        self.assertTrue(data['duration'] > 10000)
+                    break
+
+                # self confirm that the total runtime is roughly 30s (left 10s for buffer)
+                self.assertTrue((time.time() - start_time) < 40)
+        finally:
+            self.assertTrue(received)
             del listener
             signal.alarm(0)
