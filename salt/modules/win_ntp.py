@@ -48,7 +48,7 @@ def set_servers(*servers):
     update_cmd = ['W32tm', '/config', '/update']
 
     for cmd in server_cmd, reliable_cmd, update_cmd:
-        ret = __salt__['cmd.run'](cmd, python_shell=False)
+        __salt__['cmd.run'](cmd, python_shell=False)
 
     if not sorted(list(servers)) == get_servers():
         return False
