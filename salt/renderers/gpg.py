@@ -218,6 +218,7 @@ from subprocess import Popen, PIPE
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
@@ -269,12 +270,11 @@ def _decrypt_ciphertext(cipher):
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    if translate_newlines:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
-        except UnicodeDecodeError:
-            # ciphertext is binary
-            pass
+    try:
+        cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
+    except UnicodeDecodeError:
+        # ciphertext is binary
+        pass
     cipher = salt.utils.stringutils.to_bytes(cipher)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
            '--no-tty', '-d']
