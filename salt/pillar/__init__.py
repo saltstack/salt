@@ -718,7 +718,7 @@ class Pillar(object):
             msg = 'Rendering SLS \'{0}\' failed, render error:\n{1}'.format(
                 sls, exc
             )
-            log.critical(msg)
+            log.critical(msg, exc_info=True)
             if self.opts.get('pillar_safe_render_error', True):
                 errors.append(
                     'Rendering SLS \'{0}\' failed. Please see master log for '
