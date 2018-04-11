@@ -48,6 +48,20 @@ serialized. See the documentation for the new ``serializer_opts`` option in the
 information.
 
 
+:py:func:`file.patch <salt.sates.file.patch>` State Rewritten
+-------------------------------------------------------------
+
+The :py:func:`file.patch <salt.sates.file.patch>` state has been rewritten with
+several new features:
+
+- Patch sources can now be remote files instead of only ``salt://`` URLs
+- Multi-file patches are now supported
+- Patch files can be templated
+
+In addition, it is no longer necessary to specify what the hash of the patched
+file should be.
+
+
 Deprecations
 ------------
 
