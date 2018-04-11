@@ -135,10 +135,7 @@ def __get_conn():
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
-    if 'virt.connect' in __opts__:
-        conn_str = __opts__['virt.connect']
-    else:
-        conn_str = 'qemu:///system'
+    conn_str = __salt__['config.get']('virt.connect', None)
 
     conn_func = {
         'esxi': [libvirt.openAuth, [__esxi_uri(),
