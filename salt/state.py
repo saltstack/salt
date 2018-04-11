@@ -42,6 +42,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
     SaltRenderError,
@@ -57,7 +58,6 @@ import salt.utils.yamlloader as yamlloader
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -179,7 +179,7 @@ def _calculate_fake_duration():
     start_time = local_start_time.time().isoformat()
     delta = (utc_finish_time - utc_start_time)
     # duration in milliseconds.microseconds
-    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
 
     return start_time, duration
 
@@ -1710,27 +1710,20 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, cdata, low):
+    def _call_parallel_target(self, name, cdata, low):
         '''
         The target function to call that will create the parallel thread/process
         '''
+        # we need to re-record start/end duration here because it is impossible to
+        # correctly calculate further down the chain
+        utc_start_time = datetime.datetime.utcnow()
+
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
         except Exception:
             trb = traceback.format_exc()
-            # There are a number of possibilities to not have the cdata
-            # populated with what we might have expected, so just be smart
-            # enough to not raise another KeyError as the name is easily
-            # guessable and fallback in all cases to present the real
-            # exception to the user
-            if len(cdata['args']) > 0:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
-                name = low.get('name', low.get('__id__'))
             ret = {
                 'result': False,
                 'name': name,
@@ -1738,6 +1731,13 @@ class State(object):
                 'comment': 'An exception occurred in this state: {0}'.format(
                     trb)
             }
+
+        utc_finish_time = datetime.datetime.utcnow()
+        delta = (utc_finish_time - utc_start_time)
+        # duration in milliseconds.microseconds
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        ret['duration'] = duration
+
         troot = os.path.join(self.opts['cachedir'], self.jid)
         tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
@@ -1748,17 +1748,26 @@ class State(object):
                 # and the attempt, we are safe to pass
                 pass
         with salt.utils.files.fopen(tfile, 'wb+') as fp_:
-            fp_.write(msgpack.dumps(ret))
+            fp_.write(msgpack_serialize(ret))
 
     def call_parallel(self, cdata, low):
         '''
         Call the state defined in the given cdata in parallel
         '''
+        # There are a number of possibilities to not have the cdata
+        # populated with what we might have expected, so just be smart
+        # enough to not raise another KeyError as the name is easily
+        # guessable and fallback in all cases to present the real
+        # exception to the user
+        name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+        if not name:
+            name = low.get('name', low.get('__id__'))
+
         proc = salt.utils.process.MultiprocessingProcess(
                 target=self._call_parallel_target,
-                args=(cdata, low))
+                args=(name, cdata, low))
         proc.start()
-        ret = {'name': cdata['args'][0],
+        ret = {'name': name,
                 'result': None,
                 'changes': {},
                 'comment': 'Started in a separate process',
@@ -1903,12 +1912,10 @@ class State(object):
             # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
-            if len(cdata['args']) > 0:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
+            name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+            if not name:
                 name = low.get('name', low.get('__id__'))
+
             ret = {
                 'result': False,
                 'name': name,
@@ -1949,7 +1956,7 @@ class State(object):
         ret['start_time'] = local_start_time.time().isoformat()
         delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2117,7 +2124,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.01)
+            time.sleep(0.0001)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2196,7 +2203,7 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = msgpack_deserialize(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
@@ -2309,15 +2316,17 @@ class State(object):
                 run_dict = self.pre
             else:
                 run_dict = running
+
+            while True:
+                if self.reconcile_procs(run_dict):
+                    break
+                time.sleep(0.0001)
+
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
                     req_stats.add('unmet')
                     continue
-                if run_dict[tag].get('proc'):
-                    # Run in parallel, first wait for a touch and then recheck
-                    time.sleep(0.01)
-                    return self.check_requisite(low, running, chunks, pre)
                 if r_state.startswith('onfail'):
                     if run_dict[tag]['result'] is True:
                         req_stats.add('onfail')  # At least one state is OK
