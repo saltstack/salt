@@ -22,6 +22,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -57,11 +58,29 @@ def _pshell_json(cmd, cwd=None):
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json'.format(cmd)
     log.debug('PowerShell: %s', cmd)
-    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd)
+
+    if 'pid' in ret:
+        del ret['pid']
+
+    if ret.get('stderr', ''):
+        error = ret['stderr'].splitlines()[0]
+        raise CommandExecutionError(error, info=ret)
+
+    if 'retcode' not in ret or ret['retcode'] != 0:
+        # run_all logs an error to log.error, fail hard back to the user
+        raise CommandExecutionError(
+            'Issue executing PowerShell {0}'.format(cmd), info=ret)
+
+    # Sometimes Powershell returns an empty string, which isn't valid JSON
+    if ret['stdout'] == '':
+        ret['stdout'] = '{}'
+
     try:
-        ret = salt.utils.json.loads(ret, strict=False)
+        ret = salt.utils.json.loads(ret['stdout'], strict=False)
     except ValueError:
-        log.debug('Json not returned')
+        raise CommandExecutionError(
+            'No JSON results from PowerShell', info=ret)
     return ret
 
 
@@ -104,7 +123,10 @@ def list_installed():
           '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue ' \
           '| Select DisplayName,Name,Installed'
-    features = _pshell_json(cmd)
+    try:
+        features = _pshell_json(cmd)
+    except CommandExecutionError:
+        raise
 
     ret = {}
     for entry in features:
@@ -203,7 +225,10 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
           .format(command, _cmd_quote(feature), management_tools,
                   '-IncludeAllSubFeature' if recurse else '',
                   '' if source is None else '-Source {0}'.format(source))
-    out = _pshell_json(cmd)
+    try:
+        out = _pshell_json(cmd)
+    except CommandExecutionError:
+        raise
 
     # Uninstall items in the exclude list
     # The Install-WindowsFeature command doesn't have the concept of an exclude
@@ -341,7 +366,12 @@ def remove(feature, remove_payload=False, restart=False):
           .format(command, _cmd_quote(feature), management_tools,
                   _remove_payload,
                   '-Restart' if restart else '')
-    out = _pshell_json(cmd)
+    try:
+        out = _pshell_json(cmd)
+    except CommandExecutionError as exc:
+        if 'ArgumentNotValid' in exc.message:
+            raise CommandExecutionError('Invalid Feature Name', info=exc.info)
+        raise
 
     # Results are stored in a list of dictionaries in `FeatureResult`
     if out['FeatureResult']:
