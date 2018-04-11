@@ -383,7 +383,7 @@ class OrchEventTest(ShellCase):
 
         orch_sls = os.path.join(self.base_env, 'test_par_orch.sls')
 
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 {% for count in range(1, 20) %}
 
