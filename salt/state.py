@@ -54,6 +54,7 @@ from salt.utils.locales import sdecode
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
+import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
@@ -2156,7 +2157,7 @@ class State(object):
                     tries = 0
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
-                            pdat = msgpack.loads(fp_.read())
+                            pdat = msgpack_deserialize(fp_.read())
                         except msgpack.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
