@@ -103,6 +103,7 @@ def orchestrate(mods,
             saltenv=saltenv,
             pillarenv=pillarenv,
             pillar_enc=pillar_enc,
+            __pub_jid=orchestration_jid,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = __utils__['state.check_result'](ret['data'])
