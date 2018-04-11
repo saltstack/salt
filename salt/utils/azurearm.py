@@ -125,7 +125,7 @@ def _determine_auth(**kwargs):
 
     subscription_id = salt.utils.stringutils.to_str(kwargs['subscription_id'])
 
-    return credentials, subscription_id.encode(), cloud_env
+    return credentials, subscription_id, cloud_env
 
 
 def get_client(client_type, **kwargs):
