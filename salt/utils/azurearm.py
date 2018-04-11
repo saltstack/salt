@@ -31,6 +31,7 @@ import sys
 import salt.config
 import salt.ext.six as six
 import salt.loader
+import salt.utils.stringutils
 import salt.version
 from salt.exceptions import (
     SaltInvocationError, SaltSystemExit
@@ -122,7 +123,7 @@ def _determine_auth(**kwargs):
             'A subscription_id must be specified'
         )
 
-    subscription_id = kwargs['subscription_id']
+    subscription_id = salt.utils.stringutils.to_str(kwargs['subscription_id'])
 
     return credentials, subscription_id.encode(), cloud_env
 
