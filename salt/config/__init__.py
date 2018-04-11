@@ -1665,6 +1665,7 @@ DEFAULT_MASTER_OPTS = {
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'master_tops': {},
+    'master_tops_first': False,
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
