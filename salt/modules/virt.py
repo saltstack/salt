@@ -108,6 +108,15 @@ def __get_conn():
          - http://libvirt.org/uri.html#URI_config
         '''
         connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection is not None:
+            salt.utils.warn_until(
+                'Sodium',
+                '\'libvirt.connection\' configuration property has been deprecated in favor '
+                'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
+                '{version}.'
+            )
+
+        connection = __salt__['config.get']('virt:connection:uri', connection)
         return connection
 
     def __esxi_auth():
@@ -136,6 +145,24 @@ def __get_conn():
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
     conn_str = __salt__['config.get']('virt.connect', None)
+    if conn_str is not None:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'virt.connect\' configuration property has been deprecated in favor '
+            'of \'virt:connection:uri\'. \'virt.connect\' will stop being used in '
+            '{version}.'
+        )
+    else:
+        conn_str = __salt__['config.get']('libvirt:connection', None)
+        if conn_str is not None:
+            salt.utils.warn_until(
+                'Sodium',
+                '\'libvirt.connection\' configuration property has been deprecated in favor '
+                'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
+                '{version}.'
+            )
+
+    conn_str = __salt__['config.get']('virt:connection:uri', conn_str)
 
     conn_func = {
         'esxi': [libvirt.openAuth, [__esxi_uri(),
