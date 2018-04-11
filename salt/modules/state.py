@@ -2344,9 +2344,10 @@ def event(tagmatch='*',
                 )
                 sys.stdout.flush()
 
-            if count > -1:
+            if count > 0:
                 count -= 1
                 log.debug('Remaining event matches: %s', count)
+
             if count == 0:
                 break
         else:

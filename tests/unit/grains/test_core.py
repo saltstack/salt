@@ -889,4 +889,6 @@ SwapTotal:       4789244 kB'''
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
-            self.assertEqual(fqdns, ret)
+            self.assertIn('fqdns', fqdns)
+            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
+            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))

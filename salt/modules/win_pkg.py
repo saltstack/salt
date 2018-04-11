@@ -1882,7 +1882,7 @@ def get_repo_data(saltenv='base'):
         serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
-                repodata = salt.utils.data.decode(serial.loads(repofile.read(), encoding='utf-8') or {})
+                repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
                 __context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:

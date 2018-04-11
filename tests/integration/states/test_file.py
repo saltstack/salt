@@ -2182,7 +2182,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'salt_utf8_tests',
             '{0}.txt'.format(korean_1)
         )
-        test_file_encoded = salt.utils.stringutils.to_str(test_file)
+        test_file_encoded = test_file
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template_lines = [
@@ -2247,46 +2247,45 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ' 한국어 시험\n'
                 '+마지막 행\n'
             )
-            diff = salt.utils.stringutils.to_str(diff)
             # future_lint: disable=blacklisted-function
             expected = {
-                str('file_|-some-utf8-file-create_|-{0}_|-managed').format(test_file_encoded): {
+                'file_|-some-utf8-file-create_|-{0}_|-managed'.format(test_file_encoded): {
                     'name': test_file_encoded,
                     '__run_num__': 0,
-                    'comment': str('File {0} updated').format(test_file_encoded),
+                    'comment': 'File {0} updated'.format(test_file_encoded),
                     'diff': 'New file'
                 },
-                str('file_|-some-utf8-file-create2_|-{0}_|-managed').format(test_file_encoded): {
+                'file_|-some-utf8-file-create2_|-{0}_|-managed'.format(test_file_encoded): {
                     'name': test_file_encoded,
                     '__run_num__': 1,
-                    'comment': str('File {0} updated').format(test_file_encoded),
+                    'comment': 'File {0} updated'.format(test_file_encoded),
                     'diff': diff
                 },
-                str('file_|-some-utf8-file-exists_|-{0}_|-exists').format(test_file_encoded): {
+                'file_|-some-utf8-file-exists_|-{0}_|-exists'.format(test_file_encoded): {
                     'name': test_file_encoded,
                     '__run_num__': 2,
-                    'comment': str('Path {0} exists').format(test_file_encoded)
+                    'comment': 'Path {0} exists'.format(test_file_encoded)
                 },
-                str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded): {
-                    'name': str('cat "{0}"').format(test_file_encoded),
+                'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded): {
+                    'name': 'cat "{0}"'.format(test_file_encoded),
                     '__run_num__': 3,
-                    'comment': str('Command "cat "{0}"" run').format(test_file_encoded),
-                    'stdout': str('{0}\n{1}\n{2}').format(
-                        salt.utils.stringutils.to_str(korean_2),
-                        salt.utils.stringutils.to_str(korean_1),
-                        salt.utils.stringutils.to_str(korean_3),
+                    'comment': 'Command "cat "{0}"" run'.format(test_file_encoded),
+                    'stdout': '{0}\n{1}\n{2}'.format(
+                        korean_2,
+                        korean_1,
+                        korean_3,
                     )
                 },
-                str('cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run').format(test_file_encoded): {
-                    'name': str('rm -f "{0}"').format(test_file_encoded),
+                'cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run'.format(test_file_encoded): {
+                    'name': 'rm -f "{0}"'.format(test_file_encoded),
                     '__run_num__': 4,
-                    'comment': str('Command "rm -f "{0}"" run').format(test_file_encoded),
+                    'comment': 'Command "rm -f "{0}"" run'.format(test_file_encoded),
                     'stdout': ''
                 },
-                str('file_|-some-utf8-file-removed_|-{0}_|-missing').format(test_file_encoded): {
+                'file_|-some-utf8-file-removed_|-{0}_|-missing'.format(test_file_encoded): {
                     'name': test_file_encoded,
                     '__run_num__': 5,
-                    'comment': str('Path {0} is missing').format(test_file_encoded),
+                    'comment': 'Path {0} is missing'.format(test_file_encoded),
                 }
             }
             # future_lint: enable=blacklisted-function
@@ -2308,7 +2307,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
             self.assertEqual(expected, result)
             # future_lint: disable=blacklisted-function
-            cat_id = str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded)
+            cat_id = 'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded)
             # future_lint: enable=blacklisted-function
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(result[cat_id]['stdout']),

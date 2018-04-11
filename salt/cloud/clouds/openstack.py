@@ -708,7 +708,7 @@ def create(vm_):
     try:
         ip_address = __utils__['cloud.wait_for_fun'](
             __query_node,
-            update_args=(vm_,)
+            vm_=vm_
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
