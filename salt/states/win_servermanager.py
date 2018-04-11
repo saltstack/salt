@@ -13,6 +13,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import salt modules
 import salt.utils.data
 import salt.utils.versions
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -111,7 +112,7 @@ def installed(name,
               - XPS-Viewer
               - SNMP-Service
             - exclude:
-              - Web-Service
+              - Web-Server
     '''
     if 'force' in kwargs:
         salt.utils.versions.warn_until(
@@ -298,8 +299,11 @@ def removed(name, features=None, remove_payload=False, restart=False):
         return ret
 
     # Remove the features
-    status = __salt__['win_servermanager.remove'](
-        features, remove_payload=remove_payload, restart=restart)
+    try:
+        status = __salt__['win_servermanager.remove'](
+            features, remove_payload=remove_payload, restart=restart)
+    except CommandExecutionError:
+        raise
 
     ret['result'] = status['Success']
 
