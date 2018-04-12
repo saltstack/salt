@@ -46,6 +46,7 @@ import logging
 import time
 
 # Import Salt libs
+import salt.utils.data
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
@@ -140,7 +141,7 @@ def search(filter,      # pylint: disable=C0103
     if attrs == '':  # Allow command line 'return all' attr override
         attrs = None
     elif attrs is None:
-        attrs = _config('attrs')
+        attrs = salt.utils.data.decode(_config('attrs'), to_str=True)
     _ldap = _connect(**kwargs)
     start = time.time()
     log.debug(
