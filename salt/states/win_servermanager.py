@@ -299,11 +299,8 @@ def removed(name, features=None, remove_payload=False, restart=False):
         return ret
 
     # Remove the features
-    try:
-        status = __salt__['win_servermanager.remove'](
-            features, remove_payload=remove_payload, restart=restart)
-    except CommandExecutionError:
-        raise
+    status = __salt__['win_servermanager.remove'](
+        features, remove_payload=remove_payload, restart=restart)
 
     ret['result'] = status['Success']
 
