@@ -1,5 +1,5 @@
 test subset:
   salt.state:
-    - tgt: '*'
+    - tgt: '*minion'
     - subset: 1
     - sls: test

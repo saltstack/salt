@@ -65,6 +65,7 @@ import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.yaml
 from salt.utils.versions import LooseVersion
 from salt.ext import six
@@ -197,9 +198,11 @@ def get_conn(Client=None):
     if Client is None:
         Client = ComputeManagementClient
 
-    subscription_id = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    subscription_id = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
 
     tenant = config.get_cloud_config_value(
