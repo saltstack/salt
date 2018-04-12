@@ -60,6 +60,7 @@ def _pshell_json(cmd, cwd=None):
     log.debug('PowerShell: %s', cmd)
     ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd)
 
+    ret.pop()
     if 'pid' in ret:
         del ret['pid']
 
@@ -123,10 +124,7 @@ def list_installed():
           '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue ' \
           '| Select DisplayName,Name,Installed'
-    try:
-        features = _pshell_json(cmd)
-    except CommandExecutionError:
-        raise
+    features = _pshell_json(cmd)
 
     ret = {}
     for entry in features:
@@ -225,10 +223,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
           .format(command, _cmd_quote(feature), management_tools,
                   '-IncludeAllSubFeature' if recurse else '',
                   '' if source is None else '-Source {0}'.format(source))
-    try:
-        out = _pshell_json(cmd)
-    except CommandExecutionError:
-        raise
+    out = _pshell_json(cmd)
 
     # Uninstall items in the exclude list
     # The Install-WindowsFeature command doesn't have the concept of an exclude
