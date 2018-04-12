@@ -222,7 +222,7 @@ def minion_mods(
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(
-        _module_dirs(opts, 'modules', 'module'),
+        _module_dirs(opts, 'modules', 'module') + _module_dirs(opts, 'utils'),
         opts,
         tag='module',
         pack={'__context__': context, '__utils__': utils, '__proxy__': proxy},
@@ -503,7 +503,7 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
         statemods = salt.loader.states(__opts__, None, None)
     '''
     ret = LazyLoader(
-        _module_dirs(opts, 'states'),
+        _module_dirs(opts, 'states') + _module_dirs(opts, 'utils'),
         opts,
         tag='states',
         pack={'__salt__': functions, '__proxy__': proxy or {}},

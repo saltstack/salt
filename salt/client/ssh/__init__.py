@@ -1514,6 +1514,7 @@ def mod_data(fsclient):
             'grains',
             'renderers',
             'returners',
+            'utils',
             ]
     ret = {}
     envs = fsclient.envs()
