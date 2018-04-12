@@ -602,12 +602,10 @@ class JinjaFiltersTest(object):
         '''
         test jinja filter path.which
         '''
-        _expected = {'ret': '/usr/bin/which'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.path_which'])
         self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
 
     def test_stringutils_contains_whitespace(self):
         '''
