@@ -167,7 +167,7 @@ def auth(profile=None, **connection_args):
         'Neon',
         (
             'The keystone module has been deprecated and will be removed in {version}.  '
-            'Please update to using the keystoneng module',
+            'Please update to using the keystoneng module'
         ),
     )
     kwargs = _get_kwargs(profile=profile, **connection_args)
