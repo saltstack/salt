@@ -2270,7 +2270,7 @@ def managed(name,
             )
 
         contents_are_binary = \
-            isinstance(use_contents, six.string_types) and '\0' in use_contents
+            isinstance(use_contents, six.string_types) and str('\0') in use_contents
         if contents_are_binary:
             contents = use_contents
         else:

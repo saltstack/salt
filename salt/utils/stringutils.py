@@ -186,7 +186,7 @@ def is_binary(data):
     '''
     if not data or not isinstance(data, six.string_types):
         return False
-    if '\0' in data:
+    if str('\0') in data:
         return True
 
     text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
