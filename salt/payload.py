@@ -151,7 +151,6 @@ class Serial(object):
                 except UnicodeDecodeError:
                     # msg contains binary data
                     ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, object_pairs_hook=OrderedDict)
->>>>>>> upstream/develop
             else:
                 ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             if six.PY3 and encoding is None and not raw:
