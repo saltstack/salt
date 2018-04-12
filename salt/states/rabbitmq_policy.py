@@ -36,10 +36,10 @@ def __virtual__():
 def present(name,
             pattern,
             definition,
-            apply_to=None,
             priority=0,
             vhost='/',
-            runas=None):
+            runas=None,
+            apply_to=None):
     '''
     Ensure the RabbitMQ policy exists.
 
@@ -53,12 +53,12 @@ def present(name,
         A json dict describing the policy
     priority
         Priority (defaults to 0)
-    apply_to
-        Apply policy to 'queues', 'exchanges' or 'all' (default to 'all')
     vhost
         Virtual host to apply to (defaults to '/')
     runas
         Name of the user to run the command as
+    apply_to
+        Apply policy to 'queues', 'exchanges' or 'all' (default to 'all')
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     result = {}
@@ -90,9 +90,9 @@ def present(name,
                                                      name,
                                                      pattern,
                                                      definition,
-                                                     apply_to,
                                                      priority=priority,
-                                                     runas=runas)
+                                                     runas=runas,
+                                                     apply_to=apply_to)
     elif updates:
         ret['changes'].update({'old': policy, 'new': updates})
         if __opts__['test']:
@@ -103,9 +103,9 @@ def present(name,
                                                      name,
                                                      pattern,
                                                      definition,
-                                                     apply_to,
                                                      priority=priority,
-                                                     runas=runas)
+                                                     runas=runas,
+                                                     apply_to=apply_to)
 
     if 'Error' in result:
         ret['result'] = False
