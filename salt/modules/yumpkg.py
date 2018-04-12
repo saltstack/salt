@@ -2748,7 +2748,8 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Build a list of keys to be deleted
     todelete = []
-    for key in repo_opts:
+    # list() of keys because the dict could be shrinking in the for loop.
+    for key in list(repo_opts):
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
             todelete.append(key)

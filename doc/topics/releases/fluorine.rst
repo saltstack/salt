@@ -193,3 +193,40 @@ The ``vault`` utils module had the following changes:
 - Support for specifying Vault connection data within a 'profile' has been removed.
   Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
   details on the new configuration schema.
+
+=======
+SaltSSH major updates
+=====================
+
+SaltSSH now works across different major Python versions. Python 2.7 ~ Python 3.x
+are now supported transparently. Requirement is, however, that the SaltMaster should
+have installed Salt, including all related dependencies for Python 2 and Python 3.
+Everything needs to be importable from the respective Python environment.
+
+SaltSSH can bundle up an arbitrary version of Salt. If there would be an old box for
+example, running an outdated and unsupported Python 2.6, it is still possible from
+a SaltMaster with Python 3.5 or newer to access it. This feature requires an additional
+configuration in /etc/salt/master as follows:
+
+
+.. code-block:: yaml
+
+       ssh_ext_alternatives:
+           2016.3:                     # Namespace, can be actually anything.
+               py-version: [2, 6]      # Constraint to specific interpreter version
+               path: /opt/2016.3/salt  # Main Salt installation
+               dependencies:           # List of dependencies and their installation paths
+                 jinja2: /opt/jinja2
+                 yaml: /opt/yaml
+                 tornado: /opt/tornado
+                 msgpack: /opt/msgpack
+                 certifi: /opt/certifi
+                 singledispatch: /opt/singledispatch.py
+                 singledispatch_helpers: /opt/singledispatch_helpers.py
+                 markupsafe: /opt/markupsafe
+                 backports_abc: /opt/backports_abc.py
+
+It is also possible to use several alternative versions of Salt. You can for instance generate
+a minimal tarball using runners and include that. But this is only possible, when such specific
+Salt version is also available on the Master machine, although does not need to be directly
+installed together with the older Python interpreter.
