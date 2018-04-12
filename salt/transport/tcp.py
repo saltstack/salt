@@ -1206,7 +1206,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             clients = self.present[id_]
             clients.add(client)
         else:
-            self.present[id_] = set([client])
+            self.present[id_] = {client}
             if self.presence_events:
                 data = {'new': [id_],
                         'lost': []}

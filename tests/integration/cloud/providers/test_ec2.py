@@ -220,10 +220,10 @@ class EC2Test(ShellCase):
         # TODO: winexe calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
         self.override_profile_config(
-            'ec2-win2012-test',
+            'ec2-win2012r2-test',
             {
                 'use_winrm': False,
-                'user_data': self.copy_file('windows-firewall-winexe.ps1'),
+                'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
@@ -235,9 +235,9 @@ class EC2Test(ShellCase):
         winrm (classic)
         '''
         self.override_profile_config(
-            'ec2-win2016-test',
+            'ec2-win2012r2-test',
             {
-                'user_data': self.copy_file('windows-firewall.ps1'),
+                'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
             }
@@ -257,7 +257,7 @@ class EC2Test(ShellCase):
             'ec2-win2016-test',
             {
                 'use_winrm': False,
-                'user_data': self.copy_file('windows-firewall-winexe.ps1'),
+                'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
@@ -271,7 +271,7 @@ class EC2Test(ShellCase):
         self.override_profile_config(
             'ec2-win2016-test',
             {
-                'user_data': self.copy_file('windows-firewall.ps1'),
+                'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
             }

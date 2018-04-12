@@ -105,6 +105,7 @@ import salt.config as config
 import salt.loader
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.ext.six as six
 import salt.version
@@ -279,9 +280,11 @@ def get_conn(client_type):
     '''
     conn_kwargs = {}
 
-    conn_kwargs['subscription_id'] = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    conn_kwargs['subscription_id'] = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
 
     cloud_env = config.get_cloud_config_value(

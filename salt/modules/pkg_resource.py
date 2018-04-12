@@ -311,8 +311,7 @@ def format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = set(['epoch', 'version', 'release', 'arch',
-                              'install_date', 'install_date_time_t'])
+        requested_attr = {'epoch', 'version', 'release', 'arch', 'install_date', 'install_date_time_t'}
 
         if attr != 'all':
             requested_attr &= set(attr + ['version'])

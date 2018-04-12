@@ -9,15 +9,19 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import subprocess
 import os
+import plistlib
 import time
 
 # Import Salt Libs
+import salt.modules.cmdmod
 import salt.utils.args
+import salt.utils.decorators as decorators
+import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
 
@@ -227,3 +231,131 @@ def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
             return True
         time.sleep(1)
     return False
+
+
+def launchctl(sub_cmd, *args, **kwargs):
+    '''
+    Run a launchctl command and raise an error if it fails
+
+    Args: additional args are passed to launchctl
+        sub_cmd (str): Sub command supplied to launchctl
+
+    Kwargs: passed to ``cmd.run_all``
+        return_stdout (bool): A keyword argument. If true return the stdout of
+            the launchctl command
+
+    Returns:
+        bool: ``True`` if successful
+        str: The stdout of the launchctl command if requested
+
+    Raises:
+        CommandExecutionError: If command fails
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.launchctl('debug', 'org.cups.cupsd')
+    '''
+    # Get return type
+    return_stdout = kwargs.pop('return_stdout', False)
+
+    # Construct command
+    cmd = ['launchctl', sub_cmd]
+    cmd.extend(args)
+
+    # Run command
+    kwargs['python_shell'] = False
+    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+
+    # Raise an error or return successful result
+    if ret['retcode']:
+        out = 'Failed to {0} service:\n'.format(sub_cmd)
+        out += 'stdout: {0}\n'.format(ret['stdout'])
+        out += 'stderr: {0}\n'.format(ret['stderr'])
+        out += 'retcode: {0}'.format(ret['retcode'])
+        raise CommandExecutionError(out)
+    else:
+        return ret['stdout'] if return_stdout else True
+
+
+def _available_services():
+    '''
+    This is a helper function needed for testing. We are using the memoziation
+    decorator on the `available_services` function, which causes the function
+    to run once and then return the results of the first run on subsequent
+    calls. This causes problems when trying to test the functionality of the
+    `available_services` function.
+    '''
+    launchd_paths = [
+        '/Library/LaunchAgents',
+        '/Library/LaunchDaemons',
+        '/System/Library/LaunchAgents',
+        '/System/Library/LaunchDaemons',
+    ]
+    _available_services = dict()
+    for launch_dir in launchd_paths:
+        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
+            for file_name in files:
+
+                # Must be a plist file
+                if not file_name.endswith('.plist'):
+                    continue
+
+                # Follow symbolic links of files in _launchd_paths
+                file_path = os.path.join(root, file_name)
+                true_path = os.path.realpath(file_path)
+
+                # ignore broken symlinks
+                if not os.path.exists(true_path):
+                    continue
+
+                try:
+                    # This assumes most of the plist files
+                    # will be already in XML format
+                    plist = plistlib.readPlist(true_path)
+
+                except Exception:
+                    # If plistlib is unable to read the file we'll need to use
+                    # the system provided plutil program to do the conversion
+                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
+                        true_path)
+                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
+                    if six.PY2:
+                        plist = plistlib.readPlistFromString(plist_xml)
+                    else:
+                        plist = plistlib.loads(
+                            salt.utils.stringutils.to_bytes(plist_xml))
+
+                try:
+                    _available_services[plist.Label.lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+                except AttributeError:
+                    # Handle malformed plist files
+                    _available_services[os.path.basename(file_name).lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+
+    return _available_services
+
+
+@decorators.memoize
+def available_services():
+    '''
+    Return a dictionary of all available services on the system
+
+    Returns:
+        dict: All available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.available_services()
+    '''
+    return _available_services()
