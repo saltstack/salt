@@ -30,45 +30,94 @@ Master Configuration
           follow_dir_links: False
           keep_newline: True
 
-    node_groups:
-      internal_servers: 'L@bob,stuart,kevin'
+The ``root_dir`` parameter is required and points to the directory where files
+for each host are stored. The ``follow_dir_links`` parameter is optional and
+defaults to False. If ``follow_dir_links`` is set to True, this external pillar
+will follow symbolic links to other directories.
 
-Pillar Configuration
---------------------
+.. warning::
+    Be careful when using ``follow_dir_links``, as a recursive symlink chain
+    will result in unexpected results.
 
-.. code-block:: bash
+.. versionchanged:: 2018.3.0
+    If ``root_dir`` is a relative path, it will be treated as relative to the
+    :conf_master:`pillar_roots` of the environment specified by
+    :conf_minion:`pillarenv`. If an environment specifies multiple
+    roots, this module will search for files relative to all of them, in order,
+    merging the results.
 
-    (salt-master) # tree /srv/ext_pillar
-    /srv/ext_pillar/
-    |-- hosts
-    |   |-- bob
-    |   |   |-- apache
-    |   |   |   `-- config.d
-    |   |   |       |-- 00_important.conf
-    |   |   |       `-- 20_bob_extra.conf
-    |   |   `-- corporate_app
-    |   |       `-- settings
-    |   |           `-- bob_settings.cfg
-    |   `-- kevin
-    |       |-- apache
-    |       |   `-- config.d
-    |       |       `-- 00_important.conf
-    |       `-- corporate_app
-    |           `-- settings
-    |               `-- kevin_settings.cfg
-    `-- nodegroups
-        `-- internal_servers
-            `-- corporate_app
-                `-- settings
-                    `-- common_settings.cfg
+If ``keep_newline`` is set to ``True``, then the pillar values for files ending
+in newlines will keep that newline. The default behavior is to remove the
+end-of-file newline. ``keep_newline`` should be turned on if the pillar data is
+intended to be used to deploy a file using ``contents_pillar`` with a
+:py:func:`file.managed <salt.states.file.managed>` state.
 
-Verify Pillar Data
-------------------
+.. versionchanged:: 2015.8.4
+    The ``raw_data`` parameter has been renamed to ``keep_newline``. In earlier
+    releases, ``raw_data`` must be used. Also, this parameter can now be a list
+    of globs, allowing for more granular control over which pillar values keep
+    their end-of-file newline. The globs match paths relative to the
+    directories named for minion IDs and nodegroups underneath the ``root_dir``
+    (see the layout examples in the below sections).
 
-.. code-block:: bash
+    .. code-block:: yaml
 
-    (salt-master) # salt bob pillar.items
-    bob:
+        ext_pillar:
+          - file_tree:
+              root_dir: /path/to/root/directory
+              keep_newline:
+                - files/testdir/*
+
+.. note::
+    In earlier releases, this documentation incorrectly stated that binary
+    files would not affected by the ``keep_newline`` configuration.  However,
+    this module does not actually distinguish between binary and text files.
+
+.. versionchanged:: 2017.7.0
+    Templating/rendering has been added. You can now specify a default render
+    pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    ``template`` must be set to ``True`` for templating to happen.
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+            root_dir: /path/to/root/directory
+            render_default: jinja|yaml
+            renderer_blacklist:
+              - gpg
+            renderer_whitelist:
+              - jinja
+              - yaml
+            template: True
+
+Assigning Pillar Data to Individual Hosts
+-----------------------------------------
+
+To configure pillar data for each host, this external pillar will recursively
+iterate over ``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and
+compile pillar data with each subdirectory as a dictionary key and each file
+as a value.
+
+For example, the following ``root_dir`` tree:
+
+.. code-block:: text
+
+    ./hosts/
+    ./hosts/test-host/
+    ./hosts/test-host/files/
+    ./hosts/test-host/files/testdir/
+    ./hosts/test-host/files/testdir/file1.txt
+    ./hosts/test-host/files/testdir/file2.txt
+    ./hosts/test-host/files/another-testdir/
+    ./hosts/test-host/files/another-testdir/symlink-to-file1.txt
+
+will result in the following pillar tree for minion with ID ``test-host``:
+
+.. code-block:: text
+
+    test-host:
         ----------
         apache:
             ----------
@@ -263,7 +312,7 @@ def ext_pillar(minion_id,
         Filesystem directory used as the root for pillar data (e.g.
         ``/srv/ext_pillar``)
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             If ``root_dir`` is a relative path, it will be treated as relative to the
             :conf_master:`pillar_roots` of the environment specified by
             :conf_minion:`pillarenv`. If an environment specifies multiple

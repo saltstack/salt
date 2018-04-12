@@ -282,6 +282,7 @@ from datetime import datetime   # python3 problem in the making?
 # Import salt libs
 import salt.loader
 import salt.payload
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
@@ -618,28 +619,34 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _find_keep_files(root, keep):
     '''
-    Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep) and part of exclude_pat
+    Compile a list of valid keep files (and directories).
     '''
-    removed = set()
     real_keep = set()
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
-                fn_ = os.path.dirname(fn_)
+                fn_ = os.path.abspath(os.path.dirname(fn_))
                 real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
                     break
+    return real_keep
+
+
+def _clean_dir(root, keep, exclude_pat):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep) and part of exclude_pat
+    '''
+    real_keep = _find_keep_files(root, keep)
+    removed = set()
 
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
@@ -1574,6 +1581,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_dir='',
             tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
@@ -1811,7 +1819,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -2038,6 +2046,22 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. code-block:: yaml
+
+            /etc/dhcp/dhcpd.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0755
+                - tmp_dir: '/etc/dhcp'
+                - contents: "# Managed by Salt"
+                - check_cmd: dhcpd -t -cf
+
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
         dependent on config file extension (e.g. the init-checkconf upstart
@@ -2100,7 +2124,7 @@ def managed(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2454,7 +2478,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2804,7 +2828,7 @@ def directory(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -4143,11 +4167,20 @@ def blockreplace(
         append_if_not_found=False,
         prepend_if_not_found=False,
         backup='.bak',
-        show_changes=True):
+        show_changes=True,
+        append_newline=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 2017.7.5,2018.3.1
+        ``append_newline`` argument added. Additionally, to improve
+        idempotence, if the string represented by ``marker_end`` is found in
+        the middle of the line, the content preceding the marker will be
+        removed when the block is replaced. This allows one to remove
+        ``append_newline: False`` from the SLS and have the block properly
+        replaced if the end of the content block is immediately followed by the
+        ``marker_end`` (i.e. no newline before the marker).
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
@@ -4232,41 +4265,54 @@ def blockreplace(
         See the ``source_hash`` parameter description for :mod:`file.managed
         <salt.states.file.managed>` function for more details and examples.
 
-    template
-        The named templating engine will be used to render the downloaded file.
-        Defaults to ``jinja``. The following templates are supported:
+    template : jinja
+        Templating engine to be used to render the downloaded file. The
+        following engines are supported:
 
-        - :mod:`cheetah<salt.renderers.cheetah>`
-        - :mod:`genshi<salt.renderers.genshi>`
-        - :mod:`jinja<salt.renderers.jinja>`
-        - :mod:`mako<salt.renderers.mako>`
-        - :mod:`py<salt.renderers.py>`
-        - :mod:`wempy<salt.renderers.wempy>`
+        - :mod:`cheetah <salt.renderers.cheetah>`
+        - :mod:`genshi <salt.renderers.genshi>`
+        - :mod:`jinja <salt.renderers.jinja>`
+        - :mod:`mako <salt.renderers.mako>`
+        - :mod:`py <salt.renderers.py>`
+        - :mod:`wempy <salt.renderers.wempy>`
 
     context
-        Overrides default context variables passed to the template.
+        Overrides default context variables passed to the template
 
     defaults
-        Default context passed to the template.
+        Default context passed to the template
 
-    append_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be appended to the file. Default is ``False``
+    append_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be appended to the file.
 
-    prepend_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be prepended to the file. Default is ``False``
+    prepend_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be prepended to the file.
 
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``
-        return a boolean if any changes were made
+    show_changes : True
+        Controls how changes are presented. If ``True``, the ``Changes``
+        section of the state return will contain a unified diff of the changes
+        made. If False, then it will contain a boolean (``True`` if any changes
+        were made, otherwise ``False``).
+
+    append_newline
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is unspecified, then a newline will
+        only be added to the content block if it does not already end in a
+        newline.
+
+        .. versionadded:: 2017.7.5,2018.3.1
 
     Example of usage with an accumulator and with a variable:
 
@@ -4368,17 +4414,25 @@ def blockreplace(
         for index, item in enumerate(text):
             content += six.text_type(item)
 
-    changes = __salt__['file.blockreplace'](
-        name,
-        marker_start,
-        marker_end,
-        content=content,
-        append_if_not_found=append_if_not_found,
-        prepend_if_not_found=prepend_if_not_found,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes
-    )
+    try:
+        changes = __salt__['file.blockreplace'](
+            name,
+            marker_start,
+            marker_end,
+            content=content,
+            append_if_not_found=append_if_not_found,
+            prepend_if_not_found=prepend_if_not_found,
+            backup=backup,
+            dry_run=__opts__['test'],
+            show_changes=show_changes,
+            append_newline=append_newline)
+    except Exception as exc:
+        log.exception('Encountered error managing block')
+        ret['comment'] = (
+            'Encountered error managing block: {0}. '
+            'See the log for details.'.format(exc)
+        )
+        return ret
 
     if changes:
         ret['pchanges'] = {'diff': changes}
@@ -5105,15 +5159,13 @@ def patch(name,
           dry_run_first=True,
           **kwargs):
     '''
-    Apply a patch to a file or directory.
+    Ensure that a patch has been applied to the specified file
 
     .. note::
-
-        A suitable ``patch`` executable must be available on the minion when
-        using this state function.
+        A suitable ``patch`` executable must be available on the minion
 
     name
-        The file or directory to which the patch will be applied.
+        The file to which the patch should be applied
 
     source
         The source patch to download to the minion, this source file must be
@@ -5303,9 +5355,14 @@ def copy(
         subdir=False,
         **kwargs):
     '''
-    If the source file exists on the system, copy it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the file defined by the ``source`` option exists on the minion, copy it
+    to the named path. The file will not be overwritten if it already exists,
+    unless the ``force`` option is set to ``True``.
+
+    .. note::
+        This state only copies files from one location on a minion to another
+        location on the same minion. For copying files from the master, use a
+        :py:func:`file.managed <salt.states.file.managed>` state.
 
     name
         The location of the file to copy to
@@ -5698,6 +5755,7 @@ def serialize(name,
               merge_if_exists=False,
               encoding=None,
               encoding_errors='strict',
+              serializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -5779,6 +5837,33 @@ def serialize(name,
 
         .. versionadded:: 2014.7.0
 
+    serializer_opts
+        Pass through options to serializer. For example:
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
+
+        The valid opts are the additional opts (i.e. not the data being
+        serialized) for the function used to serialize the data. Documentation
+        for the these functions can be found in the list below:
+
+        - For **yaml**: `yaml.dump()`_
+        - For **json**: `json.dumps()`_
+        - For **python**: `pprint.pformat()`_
+
+        .. _`yaml.dump()`: https://pyyaml.org/wiki/PyYAMLDocumentation
+        .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
+        .. _`pprint.pformat()`: https://docs.python.org/2/library/pprint.html#pprint.pformat
+
+        .. versionadded:: Fluorine
+
     For example, this state:
 
     .. code-block:: yaml
@@ -5816,14 +5901,20 @@ def serialize(name,
 
     name = os.path.expanduser(name)
 
-    default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
-                              'json.serialize': {'indent': 2,
-                                       'separators': (',', ': '),
-                                       'sort_keys': True}
-                              }
+    # Set some defaults
+    options = {
+        'yaml.serialize': {
+            'default_flow_style': False,
+        },
+        'json.serialize': {
+            'indent': 2,
+            'separators': (',', ': '),
+            'sort_keys': True,
+        }
+    }
     if encoding:
-        default_serializer_opts['yaml.serialize'].update({'allow_unicode': True})
-        default_serializer_opts['json.serialize'].update({'ensure_ascii': False})
+        options['yaml.serialize'].update({'allow_unicode': True})
+        options['json.serialize'].update({'ensure_ascii': False})
 
     ret = {'changes': {},
            'comment': '',
@@ -5871,6 +5962,11 @@ def serialize(name,
                 'result': False
                 }
 
+    if serializer_opts:
+        options.get(serializer_name, {}).update(
+            salt.utils.data.repack_dictlist(serializer_opts)
+        )
+
     if merge_if_exists:
         if os.path.isfile(name):
             if '{0}.deserialize'.format(formatter) not in __serializers__:
@@ -5890,7 +5986,7 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
+    contents = __serializers__[serializer_name](dataset, **options.get(serializer_name, {}))
 
     contents += '\n'
 

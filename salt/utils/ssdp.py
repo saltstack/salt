@@ -193,10 +193,10 @@ class SSDPFactory(SSDPBase):
 
             self.log.debug('Received "%s" from %s:%s', message, *addr)
             self._sendto(
-                str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
+                salt.utils.stringutils.to_bytes(str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
                     self.signature,
                     salt.utils.json.dumps(self.answer, _json_module=_json)
-                ),
+                )),
                 addr
             )
         else:

@@ -14,6 +14,9 @@ from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-buil
 
 UNICODE = '中国語 (繁体)'
 STR = BYTES = UNICODE.encode('utf-8')
+# This is an example of a unicode string with й constructed using two separate
+# code points. Do not modify it.
+EGGS = '\u044f\u0438\u0306\u0446\u0430'
 
 
 class StringutilsTestCase(TestCase):
@@ -91,6 +94,21 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_bytes(UNICODE, 'utf-8'), BYTES)
 
     def test_to_unicode(self):
+        self.assertEqual(
+            salt.utils.stringutils.to_unicode(
+                EGGS,
+                normalize=True
+            ),
+            'яйца'
+        )
+        self.assertNotEqual(
+            salt.utils.stringutils.to_unicode(
+                EGGS,
+                normalize=False
+            ),
+            'яйца'
+        )
+
         if six.PY3:
             self.assertEqual(salt.utils.stringutils.to_unicode('plugh'), 'plugh')
             self.assertEqual(salt.utils.stringutils.to_unicode('áéíóúý'), 'áéíóúý')
@@ -100,9 +118,12 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_unicode(str('xyzzy'), 'utf-8'), 'xyzzy')  # future lint: disable=blacklisted-function
             self.assertEqual(salt.utils.stringutils.to_unicode(BYTES, 'utf-8'), UNICODE)
 
-            # Test utf-8 fallback with ascii default encoding
+            # Test that unicode chars are decoded properly even when using
+            # locales which are not UTF-8 compatible
             with patch.object(builtins, '__salt_system_encoding__', 'ascii'):
-                self.assertEqual(salt.utils.stringutils.to_unicode(u'Ψ'.encode('utf-8')), u'Ψ')
+                self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
+            with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
+                self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
 
     def test_build_whitespace_split_regex(self):
         expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
@@ -149,3 +170,12 @@ class StringutilsTestCase(TestCase):
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2, marker=' <---')
         expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
         self.assertEqual(expected, context)
+
+    def test_expr_match(self):
+        val = 'foo/bar/baz'
+        # Exact match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, val))
+        # Glob match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
+        # Glob non-match
+        self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))

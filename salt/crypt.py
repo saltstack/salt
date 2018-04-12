@@ -84,8 +84,7 @@ def dropfile(cachedir, user=None):
     '''
     dfn = os.path.join(cachedir, '.dfn')
     # set a mask (to avoid a race condition on file creation) and store original.
-    mask = os.umask(191)
-    try:
+    with salt.utils.files.set_umask(0o277):
         log.info('Rotating AES key')
         if os.path.isfile(dfn):
             log.info('AES key rotation already requested')
@@ -103,8 +102,6 @@ def dropfile(cachedir, user=None):
                 os.chown(dfn, uid, -1)
             except (KeyError, ImportError, OSError, IOError):
                 pass
-    finally:
-        os.umask(mask)  # restore original umask
 
 
 def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
@@ -138,17 +135,19 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     if not os.access(keydir, os.W_OK):
         raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
-    cumask = os.umask(0o277)
-    if HAS_M2:
-        # if passphrase is empty or None use no cipher
-        if not passphrase:
-            gen.save_pem(priv, cipher=None)
+    with salt.utils.files.set_umask(0o277):
+        if HAS_M2:
+            # if passphrase is empty or None use no cipher
+            if not passphrase:
+                gen.save_pem(priv, cipher=None)
+            else:
+                gen.save_pem(
+                    priv,
+                    cipher='des_ede3_cbc',
+                    callback=lambda x: salt.utils.stringutils.to_bytes(passphrase))
         else:
-            gen.save_pem(priv, cipher='des_ede3_cbc', callback=lambda x: six.b(passphrase))
-    else:
-        with salt.utils.files.fopen(priv, 'wb+') as f:
-            f.write(gen.exportKey('PEM', passphrase))
-    os.umask(cumask)
+            with salt.utils.files.fopen(priv, 'wb+') as f:
+                f.write(gen.exportKey('PEM', passphrase))
     if HAS_M2:
         gen.save_pub_key(pub)
     else:
@@ -806,7 +805,7 @@ class AsyncAuth(object):
             pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
             if HAS_M2:
-                payload['token'] = pub.public_encrypt(six.b(self.token), RSA.pkcs1_oaep_padding)
+                payload['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)
@@ -845,7 +844,8 @@ class AsyncAuth(object):
             log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         if HAS_M2:
-            key_str = key.private_decrypt(six.b(payload['aes']), RSA.pkcs1_oaep_padding)
+            key_str = key.private_decrypt(payload['aes'],
+                                          RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             key_str = cipher.decrypt(payload['aes'])
@@ -876,7 +876,8 @@ class AsyncAuth(object):
         else:
             if 'token' in payload:
                 if HAS_M2:
-                    token = key.private_decrypt(six.b(payload['token']), RSA.pkcs1_oaep_padding)
+                    token = key.private_decrypt(payload['token'],
+                                                RSA.pkcs1_oaep_padding)
                 else:
                     token = cipher.decrypt(payload['token'])
                 return key_str, token

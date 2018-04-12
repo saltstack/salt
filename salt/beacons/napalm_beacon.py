@@ -3,7 +3,7 @@
 NAPALM functions
 ================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Watch NAPALM functions and fire events on specific triggers.
 

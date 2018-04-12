@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/loadbalancer/s
 
 Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers

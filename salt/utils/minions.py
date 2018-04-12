@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.roster
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -682,6 +683,13 @@ class CkMinions(object):
                 _res = check_func(expr, delimiter, greedy)
             else:
                 _res = check_func(expr, greedy)
+            _res['ssh_minions'] = False
+            if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
+                roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
+                ssh_minions = roster.targets(expr, tgt_type)
+                if ssh_minions:
+                    _res['minions'].extend(ssh_minions)
+                    _res['ssh_minions'] = True
         except Exception:
             log.exception(
                     'Failed matching available minions with %s pattern: %s',
@@ -710,21 +718,11 @@ class CkMinions(object):
         _res = self.check_minions(v_expr, v_matcher)
         return set(_res['minions'])
 
-    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = self._expand_matching(valid)
         if minions is None:

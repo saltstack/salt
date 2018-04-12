@@ -13,6 +13,7 @@ import os
 import shlex
 import re
 import time
+import unicodedata
 
 # Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
@@ -40,10 +41,11 @@ def to_bytes(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -63,10 +65,11 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.decode(encoding, errors)
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.decode('utf-8', errors)
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return s.decode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
@@ -76,38 +79,43 @@ def to_str(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
-def to_unicode(s, encoding=None, errors='strict'):
+def to_unicode(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    def _normalize(s):
+        return unicodedata.normalize('NFC', s) if normalize else s
+
     if six.PY3:
         if isinstance(s, str):
-            return s
+            return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
-            return to_str(s, encoding, errors)
+            return _normalize(to_str(s, encoding, errors))
         raise TypeError('expected str, bytes, or bytearray')
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
-            return s
+            return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             if encoding:
-                return s.decode(encoding, errors)
+                return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
+                    # Try UTF-8 first
+                    return _normalize(s.decode('utf-8', errors))
                 except UnicodeDecodeError:
-                    # Fall back to UTF-8
-                    return s.decode('utf-8', errors)
+                    # Fall back to detected encoding
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str or bytearray')
 
 
@@ -221,7 +229,7 @@ def human_to_bytes(size):
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
     sbytes = size[:-1]
     unit = size[-1]
@@ -290,20 +298,29 @@ def build_whitespace_split_regex(text):
 
 def expr_match(line, expr):
     '''
-    Evaluate a line of text against an expression. First try a full-string
-    match, next try globbing, and then try to match assuming expr is a regular
-    expression. Originally designed to match minion IDs for
-    whitelists/blacklists.
+    Checks whether or not the passed value matches the specified expression.
+    Tries to match expr first as a glob using fnmatch.fnmatch(), and then tries
+    to match expr as a regular expression. Originally designed to match minion
+    IDs for whitelists/blacklists.
+
+    Note that this also does exact matches, as fnmatch.fnmatch() will return
+    ``True`` when no glob characters are used and the string is an exact match:
+
+    .. code-block:: python
+
+        >>> fnmatch.fnmatch('foo', 'foo')
+        True
     '''
-    if line == expr:
-        return True
-    if fnmatch.fnmatch(line, expr):
-        return True
     try:
-        if re.match(r'\A{0}\Z'.format(expr), line):
+        if fnmatch.fnmatch(line, expr):
             return True
-    except re.error:
-        pass
+        try:
+            if re.match(r'\A{0}\Z'.format(expr), line):
+                return True
+        except re.error:
+            pass
+    except TypeError:
+        log.exception('Value %r or expression %r is not a string', line, expr)
     return False
 
 
@@ -331,24 +348,18 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     found in the whitelist, the function returns ``False``.
     '''
     if blacklist is not None:
-        if not hasattr(blacklist, '__iter__'):
+        if not isinstance(blacklist, list):
             blacklist = [blacklist]
-        try:
-            for expr in blacklist:
-                if expr_match(value, expr):
-                    return False
-        except TypeError:
-            log.error('Non-iterable blacklist %s', blacklist)
+        for expr in blacklist:
+            if expr_match(value, expr):
+                return False
 
     if whitelist:
-        if not hasattr(whitelist, '__iter__'):
+        if not isinstance(whitelist, list):
             whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    return True
-        except TypeError:
-            log.error('Non-iterable whitelist %s', whitelist)
+        for expr in whitelist:
+            if expr_match(value, expr):
+                return True
     else:
         return True
 

@@ -55,6 +55,9 @@ VALID_REF_TYPES = _DEFAULT_MASTER_OPTS['gitfs_ref_types']
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
+# Params which are global only and cannot be overridden for a single remote.
+GLOBAL_ONLY = ()
+
 SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
@@ -104,8 +107,8 @@ try:
 
     # Work around upstream bug where bytestrings were being decoded using the
     # default encoding (which is usually ascii on Python 2). This was fixed
-    # on 2 Feb 2018, so releases prior to 0.26.2 will need a workaround.
-    if PYGIT2_VERSION <= _LooseVersion('0.26.2'):
+    # on 2 Feb 2018, so releases prior to 0.26.3 will need a workaround.
+    if PYGIT2_VERSION <= _LooseVersion('0.26.3'):
         try:
             import pygit2.ffi
             import pygit2.remote
@@ -357,7 +360,7 @@ class GitProvider(object):
                         salt.utils.url.strip_proto(saltenv_ptr['mountpoint'])
 
         for key, val in six.iteritems(self.conf):
-            if key not in PER_SALTENV_PARAMS:
+            if key not in PER_SALTENV_PARAMS and not hasattr(self, key):
                 setattr(self, key, val)
 
         for key in PER_SALTENV_PARAMS:
@@ -489,7 +492,7 @@ class GitProvider(object):
     @classmethod
     def add_conf_overlay(cls, name):
         '''
-        Programatically determine config value based on the desired saltenv
+        Programmatically determine config value based on the desired saltenv
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \
@@ -973,13 +976,13 @@ class GitProvider(object):
         '''
         Resolve dynamically-set branch
         '''
-        if self.branch == '__env__':
+        if self.role == 'git_pillar' and self.branch == '__env__':
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
-            return self.opts['{0}_base'.format(self.role)] \
+            return self.base \
                 if target == 'base' \
-                else target
+                else six.text_type(target)
         return self.branch
 
     def get_tree(self, tgt_env):
@@ -1021,7 +1024,7 @@ class GitProvider(object):
             try:
                 self.branch, self.url = self.id.split(None, 1)
             except ValueError:
-                self.branch = self.opts['{0}_branch'.format(self.role)]
+                self.branch = self.conf['branch']
                 self.url = self.id
         else:
             self.url = self.id
@@ -1682,7 +1685,7 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
-        # pygit2 0.23.2 brought
+        # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs['callbacks'] = self.remotecallbacks
         else:
@@ -2026,15 +2029,15 @@ class GitBase(object):
     Base class for gitfs/git_pillar
     '''
     def __init__(self, opts, remotes=None, per_remote_overrides=(),
-                 per_remote_only=PER_REMOTE_ONLY, git_providers=None,
-                 cache_root=None, init_remotes=True):
+                 per_remote_only=PER_REMOTE_ONLY, global_only=GLOBAL_ONLY,
+                 git_providers=None, cache_root=None, init_remotes=True):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
         really designed right now for winrepo, as its repos need to be checked
         out into the winrepo locations and not within the cachedir.
 
-        As of the Oxygen release cycle, the classes used to interface with
+        As of the 2018.3 release cycle, the classes used to interface with
         Pygit2 and GitPython can be overridden by passing the git_providers
         argument when spawning a class instance. This allows for one to write
         classes which inherit from salt.utils.gitfs.Pygit2 or
@@ -2085,10 +2088,12 @@ class GitBase(object):
             self.init_remotes(
                 remotes if remotes is not None else [],
                 per_remote_overrides,
-                per_remote_only)
+                per_remote_only,
+                global_only)
 
     def init_remotes(self, remotes, per_remote_overrides=(),
-                     per_remote_only=PER_REMOTE_ONLY):
+                     per_remote_only=PER_REMOTE_ONLY,
+                     global_only=GLOBAL_ONLY):
         '''
         Initialize remotes
         '''
@@ -2121,7 +2126,9 @@ class GitBase(object):
             failhard(self.role)
 
         per_remote_defaults = {}
-        for param in override_params:
+        global_values = set(override_params)
+        global_values.update(set(global_only))
+        for param in global_values:
             key = '{0}_{1}'.format(self.role, param)
             if key not in self.opts:
                 log.critical(
@@ -2157,6 +2164,9 @@ class GitBase(object):
                 for saltenv, saltenv_conf in six.iteritems(repo_obj.saltenv):
                     if 'ref' in saltenv_conf:
                         ref = saltenv_conf['ref']
+                        repo_obj.saltenv_revmap.setdefault(
+                            ref, []).append(saltenv)
+
                         if saltenv == 'base':
                             # Remove redundant 'ref' config for base saltenv
                             repo_obj.saltenv[saltenv].pop('ref')
@@ -2171,9 +2181,6 @@ class GitBase(object):
                                 )
                                 # Rewrite 'base' config param
                                 repo_obj.base = ref
-                        else:
-                            repo_obj.saltenv_revmap.setdefault(
-                                ref, []).append(saltenv)
 
                 # Build list of all envs defined by ref mappings in the
                 # per-remote 'saltenv' param. We won't add any matching envs
@@ -2346,7 +2353,7 @@ class GitBase(object):
 
     def update(self, remotes=None):
         '''
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             The remotes argument was added. This being a list of remote URLs,
             it will only update matching remotes. This actually matches on
             repo.id
@@ -2967,8 +2974,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_base'.format(self.role)]
-                    env = 'base' if repo.branch == base_branch else repo.branch
+                    env = 'base' if repo.branch == repo.base else repo.branch
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -3095,6 +3101,9 @@ class WinRepo(GitBase):
     Functionality specific to the winrepo runner
     '''
     role = 'winrepo'
+    # Need to define this in case we try to reference it before checking
+    # out the repos.
+    winrepo_dirs = {}
 
     def checkout(self):
         '''

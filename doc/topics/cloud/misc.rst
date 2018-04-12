@@ -392,7 +392,7 @@ script, a cloud profile using ``file_map`` might look like:
 Running Pre-Flight Commands
 ===========================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 To execute specified preflight shell commands on a VM before the deploy script is
 run, use the ``preflight_cmds`` option. These must be defined as a list in a cloud
@@ -413,7 +413,7 @@ These commands will run in sequence **before** the bootstrap script is executed.
 Force Minion Config
 ===================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``force_minion_config`` option requests the bootstrap process to overwrite
 an existing minion configuration file and public/private key files.

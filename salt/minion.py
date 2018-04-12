@@ -31,23 +31,11 @@ if six.PY3:
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
-try:
-    import zmq
-    # TODO: cleanup
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
-
 HAS_RANGE = False
 try:
     import seco.range
@@ -156,10 +144,10 @@ def resolve_dns(opts, fallback=True):
     if (opts.get('file_client', 'remote') == 'local' and
             not opts.get('use_master_when_local', False)):
         check_dns = False
+    # Since salt.log is imported below, salt.utils.network needs to be imported here as well
+    import salt.utils.network
 
     if check_dns is True:
-        # Because I import salt.log below I need to re-import salt.utils here
-        import salt.utils
         try:
             if opts['master'] == '':
                 raise SaltSystemExit
@@ -690,7 +678,7 @@ class MinionBase(object):
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
                         for trans in ('zeromq', 'tcp'):
-                            if trans == 'zeromq' and not HAS_ZMQ:
+                            if trans == 'zeromq' and not zmq:
                                 continue
                             self.opts['transport'] = trans
                             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
@@ -793,10 +781,8 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if self.opts['transport'] == 'zeromq' and HAS_ZMQ:
-                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-            else:
-                io_loop = LOOP_CLASS.current()
+            install_zmq()
+            io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
@@ -931,9 +917,8 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS.current()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
 
@@ -1086,23 +1071,14 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ:
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]  # pylint: disable=no-member
-                )
-            if zmq_version_info < (3, 2):
+        if zmq:
+            if ZMQ_VERSION_INFO < (3, 2):
                 log.warning(
                     'You have a version of ZMQ less than ZMQ 3.2! There are '
                     'known connection keep-alive issues with ZMQ < 3.2 which '
@@ -2078,14 +2054,16 @@ class Minion(MinionBase):
 
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        # dup name spaced event
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to False in Neon Salt release
+            self._fire_master(
+                'Minion {0} started at {1}'.format(
+                self.opts['id'],
+                time.asctime()
+                ),
+                'minion_start'
+            )
+        # send name spaced event
         self._fire_master(
             'Minion {0} started at {1}'.format(
             self.opts['id'],
@@ -2161,6 +2139,8 @@ class Minion(MinionBase):
             self.schedule.disable_job(name, persist)
         elif func == 'postpone_job':
             self.schedule.postpone_job(name, data)
+        elif func == 'skip_job':
+            self.schedule.skip_job(name, data)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
@@ -2624,7 +2604,7 @@ class Minion(MinionBase):
             def ping_master():
                 try:
                     def ping_timeout_handler(*_):
-                        if not self.opts.get('auth_safemode', True):
+                        if self.opts.get('auth_safemode', False):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
@@ -2778,14 +2758,16 @@ class Syndic(Minion):
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-                self.opts['id'],
-                time.asctime()
-            ),
-            'syndic_start',
-            sync=False,
-        )
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to false in Neon Salt release.
+            self._fire_master(
+                'Syndic {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                ),
+                'syndic_start',
+                sync=False,
+            )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
                 self.opts['id'],
@@ -2889,9 +2871,8 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 

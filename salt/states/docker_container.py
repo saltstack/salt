@@ -248,7 +248,7 @@ def running(name,
             <salt.states.dockermod.image_present>` state should be used to
             manage the image.
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             If no tag is specified in the image name, and nothing matching the
             specified image is pulled on the minion, the ``docker pull`` that
             retrieves the image will pull *all tags* for the image. A tag of
@@ -369,7 +369,7 @@ def running(name,
 
         .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
-            ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
+            ``shutdown_timeout`` to accommodate the ``stop_timeout`` container
             configuration setting.
 
     client_timeout : 60
@@ -383,12 +383,16 @@ def running(name,
 
     **NETWORK MANAGEMENT**
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
+    .. versionchanged:: Fluorine
+        If the ``networks`` option is used, any networks (including the default
+        ``bridge`` network) which are not specified will be disconnected.
 
     The ``networks`` argument can be used to ensure that a container is
     attached to one or more networks. Optionally, arguments can be passed to
     the networks. In the example below, ``net1`` is being configured with
-    arguments, while ``net2`` is being configured *without* arguments:
+    arguments, while ``net2`` and ``bridge`` are being configured *without*
+    arguments:
 
     .. code-block:: yaml
 
@@ -402,6 +406,7 @@ def running(name,
                   - baz
                 - ipv4_address: 10.0.20.50
               - net2
+              - bridge
             - require:
               - docker_network: net1
               - docker_network: net2
@@ -417,6 +422,17 @@ def running(name,
         documentation for the correct type/format of data to pass.
 
     .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
+
+    To start a container with no network connectivity (only possible in
+    Fluorine and later) pass this option as an empty list. For example:
+
+    .. code-block:: yaml
+
+        foo:
+          docker_container.running:
+            - image: myuser/myimage:foo
+            - networks: []
+
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
@@ -1043,7 +1059,7 @@ def running(name,
                     bar: baz
                     hello: world
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Methods for specifying labels can now be mixed. Earlier releases
             required either labels with or without values.
 
@@ -1564,14 +1580,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits: nofile=1024:1024,nproc=60
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits:
                   - nofile=1024:1024
@@ -1672,6 +1688,9 @@ def running(name,
         image = six.text_type(image)
 
     try:
+        # Since we're rewriting the "networks" value below, save the original
+        # value here.
+        configured_networks = networks
         networks = _parse_networks(networks)
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
@@ -1802,8 +1821,31 @@ def running(name,
                 ret['result'] = False
                 comments.append(exc.__str__())
                 return _format_comments(ret, comments)
+
         post_net_connect = __salt__['docker.inspect_container'](
             temp_container_name)
+
+        if configured_networks is not None:
+            # Use set arithmetic to determine the networks which are connected
+            # but not explicitly defined. They will be disconnected below. Note
+            # that we check configured_networks because it represents the
+            # original (unparsed) network configuration. When no networks
+            # argument is used, the parsed networks will be an empty list, so
+            # it's not sufficient to do a boolean check on the "networks"
+            # variable.
+            extra_nets = set(
+                post_net_connect.get('NetworkSettings', {}).get('Networks', {})
+            ) - set(networks)
+
+            if extra_nets:
+                for extra_net in extra_nets:
+                    __salt__['docker.disconnect_container_from_network'](
+                        temp_container_name,
+                        extra_net)
+
+                # We've made changes, so we need to inspect the container again
+                post_net_connect = __salt__['docker.inspect_container'](
+                    temp_container_name)
 
         net_changes = __salt__['docker.compare_container_networks'](
             pre_net_connect, post_net_connect)
@@ -2067,7 +2109,7 @@ def run(name,
         client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
         **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     .. note::
         If no tag is specified in the image name, and nothing matching the
@@ -2183,7 +2225,7 @@ def run(name,
         return ret
 
     try:
-        if 'networks' in kwargs:
+        if 'networks' in kwargs and kwargs['networks'] is not None:
             kwargs['networks'] = _parse_networks(kwargs['networks'])
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:

@@ -16,7 +16,6 @@ import stat
 import subprocess
 import tempfile
 import time
-import urllib
 
 # Import Salt libs
 import salt.utils.path
@@ -29,6 +28,7 @@ from salt.utils.decorators.jinja import jinja_filter
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 try:
     import fcntl
     HAS_FCNTL = True
@@ -299,20 +299,29 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace('Write lock for %s (%s) released', path, lock_fn)
 
 
+def get_umask():
+    '''
+    Returns the current umask
+    '''
+    ret = os.umask(0)  # pylint: disable=blacklisted-function
+    os.umask(ret)  # pylint: disable=blacklisted-function
+    return ret
+
+
 @contextlib.contextmanager
 def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.platform.is_windows():
-        # Don't attempt on Windows
+    if mask is None or salt.utils.platform.is_windows():
+        # Don't attempt on Windows, or if no mask was passed
         yield
     else:
         try:
-            orig_mask = os.umask(mask)
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
-            os.umask(orig_mask)
+            os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):
@@ -328,6 +337,17 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     '''
+    if six.PY3:
+        try:
+            # Don't permit stdin/stdout/stderr to be opened. The boolean False
+            # and True are treated by Python 3's open() as file descriptors 0
+            # and 1, respectively.
+            if args[0] in (0, 1, 2):
+                raise TypeError(
+                    '{0} is not a permitted file descriptor'.format(args[0])
+                )
+        except IndexError:
+            pass
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
@@ -563,7 +583,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe='')
+        return quote(re_obj.group(0), safe='')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',

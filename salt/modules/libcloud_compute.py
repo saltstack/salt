@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/compute/suppor
 
 Clouds include Amazon EC2, Azure, Google GCE, VMware, OpenStack Nova
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple cloud providers
@@ -206,7 +206,7 @@ def destroy_node(node_id, profile, **libcloud_kwargs):
     '''
     Destroy a node in the cloud
 
-    :param node_id: Unique ID of the node to destory
+    :param node_id: Unique ID of the node to destroy
     :type  node_id: ``str``
 
     :param profile: The profile key

@@ -58,7 +58,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     '''
     Parse a string or file through Salt's renderer system
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
        Add support for Salt fileserver URIs.
 
     This is an open-ended function and can be used for a variety of tasks. It

@@ -11,7 +11,7 @@ import textwrap
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, mock_open
+from tests.support.mock import MagicMock, Mock, patch, mock_open
 
 try:
     import pytest
@@ -19,6 +19,7 @@ except ImportError:
     pytest = None
 
 # Import Salt libs
+from salt.ext import six
 import salt.config
 import salt.loader
 import salt.utils.files
@@ -28,7 +29,7 @@ import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+from salt.utils.jinja import SaltCacheLoader
 
 SED_CONTENT = '''test
 some
@@ -284,10 +285,11 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             "We shall say 'Ni' again to you, if you do not appease us."
         ])
         filemod.blockreplace(self.tfile.name,
-                             '#-- START BLOCK 1',
-                             '#-- END BLOCK 1',
-                             new_multiline_content,
-                             backup=False)
+                             marker_start='#-- START BLOCK 1',
+                             marker_end='#-- END BLOCK 1',
+                             content=new_multiline_content,
+                             backup=False,
+                             append_newline=None)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
@@ -305,9 +307,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError,
             filemod.blockreplace,
             self.tfile.name,
-            '#-- START BLOCK 2',
-            '#-- END BLOCK 2',
-            new_content,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
             append_if_not_found=False,
             backup=False
         )
@@ -318,9 +320,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         filemod.blockreplace(self.tfile.name,
-                             '#-- START BLOCK 2',
-                             '#-- END BLOCK 2',
-                             new_content,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
                              backup=False,
                              append_if_not_found=True)
 
@@ -381,9 +383,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError,
             filemod.blockreplace,
             self.tfile.name,
-            '#-- START BLOCK 2',
-            '#-- END BLOCK 2',
-            new_content,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
             prepend_if_not_found=False,
             backup=False
         )
@@ -395,8 +397,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 fp.read())
 
         filemod.blockreplace(self.tfile.name,
-                             '#-- START BLOCK 2', '#-- END BLOCK 2',
-                             new_content,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
                              backup=False,
                              prepend_if_not_found=True)
 
@@ -409,9 +412,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK',
-                             '// END BLOCK',
-                             'new content 1',
+                             marker_start='// START BLOCK',
+                             marker_end='// END BLOCK',
+                             content='new content 1',
                              backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
@@ -419,7 +422,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn('new content 1', filecontent)
         self.assertNotIn('to be removed', filecontent)
         self.assertIn('first part of start line', filecontent)
-        self.assertIn('first part of end line', filecontent)
+        self.assertNotIn('first part of end line', filecontent)
         self.assertIn('part of start line not removed', filecontent)
         self.assertIn('part of end line not removed', filecontent)
 
@@ -429,7 +432,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         filemod.blockreplace(
             self.tfile.name,
-            '// START BLOCK', '// END BLOCK', 'new content 2',
+            marker_start='// START BLOCK',
+            marker_end='// END BLOCK',
+            content='new content 2',
             backup=fext)
 
         self.assertTrue(os.path.exists(bak_file))
@@ -440,22 +445,27 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
 
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK', '// END BLOCK', 'new content 3',
+                             marker_start='// START BLOCK',
+                             marker_end='// END BLOCK',
+                             content='new content 3',
                              backup=False)
 
         self.assertFalse(os.path.exists(bak_file))
 
     def test_no_modifications(self):
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK', '// END BLOCK',
-                             'new content 4',
-                             backup=False)
+                             marker_start='#-- START BLOCK 1',
+                             marker_end='#-- END BLOCK 1',
+                             content='new content 4',
+                             backup=False,
+                             append_newline=None)
         before_ctime = os.stat(self.tfile.name).st_mtime
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK',
-                             '// END BLOCK',
-                             'new content 4',
-                             backup=False)
+                             marker_start='#-- START BLOCK 1',
+                             marker_end='#-- END BLOCK 1',
+                             content='new content 4',
+                             backup=False,
+                             append_newline=None)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
         self.assertEqual(before_ctime, after_ctime)
@@ -463,9 +473,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
         filemod.blockreplace(self.tfile.name,
-                             '// START BLOCK',
-                             '// END BLOCK',
-                             'new content 5',
+                             marker_start='// START BLOCK',
+                             marker_end='// END BLOCK',
+                             content='new content 5',
                              dry_run=True)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
@@ -473,18 +483,18 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_changes(self):
         ret = filemod.blockreplace(self.tfile.name,
-                                   '// START BLOCK',
-                                   '// END BLOCK',
-                                   'new content 6',
+                                   marker_start='// START BLOCK',
+                                   marker_end='// END BLOCK',
+                                   content='new content 6',
                                    backup=False,
                                    show_changes=True)
 
         self.assertTrue(ret.startswith('---'))  # looks like a diff
 
         ret = filemod.blockreplace(self.tfile.name,
-                                   '// START BLOCK',
-                                   '// END BLOCK',
-                                   'new content 7',
+                                   marker_start='// START BLOCK',
+                                   marker_end='// END BLOCK',
+                                   content='new content 7',
                                    backup=False,
                                    show_changes=False)
 
@@ -495,9 +505,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError,
             filemod.blockreplace,
             self.tfile.name,
-            '#-- START BLOCK UNFINISHED',
-            '#-- END BLOCK UNFINISHED',
-            'foobar',
+            marker_start='#-- START BLOCK UNFINISHED',
+            marker_end='#-- END BLOCK UNFINISHED',
+            content='foobar',
             backup=False
         )
 
@@ -754,12 +764,13 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         contents = 'This is a {{ template }}.'
         defaults = {'template': 'templated file'}
-        ret = filemod.apply_template_on_contents(
-            contents,
-            template='jinja',
-            context={'opts': filemod.__opts__},
-            defaults=defaults,
-            saltenv='base')
+        with patch.object(SaltCacheLoader, 'file_client', Mock()):
+            ret = filemod.apply_template_on_contents(
+                contents,
+                template='jinja',
+                context={'opts': filemod.__opts__},
+                defaults=defaults,
+                saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
 

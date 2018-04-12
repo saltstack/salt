@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Groups
 =======================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions

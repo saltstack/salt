@@ -10,6 +10,7 @@ documented in the execution module docs.
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import json
 import logging
 import string
 import requests
@@ -40,7 +41,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         True. This happens when the master generates minion pillars.
     '''
     log.debug(
-        'Token generation request for %s (impersonated by master: %s)'.
+        'Token generation request for %s (impersonated by master: %s)',
         minion_id, impersonated_by_master
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
@@ -92,6 +93,36 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         }
     except Exception as e:
         return {'error': six.text_type(e)}
+
+
+def unseal():
+    '''
+    Unseal Vault server
+
+    This function uses the 'keys' from the 'vault' configuration to unseal vault server
+
+    vault:
+      keys:
+        - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+        - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+        - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+        - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+        - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
+
+    .. note: This function will send unsealed keys until the api returns back
+             that the vault has been unsealed
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run vault.unseal
+    '''
+    for key in __opts__['vault']['keys']:
+        ret = __utils__['vault.make_request']('PUT', 'v1/sys/unseal', data=json.dumps({'key': key})).json()
+        if ret['sealed'] is False:
+            return True
+    return False
 
 
 def show_policies(minion_id):

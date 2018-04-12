@@ -157,7 +157,8 @@ will need to be restarted to pick up any changes.  A corresponding utility funct
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
 it easier to tell when the running minion is a proxy minion. **NOTE: This
-function was renamed to salt.utils.platform.is_proxy() for the Oxygen release**
+function was renamed to salt.utils.platform.is_proxy() for the 2018.3.0
+release**
 
 New in 2015.8
 -------------

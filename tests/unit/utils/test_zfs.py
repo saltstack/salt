@@ -1313,11 +1313,10 @@ class ZfsUtilsTestCase(TestCase):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
                         my_flags = [
                             '-r',  # recursive
-                            '-p',  # parsable
                         ]
                         self.assertEqual(
                             zfs.zfs_command('list', flags=my_flags),
-                            "/sbin/zfs list -r -p"
+                            "/sbin/zfs list -r"
                         )
 
     def test_zfs_command_opt(self):
@@ -1346,14 +1345,13 @@ class ZfsUtilsTestCase(TestCase):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
                         my_flags = [
                             '-r',  # recursive
-                            '-p',  # parsable
                         ]
                         my_opts = {
                             '-t': 'snap',  # only list snapshots
                         }
                         self.assertEqual(
                             zfs.zfs_command('list', flags=my_flags, opts=my_opts),
-                            "/sbin/zfs list -r -p -t snap"
+                            "/sbin/zfs list -r -t snap"
                         )
 
     def test_zfs_command_target(self):
@@ -1366,14 +1364,13 @@ class ZfsUtilsTestCase(TestCase):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
                         my_flags = [
                             '-r',  # recursive
-                            '-p',  # parsable
                         ]
                         my_opts = {
                             '-t': 'snap',  # only list snapshots
                         }
                         self.assertEqual(
                             zfs.zfs_command('list', flags=my_flags, opts=my_opts, target='mypool'),
-                            "/sbin/zfs list -r -p -t snap mypool"
+                            "/sbin/zfs list -r -t snap mypool"
                         )
 
     def test_zfs_command_target_with_space(self):
@@ -1386,14 +1383,13 @@ class ZfsUtilsTestCase(TestCase):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
                         my_flags = [
                             '-r',  # recursive
-                            '-p',  # parsable
                         ]
                         my_opts = {
                             '-t': 'snap',  # only list snapshots
                         }
                         self.assertEqual(
                             zfs.zfs_command('list', flags=my_flags, opts=my_opts, target='my pool'),
-                            '/sbin/zfs list -r -p -t snap "my pool"'
+                            '/sbin/zfs list -r -t snap "my pool"'
                         )
 
     def test_zfs_command_property(self):
@@ -1531,15 +1527,12 @@ class ZfsUtilsTestCase(TestCase):
             with patch.object(zfs, '_zpool_cmd', MagicMock(return_value='/sbin/zpool')):
                 with patch.object(zfs, 'property_data_zfs', MagicMock(return_value=pmap_zfs)):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
-                        my_flags = [
-                            '-p',  # parsable
-                        ]
                         my_opts = {
                             '-o': 'name,size',  # show only name and size
                         }
                         self.assertEqual(
-                            zfs.zpool_command('list', flags=my_flags, opts=my_opts),
-                            "/sbin/zpool list -p -o name,size"
+                            zfs.zpool_command('list', opts=my_opts),
+                            "/sbin/zpool list -o name,size"
                         )
 
     def test_zpool_command_target(self):
@@ -1550,15 +1543,12 @@ class ZfsUtilsTestCase(TestCase):
             with patch.object(zfs, '_zpool_cmd', MagicMock(return_value='/sbin/zpool')):
                 with patch.object(zfs, 'property_data_zfs', MagicMock(return_value=pmap_zfs)):
                     with patch.object(zfs, 'property_data_zpool', MagicMock(return_value=pmap_zpool)):
-                        my_flags = [
-                            '-p',  # parsable
-                        ]
                         my_opts = {
                             '-o': 'name,size',  # show only name and size
                         }
                         self.assertEqual(
-                            zfs.zpool_command('list', flags=my_flags, opts=my_opts, target='mypool'),
-                            "/sbin/zpool list -p -o name,size mypool"
+                            zfs.zpool_command('list', opts=my_opts, target='mypool'),
+                            "/sbin/zpool list -o name,size mypool"
                         )
 
     def test_zpool_command_target_with_space(self):

@@ -1,10 +1,10 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 
-The minion id must be the AWS instance-id or value in 'tag_key'.
-For example set 'tag_key' to 'Name', to have the minion-id matched against the
-tag 'Name'. The tag contents must be unique.  The value of tag_value can
+The minion id must be the AWS instance-id or value in 'tag_match_key'.
+For example set 'tag_match_key' to 'Name', to have the minion-id matched against the
+tag 'Name'. The tag contents must be unique.  The value of tag_match_value can
 be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparison.
 
 The option use_grain can be set to True.  This allows the use of an
@@ -27,8 +27,8 @@ exist it is still included as an empty list.
 
     ext_pillar:
       - ec2_pillar:
-          tag_key: 'Name'
-          tag_value: 'asis'
+          tag_match_key: 'Name'
+          tag_match_value: 'asis'
           tag_list_key:
             - Role
           tag_list_sep: ';'
@@ -100,14 +100,14 @@ def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                use_grain=False,
                minion_ids=None,
-               tag_key=None,
-               tag_value='asis',
+               tag_match_key=None,
+               tag_match_value='asis',
                tag_list_key=None,
                tag_list_sep=';'):
     '''
     Execute a command and read the output as YAML
     '''
-    valid_tag_value = ['uqdn', 'asis']
+    valid_tag_match_value = ['uqdn', 'asis']
 
     # meta-data:instance-id
     grain_instance_id = __grains__.get('meta-data', {}).get('instance-id', None)
@@ -121,22 +121,22 @@ def ext_pillar(minion_id,
         grain_instance_id = None  # invalid instance id found, remove it from use.
 
     # Check AWS Tag restrictions .i.e. letters, spaces, and numbers and + - = . _ : / @
-    if tag_key and re.match(r'[\w=.:/@-]+$', tag_key) is None:
-        log.error('External pillar %s, tag_key \'%s\' is not valid ',
-                  __name__, tag_key if isinstance(tag_key, six.text_type) else 'non-string')
+    if tag_match_key and re.match(r'[\w=.:/@-]+$', tag_match_key) is None:
+        log.error('External pillar %s, tag_match_key \'%s\' is not valid ',
+                  __name__, tag_match_key if isinstance(tag_match_key, six.text_type) else 'non-string')
         return {}
 
-    if tag_key and tag_value not in valid_tag_value:
+    if tag_match_key and tag_match_value not in valid_tag_match_value:
         log.error('External pillar %s, tag_value \'%s\' is not valid must be one '
-                  'of %s', __name__, tag_value, ' '.join(valid_tag_value))
+                  'of %s', __name__, tag_match_value, ' '.join(valid_tag_match_value))
         return {}
 
-    if not tag_key:
+    if not tag_match_key:
         base_msg = ('External pillar %s, querying EC2 tags for minion id \'%s\' '
                     'against instance-id', __name__, minion_id)
     else:
         base_msg = ('External pillar %s, querying EC2 tags for minion id \'%s\' '
-                    'against instance-id or \'%s\' against \'%s\'', __name__, minion_id, tag_key, tag_value)
+                    'against instance-id or \'%s\' against \'%s\'', __name__, minion_id, tag_match_key, tag_match_value)
 
     log.debug(base_msg)
     find_filter = None
@@ -145,11 +145,11 @@ def ext_pillar(minion_id,
     if re.search(r'^i-([0-9a-z]{17}|[0-9a-z]{8})$', minion_id) is not None:
         find_filter = None
         find_id = minion_id
-    elif tag_key:
-        if tag_value == 'uqdn':
-            find_filter = {'tag:{0}'.format(tag_key): minion_id.split('.', 1)[0]}
+    elif tag_match_key:
+        if tag_match_value == 'uqdn':
+            find_filter = {'tag:{0}'.format(tag_match_key): minion_id.split('.', 1)[0]}
         else:
-            find_filter = {'tag:{0}'.format(tag_key): minion_id}
+            find_filter = {'tag:{0}'.format(tag_match_key): minion_id}
         if grain_instance_id:
             # we have an untrusted grain_instance_id, use it to narrow the search
             # even more. Combination will be unique even if uqdn is set.
@@ -173,7 +173,7 @@ def ext_pillar(minion_id,
     if not (find_filter or find_id):
         log.debug('External pillar %s, querying EC2 tags for minion id \'%s\' against '
                   'instance-id or \'%s\' against \'%s\' noughthing to match against',
-                  __name__, minion_id, tag_key, tag_value)
+                  __name__, minion_id, tag_match_key, tag_match_value)
         return {}
 
     myself = boto.utils.get_instance_metadata(timeout=0.1, num_retries=1)

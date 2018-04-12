@@ -128,14 +128,13 @@ class AESReqServerMixin(object):
             return {'error': 'AES key not found'}
 
         pret = {}
+        if not six.PY2:
+            key = salt.utils.stringutils.to_bytes(key)
         if HAS_M2:
-            pret['key'] = pub.public_encrypt(six.b(key), RSA.pkcs1_oaep_padding)
+            pret['key'] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(pub)
-            if six.PY2:
-                pret['key'] = cipher.encrypt(key)
-            else:
-                pret['key'] = cipher.encrypt(salt.utils.stringutils.to_bytes(key))
+            pret['key'] = cipher.encrypt(key)
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -472,7 +471,7 @@ class AESReqServerMixin(object):
             if 'token' in load:
                 try:
                     if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(six.b(load['token']),
+                        mtoken = self.master_key.key.private_decrypt(load['token'],
                                                                      RSA.pkcs1_oaep_padding)
                     else:
                         mtoken = mcipher.decrypt(load['token'])
@@ -485,16 +484,16 @@ class AESReqServerMixin(object):
                 aes = salt.master.SMaster.secrets['aes']['secret'].value
 
             if HAS_M2:
-                ret['aes'] = pub.public_encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
+                ret['aes'] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
             else:
                 ret['aes'] = cipher.encrypt(aes)
         else:
             if 'token' in load:
                 try:
                     if HAS_M2:
-                        mtoken = self.master_key.key.private_decrypt(six.b(load['token']),
+                        mtoken = self.master_key.key.private_decrypt(load['token'],
                                                                      RSA.pkcs1_oaep_padding)
-                        ret['token'] = pub.public_encrypt(six.b(mtoken), RSA.pkcs1_oaep_padding)
+                        ret['token'] = pub.public_encrypt(mtoken, RSA.pkcs1_oaep_padding)
                     else:
                         mtoken = mcipher.decrypt(load['token'])
                         ret['token'] = cipher.encrypt(mtoken)
@@ -505,11 +504,12 @@ class AESReqServerMixin(object):
 
             aes = salt.master.SMaster.secrets['aes']['secret'].value
             if HAS_M2:
-                ret['aes'] = pub.public_encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
+                ret['aes'] = pub.public_encrypt(aes,
+                                                RSA.pkcs1_oaep_padding)
             else:
                 ret['aes'] = cipher.encrypt(aes)
         # Be aggressive about the signature
-        digest = hashlib.sha256(aes).hexdigest()
+        digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret['sig'] = salt.crypt.private_encrypt(self.master_key.key, digest)
         eload = {'result': True,
                  'act': 'accept',

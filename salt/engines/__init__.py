@@ -69,11 +69,11 @@ class Engine(SignalHandlingMultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners, proxy, log_queue=None):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__(log_queue=log_queue)
+        super(Engine, self).__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -93,17 +93,21 @@ class Engine(SignalHandlingMultiprocessingProcess):
             state['funcs'],
             state['runners'],
             state['proxy'],
-            log_queue=state['log_queue']
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
         )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'fun': self.fun,
-                'config': self.config,
-                'funcs': self.funcs,
-                'runners': self.runners,
-                'proxy': self.proxy,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'fun': self.fun,
+            'config': self.config,
+            'funcs': self.funcs,
+            'runners': self.runners,
+            'proxy': self.proxy,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''

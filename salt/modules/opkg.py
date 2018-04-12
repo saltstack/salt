@@ -149,7 +149,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
         If True, raise an error with a list of the package databases that
         encountered errors.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
