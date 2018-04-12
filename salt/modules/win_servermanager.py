@@ -60,7 +60,6 @@ def _pshell_json(cmd, cwd=None):
     log.debug('PowerShell: %s', cmd)
     ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd)
 
-    ret.pop()
     if 'pid' in ret:
         del ret['pid']
 
