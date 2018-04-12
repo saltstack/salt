@@ -57,3 +57,36 @@ class DecoratorTest(ModuleCase):
                     'runtests_decorators.missing_depends_will_fallback'
                     )
                 )
+
+    def test_command_success_retcode(self):
+        ret = self.run_function('runtests_decorators.command_success_retcode')
+        self.assertIs(ret, True)
+
+    def test_command_failure_retcode(self):
+        ret = self.run_function('runtests_decorators.command_failure_retcode')
+        self.assertEqual(
+            ret,
+            "'runtests_decorators.command_failure_retcode' is not available."
+        )
+
+    def test_command_success_nonzero_retcode_true(self):
+        ret = self.run_function('runtests_decorators.command_success_nonzero_retcode_true')
+        self.assertIs(ret, True)
+
+    def test_command_failure_nonzero_retcode_true(self):
+        ret = self.run_function('runtests_decorators.command_failure_nonzero_retcode_true')
+        self.assertEqual(
+            ret,
+            "'runtests_decorators.command_failure_nonzero_retcode_true' is not available."
+        )
+
+    def test_command_success_nonzero_retcode_false(self):
+        ret = self.run_function('runtests_decorators.command_success_nonzero_retcode_false')
+        self.assertIs(ret, True)
+
+    def test_command_failure_nonzero_retcode_false(self):
+        ret = self.run_function('runtests_decorators.command_failure_nonzero_retcode_false')
+        self.assertEqual(
+            ret,
+            "'runtests_decorators.command_failure_nonzero_retcode_false' is not available."
+        )
