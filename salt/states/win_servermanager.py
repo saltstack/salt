@@ -13,7 +13,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import salt modules
 import salt.utils.data
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
