@@ -4969,9 +4969,8 @@ def get_diff(file1,
     args = []
     for idx, filename in enumerate(files):
         try:
-            with salt.utils.files.fopen(filename, 'r') as fp_:
-                args.append([salt.utils.stringutils.to_unicode(x)
-                             for x in fp_.readlines()])
+            with salt.utils.files.fopen(filename, 'rb') as fp_:
+                args.append(fp_.readlines())
         except (IOError, OSError) as exc:
             raise CommandExecutionError(
                 'Failed to read {0}: {1}'.format(
@@ -4991,15 +4990,13 @@ def get_diff(file1,
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(
-                        [salt.utils.stringutils.to_unicode(x) for x in files]
+                    args.extend(files)
+                ret = ''.join(
+                    difflib.unified_diff(
+                        *salt.utils.data.decode(args)
                     )
-                ret = salt.utils.locales.sdecode(
-                    ''.join(difflib.unified_diff(*args))  # pylint: disable=no-value-for-parameter
                 )
-        return ret
-
-    return ''
+    return ret
 
 
 def manage_file(name,
