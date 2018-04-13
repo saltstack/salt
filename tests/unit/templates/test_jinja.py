@@ -68,10 +68,10 @@ def _setup_test_dir(src_dir, test_dir):
     os.makedirs(test_dir)
     salt.utils.files.recursive_copy(src_dir, test_dir)
     filename = os.path.join(test_dir, 'non_ascii')
-    with open(filename, 'wb') as fp:
+    with salt.utils.fopen(filename, 'wb') as fp:
         fp.write(b'Assun\xc3\xa7\xc3\xa3o' + os.linesep)
     filename = os.path.join(test_dir, 'hello_simple')
-    with open(filename, 'wb') as fp:
+    with salt.utils.fopen(filename, 'wb') as fp:
         fp.write(b'world' + os.linesep)
     filename = os.path.join(test_dir, 'hello_import')
     lines = [
@@ -79,7 +79,7 @@ def _setup_test_dir(src_dir, test_dir):
         r"{% from 'macro' import mymacro -%}",
         r"{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}",
     ]
-    with open(filename, 'wb') as fp:
+    with salt.utils.fopen(filename, 'wb') as fp:
         for line in lines:
             fp.write(line.encode('utf-8') + os.linesep)
 
