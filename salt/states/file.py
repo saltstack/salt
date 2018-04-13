@@ -2269,9 +2269,7 @@ def managed(name,
                 .format(contents_id)
             )
 
-        contents_are_binary = \
-            isinstance(use_contents, six.string_types) and str('\0') in use_contents
-        if contents_are_binary:
+        if salt.utils.stringutils.is_binary(use_contents):
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
