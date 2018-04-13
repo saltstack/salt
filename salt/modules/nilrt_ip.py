@@ -284,6 +284,57 @@ def _get_requestmode_info(interface):
     return 'dhcp_linklocal'
 
 
+def _get_adaptermode_info(interface):
+    '''
+    return adaptermode for given interface
+    '''
+    with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
+        config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+        config_parser.read_file(config_file)
+        mode = '' if not config_parser.has_option(interface, 'mode') else \
+            _remove_quotes(config_parser.get(interface, 'mode').lower())
+    return mode if mode in ['disabled', 'ethercat'] else 'tcpip'
+
+
+def _get_possible_adaptermodes(interface, blacklist):
+    '''
+    Return possible adapter modes for a given interface using a blacklist.
+
+    :param interface: interface name
+    :param blacklist: given blacklist
+    :return: list of possible adapter modes
+    '''
+    adapter_modes = []
+
+    with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
+        config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+        config_parser.read_file(config_file)
+        protocols = _remove_quotes(config_parser.get('lvrt', 'AdditionalNetworkProtocols').lower()) if \
+            config_parser.has_option('lvrt', 'AdditionalNetworkProtocols') else ''
+    sys_interface_path = os.readlink('/sys/class/net/{0}'.format(interface))
+    with salt.utils.files.fopen('/sys/class/net/{0}/uevent'.format(interface)) as uevent_file:
+        uevent_lines = uevent_file.readlines()
+    uevent_devtype = ""
+    for line in uevent_lines:
+        if line.startswith("DEVTYPE="):
+            uevent_devtype = line.split('=')[1].strip()
+            break
+
+    for adapter_mode in blacklist:
+        if adapter_mode == '_':
+            continue
+        value = blacklist.get(adapter_mode, {})
+        if value.get('additional_protocol') and adapter_mode not in protocols:
+            continue
+
+        if interface not in value['name'] \
+            and not any((blacklist['_'][iface_type] == 'sys' and iface_type in sys_interface_path) or
+                        (blacklist['_'][iface_type] == 'uevent' and iface_type == uevent_devtype)
+                        for iface_type in value['type']):
+            adapter_modes += [adapter_mode]
+    return adapter_modes
+
+
 def _get_static_info(interface):
     '''
     Return information about an interface from config file.
@@ -322,9 +373,33 @@ def _get_interface_info(interface):
     '''
     return details about given interface
     '''
+    blacklist = {
+        'tcpip': {
+            'name': [],
+            'type': [],
+            'additional_protocol': False
+        },
+        'disabled': {
+            'name': ['eth0'],
+            'type': ['gadget'],
+            'additional_protocol': False
+        },
+        'ethercat': {
+            'name': ['eth0'],
+            'type': ['gadget', 'usb', 'wlan'],
+            'additional_protocol': True
+        },
+        '_': {
+            'usb': 'sys',
+            'gadget': 'uevent',
+            'wlan': 'uevent'
+        }
+    }
     data = {
         'label': interface.name,
         'connectionid': interface.name,
+        'supported_adapter_modes': _get_possible_adaptermodes(interface.name, blacklist),
+        'adapter_mode': _get_adaptermode_info(interface.name),
         'up': False,
         'ipv4': {
             'supportedrequestmodes': ['dhcp_linklocal', 'dhcp_only', 'linklocal_only', 'static'],
@@ -332,6 +407,9 @@ def _get_interface_info(interface):
         },
         'hwaddr': interface.hwaddr[:-1]
     }
+    with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
+        config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+        config_parser.read_file(config_file)
     if interface.flags & IFF_RUNNING != 0:
         data['up'] = True
         data['ipv4']['address'] = interface.sockaddrToStr(interface.addr)
@@ -353,6 +431,10 @@ def _get_interface_info(interface):
         iface_gateway_hex = None if not match else match.group(1)
     if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
         data['ipv4']['gateway'] = '.'.join([str(int(iface_gateway_hex[i:i+2], 16)) for i in range(6, -1, -2)])
+    if data['adapter_mode'] == 'ethercat':
+        data['ethercat'] = {
+            'masterid': _remove_quotes(config_parser.get(interface.name, 'MasterID'))
+        }
     return data
 
 
@@ -404,9 +486,27 @@ def get_interfaces_details():
     return {'interfaces': list(map(_get_info, _interfaces))}
 
 
+def _set_adapter_mode(interface, mode):
+    '''
+    Change adapter mode to a given one for a given interface.
+
+    :param interface: interface label
+    :param mode: TCPIP, EtherCAT or Disabled
+    :return: True if the settings were applied, otherwise an exception will be thrown.
+    :rtype: bool
+    '''
+    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=Mode,value={1}'.
+                               format(interface, mode))['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('Couldn\'t set {0} mode for the interface: {1}'.format(mode,
+                                                                                                           interface))
+    return True
+
+
 def up(interface, iface_type=None):  # pylint: disable=invalid-name,unused-argument
     '''
     Enable the specified interface
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
     :return: True if the service was enabled, otherwise an exception will be thrown.
@@ -419,10 +519,15 @@ def up(interface, iface_type=None):  # pylint: disable=invalid-name,unused-argum
         salt '*' ip.up interface-label
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        out = __salt__['cmd.run_all']('ip link set {0} up'.format(interface))
-        if out['retcode'] != 0:
-            msg = 'Couldn\'t enable interface {0}. Error: {1}'.format(interface, out['stderr'])
-            raise salt.exceptions.CommandExecutionError(msg)
+        initial_mode = _get_adaptermode_info(interface)
+        _set_adapter_mode(interface, 'TCPIP')
+        if initial_mode == 'ethercat':
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            out = __salt__['cmd.run_all']('ip link set {0} up'.format(interface))
+            if out['retcode'] != 0:
+                msg = 'Couldn\'t enable interface {0}. Error: {1}'.format(interface, out['stderr'])
+                raise salt.exceptions.CommandExecutionError(msg)
         return True
     service = _interface_to_service(interface)
     if not service:
@@ -441,6 +546,8 @@ def enable(interface):
     '''
     Enable the specified interface
 
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
     :param str interface: interface label
     :return: True if the service was enabled, otherwise an exception will be thrown.
     :rtype: bool
@@ -458,6 +565,8 @@ def down(interface, iface_type=None):  # pylint: disable=unused-argument
     '''
     Disable the specified interface
 
+    Change adapter mode to Disabled. If previous adapter mode was EtherCAT, the target will need reboot.
+
     :param str interface: interface label
     :return: True if the service was disabled, otherwise an exception will be thrown.
     :rtype: bool
@@ -469,10 +578,15 @@ def down(interface, iface_type=None):  # pylint: disable=unused-argument
         salt '*' ip.down interface-label
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        out = __salt__['cmd.run_all']('ip link set {0} down'.format(interface))
-        if out['retcode'] != 0:
-            msg = 'Couldn\'t disable interface {0}. Error: {1}'.format(interface, out['stderr'])
-            raise salt.exceptions.CommandExecutionError(msg)
+        initial_mode = _get_adaptermode_info(interface)
+        _set_adapter_mode(interface, 'Disabled')
+        if initial_mode == 'ethercat':
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            out = __salt__['cmd.run_all']('ip link set {0} down'.format(interface))
+            if out['retcode'] != 0:
+                msg = 'Couldn\'t disable interface {0}. Error: {1}'.format(interface, out['stderr'])
+                raise salt.exceptions.CommandExecutionError(msg)
         return True
     service = _interface_to_service(interface)
     if not service:
@@ -490,6 +604,8 @@ def down(interface, iface_type=None):  # pylint: disable=unused-argument
 def disable(interface):
     '''
     Disable the specified interface
+
+    Change adapter mode to Disabled. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
     :return: True if the service was disabled, otherwise an exception will be thrown.
@@ -515,9 +631,39 @@ def _persist_config(section, token, value):
         raise salt.exceptions.CommandExecutionError(exc_msg)
 
 
+def set_ethercat(interface, master_id):
+    '''
+    Configure specified adapter to use EtherCAT adapter mode. If successful, the target will need reboot if it doesn't
+    already use EtherCAT adapter mode, otherwise will return true.
+
+    :param interface: interface label
+    :param master_id: EtherCAT Master ID
+    :return: True if the settings were applied, otherwise an exception will be thrown.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ip.set_ethercat interface-label master-id
+    '''
+    if __grains__['lsb_distrib_id'] == 'nilrt':
+        initial_mode = _get_adaptermode_info(interface)
+        _set_adapter_mode(interface, 'EtherCAT')
+        if __salt__['cmd.run_all']('{0} --set section={1},token=MasterID,value={2}'.
+                                   format(NIRTCFG_PATH, interface, master_id))['retcode'] != 0:
+            raise salt.exceptions.CommandExecutionError('Couldn\'t set EtherCAT mode for interface {0}'.
+                                                        format(interface))
+        if initial_mode != 'ethercat':
+            __salt__['system.set_reboot_required_witnessed']()
+        return True
+    raise salt.exceptions.CommandExecutionError('EtherCAT is not supported')
+
+
 def set_dhcp_linklocal_all(interface):
     '''
     Configure specified adapter to use DHCP with linklocal fallback
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
     :return: True if the settings ware applied, otherwise an exception will be thrown.
@@ -530,10 +676,15 @@ def set_dhcp_linklocal_all(interface):
         salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
+        initial_mode = _get_adaptermode_info(interface)
+        _set_adapter_mode(interface, 'TCPIP')
         _persist_config(interface, 'dhcpenabled', '1')
         _persist_config(interface, 'linklocalenabled', '1')
-        disable(interface)
-        enable(interface)
+        if initial_mode == 'ethercat':
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            disable(interface)
+            enable(interface)
         return True
     service = _interface_to_service(interface)
     if not service:
@@ -557,6 +708,8 @@ def set_dhcp_only_all(interface):
     '''
     Configure specified adapter to use DHCP only
 
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
     :param str interface: interface label
     :return: True if the settings ware applied, otherwise an exception will be thrown.
     :rtype: bool
@@ -569,16 +722,23 @@ def set_dhcp_only_all(interface):
     '''
     if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
+    initial_mode = _get_adaptermode_info(interface)
+    _set_adapter_mode(interface, 'TCPIP')
     _persist_config(interface, 'dhcpenabled', '1')
     _persist_config(interface, 'linklocalenabled', '0')
-    disable(interface)
-    enable(interface)
+    if initial_mode == 'ethercat':
+        __salt__['system.set_reboot_required_witnessed']()
+    else:
+        disable(interface)
+        enable(interface)
     return True
 
 
 def set_linklocal_only_all(interface):
     '''
     Configure specified adapter to use linklocal only
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
     :return: True if the settings ware applied, otherwise an exception will be thrown.
@@ -592,10 +752,15 @@ def set_linklocal_only_all(interface):
     '''
     if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
+    initial_mode = _get_adaptermode_info(interface)
+    _set_adapter_mode(interface, 'TCPIP')
     _persist_config(interface, 'dhcpenabled', '0')
     _persist_config(interface, 'linklocalenabled', '1')
-    disable(interface)
-    enable(interface)
+    if initial_mode == 'ethercat':
+        __salt__['system.set_reboot_required_witnessed']()
+    else:
+        disable(interface)
+        enable(interface)
     return True
 
 
@@ -645,6 +810,8 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     '''
     Configure specified adapter to use ipv4 manual settings
 
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
     :param str interface: interface label
     :param str address: ipv4 address
     :param str netmask: ipv4 netmask
@@ -668,6 +835,8 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     if not isinstance(nameservers, list):
         nameservers = nameservers.split(' ')
     if __grains__['lsb_distrib_id'] == 'nilrt':
+        initial_mode = _get_adaptermode_info(interface)
+        _set_adapter_mode(interface, 'TCPIP')
         _persist_config(interface, 'dhcpenabled', '0')
         _persist_config(interface, 'linklocalenabled', '0')
         _persist_config(interface, 'IP_Address', address)
@@ -675,8 +844,11 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
         _persist_config(interface, 'Gateway', gateway)
         if nameservers:
             _persist_config(interface, 'DNS_Address', nameservers[0])
-        disable(interface)
-        enable(interface)
+        if initial_mode == 'ethercat':
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            disable(interface)
+            enable(interface)
         return True
     service = _interface_to_service(interface)
     if not service:
