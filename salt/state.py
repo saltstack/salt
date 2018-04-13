@@ -3253,19 +3253,46 @@ class BaseHighState(object):
                             raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
+    @staticmethod
+    def _get_topmatch_params(lst):
+        '''
+        Take a list of state names and dictionaries of keyword parameters,
+        and produce a dictionary of all keyword parameters.
+
+        Input:
+        { 'env': [ 'state1', { 'prm1': 'v1' }, 'state2', { 'prm2': 'v2' } ] }
+
+        Returns:
+        { 'prm1': 'v1', 'prm2': 'v2' }
+        '''
+        ret = {}
+        for elem in lst:
+            if isinstance(elem, dict):
+                ret.update(elem)
+        return ret
+
+    @staticmethod
+    def _get_topmatch_states(lst):
+        '''
+        Take a list of state names and dictionaries of keyword parameters,
+        and produce a list of just state names.
+
+        Input:
+        { 'env': [ 'state1', { 'prm1': 'v1' }, 'state2', { 'prm2': 'v2' } ] }
+
+        Returns:
+        [ 'state1', 'state2' ]
+        '''
+        return [x for x in lst if isinstance(x, six.string_types)]
+
     def _merge_tops_merge_all(self, tops):
         '''
-        Merge the top files into a single dictionary
+        Merge the top files into a single dictionary and return a dictionary
+        of keyword parameters and a list of states to be applied.
         '''
         def _read_tgt(tgt):
-            match_type = None
-            states = []
-            for item in tgt:
-                if isinstance(item, dict):
-                    match_type = item
-                if isinstance(item, six.string_types):
-                    states.append(item)
-            return match_type, states
+            return (self._get_topmatch_params(tgt),
+                    self._get_topmatch_states(tgt))
 
         top = DefaultOrderedDict(OrderedDict)
         for ctops in six.itervalues(tops):
@@ -3278,12 +3305,11 @@ class BaseHighState(object):
                             if tgt not in top[saltenv]:
                                 top[saltenv][tgt] = ctop[saltenv][tgt]
                                 continue
-                            m_type1, m_states1 = _read_tgt(top[saltenv][tgt])
-                            m_type2, m_states2 = _read_tgt(ctop[saltenv][tgt])
+                            kargs1, m_states_1 = _read_tgt(top[saltenv][tgt])
+                            kargs2, m_states_2 = _read_tgt(ctop[saltenv][tgt])
                             merged = []
-                            match_type = m_type2 or m_type1
-                            if match_type is not None:
-                                merged.append(match_type)
+                            merged.extend(kargs1)
+                            merged.extend(kargs2)
                             merged.extend(m_states1)
                             merged.extend([x for x in m_states2 if x not in merged])
                             top[saltenv][tgt] = merged
@@ -3322,11 +3348,11 @@ class BaseHighState(object):
                     continue
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
-                        # This value is a match option
+                        # This value is a keyword parameter.
                         for val in six.itervalues(slsmod):
                             if not val:
                                 errors.append(
-                                    'Improperly formatted top file matcher '
+                                    'Improperly formatted top file keyword parameter '
                                     'in saltenv {0}: {1} file'.format(
                                         slsmod,
                                         val
@@ -3355,11 +3381,13 @@ class BaseHighState(object):
 
     def top_matches(self, top):
         '''
-        Search through the top high data for matches and return the states
-        that this minion needs to execute.
+        Search through the top high data for matches and return a list of
+        the names of the states that this minion needs to execute and
+        the dictionaries of optional keyword parameters for the
+        matching entry.
 
         Returns:
-        {'saltenv': ['state1', 'state2', ...]}
+        { 'saltenv': [ 'state1', { param1: val }, 'state2', ... ] }
         '''
         matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
@@ -3385,13 +3413,9 @@ class BaseHighState(object):
                                     _filter_matches(match, data, _opts)
                             if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
-                            elif isinstance(item, dict):
-                                env_key, inc_sls = item.popitem()
-                                if env_key not in self.avail:
-                                    continue
-                                if env_key not in matches:
-                                    matches[env_key] = []
-                                matches[env_key].append(inc_sls)
+                            # Pass through any keyword parameters.
+                            if isinstance(item, dict):
+                                matches[saltenv].append(item)
                 _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
@@ -3760,7 +3784,9 @@ class BaseHighState(object):
         mods = set()
         statefiles = []
         for saltenv, states in six.iteritems(matches):
-            for sls_match in states:
+            # Separate possible keyword parameters from the list of states.
+            kparams = self._get_topmatch_params(states)
+            for sls_match in self._get_topmatch_states(states):
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
                 except KeyError:
@@ -3789,9 +3815,14 @@ class BaseHighState(object):
                             this_sls = 'SLS {0} in saltenv'.format(
                                 sls_match)
                             if this_sls in error:
-                                errors[i] = (
-                                    'No matching sls found for \'{0}\' '
-                                    'in env \'{1}\''.format(sls_match, saltenv))
+                                if kparams.get('ignore_missing'):
+                                    msg = 'Ignoring a missing sls \'{0}\' in env \'{1}\''.format(sls_match, saltenv)
+                                    log.debug(msg)
+                                    del errors[i]
+                                else:
+                                    errors[i] = (
+                                        'No matching sls found for \'{0}\' '
+                                        'in env \'{1}\''.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
