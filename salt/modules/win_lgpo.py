@@ -4660,7 +4660,7 @@ def _getScriptSettingsFromIniFile(policy_info):
     '''
     _existingData = None
     if os.path.isfile(policy_info['ScriptIni']['IniPath']):
-        with salt.utils.fopen(policy_info['ScriptIni']['IniPath'], 'rb') as fhr:
+        with salt.utils.files.fopen(policy_info['ScriptIni']['IniPath'], 'rb') as fhr:
             _existingData = fhr.read()
         if _existingData:
             try:
