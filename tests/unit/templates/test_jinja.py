@@ -22,6 +22,7 @@ import salt.config
 import salt.ext.six as six
 import salt.loader
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
 from salt.utils import get_context
@@ -63,18 +64,57 @@ class MockFileClient(object):
         })
 
 
+def _setup_test_dir(src_dir, test_dir):
+    os.makedirs(test_dir)
+    #for dirname, dirs, files in os.walk(src_dir):
+    #    for file in files:
+    #        with open(os.path.join(dirname, file), 'rb') as src:
+    #            with open(os.path.join(test_dir, file), 'wb') as dst:
+    #                while True:
+    #                    chunk = src.read(1024)
+    #                    if not chunk:
+    #                        break
+    #                    dst.write(chunk)
+    salt.utils.files.recursive_copy(src_dir, test_dir)
+    filename = os.path.join(test_dir, 'non_ascii')
+    with open(filename, 'wb') as fp:
+        fp.write(b'Assun\xc3\xa7\xc3\xa3o' + os.linesep)
+    filename = os.path.join(test_dir, 'hello_simple')
+    with open(filename, 'wb') as fp:
+        fp.write(b'world' + os.linesep)
+    filename = os.path.join(test_dir, 'hello_import')
+    lines = [
+        r"{% from 'macro' import mymacro -%}",
+        r"{% from 'macro' import mymacro -%}",
+        r"{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}",
+    ]
+    with open(filename, 'wb') as fp:
+        for line in lines:
+            fp.write(line.encode('utf-8') + os.linesep)
+
+
 class TestSaltCacheLoader(TestCase):
-    def __init__(self, *args, **kws):
-        super(TestSaltCacheLoader, self).__init__(*args, **kws)
+
+    def setUp(self):
+        self.TEMPDIR = tempfile.mkdtemp()
+        self.TEMPLATES_DIR = os.path.join(self.TEMPDIR, 'files', 'test')
+        _setup_test_dir(
+            os.path.join(TEMPLATES_DIR, 'files', 'test'),
+            self.TEMPLATES_DIR
+        )
         self.opts = {
-            'cachedir': TEMPLATES_DIR,
+            'cachedir': self.TEMPDIR,
             'file_roots': {
-                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+                'test': [self.TEMPLATES_DIR]
             },
             'pillar_roots': {
-                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+                'test': [self.TEMPLATES_DIR]
             }
         }
+        super(TestSaltCacheLoader, self).setUp()
+
+    def tearDown(self):
+        salt.utils.rm_rf(self.TEMPDIR)
 
     def test_searchpath(self):
         '''
@@ -96,7 +136,7 @@ class TestSaltCacheLoader(TestCase):
         assert len(res) == 3
         # res[0] on Windows is unicode and use os.linesep so it works cross OS
         self.assertEqual(str(res[0]), 'world' + os.linesep)
-        tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
+        tmpl_dir = os.path.join(self.TEMPLATES_DIR, 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
         assert len(loader._file_client.requests)
@@ -155,18 +195,24 @@ class TestSaltCacheLoader(TestCase):
 
 
 class TestGetTemplate(TestCase):
-    def __init__(self, *args, **kws):
-        super(TestGetTemplate, self).__init__(*args, **kws)
+
+    def setUp(self):
+        self.TEMPDIR = tempfile.mkdtemp()
+        self.TEMPLATES_DIR = os.path.join(self.TEMPDIR, 'files', 'test')
+        _setup_test_dir(
+            os.path.join(TEMPLATES_DIR, 'files', 'test'),
+            self.TEMPLATES_DIR
+        )
         self.local_opts = {
-            'cachedir': TEMPLATES_DIR,
+            'cachedir': self.TEMPDIR,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+                'test': [self.TEMPLATES_DIR]
             },
             'pillar_roots': {
-                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+                'test': [self.TEMPLATES_DIR]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -176,13 +222,17 @@ class TestGetTemplate(TestCase):
         }
         self.local_salt = {
         }
+        super(TestGetTemplate, self).setUp()
+
+    def tearDown(self):
+        salt.utils.rm_rf(self.TEMPDIR)
 
     def test_fallback(self):
         '''
         A Template with a filesystem loader is returned as fallback
         if the file is not contained in the searchpath
         '''
-        fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
+        fn_ = os.path.join(self.TEMPLATES_DIR, 'hello_simple')
         with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
@@ -194,7 +244,7 @@ class TestGetTemplate(TestCase):
         A Template with a filesystem loader is returned as fallback
         if the file is not contained in the searchpath
         '''
-        filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
+        filename = os.path.join(self.TEMPLATES_DIR, 'hello_import')
         with salt.utils.fopen(filename) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
@@ -210,11 +260,11 @@ class TestGetTemplate(TestCase):
         '''
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
+            filename = os.path.join(self.TEMPLATES_DIR, 'hello_import')
             with salt.utils.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
-                    dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                    dict(opts={'cachedir': self.TEMPDIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Salt', saltenv='test', salt=self.local_salt))
@@ -233,8 +283,7 @@ class TestGetTemplate(TestCase):
 \{\{ 1/0 \}\}    <======================
 \{%- endmacro %\}
 ---.*'''
-        filename = os.path.join(TEMPLATES_DIR,
-                                'files', 'test', 'hello_import_generalerror')
+        filename = os.path.join(self.TEMPLATES_DIR, 'hello_import_generalerror')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
@@ -257,8 +306,7 @@ class TestGetTemplate(TestCase):
 \{\{b.greetee\}\} <-- error is here    <======================
 \{%- endmacro %\}
 ---'''
-        filename = os.path.join(TEMPLATES_DIR,
-                                'files', 'test', 'hello_import_undefined')
+        filename = os.path.join(self.TEMPLATES_DIR, 'hello_import_undefined')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
@@ -281,8 +329,7 @@ class TestGetTemplate(TestCase):
 \{\{ greeting ~ ' ' ~ greetee \}\} !
 \{%- endmacro %\}
 ---.*'''
-        filename = os.path.join(TEMPLATES_DIR,
-                                'files', 'test', 'hello_import_error')
+        filename = os.path.join(self.TEMPLATES_DIR, 'hello_import_error')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.fopen(filename) as fp_:
@@ -296,22 +343,22 @@ class TestGetTemplate(TestCase):
     def test_non_ascii_encoding(self):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
+            filename = os.path.join(self.TEMPLATES_DIR, 'hello_import')
             with salt.utils.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
-                    dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                    dict(opts={'cachedir': self.TEMPDIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
             self.assertEqual(out, u'Hey world !Hi Sàlt !' + os.linesep)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
-            filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
+            filename = os.path.join(self.TEMPLATES_DIR, 'non_ascii')
             with salt.utils.fopen(filename, mode='rb') as fp_:
                 out = render_jinja_tmpl(
                     salt.utils.to_unicode(fp_.read(), 'utf-8'),
-                    dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                    dict(opts={'cachedir': self.TEMPDIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
@@ -345,7 +392,7 @@ class TestGetTemplate(TestCase):
             self.assertEqual(response, '02')
 
     def test_non_ascii(self):
-        fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
+        fn = os.path.join(self.TEMPLATES_DIR, 'non_ascii')
         out = JINJA(fn, opts=self.local_opts, saltenv='test')
         with salt.utils.fopen(out['data'], mode='rb') as fp:
             result = salt.utils.to_unicode(fp.read(), 'utf-8')
