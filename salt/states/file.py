@@ -5356,18 +5356,21 @@ def patch(name,
     max_index = len(options) - 1
     # Not using enumerate here because we may need to consume more than one
     # option if --strip is used.
+    blacklisted_options = []
     while index <= max_index:
         option = options[index]
         if not isinstance(option, six.string_types):
             option = six.text_type(option)
 
-        for blacklisted in ('-N', '--forward', '-r', '--reject-file',
-                            '-o', '--output'):
-            if option.startswith(blacklisted):
-                ret['comment'] = 'The \'{0}\' CLI option is not allowed'.format(
-                    blacklisted
-                )
-                return ret
+        for item in ('-N', '--forward', '-r', '--reject-file', '-o', '--output'):
+            if option.startswith(item):
+                blacklisted = option
+                break
+        else:
+            blacklisted = None
+
+        if blacklisted is not None:
+            blacklisted_options.append(blacklisted)
 
         if option.startswith('-p'):
             try:
@@ -5408,6 +5411,14 @@ def patch(name,
 
         # Increment the index
         index += 1
+
+    if blacklisted_options:
+        ret['comment'] = (
+            'The following CLI options are not allowed: {0}'.format(
+                ', '.join(blacklisted_options)
+            )
+        )
+        return ret
 
     options = sanitized_options
 
