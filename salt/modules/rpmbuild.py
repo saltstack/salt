@@ -335,46 +335,22 @@ def make_repo(repodir,
         The directory to find packages that will be in the repository.
 
     keyid
-        .. versionchanged:: 2016.3.0
+        .. versionchanged:: fluorine
 
         Optional Key ID to use in signing packages and repository.
+        This consists of the last 8 hex digits of the GPG key ID.
+
         Utilizes Public and Private keys associated with keyid which have
         been loaded into the minion's Pillar data.
+        These pillar values are assumed to be filenames which are present
+        in ``gnupghome``. The pillar keys shown below have to match exactly.
 
         For example, contents from a Pillar data file with named Public
         and Private keys as follows:
 
         .. code-block:: yaml
 
-            gpg_pkg_priv_key: |
-              -----BEGIN PGP PRIVATE KEY BLOCK-----
-              Version: GnuPG v1
-
-              lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-              .
-              .
-              Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
-              R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
-              =JvW8
-              -----END PGP PRIVATE KEY BLOCK-----
-
             gpg_pkg_priv_keyname: gpg_pkg_key.pem
-
-            gpg_pkg_pub_key: |
-              -----BEGIN PGP PUBLIC KEY BLOCK-----
-              Version: GnuPG v1
-
-              mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-              .
-              .
-              bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
-              4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
-              inNqW9c=
-              =s1CX
-              -----END PGP PUBLIC KEY BLOCK-----
-
             gpg_pkg_pub_keyname: gpg_pkg_key.pub
 
     env
@@ -482,49 +458,52 @@ def make_repo(repodir,
         ## sign_it_here
         # interval of 0.125 is really too fast on some systems
         interval = 0.5
-        for file in os.listdir(repodir):
-            if file.endswith('.rpm'):
-                abs_file = os.path.join(repodir, file)
-                number_retries = timeout / interval
-                times_looped = 0
-                error_msg = 'Failed to sign file {0}'.format(abs_file)
-                cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
-                preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
-                try:
-                    stdout, stderr = None, None
-                    proc = salt.utils.vt.Terminal(
-                        cmd,
-                        shell=True,
-                        preexec_fn=preexec_fn,
-                        stream_stdout=True,
-                        stream_stderr=True
-                    )
-                    while proc.has_unread_data:
-                        stdout, stderr = proc.recv()
-                        if stdout and SIGN_PROMPT_RE.search(stdout):
-                            # have the prompt for inputting the passphrase
-                            proc.sendline(phrase)
-                        else:
-                            times_looped += 1
-
-                        if times_looped > number_retries:
-                            raise SaltInvocationError(
-                                'Attemping to sign file {0} failed, timed out after {1} seconds'
-                                .format(abs_file, int(times_looped * interval))
-                            )
-                        time.sleep(interval)
-
-                    proc_exitstatus = proc.exitstatus
-                    if proc_exitstatus != 0:
-                        raise SaltInvocationError(
-                            'Signing file {0} failed with proc.status {1}'
-                            .format(abs_file, proc_exitstatus)
+        for (dirpath, dirnames, filenames) in os.walk(repodir):
+            for filename in filenames:
+                file = os.path.join(dirpath, name)
+                if file.endswith('.rpm'):
+                    abs_file = os.path.join(repodir, file)
+                    number_retries = timeout / interval
+                    times_looped = 0
+                    error_msg = 'Failed to sign file {0}'.format(abs_file)
+                    cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
+                    preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
+                    try:
+                        stdout, stderr = None, None
+                        proc = salt.utils.vt.Terminal(
+                            cmd,
+                            env={'GNUPGHOME': gnupghome},
+                            shell=True,
+                            preexec_fn=preexec_fn,
+                            stream_stdout=True,
+                            stream_stderr=True
                         )
-                except salt.utils.vt.TerminalException as err:
-                    trace = traceback.format_exc()
-                    log.error(error_msg, err, trace)
-                finally:
-                    proc.close(terminate=True, kill=True)
+                        while proc.has_unread_data:
+                            stdout, stderr = proc.recv()
+                            if stdout and SIGN_PROMPT_RE.search(stdout):
+                                # have the prompt for inputting the passphrase
+                                proc.sendline(phrase)
+                            else:
+                                times_looped += 1
+
+                            if times_looped > number_retries:
+                                raise SaltInvocationError(
+                                    'Attemping to sign file {0} failed, timed out after {1} seconds'
+                                    .format(abs_file, int(times_looped * interval))
+                                )
+                            time.sleep(interval)
+
+                        proc_exitstatus = proc.exitstatus
+                        if proc_exitstatus != 0:
+                            raise SaltInvocationError(
+                                'Signing file {0} failed with proc.status {1}'
+                                .format(abs_file, proc_exitstatus)
+                            )
+                    except salt.utils.vt.TerminalException as err:
+                        trace = traceback.format_exc()
+                        log.error(error_msg, err, trace)
+                    finally:
+                        proc.close(terminate=True, kill=True)
 
     cmd = 'createrepo --update {0}'.format(repodir)
     return __salt__['cmd.run_all'](cmd, runas=runas)
