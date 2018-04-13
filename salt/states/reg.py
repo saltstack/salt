@@ -192,11 +192,8 @@ def present(name,
                                    salt.utils.stringutils.to_unicode(name, 'utf-8'))
         return ret
 
-    try:
-        vdata_decoded = salt.utils.stringutils.to_unicode(vdata, 'utf-8')
-    except UnicodeDecodeError:
-        # vdata contains binary data that can't be decoded
-        vdata_decoded = vdata
+    vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
+
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
                   'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
                   'Value': vdata_decoded}
