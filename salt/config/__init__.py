@@ -3675,6 +3675,8 @@ def apply_minion_config(overrides=None,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'minion'
@@ -3683,7 +3685,7 @@ def apply_minion_config(overrides=None,
         opts.update(overrides)
 
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' minion config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3783,7 +3785,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3872,6 +3874,8 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'master'
@@ -3880,7 +3884,7 @@ def apply_master_config(overrides=None, defaults=None):
         opts.update(overrides)
 
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' master config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3930,7 +3934,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Insert all 'utils_dirs' directories to the system path
     insert_system_path(opts, opts['utils_dirs'])
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
