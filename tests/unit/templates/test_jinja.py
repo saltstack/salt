@@ -66,15 +66,6 @@ class MockFileClient(object):
 
 def _setup_test_dir(src_dir, test_dir):
     os.makedirs(test_dir)
-    #for dirname, dirs, files in os.walk(src_dir):
-    #    for file in files:
-    #        with open(os.path.join(dirname, file), 'rb') as src:
-    #            with open(os.path.join(test_dir, file), 'wb') as dst:
-    #                while True:
-    #                    chunk = src.read(1024)
-    #                    if not chunk:
-    #                        break
-    #                    dst.write(chunk)
     salt.utils.files.recursive_copy(src_dir, test_dir)
     filename = os.path.join(test_dir, 'non_ascii')
     with open(filename, 'wb') as fp:
