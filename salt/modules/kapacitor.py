@@ -31,6 +31,10 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.path
 from salt.utils.decorators import memoize
+import logging as logger
+
+# Setup the logger
+log = logger.getLogger(__name__)
 
 
 def __virtual__():
@@ -160,10 +164,8 @@ def define_task(name,
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
     if not database and not dbrps:
-        return (
-            False,
-            'Providing database name or dbrps is mandatory.'
-        )
+        log.error("Providing database name or dbrps is mandatory.")
+        return False
 
     if version() < '0.13':
         cmd = 'kapacitor define -name {0}'.format(name)
