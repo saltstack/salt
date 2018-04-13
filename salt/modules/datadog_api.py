@@ -17,6 +17,7 @@ https://docs.datadoghq.com/api/
 # Import salt libs
 from __future__ import absolute_import, print_function, unicode_literals
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 # Import third party libs
 import requests
@@ -248,7 +249,7 @@ def post_event(api_key=None,
                                             alert_type=alert_type,
                                             aggregation_key=aggregation_key,
                                             source_type_name=source_type_name
-                                           )
+                                            )
     except ValueError:
         comment = ('Unexpected exception in Datadog Post Event API '
                    'call. Are your keys correct?')
@@ -261,4 +262,396 @@ def post_event(api_key=None,
         ret['comment'] = 'Successfully sent event'
     else:
         ret['comment'] = 'Error in posting event.'
+    return ret
+
+
+def get_all_monitors(name=None,
+                     group_states=None,
+                     tags=None,
+                     monitor_tags=None,
+                     with_downtimes=None,
+                     api_key=None,
+                     app_key=None):
+    '''
+    Get all monitors in Datadog.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-call datadog.get_all_monitors api_key='0123456789' \\
+                                           app_key='9876543210'
+
+    Optional arguments
+
+    :param name:             Name of monitor.
+    :param group_states:     If this argument is set, the returned data will
+                             include additional information about the group
+                             states. Choose one or more from 'all', 'alert'
+                             'warn' or 'no data'.
+    :param tags:             A comma separated list indicating what tags
+                             should be used to filter the list of monitors.
+    :param monitor_tags:     A comma separated list indicating what service
+                             and/or custom tags should be used to filter the
+                             list of monitors.
+    :param with_downtimes:   If this argument is set to true, then the returned
+                             data includes current downtimes for each monitor.
+    '''
+    _initialize_connection(api_key, app_key)
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    try:
+        response = datadog.api.Monitor.get_all(name=name,
+                                               group_states=group_states,
+                                               tags=tags,
+                                               monitor_tags=monitor_tags,
+                                               with_downtimes=with_downtimes)
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Get All Monitors API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+
+    ret['response'] = response
+    if isinstance(response, list):
+        no_monitors = len(response)
+        ret['result'] = True
+        ret['comment'] = str(no_monitors) + ' monitors found'
+    else:
+        ret['comment'] = 'Error in finding monitors.'
+
+    return ret
+
+
+def get_monitor(id, group_states=None, api_key=None, app_key=None):
+    '''
+    Get a monitors details based on it's id.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-call datadog.get_monitor id='1234567' \\
+                                      api_key='0123456789' \\
+                                      app_key='9876543210'
+
+    Required arguments
+
+    :param id:    The id of the monitor
+    '''
+    _initialize_connection(api_key, app_key)
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    try:
+        response = datadog.api.Monitor.get(id=id, group_states=group_states)
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Get Monitor API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+
+    ret['response'] = response
+    if 'id' in response.keys():
+        ret['result'] = True
+        ret['comment'] = 'Successfully found monitor'
+    else:
+        ret['comment'] = 'Error in finding monitor.'
+
+    return ret
+
+
+def _get_options(**kwargs):
+    '''
+    Return dict of options.
+    '''
+    options = {}
+    for key, value in six.iteritems(kwargs):
+        if value:
+            options[key] = value
+
+    return options
+
+
+def create_monitor(name,
+                   type,
+                   query,
+                   api_key=None,
+                   app_key=None,
+                   message=None,
+                   tags=None,
+                   silenced=None,
+                   notify_no_data=None,
+                   new_host_delay=None,
+                   no_data_timeframe=None,
+                   timeout_h=None,
+                   require_full_window=None,
+                   renotify_interval=None,
+                   escalation_message=None,
+                   notify_audit=None,
+                   locked=None,
+                   include_tags=None,
+                   thresholds=None,
+                   evaluation_delay=None):
+    '''
+    Create a monitor in Datadog.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-call datadog.create_monitor name='check datadog agent up' \\
+                                         type='service check' \\
+                                         query='"datadog.agent.up".over("*").by("host").last(2).count_by_status()' \\
+                                         api_key='0123456789' \\
+                                         app_key='9876543210' \\
+
+    Required arguments
+
+    :param name:                  The name of the alert
+    :param type:                  The type of the monitor
+    :param query:                 The query defines when a monitor will
+                                  trigger.
+
+    Optional arguments
+
+    :param message:               A message to include with notifications for
+                                  the monitor.
+    :param tags:                  A list of tags to associate with the monitor
+    :param silenced:              Dictionary of scopes to timestamps or None.
+                                  Scopes will be muted until given timestamp
+    :param notify_no_data         A boolean indicating whether this monitor
+                                  will notify when data stops reporting.
+    :param new_host_delay         Time in seconds to allow a host to boot
+                                  before evaulating monitor results.
+    :param no_data_timeframe      The number of minutes before a monitor will
+                                  notify when data stops reporting.
+    :param timeout_h              The number of hours of the monitor not
+                                  reporting data before it will automatically
+                                  resolve from a triggered state.
+    :param require_full_window    A boolean indicating whether this monitor
+                                  needs a full window of data before it's
+                                  evaluated.
+    :param renotify_interval      The number of minutes after the last
+                                  notification before a monitor will
+                                  re-notify on the current status.
+    :param escalation_message     A message to include with a re-notification
+    :param notify_audit           A boolean indicating whether tagged users
+                                  will be notified on changes to this monitor.
+    :param locked                 A boolean indicating whether changes to to
+                                  this monitor should be restricted to the
+                                  creator or admins.
+    :param include_tags           A boolean indicating whether notifications
+                                  from this monitor will automatically insert
+                                  its triggering tags into the title.
+    :param thresholds             A disctionary of thresholds by threshold
+                                  type.
+    :param evaluation_delay       Time (in seconds) to delay evaluation, as a
+                                  non-negative integer.
+
+    '''
+    _initialize_connection(api_key, app_key)
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    options = _get_options(silenced=silenced,
+                           notify_no_data=notify_no_data,
+                           new_host_delay=new_host_delay,
+                           no_data_timeframe=no_data_timeframe,
+                           timeout_h=timeout_h,
+                           require_full_window=require_full_window,
+                           renotify_interval=renotify_interval,
+                           escalation_message=escalation_message,
+                           notify_audit=notify_audit,
+                           locked=locked,
+                           include_tags=include_tags,
+                           thresholds=thresholds,
+                           evaluation_delay=evaluation_delay)
+
+    try:
+        response = datadog.api.Monitor.create(name=name,
+                                              type=type,
+                                              query=query,
+                                              message=message,
+                                              tags=tags,
+                                              options=options)
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Create Monitor API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+
+    ret['response'] = response
+    if 'id' in response.keys():
+        ret['result'] = True
+        ret['comment'] = 'Successfully created monitor'
+    else:
+        ret['comment'] = 'Error in creating monitor.'
+
+    return ret
+
+
+def update_monitor(name,
+                   id,
+                   query,
+                   api_key=None,
+                   app_key=None,
+                   message=None,
+                   tags=None,
+                   silenced=None,
+                   notify_no_data=None,
+                   new_host_delay=None,
+                   no_data_timeframe=None,
+                   timeout_h=None,
+                   require_full_window=None,
+                   renotify_interval=None,
+                   escalation_message=None,
+                   notify_audit=None,
+                   locked=None,
+                   include_tags=None,
+                   thresholds=None,
+                   evaluation_delay=None):
+    '''
+    Update a monitor in Datadog.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-call datadog.update_monitor name='check datadog agent up' \\
+                                         id='1234567' \\
+                                         query='"datadog.agent.up".over("*").by("host").last(2).count_by_status()' \\
+                                         api_key='0123456789' \\
+                                         app_key='9876543210' \\
+
+    Required arguments
+
+    :param name:                  The name of the alert
+    :param query:                 The query defines when a monitor will
+                                  trigger.
+
+    Optional arguments
+
+    :param message:               A message to include with notifications for
+                                  the monitor.
+    :param tags:                  A list of tags to associate with the monitor
+    :param silenced:              Dictionary of scopes to timestamps or None.
+                                  Scopes will be muted until given timestamp
+    :param notify_no_data         A boolean indicating whether this monitor
+                                  will notify when data stops reporting.
+    :param new_host_delay         Time in seconds to allow a host to boot
+                                  before evaulating monitor results.
+    :param no_data_timeframe      The number of minutes before a monitor will
+                                  notify when data stops reporting.
+    :param timeout_h              The number of hours of the monitor not
+                                  reporting data before it will automatically
+                                  resolve from a triggered state.
+    :param require_full_window    A boolean indicating whether this monitor
+                                  needs a full window of data before it's
+                                  evaluated.
+    :param renotify_interval      The number of minutes after the last
+                                  notification before a monitor will
+                                  re-notify on the current status.
+    :param escalation_message     A message to include with a re-notification
+    :param notify_audit           A boolean indicating whether tagged users
+                                  will be notified on changes to this monitor.
+    :param locked                 A boolean indicating whether changes to to
+                                  this monitor should be restricted to the
+                                  creator or admins.
+    :param include_tags           A boolean indicating whether notifications
+                                  from this monitor will automatically insert
+                                  its triggering tags into the title.
+    :param thresholds             A disctionary of thresholds by threshold
+                                  type.
+    :param evaluation_delay       Time (in seconds) to delay evaluation, as a
+                                  non-negative integer.
+
+    '''
+    _initialize_connection(api_key, app_key)
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    options = _get_options(silenced=silenced,
+                           notify_no_data=notify_no_data,
+                           new_host_delay=new_host_delay,
+                           no_data_timeframe=no_data_timeframe,
+                           timeout_h=timeout_h,
+                           require_full_window=require_full_window,
+                           renotify_interval=renotify_interval,
+                           escalation_message=escalation_message,
+                           notify_audit=notify_audit,
+                           locked=locked,
+                           include_tags=include_tags,
+                           thresholds=thresholds,
+                           evaluation_delay=evaluation_delay)
+
+    try:
+        response = datadog.api.Monitor.update(name=name,
+                                              id=id,
+                                              query=query,
+                                              message=message,
+                                              tags=tags,
+                                              options=options)
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Update Monitor API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+
+    ret['response'] = response
+    if 'id' in response.keys():
+        ret['result'] = True
+        ret['comment'] = 'Successfully updated monitor'
+    else:
+        ret['comment'] = 'Error in updating monitor.'
+
+    return ret
+
+
+def delete_monitor(id, api_key=None, app_key=None):
+    '''
+    Delete a monitor.
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-call datadog.delete_monitor id='1234567' \\
+                                         api_key='0123456789' \\
+                                         app_key='9876543210'
+
+    Required arguments
+
+    :param id:    The id of the monitor
+    '''
+    _initialize_connection(api_key, app_key)
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    try:
+        response = datadog.api.Monitor.delete(id=id)
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Delete Monitor API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+
+    ret['response'] = response
+    if 'deleted_monitor_id' in response.keys():
+        ret['result'] = True
+        ret['comment'] = 'Successfully deleted monitor'
+    else:
+        ret['comment'] = 'Error in deleting monitor.'
+
     return ret
