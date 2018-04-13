@@ -55,6 +55,7 @@ def _timedatectl():
 
     return ret
 
+
 def _get_zone_solaris():
     tzfile = '/etc/TIMEZONE'
     with salt.utils.files.fopen(tzfile, 'r') as fp_:
