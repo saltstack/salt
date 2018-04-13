@@ -83,5 +83,12 @@ class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(parsed_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = [{"a": "192.168.10.10"}, "192.168.10.20"]
+        ret = [
+            "default.users",
+            "default.motd",
+            "default.empty",
+            "default",
+            "roles.app",
+            "roles.nginx",
+        ]
         self._runner(ret)
