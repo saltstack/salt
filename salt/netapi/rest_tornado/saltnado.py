@@ -213,6 +213,7 @@ ioloop.install()
 import salt.netapi
 import salt.utils.args
 import salt.utils.event
+import salt.utils.jid
 import salt.utils.json
 import salt.utils.yaml
 from salt.utils.event import tagify
@@ -929,7 +930,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Dispatch local client commands
         '''
         # Generate jid before triggering a job to subscribe all returns from minions
-        chunk['jid'] = salt.utils.jid.gen_jid()
+        chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts)
 
         # Subscribe returns from minions before firing a job
         future_minion_map = self.subscribe_minion_returns(chunk['jid'], chunk['tgt'])
