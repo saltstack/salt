@@ -57,14 +57,14 @@ class Depends(object):
         .. code-block:: python
 
         This can also be done with the retcode of a command, using the
-        `retcode` argument:
+        ``retcode`` argument:
 
             @depends('/opt/bin/check_cmd', retcode=0)
             def test():
                 return 'foo'
 
         It is also possible to check for any nonzero retcode using the
-        `nonzero_retcode` argument:
+        ``nonzero_retcode`` argument:
 
             @depends('/opt/bin/check_cmd', nonzero_retcode=True)
             def test():
