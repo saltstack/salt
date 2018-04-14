@@ -118,6 +118,7 @@ import os
 import logging
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
@@ -158,7 +159,7 @@ def _config(name, conf):
     Return a value for 'name' from  the config file options.
     '''
     try:
-        value = conf[name]
+        value = salt.utils.data.decode(conf[name], to_str=True)
     except KeyError:
         value = None
     return value
