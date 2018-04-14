@@ -12,7 +12,7 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
+from tests.support.paths import TMP, FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -23,12 +23,50 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 import salt.ext.six as six
 
 
+DEFAULT_ENDING = salt.utils.to_bytes(os.linesep)
+
+
+def trim_line_end(line):
+    '''
+    Remove CRLF or LF from the end of line.
+    '''
+    if line[-2:] == salt.utils.to_bytes('\r\n'):
+        return line[:-2]
+    elif line[-1] == salt.utils.to_bytes('\n'):
+        return line[:-1]
+    raise Exception("Invalid line ending")
+
+
+def reline(source, dest, force=False, ending=DEFAULT_ENDING):
+    '''
+    Normalize the line endings of a file.
+    '''
+    fp, tmp = tempfile.mkstemp()
+    os.close(fp)
+    with salt.utils.fopen(tmp, 'wb') as tmp_fd:
+        with salt.utils.fopen(source, 'rb') as fd:
+            lines = fd.readlines()
+            for line in lines:
+                line_noend = trim_line_end(line)
+                tmp_fd.write(line_noend + ending)
+    if os.path.exists(dest) and force:
+        os.remove(dest)
+    os.rename(tmp, dest)
+
+
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''
 
     maxDiff = None
+
+    def setUp(self):
+        super(StateModuleTest, self).setUp()
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
+        reline(destpath, destpath, force=True)
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
+        reline(destpath, destpath, force=True)
 
     def test_show_highstate(self):
         '''
