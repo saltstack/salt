@@ -32,7 +32,7 @@ def trim_line_end(line):
     '''
     if line[-2:] == salt.utils.to_bytes('\r\n'):
         return line[:-2]
-    elif line[-1] == salt.utils.to_bytes('\n'):
+    elif line[-1:] == salt.utils.to_bytes('\n'):
         return line[:-1]
     raise Exception("Invalid line ending")
 
