@@ -1378,7 +1378,7 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
         _cmd = client.cmd_subset
         cmd_kwargs = {
             'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
-            'ret': ret, 'kwarg': kwarg, 'sub': kwargs['subset'],
+            'ret': ret, 'cli': True, 'kwarg': kwarg, 'sub': kwargs['subset'],
         }
         del kwargs['subset']
     else:
@@ -1533,6 +1533,9 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
         if 'saltenv' in aspec.args:
             kwarg['saltenv'] = saltenv
+
+    if name in ['state.orchestrate', 'state.orch', 'state.sls']:
+        kwarg['orchestration_jid'] = jid
 
     if jid:
         salt.utils.event.fire_args(
