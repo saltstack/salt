@@ -341,10 +341,7 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug(
-            'Setting the value for %s under %s (%s)',
-            key=key, bank=bank, redis_key=redis_key
-        )
+        log.debug('Setting the value for %s under %s (%s)', key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
         log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()

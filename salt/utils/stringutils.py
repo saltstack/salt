@@ -348,14 +348,14 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     found in the whitelist, the function returns ``False``.
     '''
     if blacklist is not None:
-        if not hasattr(blacklist, '__iter__'):
+        if not isinstance(blacklist, list):
             blacklist = [blacklist]
         for expr in blacklist:
             if expr_match(value, expr):
                 return False
 
     if whitelist:
-        if not hasattr(whitelist, '__iter__'):
+        if not isinstance(whitelist, list):
             whitelist = [whitelist]
         for expr in whitelist:
             if expr_match(value, expr):
