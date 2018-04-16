@@ -567,8 +567,9 @@ class MinionBase(object):
                         break
                     except SaltClientError as exc:
                         last_exc = exc
+                        pki_dirname = os.path.dirname(opts['pki_dir'])
                         if exc.strerror.startswith(
-                                'Could not access {0}'.format(opts['pki_dir'])):
+                                'Could not access {0}'.format(pki_dirname)):
                             msg = exc.strerror
                         else:
                             msg = ('Master {0} could not be reached, trying '
