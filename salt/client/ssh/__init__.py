@@ -341,12 +341,12 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
+        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy') is True:
             target = self.targets[host]
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').count('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied') and not self.opts.get('ssh_key_deploy') is False:
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
