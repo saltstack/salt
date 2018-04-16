@@ -1567,7 +1567,8 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
+                # use minion_blackout_whitelist from grains if it exists
+                if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
@@ -2053,14 +2054,16 @@ class Minion(MinionBase):
 
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Minion {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'minion_start'
-        )
-        # dup name spaced event
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to False in Neon Salt release
+            self._fire_master(
+                'Minion {0} started at {1}'.format(
+                self.opts['id'],
+                time.asctime()
+                ),
+                'minion_start'
+            )
+        # send name spaced event
         self._fire_master(
             'Minion {0} started at {1}'.format(
             self.opts['id'],
@@ -2521,7 +2524,6 @@ class Minion(MinionBase):
                     self.opts,
                     self.functions,
                     self.returners,
-                    utils=self.utils,
                     cleanup=[master_event(type='alive')])
 
             try:
@@ -2602,7 +2604,7 @@ class Minion(MinionBase):
             def ping_master():
                 try:
                     def ping_timeout_handler(*_):
-                        if not self.opts.get('auth_safemode', True):
+                        if self.opts.get('auth_safemode', False):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
@@ -2756,14 +2758,16 @@ class Syndic(Minion):
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-                self.opts['id'],
-                time.asctime()
-            ),
-            'syndic_start',
-            sync=False,
-        )
+        if self.opts['enable_legacy_startup_events']:
+            # old style event. Defaults to false in Neon Salt release.
+            self._fire_master(
+                'Syndic {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                ),
+                'syndic_start',
+                sync=False,
+            )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
                 self.opts['id'],

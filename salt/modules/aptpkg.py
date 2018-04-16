@@ -2152,7 +2152,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         Keyserver to get gpg key from
 
     keyid
-        Key ID to load with the ``keyserver`` argument
+        Key ID or a list of key IDs to load with the ``keyserver`` argument
 
     key_url
         URL to a GPG key to add to the APT GPG keyring
@@ -2210,12 +2210,18 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if repo_info:
                     return {repo: repo_info}
                 else:
+                    env = None
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        env = {'http_proxy': http_proxy_url,
+                               'https_proxy': http_proxy_url}
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = ['apt-add-repository', repo]
                     else:
                         cmd = ['apt-add-repository', '-y', repo]
                     out = __salt__['cmd.run_all'](cmd,
                                                   python_shell=False,
+                                                  env=env,
                                                   **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
@@ -2336,27 +2342,31 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
-        if isinstance(keyid, int):  # yaml can make this an int, we need the hex version
-            keyid = hex(keyid)
-        cmd = ['apt-key', 'export', keyid]
-        output = __salt__['cmd.run_stdout'](cmd, python_shell=False, **kwargs)
-        imported = output.startswith('-----BEGIN PGP')
-        if keyserver:
-            if not imported:
-                http_proxy_url = _get_http_proxy_url()
-                if http_proxy_url:
-                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
-                           '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
-                else:
-                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
-                           '--logger-fd', '1', '--recv-keys', keyid]
-                ret = __salt__['cmd.run_all'](cmd,
-                                              python_shell=False,
-                                              **kwargs)
-                if ret['retcode'] != 0:
-                    raise CommandExecutionError(
-                        'Error: key retrieval failed: {0}'.format(ret['stdout'])
-                    )
+        if not isinstance(keyid, list):
+            keyid = [keyid]
+
+        for key in keyid:
+            if isinstance(key, int):  # yaml can make this an int, we need the hex version
+                key = hex(key)
+            cmd = ['apt-key', 'export', key]
+            output = __salt__['cmd.run_stdout'](cmd, python_shell=False, **kwargs)
+            imported = output.startswith('-----BEGIN PGP')
+            if keyserver:
+                if not imported:
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
+                               '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', key]
+                    else:
+                        cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                               '--logger-fd', '1', '--recv-keys', key]
+                    ret = __salt__['cmd.run_all'](cmd,
+                                                  python_shell=False,
+                                                  **kwargs)
+                    if ret['retcode'] != 0:
+                        raise CommandExecutionError(
+                            'Error: key retrieval failed: {0}'.format(ret['stdout'])
+                        )
 
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']

@@ -4,6 +4,7 @@ Module for viewing and modifying OpenBSD sysctl parameters
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import re
 
 # Import salt libs
 from salt.ext import six
@@ -76,7 +77,11 @@ def assign(name, value):
     cmd = 'sysctl {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
 
-    if data['retcode'] != 0:
+    # Certain values cannot be set from this console, at the current
+    # securelevel or there are other restrictions that prevent us
+    # from applying the setting rightaway.
+    if re.match(r'^sysctl:.*: Operation not permitted$', data['stderr']) or \
+      data['retcode'] != 0:
         raise CommandExecutionError('sysctl failed: {0}'.format(
             data['stderr']))
     new_name, new_value = data['stdout'].split(':', 1)

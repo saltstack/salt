@@ -1956,6 +1956,64 @@ def diff(cwd,
                     output_encoding=output_encoding)['stdout']
 
 
+def discard_local_changes(cwd,
+                          path='.',
+                          user=None,
+                          password=None,
+                          ignore_retcode=False,
+                          output_encoding=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
+
+    cwd
+        The path to the git checkout
+
+    path
+        path relative to cwd (defaults to ``.``)
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.discard_local_changes /path/to/repo
+        salt myminion git.discard_local_changes /path/to/repo path=foo
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git', 'checkout', '--', path]
+    # Checkout message goes to stderr
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
 def fetch(cwd,
           remote=None,
           force=False,

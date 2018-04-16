@@ -152,7 +152,7 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
 
 def cache_id_func(service):
     '''
-    Returns a partial `cache_id` function for the provided service.
+    Returns a partial ``cache_id`` function for the provided service.
 
     .. code-block:: python
 
@@ -203,7 +203,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
 
 def get_connection_func(service, module=None):
     '''
-    Returns a partial `get_connection` function for the provided service.
+    Returns a partial ``get_connection`` function for the provided service.
 
     .. code-block:: python
 
@@ -259,7 +259,7 @@ def assign_funcs(modname, service, module=None, pack=None):
 
     .. code-block:: python
 
-        _utils__['boto.assign_partials'](__name__, 'ec2')
+        __utils__['boto.assign_partials'](__name__, 'ec2')
     '''
     if pack:
         global __salt__  # pylint: disable=W0601
@@ -274,9 +274,10 @@ def assign_funcs(modname, service, module=None, pack=None):
 
 
 def paged_call(function, *args, **kwargs):
-    """Retrieve full set of values from a boto API call that may truncate
+    '''
+    Retrieve full set of values from a boto API call that may truncate
     its results, yielding each page as it is obtained.
-    """
+    '''
     marker_flag = kwargs.pop('marker_flag', 'marker')
     marker_arg = kwargs.pop('marker_flag', 'marker')
     while True:

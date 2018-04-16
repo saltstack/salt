@@ -23,6 +23,13 @@ import uuid
 from errno import EACCES, EPERM
 import datetime
 
+# pylint: disable=import-error
+try:
+    import dateutil.tz
+    _DATEUTIL_TZ = True
+except ImportError:
+    _DATEUTIL_TZ = False
+
 __proxyenabled__ = ['*']
 __FQDN__ = None
 
@@ -861,6 +868,10 @@ def _virtual(osdata):
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
                     grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
                 else:
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
@@ -995,6 +1006,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
@@ -1483,6 +1496,12 @@ def os_data():
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif salt.utils.path.which('dumb-init') in init_cmdline:
+                        # https://github.com/Yelp/dumb-init
+                        grains['init'] = 'dumb-init'
+                    elif salt.utils.path.which('tini') in init_cmdline:
+                        # https://github.com/krallin/tini
+                        grains['init'] = 'tini'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
                     elif '/sbin/my_init' in init_cmdline:
@@ -1841,6 +1860,8 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+    if _DATEUTIL_TZ:
+        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
     return grains
 
 
@@ -1891,6 +1912,38 @@ def append_domain():
     if 'append_domain' in __opts__:
         grain['append_domain'] = __opts__['append_domain']
     return grain
+
+
+def fqdns():
+    '''
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    '''
+    # Provides:
+    # fqdns
+
+    grains = {}
+    fqdns = set()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False,
+                                            interface_data=_INTERFACES)
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
+                                                  interface_data=_INTERFACES))
+    err_message = 'Exception during resolving address: %s'
+    for ip in addresses:
+        try:
+            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+        except socket.herror as err:
+            if err.errno == 1:
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
+
+    grains['fqdns'] = sorted(list(fqdns))
+    return grains
 
 
 def ip_fqdn():

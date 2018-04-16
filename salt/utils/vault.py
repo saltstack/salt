@@ -11,7 +11,6 @@ documented in the execution module docs.
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
-import os
 import requests
 
 import salt.crypt
@@ -24,6 +23,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 # Load the __salt__ dunder if not already loaded (when called from utils-module)
 __salt__ = None
+
+
 def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
     try:
         global __salt__  # pylint: disable=global-statement
@@ -50,27 +51,27 @@ def _get_token_and_url_from_master():
         log.debug('Running on minion, signing token request with key %s',
                   private_key)
         signature = base64.b64encode(salt.crypt.sign_message(
-                                                             private_key,
-                                                             minion_id
-                                                            ))
+            private_key,
+            minion_id
+        ))
         result = __salt__['publish.runner'](
-                                            'vault.generate_token',
-                                            arg=[minion_id, signature]
-                                           )
+            'vault.generate_token',
+            arg=[minion_id, signature]
+        )
     else:
         private_key = '{0}/master.pem'.format(pki_dir)
         log.debug('Running on master, signing token request for %s with key %s',
                   minion_id, private_key)
         signature = base64.b64encode(salt.crypt.sign_message(
-                                                             private_key,
-                                                             minion_id
-                                                            ))
+            private_key,
+            minion_id
+        ))
         result = __salt__['saltutil.runner'](
-                                             'vault.generate_token',
-                                             minion_id=minion_id,
-                                             signature=signature,
-                                             impersonated_by_master=True
-                                            )
+            'vault.generate_token',
+            minion_id=minion_id,
+            signature=signature,
+            impersonated_by_master=True
+        )
 
     if not result:
         log.error('Failed to get token from master! No result returned - '
@@ -85,10 +86,10 @@ def _get_token_and_url_from_master():
                   'An error was returned: %s', result['error'])
         raise salt.exceptions.CommandExecutionError(result)
     return {
-            'url': result['url'],
-            'token': result['token'],
-            'verify': result['verify'],
-           }
+        'url': result['url'],
+        'token': result['token'],
+        'verify': result['verify'],
+    }
 
 
 def _get_vault_connection():
@@ -131,52 +132,24 @@ def _get_vault_connection():
         return _get_token_and_url_from_master()
 
 
-def make_request(method, resource, profile=None, **args):
+def make_request(method, resource, token=None, vault_url=None, get_token_url=False, **args):
     '''
     Make a request to Vault
     '''
-    if profile is not None and profile.keys().remove('driver') is not None:
-        # Deprecated code path
-        return make_request_with_profile(method, resource, profile, **args)
-
-    connection = _get_vault_connection()
-    token, vault_url = connection['token'], connection['url']
-    if 'verify' not in args:
-        args['verify'] = connection['verify']
+    if not token or not vault_url:
+        connection = _get_vault_connection()
+        token, vault_url = connection['token'], connection['url']
+        if 'verify' not in args:
+            args['verify'] = connection['verify']
 
     url = "{0}/{1}".format(vault_url, resource)
     headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}
     response = requests.request(method, url, headers=headers, **args)
 
-    return response
-
-
-def make_request_with_profile(method, resource, profile, **args):
-    '''
-    DEPRECATED! Make a request to Vault, with a profile including connection
-    details.
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'Specifying Vault connection data within a \'profile\' has been '
-        'deprecated. Please see the documentation for details on the new '
-        'configuration schema. Support for this function will be removed '
-        'in Salt Fluorine.'
-    )
-    url = '{0}://{1}:{2}/v1/{3}'.format(
-        profile.get('vault.scheme', 'https'),
-        profile.get('vault.host'),
-        profile.get('vault.port'),
-        resource,
-    )
-    token = os.environ.get('VAULT_TOKEN', profile.get('vault.token'))
-    if token is None:
-        raise salt.exceptions.CommandExecutionError('A token was not configured')
-
-    headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}
-    response = requests.request(method, url, headers=headers, **args)
-
-    return response
+    if get_token_url:
+        return response, token, vault_url
+    else:
+        return response
 
 
 def _selftoken_expired():

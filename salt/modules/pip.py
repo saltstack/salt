@@ -1313,7 +1313,8 @@ def list_all_versions(pkg,
                       include_beta=False,
                       include_rc=False,
                       user=None,
-                      cwd=None):
+                      cwd=None,
+                      index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1342,6 +1343,10 @@ def list_all_versions(pkg,
     cwd
         Current working directory to run pip from
 
+    index_url
+        Base URL of Python Package Index
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1351,6 +1356,13 @@ def list_all_versions(pkg,
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'install', '{0}==versions'.format(pkg)]
+
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(index_url)
+            )
+        cmd.extend(['--index-url', index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):

@@ -478,10 +478,7 @@ class Pillar(object):
         '''
         Pull the file server environments out of the master options
         '''
-        envs = set(['base'])
-        if 'file_roots' in self.opts:
-            envs.update(list(self.opts['file_roots']))
-        return envs
+        return set(['base']) | set(self.opts.get('file_roots', []))
 
     def get_tops(self):
         '''
@@ -493,6 +490,7 @@ class Pillar(object):
         errors = []
         # Gather initial top files
         try:
+            saltenvs = set()
             if self.opts['pillarenv']:
                 # If the specified pillarenv is not present in the available
                 # pillar environments, do not cache the pillar top file.
@@ -503,42 +501,24 @@ class Pillar(object):
                         self.opts['pillarenv'], ', '.join(self.opts['file_roots'])
                     )
                 else:
-                    top = self.client.cache_file(self.opts['state_top'], self.opts['pillarenv'])
-                    if top:
-                        tops[self.opts['pillarenv']] = [
-                                compile_template(
-                                    top,
-                                    self.rend,
-                                    self.opts['renderer'],
-                                    self.opts['renderer_blacklist'],
-                                    self.opts['renderer_whitelist'],
-                                    self.opts['pillarenv'],
-                                    _pillar_rend=True,
-                                    )
-                                ]
+                    saltenvs.add(self.opts['pillarenv'])
             else:
-                for saltenv in self._get_envs():
-                    if self.opts.get('pillar_source_merging_strategy', None) == "none":
-                        if self.saltenv and saltenv != self.saltenv:
-                            continue
-                        if not self.saltenv and not saltenv == 'base':
-                            continue
-                    top = self.client.cache_file(
-                            self.opts['state_top'],
-                            saltenv
-                            )
-                    if top:
-                        tops[saltenv].append(
-                                compile_template(
-                                    top,
-                                    self.rend,
-                                    self.opts['renderer'],
-                                    self.opts['renderer_blacklist'],
-                                    self.opts['renderer_whitelist'],
-                                    saltenv=saltenv,
-                                    _pillar_rend=True,
-                                    )
-                                )
+                saltenvs = self._get_envs()
+                if self.opts.get('pillar_source_merging_strategy', None) == "none":
+                    saltenvs &= set([self.saltenv or 'base'])
+
+            for saltenv in saltenvs:
+                top = self.client.cache_file(self.opts['state_top'], saltenv)
+                if top:
+                    tops[saltenv].append(compile_template(
+                        top,
+                        self.rend,
+                        self.opts['renderer'],
+                        self.opts['renderer_blacklist'],
+                        self.opts['renderer_whitelist'],
+                        saltenv=saltenv,
+                        _pillar_rend=True,
+                    ))
         except Exception as exc:
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
@@ -763,6 +743,8 @@ class Pillar(object):
                     else:
                         # render included state(s)
                         include_states = []
+
+                        matched_pstates = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -770,6 +752,16 @@ class Pillar(object):
                                 key = v.get('key', None)
                             else:
                                 key = None
+
+                            try:
+                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
+                            except KeyError:
+                                errors.extend(
+                                    ['No matching pillar environment for environment '
+                                     '\'{0}\' found'.format(saltenv)]
+                                )
+
+                        for sub_sls in set(matched_pstates):
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,

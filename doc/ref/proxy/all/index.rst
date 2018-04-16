@@ -10,6 +10,7 @@ proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cimc
     chronos
     cimc
     cisconso

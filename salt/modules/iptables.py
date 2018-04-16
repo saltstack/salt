@@ -110,7 +110,7 @@ def _conf(family='ipv4'):
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     elif __grains__['os_family'] == 'Void':
-        if family == 'ipv6':
+        if family == 'ipv4':
             return '/etc/iptables/iptables.rules'
         else:
             return '/etc/iptables/ip6tables.rules'
@@ -1093,6 +1093,8 @@ def _parser():
     add_arg('--ahres', dest='ahres', action='append')
     ## bpf
     add_arg('--bytecode', dest='bytecode', action='append')
+    ## cgroup
+    add_arg('--cgroup', dest='cgroup', action='append')
     ## cluster
     add_arg('--cluster-total-nodes',
             dest='cluster-total-nodes',

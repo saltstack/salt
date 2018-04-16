@@ -579,8 +579,9 @@ class Client(object):
                 ftp = ftplib.FTP()
                 ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
+                remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
-                    ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                    ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
             except Exception as exc:
@@ -853,12 +854,10 @@ class LocalClient(Client):
         fnd = {'path': '',
                'rel': ''}
 
-        if saltenv not in self.opts['file_roots']:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
             path = salt.utils.url.unescape(path)
-        for root in self.opts['file_roots'][saltenv]:
+        for root in self.opts['file_roots'].get(saltenv, []):
             full = os.path.join(root, path)
             if os.path.isfile(full):
                 fnd['path'] = full
@@ -891,10 +890,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -912,9 +909,7 @@ class LocalClient(Client):
         '''
         ret = []
         prefix = prefix.strip('/')
-        if saltenv not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -930,10 +925,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -1028,10 +1021,7 @@ class LocalClient(Client):
         '''
         Return the available environments
         '''
-        ret = []
-        for saltenv in self.opts['file_roots']:
-            ret.append(saltenv)
-        return ret
+        return list(self.opts['file_roots'])
 
     def master_tops(self):
         '''

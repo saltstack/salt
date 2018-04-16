@@ -282,6 +282,7 @@ from datetime import datetime   # python3 problem in the making?
 # Import salt libs
 import salt.loader
 import salt.payload
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
@@ -1580,6 +1581,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_dir='',
             tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
@@ -2044,6 +2046,22 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. code-block:: yaml
+
+            /etc/dhcp/dhcpd.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0755
+                - tmp_dir: '/etc/dhcp'
+                - contents: "# Managed by Salt"
+                - check_cmd: dhcpd -t -cf
+
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
         dependent on config file extension (e.g. the init-checkconf upstart
@@ -2460,7 +2478,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -5737,6 +5755,7 @@ def serialize(name,
               merge_if_exists=False,
               encoding=None,
               encoding_errors='strict',
+              serializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -5818,6 +5837,33 @@ def serialize(name,
 
         .. versionadded:: 2014.7.0
 
+    serializer_opts
+        Pass through options to serializer. For example:
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
+
+        The valid opts are the additional opts (i.e. not the data being
+        serialized) for the function used to serialize the data. Documentation
+        for the these functions can be found in the list below:
+
+        - For **yaml**: `yaml.dump()`_
+        - For **json**: `json.dumps()`_
+        - For **python**: `pprint.pformat()`_
+
+        .. _`yaml.dump()`: https://pyyaml.org/wiki/PyYAMLDocumentation
+        .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
+        .. _`pprint.pformat()`: https://docs.python.org/2/library/pprint.html#pprint.pformat
+
+        .. versionadded:: Fluorine
+
     For example, this state:
 
     .. code-block:: yaml
@@ -5855,14 +5901,20 @@ def serialize(name,
 
     name = os.path.expanduser(name)
 
-    default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
-                              'json.serialize': {'indent': 2,
-                                       'separators': (',', ': '),
-                                       'sort_keys': True}
-                              }
+    # Set some defaults
+    options = {
+        'yaml.serialize': {
+            'default_flow_style': False,
+        },
+        'json.serialize': {
+            'indent': 2,
+            'separators': (',', ': '),
+            'sort_keys': True,
+        }
+    }
     if encoding:
-        default_serializer_opts['yaml.serialize'].update({'allow_unicode': True})
-        default_serializer_opts['json.serialize'].update({'ensure_ascii': False})
+        options['yaml.serialize'].update({'allow_unicode': True})
+        options['json.serialize'].update({'ensure_ascii': False})
 
     ret = {'changes': {},
            'comment': '',
@@ -5910,6 +5962,11 @@ def serialize(name,
                 'result': False
                 }
 
+    if serializer_opts:
+        options.get(serializer_name, {}).update(
+            salt.utils.data.repack_dictlist(serializer_opts)
+        )
+
     if merge_if_exists:
         if os.path.isfile(name):
             if '{0}.deserialize'.format(formatter) not in __serializers__:
@@ -5929,7 +5986,7 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
+    contents = __serializers__[serializer_name](dataset, **options.get(serializer_name, {}))
 
     contents += '\n'
 

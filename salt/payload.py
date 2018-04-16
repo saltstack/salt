@@ -36,8 +36,12 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
-        raise ImportError
+    if msgpack.version >= (0, 4, 0):
+        if msgpack.loads(msgpack.dumps([1, 2, 3], use_bin_type=False), use_list=True) is None:
+            raise ImportError
+    else:
+        if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
+            raise ImportError
     HAS_MSGPACK = True
 except ImportError:
     # Fall back to msgpack_pure
@@ -191,9 +195,9 @@ class Serial(object):
                 # msgpack can't handle the very long Python longs for jids
                 # Convert any very long longs to strings
                 return six.text_type(obj)
-            elif isinstance(obj, datetime.datetime):
-                # msgpack doesn't support datetime.datetime datatype
-                # So here we have converted datetime.datetime to custom datatype
+            elif isinstance(obj, (datetime.datetime, datetime.date)):
+                # msgpack doesn't support datetime.datetime and datetime.date datatypes.
+                # So here we have converted these types to custom datatype
                 # This is msgpack Extended types numbered 78
                 return msgpack.ExtType(78, salt.utils.stringutils.to_bytes(
                     obj.strftime('%Y%m%dT%H:%M:%S.%f')))

@@ -223,6 +223,11 @@ def _get_options(**kwargs):
     enablerepo = kwargs.pop('enablerepo', '')
     disableexcludes = kwargs.pop('disableexcludes', '')
     branch = kwargs.pop('branch', '')
+    setopt = kwargs.pop('setopt', None)
+    if setopt is None:
+        setopt = []
+    else:
+        setopt = salt.utils.args.split_input(setopt)
     get_extra_options = kwargs.pop('get_extra_options', False)
 
     # Support old 'repo' argument
@@ -257,6 +262,9 @@ def _get_options(**kwargs):
     if branch:
         log.info('Adding branch \'%s\'', branch)
         ret.append('--branch={0}'.format(branch))
+
+    for item in setopt:
+        ret.extend(['--setopt', six.text_type(item)])
 
     if get_extra_options:
         # sorting here to make order uniform, makes unit testing more reliable
@@ -534,7 +542,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -544,7 +552,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    return latest_version(name, **kwargs) != ''
 
 
 def version(*names, **kwargs):
@@ -776,6 +784,13 @@ def list_repo_pkgs(*args, **kwargs):
         yum/dnf.
 
         .. versionadded:: 2017.7.0
+
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        .. versionadded:: Fluorine
 
     CLI Examples:
 
@@ -1051,6 +1066,12 @@ def refresh_db(**kwargs):
         - ``main`` - disable excludes defined in [main] in yum.conf
         - ``repoid`` - disable excludes defined for that repo
 
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1209,6 +1230,18 @@ def install(name=None,
 
         .. versionadded:: 2016.11.0
 
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install foo setopt='obsoletes=0,plugins=0'
+
+        .. versionadded:: Fluorine
 
     Repository Options:
 
@@ -1811,15 +1844,20 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
-    .. note::
+    setopt
+        A comma-separated or Python list of key=value options. This list will
+        be expanded and ``--setopt`` prepended to each in the yum/dnf command
+        that is run.
 
+        .. versionadded:: Fluorine
+
+    .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
         word arguments. For arguments without assignments, pass ``True``
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
-
     '''
     options = _get_options(get_extra_options=True, **kwargs)
 
@@ -2501,7 +2539,6 @@ def group_install(name,
             salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
 
     .. note::
-
         Because this is essentially a wrapper around pkg.install, any argument
         which can be passed to pkg.install may also be included here, and it
         will be passed along wholesale.

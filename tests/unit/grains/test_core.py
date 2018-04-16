@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+import socket
 
 # Import Salt Testing Libs
 try:
@@ -25,7 +26,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.dns
 import salt.utils.files
+import salt.utils.network
 import salt.utils.platform
 import salt.grains.core as core
 
@@ -858,3 +861,34 @@ SwapTotal:       4789244 kB'''
                        'options': []}}
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
+
+    def _run_dns_test(self, resolv_mock, ret):
+        with patch.object(salt.utils, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.dict(core.__opts__, {'ipv6': False}):
+                with patch.object(salt.utils.dns, 'parse_resolv',
+                                  MagicMock(return_value=resolv_mock)):
+                    get_dns = core.dns()
+                    self.assertEqual(get_dns, ret)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
+    def test_fqdns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
+                               ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+        ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            self.assertIn('fqdns', fqdns)
+            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
+            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))

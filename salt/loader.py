@@ -1045,8 +1045,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Iterating over keys will cause all modules to be loaded.
 
     :param list module_dirs: A list of directories on disk to search for modules
-    :param opts dict: The salt options dictionary.
-    :param tag str': The tag for the type of module to load
+    :param dict opts: The salt options dictionary.
+    :param str tag: The tag for the type of module to load
     :param func mod_type_check: A function which can be used to verify files
     :param dict pack: A dictionary of function to be packed into modules as they are loaded
     :param list whitelist: A list of modules to whitelist

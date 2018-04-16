@@ -19,17 +19,16 @@ Dependencies
 .. versionchanged:: 2017.7.0
 '''
 
+# Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
-
-# Import Python lib
 import logging
+
 log = logging.getLogger(__name__)
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1314,7 +1313,6 @@ def load_config(filename=None,
 @salt.utils.napalm.proxy_napalm_wrap
 def load_template(template_name,
                   template_source=None,
-                  template_path=None,
                   template_hash=None,
                   template_hash_name=None,
                   template_user='root',
@@ -1350,10 +1348,6 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
-    .. warning::
-        The support for native NAPALM templates will be dropped in Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be removed.
-
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1382,16 +1376,6 @@ def load_template(template_name,
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
-
-    template_path: None
-        Required only in case the argument ``template_name`` provides only the file basename
-        when referencing a local template using the absolute path.
-        E.g.: if ``template_name`` is specified as ``my_template.jinja``,
-        in order to find the template, this argument must be provided:
-        ``template_path: /absolute/path/to/``.
-
-        .. note::
-            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1528,15 +1512,15 @@ def load_template(template_name,
         # inline template using pillar data:
         salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{pillar.proxy.host}}; }'
 
-        salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa'  # will commit
-        salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa' test=True  # dry run
+        salt '*' net.load_template my_template my_param='aaa'  # will commit
+        salt '*' net.load_template my_template my_param='aaa' test=True  # dry run
 
         salt '*' net.load_template salt://templates/my_stuff.jinja debug=True  # equivalent of the next command
-        salt '*' net.load_template my_stuff.jinja template_path=salt://templates/ debug=True
+        salt '*' net.load_template my_stuff.jinja debug=True
 
         # in case the template needs to include files that are not under the same path (e.g. http://),
         # to help the templating engine find it, you will need to specify the `saltenv` argument:
-        salt '*' net.load_template my_stuff.jinja template_path=salt://templates saltenv=/path/to/includes debug=True
+        salt '*' net.load_template my_stuff.jinja saltenv=/path/to/includes debug=True
 
         # render a mako template:
         salt '*' net.load_template salt://templates/my_stuff.mako template_engine=mako debug=True
@@ -1564,11 +1548,6 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-    if template_path:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
-        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
@@ -1584,11 +1563,10 @@ def load_template(template_name,
     salt_render = False
     for salt_render_prefix in salt_render_prefixes:
         if not salt_render:
-            salt_render = salt_render or template_name.startswith(salt_render_prefix) or \
-                          (template_path and template_path.startswith(salt_render_prefix))
+            salt_render = salt_render or template_name.startswith(salt_render_prefix)
     file_exists = __salt__['file.file_exists'](template_name)
 
-    if template_source or template_path or file_exists or salt_render:
+    if template_source or file_exists or salt_render:
         # either inline template
         # either template in a custom path
         # either abs path send
@@ -1599,7 +1577,7 @@ def load_template(template_name,
         if template_source:
             # render the content
             if not saltenv:
-                saltenv = template_path if template_path else 'base'  # either use the env from the path, either base
+                saltenv = 'base'
             _rendered = __salt__['file.apply_template_on_contents'](
                 contents=template_source,
                 template=template_engine,
@@ -1618,16 +1596,15 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                 return _loaded
         else:
-            if template_path and not file_exists:
-                template_name = __salt__['file.join'](template_path, template_name)
-                if not saltenv:
-                    # no saltenv overridden
-                    # use the custom template path
-                    saltenv = template_path if not salt_render else 'base'
+            if not file_exists and not saltenv:
+                # no saltenv overridden
+                # use the custom template path
+                saltenv = 'base'
             elif salt_render and not saltenv:
                 # if saltenv not overridden and path specified as salt:// or http:// etc.
                 # will use the default environment, from the base
-                saltenv = template_path if template_path else 'base'
+                saltenv = 'base'
+
             if not saltenv:
                 # still not specified, default to `base`
                 saltenv = 'base'
@@ -1700,7 +1677,6 @@ def load_template(template_name,
             {
                 'template_name': template_name,
                 'template_source': template_source,  # inline template
-                'template_path': template_path,
                 'pillar': __pillar__,  # inject pillar content
                 'grains': __grains__,  # inject grains content
                 'opts': __opts__  # inject opts content

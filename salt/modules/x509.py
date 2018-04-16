@@ -1054,7 +1054,10 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
             return 'minion sending this request could not be identified'
-        if not __salt__['match.glob'](
+        matcher = 'match.glob'
+        if '@' in signing_policy['minions']:
+            matcher = 'match.compound'
+        if not __salt__[matcher](
                 signing_policy['minions'], kwargs['__pub_id']):
             return '{0} not permitted to use signing policy {1}'.format(
                 kwargs['__pub_id'], argdic['signing_policy'])
@@ -1314,8 +1317,8 @@ def create_certificate(
         a minion pillar. It should be a yaml formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
-        matching that pattern will be permitted to remotely request
-        certificates from that policy.
+        matching that pattern (see match.glob and match.compound) will be
+        permitted to remotely request certificates from that policy.
 
         Example:
 

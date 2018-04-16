@@ -10,7 +10,7 @@ import salt.utils.path
 
 def __virtual__():
     '''
-    Only work on Gentoo systems with eix installed
+    Only works on Gentoo systems with eix installed
     '''
     if __grains__['os'] == 'Gentoo' and salt.utils.path.which('eix'):
         return 'eix'

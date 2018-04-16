@@ -546,7 +546,7 @@ def _ip_route_linux():
 
             ret.append({
                 'addr_family': 'inet6',
-                'destination': '::',
+                'destination': '::/0',
                 'gateway': comps[2],
                 'netmask': '',
                 'flags': 'UG',
@@ -1280,11 +1280,16 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith('hostnamectl'):
-        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
-        for line in out.splitlines():
-            line = line.split(':')
-            if 'Static hostname' in line[0]:
-                o_hostname = line[1].strip()
+        result = __salt__['cmd.run_all']('{0} status'.format(hostname_cmd))
+        if 0 == result['retcode']:
+            out = result['stdout']
+            for line in out.splitlines():
+                line = line.split(':')
+                if 'Static hostname' in line[0]:
+                    o_hostname = line[1].strip()
+        else:
+            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
@@ -1293,7 +1298,16 @@ def mod_hostname(hostname):
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
     if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        result = __salt__['cmd.run_all']('{0} set-hostname {1}'.format(
+            hostname_cmd,
+            hostname,
+            ))
+        if result['retcode'] != 0:
+            log.debug('{0} was unable to set hostname. Error: {1}'.format(
+                hostname_cmd,
+                result['stderr'],
+                ))
+            return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:

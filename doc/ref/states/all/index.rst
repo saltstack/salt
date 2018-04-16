@@ -63,6 +63,7 @@ state modules
     chef
     chocolatey
     chronos_job
+    cimc
     cisconso
     cloud
     cmd
@@ -198,6 +199,7 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
     pcs
     pecl
     pdbedit

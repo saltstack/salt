@@ -757,8 +757,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -897,7 +896,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

@@ -433,6 +433,9 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
+    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    'enable_legacy_startup_events': bool,
+
     # Always execute states with test=True if this flag is set
     'test': bool,
 
@@ -1054,6 +1057,10 @@ VALID_OPTS = {
     # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': six.string_types,
 
+    # HTTP connection timeout in seconds. Applied for tornado http fetch functions like cp.get_url
+    # should be greater than overall download time
+    'http_connect_timeout': float,
+
     # HTTP request timeout in seconds. Applied for tornado http fetch functions like cp.get_url
     # should be greater than overall download time
     'http_request_timeout': float,
@@ -1365,6 +1372,7 @@ DEFAULT_MINION_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
+    'enable_legacy_startup_events': True,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -1459,6 +1467,7 @@ DEFAULT_MINION_OPTS = {
     'cache_sreqs': True,
     'cmd_safe': True,
     'sudo_user': '',
+    'http_connect_timeout': 20.0,  # tornado default - 20 seconds
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'event_match_type': 'startswith',
@@ -1663,6 +1672,7 @@ DEFAULT_MASTER_OPTS = {
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'master_tops': {},
+    'master_tops_first': False,
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -1795,6 +1805,7 @@ DEFAULT_MASTER_OPTS = {
     'rotate_aes_key': True,
     'cache_sreqs': True,
     'dummy_pub': False,
+    'http_connect_timeout': 20.0,  # tornado default - 20 seconds
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
@@ -3395,12 +3406,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone', 'profitbricks']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'profitbricks', 'libvirt', 'oneandone']
+                        'virtualbox', 'libvirt', 'oneandone']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]

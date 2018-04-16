@@ -54,6 +54,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(isinstance(low, list))
         self.assertTrue(isinstance(low[0], dict))
 
+    def test_show_states(self):
+        '''
+        state.show_states
+        '''
+        states = self.run_function('state.show_states')
+        self.assertTrue(isinstance(states, list))
+        self.assertTrue(isinstance(states[0], six.string_types))
+
+        states = self.run_function('state.show_states', sorted=False)
+        self.assertTrue(isinstance(states, list))
+        self.assertTrue(isinstance(states[0], six.string_types))
+
     def test_catch_recurse(self):
         '''
         state.show_sls used to catch a recursive ref
@@ -1884,6 +1896,48 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
 
+    def test_issue_30161_unless_and_onlyif_together(self):
+        '''
+        test cmd.run using multiple unless options where the first cmd in the
+        list will pass, but the second will fail. This tests the fix for issue
+        #35384. (The fix is in PR #35545.)
+        '''
+        sls = self.run_function('state.sls', mods='issue-30161')
+        self.assertSaltTrueReturn(sls)
+        # We must assert against the comment here to make sure the comment reads that the
+        # command "echo "hello"" was run. This ensures that we made it to the last unless
+        # command in the state. If the comment reads "unless condition is true", or similar,
+        # then the unless state run bailed out after the first unless command succeeded,
+        # which is the bug we're regression testing for.
+        _expected = {'file_|-unless_false_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+                     {'comment': 'onlyif condition is false\nunless condition is false',
+                      'name': '{0}/test.txt'.format(TMP),
+                      'skip_watch': True,
+                      'changes': {},
+                      'result': True},
+                     'file_|-unless_false_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     {'comment': 'Empty file',
+                      'pchanges': {},
+                      'name': '{0}/test.txt'.format(TMP),
+                      'start_time': '18:10:20.341753',
+                      'result': True,
+                      'changes': {'new': 'file {0}/test.txt created'.format(TMP)}},
+                     'file_|-unless_true_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+                     {'comment': 'onlyif condition is false\nunless condition is true',
+                      'name': '{0}/test.txt'.format(TMP),
+                      'start_time': '18:10:22.936446',
+                      'skip_watch': True,
+                      'changes': {},
+                      'result': True},
+                     'file_|-unless_true_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     {'comment': 'onlyif condition is true\nunless condition is true',
+                      'name': '{0}/test.txt'.format(TMP),
+                      'skip_watch': True,
+                      'changes': {},
+                      'result': True}}
+        for id in _expected:
+            self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
+
     def test_state_sls_unicode_characters(self):
         '''
         test state.sls when state file contains non-ascii characters
@@ -1907,5 +1961,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # remove testfile added in core.sls state file
         state_file = os.path.join(TMP, 'testfile')
+        if os.path.isfile(state_file):
+            os.remove(state_file)
+
+        # remove testfile added in issue-30161.sls state file
+        state_file = os.path.join(TMP, 'test.txt')
         if os.path.isfile(state_file):
             os.remove(state_file)

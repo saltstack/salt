@@ -30,13 +30,17 @@ def __virtual__():
 
 
 def _get_minor_version():
-    # Set default version to 6 for tests
-    version = 6
+    return int(_get_version()[1])
+
+
+def _get_version():
+    # Set the default minor version to 6 for tests
+    version = [3, 6]
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
     for line in result:
         if line.startswith('glusterfs'):
-            version = int(line.split()[1].split('.')[1])
+            version = line.split()[1].split('.')
     return version
 
 
@@ -666,3 +670,108 @@ def list_quota_volume(name):
         ret[path] = _etree_to_dict(limit)
 
     return ret
+
+
+def get_op_version(name):
+    '''
+    .. versionadded:: Fluorine
+
+    Returns the glusterfs volume op-version
+    name
+        Name of the glusterfs volume
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_op_version <volume>
+    '''
+
+    cmd = 'volume get {0} cluster.op-version'.format(name)
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    result = {}
+    for op_version in _iter(root, 'volGetopts'):
+        for item in op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
+
+    return result
+
+
+def get_max_op_version():
+    '''
+    .. versionadded:: Fluorine
+
+    Returns the glusterfs volume's max op-version value
+    Requires Glusterfs version > 3.9
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_max_op_version
+    '''
+
+    minor_version = _get_minor_version()
+
+    if int(minor_version) < 10:
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(_get_version())))
+
+    cmd = 'volume get all cluster.max-op-version'
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    result = {}
+    for max_op_version in _iter(root, 'volGetopts'):
+        for item in max_op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
+
+    return result
+
+
+def set_op_version(version):
+    '''
+    .. versionadded:: Fluorine
+
+    Set the glusterfs volume op-version
+    version
+        Version to set the glusterfs volume op-version
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.set_op_version <volume>
+    '''
+
+    cmd = 'volume set all cluster.op-version {0}'.format(version)
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    return root.find('output').text
+
+
+def get_version():
+    '''
+    .. versionadded:: Fluorine
+
+    Returns the version of glusterfs.
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_version
+    '''
+
+    return '.'.join(_get_version())

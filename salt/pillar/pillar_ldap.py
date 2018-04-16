@@ -58,8 +58,9 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 - filtering for:
     - members of the group ``it-admins``
     - objects with ``objectclass=user``
-- returning the data of users (``mode: map``), where each user is a dictionary
-  containing the configured string or list attributes.
+- returning the data of users (``mode: map``) as a list of dictionaries, where
+  each user is a dictionary containing the configured string or list attributes,
+  and the user dictionaries are combined to a list.
 
   **Configuration:**
 
@@ -104,6 +105,118 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
           memberOf:
               - cn=it-admins,ou=groups,dc=company,dc=tld
               - cn=team02,ou=groups,dc=company
+
+
+Dict Mode
+---------
+
+The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
+
+- filtering for:
+    - members of the group ``it-admins``
+    - objects with ``objectclass=user``
+- returning the data of users (``mode: dict``), where each user is a dictionary
+  containing the configured string or list attributes, and the user dictionaries
+  are combined to a dictionary using the value of the LDAP attribute defined in the
+  ``dict_key_attr`` configuration option (defaults to ``dn`` or ``distinguishedName``)
+  as the key.
+
+
+  **Configuration:**
+
+.. code-block:: yaml
+
+    salt-users:
+        server:    ldap.company.tld
+        port:      389
+        tls:       true
+        dn:        'dc=company,dc=tld'
+        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+        bindpw:    bi7ieBai5Ano
+        referrals: false
+        anonymous: false
+        mode:      dict
+        dn:        'ou=users,dc=company,dc=tld'
+        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        attrs:
+            - cn
+            - displayName
+            - givenName
+            - sn
+        lists:
+            - memberOf
+
+
+  **Result:**
+
+.. code-block:: yaml
+
+    salt-users:
+        cn=johndoe,ou=users,dc=company,dc=tld:
+            - cn: cn=johndoe,ou=users,dc=company,dc=tld
+              displayName: John Doe
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
+        cn=janedoe,ou=users,dc=company,dc=tld:
+            - cn: cn=janedoe,ou=users,dc=company,dc=tld
+              displayName: Jane Doe
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
+
+
+  **Configuration:**
+
+.. code-block:: yaml
+
+    salt-users:
+        server:    ldap.company.tld
+        port:      389
+        tls:       true
+        dn:        'dc=company,dc=tld'
+        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+        bindpw:    bi7ieBai5Ano
+        referrals: false
+        anonymous: false
+        mode:      dict
+        dict_key_attr: displayName
+        dn:        'ou=users,dc=company,dc=tld'
+        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        attrs:
+            - dn
+            - cn
+            - givenName
+            - sn
+        lists:
+            - memberOf
+
+
+  **Result:**
+
+.. code-block:: yaml
+
+    salt-users:
+        John Doe:
+            - dn: cn=johndoe,ou=users,dc=company,dc=tld
+              cn: cn=johndoe,ou=users,dc=company,dc=tld
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
+        Jane Doe:
+            - dn: cn=janedoe,ou=users,dc=company,dc=tld
+              cn: cn=janedoe,ou=users,dc=company,dc=tld
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
 
 
 List Mode
@@ -193,6 +306,7 @@ def _result_to_dict(data, result, conf, source):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
+    dict_key_attr = _config('dict_key_attr', conf) or 'dn'
     # TODO:
     # deprecate the default 'mode: split' and make the more
     # straightforward 'mode: dict' the new default
@@ -201,6 +315,9 @@ def _result_to_dict(data, result, conf, source):
         data[source] = []
         for record in result:
             ret = {}
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                log.debug('dn: %s', record[0])
+                ret['dn'] = record[0]
             record = record[1]
             log.debug('record: %s', record)
             for key in record:
@@ -210,6 +327,30 @@ def _result_to_dict(data, result, conf, source):
                 if key in lists:
                     ret[key] = record.get(key)
             data[source].append(ret)
+    elif mode == 'dict':
+        data[source] = {}
+        for record in result:
+            ret = {}
+            distinguished_name = record[0]
+            log.debug('dn: %s', distinguished_name)
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                ret['dn'] = distinguished_name
+            record = record[1]
+            log.debug('record: %s', record)
+            for key in record:
+                if key in attrs:
+                    for item in record.get(key):
+                        ret[key] = item
+                if key in lists:
+                    ret[key] = record.get(key)
+            if dict_key_attr in ['dn', 'distinguishedName']:
+                dict_key = distinguished_name
+            else:
+                dict_key = ','.join(sorted(record.get(dict_key_attr, [])))
+            try:
+                data[source][dict_key].append(ret)
+            except KeyError:
+                data[source][dict_key] = [ret]
     elif mode == 'split':
         for key in result[0][1]:
             if key in attrs:
@@ -247,7 +388,8 @@ def _do_search(conf):
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
-    attrs = _lists + _attrs
+    _dict_key_attr = _config('dict_key_attr', conf) or 'dn'
+    attrs = _lists + _attrs + [_dict_key_attr]
     if not attrs:
         attrs = None
     # Perform the search

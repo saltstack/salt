@@ -832,51 +832,80 @@ class State(object):
         '''
         Check that unless doesn't return 0, and that onlyif returns a 0.
         '''
-        ret = {'result': False}
+        ret = {'result': False, 'comment': []}
         cmd_opts = {}
 
         if 'shell' in self.opts['grains']:
             cmd_opts['shell'] = self.opts['grains'].get('shell')
+
         if 'onlyif' in low_data:
-            if not isinstance(low_data['onlyif'], list):
-                low_data_onlyif = [low_data['onlyif']]
-            else:
-                low_data_onlyif = low_data['onlyif']
-            for entry in low_data_onlyif:
-                if not isinstance(entry, six.string_types):
-                    ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                    return ret
-                cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-                log.debug('Last command return code: %s', cmd)
-                if cmd != 0 and ret['result'] is False:
-                    ret.update({'comment': 'onlyif condition is false',
-                                'skip_watch': True,
-                                'result': True})
-                    return ret
-                elif cmd == 0:
-                    ret.update({'comment': 'onlyif condition is true', 'result': False})
-            return ret
+            _ret = self._run_check_onlyif(low_data, cmd_opts)
+            ret['result'] = _ret['result']
+            ret['comment'].append(_ret['comment'])
+            if 'skip_watch' in _ret:
+                ret['skip_watch'] = _ret['skip_watch']
 
         if 'unless' in low_data:
-            if not isinstance(low_data['unless'], list):
-                low_data_unless = [low_data['unless']]
-            else:
-                low_data_unless = low_data['unless']
-            for entry in low_data_unless:
-                if not isinstance(entry, six.string_types):
-                    ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                    return ret
-                cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-                log.debug('Last command return code: %s', cmd)
-                if cmd == 0 and ret['result'] is False:
-                    ret.update({'comment': 'unless condition is true',
-                                'skip_watch': True,
-                                'result': True})
-                elif cmd != 0:
-                    ret.update({'comment': 'unless condition is false', 'result': False})
-                    return ret
+            _ret = self._run_check_unless(low_data, cmd_opts)
+            # If either result is True, the returned result should be True
+            ret['result'] = _ret['result'] or ret['result']
+            ret['comment'].append(_ret['comment'])
+            if 'skip_watch' in _ret:
+                # If either result is True, the returned result should be True
+                ret['skip_watch'] = _ret['skip_watch'] or ret['skip_watch']
+
+        return ret
+
+    def _run_check_onlyif(self, low_data, cmd_opts):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+
+        if not isinstance(low_data['onlyif'], list):
+            low_data_onlyif = [low_data['onlyif']]
+        else:
+            low_data_onlyif = low_data['onlyif']
+        for entry in low_data_onlyif:
+            if not isinstance(entry, six.string_types):
+                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
+                return ret
+            cmd = self.functions['cmd.retcode'](
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+            log.debug('Last command return code: %s', cmd)
+            if cmd != 0 and ret['result'] is False:
+                ret.update({'comment': 'onlyif condition is false',
+                            'skip_watch': True,
+                            'result': True})
+                return ret
+            elif cmd == 0:
+                ret.update({'comment': 'onlyif condition is true', 'result': False})
+        return ret
+
+    def _run_check_unless(self, low_data, cmd_opts):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+
+        if not isinstance(low_data['unless'], list):
+            low_data_unless = [low_data['unless']]
+        else:
+            low_data_unless = low_data['unless']
+        for entry in low_data_unless:
+            if not isinstance(entry, six.string_types):
+                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
+                return ret
+            cmd = self.functions['cmd.retcode'](
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+            log.debug('Last command return code: %s', cmd)
+            if cmd == 0 and ret['result'] is False:
+                ret.update({'comment': 'unless condition is true',
+                            'skip_watch': True,
+                            'result': True})
+            elif cmd != 0:
+                ret.update({'comment': 'unless condition is false', 'result': False})
+                return ret
 
         # No reason to stop, return ret
         return ret
@@ -1478,24 +1507,8 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
-            'require_in',
-            'watch_in',
-            'onfail_in',
-            'onchanges_in',
-            'use',
-            'use_in',
-            'prereq',
-            'prereq_in',
-            ])
-        req_in_all = req_in.union(
-                set([
-                    'require',
-                    'watch',
-                    'onfail',
-                    'onfail_stop',
-                    'onchanges',
-                    ]))
+        req_in = {'require_in', 'watch_in', 'onfail_in', 'onchanges_in', 'use', 'use_in', 'prereq', 'prereq_in'}
+        req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
         for id_, body in six.iteritems(high):
@@ -2136,7 +2149,7 @@ class State(object):
         tag = _gen_tag(low)
         if self.opts.get('test', False):
             return False
-        if (low.get('failhard', False) or self.opts['failhard']) and tag in running:
+        if low.get('failhard', self.opts['failhard']) and tag in running:
             if running[tag]['result'] is None:
                 return False
             return not running[tag]['result']
@@ -3383,7 +3396,7 @@ class BaseHighState(object):
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
             top_file_matches = matches.get(saltenv, [])
-            if self.opts['master_tops_first']:
+            if self.opts.get('master_tops_first'):
                 first = ext_matches[saltenv]
                 second = top_file_matches
             else:

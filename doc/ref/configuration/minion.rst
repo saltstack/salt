@@ -208,6 +208,28 @@ minion event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_minion:: enable_legacy_startup_events
+
+``enable_legacy_startup_events``
+--------------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``True``
+
+When a minion starts up it sends a notification on the event bus with a tag
+that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+the minion also sends a similar event with an event tag like this:
+`minion_start`. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set `enable_legacy_startup_events: False` in the
+minion config to ensure only the `salt/minion/<minion_id>/start` events are
+sent. Beginning with the `Neon` Salt release this option will default to
+`False`
+
+.. code-block:: yaml
+
+    enable_legacy_startup_events: True
+
 .. conf_minion:: master_failback
 
 ``master_failback``
@@ -1295,6 +1317,40 @@ talking to the intended master.
 .. code-block:: yaml
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
+
+.. conf_minion:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_minion:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
 
 .. conf_minion:: proxy_host
 

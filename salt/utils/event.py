@@ -88,10 +88,7 @@ log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
-SUB_EVENT = set([
-    'state.highstate',
-    'state.sls',
-])
+SUB_EVENT = ('state.highstate', 'state.sls')
 
 TAGEND = str('\n\n')  # long tag delimiter
 TAGPARTER = str('/')  # name spaced tag delimiter
@@ -1060,8 +1057,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts, log_queue=None):
-        super(EventPublisher, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(EventPublisher, self).__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1071,11 +1068,18 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -1172,13 +1176,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
         return instance
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__(log_queue=log_queue)
+        super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -1193,11 +1197,18 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):
         # Flush and terminate
