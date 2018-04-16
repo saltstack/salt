@@ -3253,6 +3253,38 @@ class BaseHighState(object):
                             raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
+    @staticmethod
+    def _get_topmatch_params(lst):
+        '''
+        Take a list of state names and dictionaries of keyword parameters,
+        and produce a dictionary of all keyword parameters.
+
+        Input:
+        { 'env': [ 'state1', { 'prm1': 'v1' }, 'state2', { 'prm2': 'v2' } ] }
+
+        Returns:
+        { 'prm1': 'v1', 'prm2': 'v2' }
+        '''
+        ret = {}
+        for elem in lst:
+            if isinstance(elem, dict):
+                ret.update(elem)
+        return ret
+
+    @staticmethod
+    def _get_topmatch_states(lst):
+        '''
+        Take a list of state names and dictionaries of keyword parameters,
+        and produce a list of just state names.
+
+        Input:
+        { 'env': [ 'state1', { 'prm1': 'v1' }, 'state2', { 'prm2': 'v2' } ] }
+
+        Returns:
+        [ 'state1', 'state2' ]
+        '''
+        return [x for x in lst if isinstance(x, six.string_types)]
+
     def _merge_tops_merge_all(self, tops):
         '''
         Merge the top files into a single dictionary
@@ -3278,12 +3310,14 @@ class BaseHighState(object):
                             if tgt not in top[saltenv]:
                                 top[saltenv][tgt] = ctop[saltenv][tgt]
                                 continue
-                            m_type1, m_states1 = _read_tgt(top[saltenv][tgt])
-                            m_type2, m_states2 = _read_tgt(ctop[saltenv][tgt])
+                            kargs = {}
+                            kargs1, m_states_1 = _read_tgt(top[saltenv][tgt])
+                            kargs2, m_states_2 = _read_tgt(ctop[saltenv][tgt])
+                            kargs.update(kargs1)
+                            kargs.update(kargs2)
                             merged = []
-                            match_type = m_type2 or m_type1
-                            if match_type is not None:
-                                merged.append(match_type)
+                            if kargs:
+                                merged.append(kargs)
                             merged.extend(m_states1)
                             merged.extend([x for x in m_states2 if x not in merged])
                             top[saltenv][tgt] = merged
@@ -3383,11 +3417,17 @@ class BaseHighState(object):
                                 _tmpdata = item.pop('subfilter')
                                 for match, data in six.iteritems(_tmpdata):
                                     _filter_matches(match, data, _opts)
+                            # The item is a reference to a state.
                             if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
+                            # The item is either a keyword parameter
+                            # or a reference to an environment.
                             elif isinstance(item, dict):
                                 env_key, inc_sls = item.popitem()
                                 if env_key not in self.avail:
+                                    # Pass through any keyword parameters.
+                                    matches[saltenv].append({ env_key:
+                                                                  inc_sls })
                                     continue
                                 if env_key not in matches:
                                     matches[env_key] = []
@@ -3760,7 +3800,11 @@ class BaseHighState(object):
         mods = set()
         statefiles = []
         for saltenv, states in six.iteritems(matches):
-            for sls_match in states:
+            # Separate possible keyword parameters from the list of states.
+            kparams = self._get_topmatch_params(states)
+            ignore_missing = ('ignore_missing' in kparams and
+                              kparams['ignore_missing'])
+            for sls_match in self._get_topmatch_states(states):
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
                 except KeyError:
@@ -3785,13 +3829,18 @@ class BaseHighState(object):
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
                         if 'is not available' in error:
-                            # match SLS foobar in environment
-                            this_sls = 'SLS {0} in saltenv'.format(
-                                sls_match)
-                            if this_sls in error:
-                                errors[i] = (
-                                    'No matching sls found for \'{0}\' '
-                                    'in env \'{1}\''.format(sls_match, saltenv))
+                            if ignore_missing:
+                                log.debug('Missing SLS {0} ignored.'.format(
+                                    sls_match))
+                                del errors[i]
+                            else:
+                                # match SLS foobar in environment
+                                this_sls = 'SLS {0} in saltenv'.format(
+                                    sls_match)
+                                if this_sls in error:
+                                    errors[i] = (
+                                        'No matching sls found for \'{0}\' '
+                                        'in env \'{1}\''.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
