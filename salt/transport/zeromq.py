@@ -50,6 +50,7 @@ PYZMQ_VERSION = tuple(map(int, zmq.pyzmq_version().split('.')))
 import tornado
 import tornado.gen
 import tornado.concurrent
+TORNADO_50 = tornado.version_info >= (5,)
 
 # Import third party libs
 try:
@@ -78,7 +79,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # do we have any mapping for this io_loop
         io_loop = kwargs.get('io_loop')
         if io_loop is None:
-            zmq.eventloop.ioloop.install()
+            if not TORNADO_50:
+                zmq.eventloop.ioloop.install()
             io_loop = tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
@@ -146,7 +148,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         self._io_loop = kwargs.get('io_loop')
         if self._io_loop is None:
-            zmq.eventloop.ioloop.install()
+            if not TORNADO_50:
+                zmq.eventloop.ioloop.install()
             self._io_loop = tornado.ioloop.IOLoop.current()
 
         if self.crypt != 'clear':
@@ -290,7 +293,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         self.io_loop = kwargs.get('io_loop')
         if self.io_loop is None:
-            zmq.eventloop.ioloop.install()
+            if not TORNADO_50:
+                zmq.eventloop.ioloop.install()
             self.io_loop = tornado.ioloop.IOLoop.current()
 
         self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
@@ -897,7 +901,8 @@ class AsyncReqMessageClient(object):
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            zmq.eventloop.ioloop.install()
+            if not TORNADO_50:
+                zmq.eventloop.ioloop.install()
             tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop

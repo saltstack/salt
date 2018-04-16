@@ -13,11 +13,18 @@ try:
     # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
     HAS_ZMQ = True
 except ImportError:
-    LOOP_CLASS = tornado.ioloop.IOLoop
     HAS_ZMQ = False
+
+import tornado
+TORNADO_50 = tornado.version_info >= (5,)
+
+if HAS_ZMQ and not TORNADO_50:
+    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
+else:
+    import tornado.ioloop
+    LOOP_CLASS = tornado.ioloop.IOLoop
 
 import contextlib
 

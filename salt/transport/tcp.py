@@ -764,10 +764,9 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
     '''
     Override _create_stream() in TCPClient to enable keep alive support.
     '''
-    def __init__(self, opts, resolver=None, io_loop=None):
+    def __init__(self, opts, resolver=None):
         self.opts = opts
-        super(TCPClientKeepAlive, self).__init__(
-            resolver=resolver, io_loop=io_loop)
+        super(TCPClientKeepAlive, self).__init__(resolver=resolver)
 
     def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument
         '''
@@ -783,7 +782,6 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(
             sock,
-            io_loop=self.io_loop,
             max_buffer_size=max_buffer_size)
         return stream.connect(addr)
 
@@ -842,8 +840,8 @@ class SaltMessageClient(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        self._tcp_client = TCPClientKeepAlive(
-            opts, io_loop=self.io_loop, resolver=resolver)
+        with salt.utils.async.current_ioloop(self.io_loop):
+            self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
 
         self._mid = 1
         self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
@@ -932,9 +930,10 @@ class SaltMessageClient(object):
             if self._closing:
                 break
             try:
-                self._stream = yield self._tcp_client.connect(self.host,
-                                                              self.port,
-                                                              ssl_options=self.opts.get('ssl'))
+                with salt.utils.async.current_ioloop(self.io_loop):
+                    self._stream = yield self._tcp_client.connect(self.host,
+                                                                  self.port,
+                                                                  ssl_options=self.opts.get('ssl'))
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
@@ -1137,7 +1136,8 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     TCP publisher
     '''
     def __init__(self, opts, io_loop=None):
-        super(PubServer, self).__init__(io_loop=io_loop, ssl_options=opts.get('ssl'))
+        super(PubServer, self).__init__(ssl_options=opts.get('ssl'))
+        self.io_loop = io_loop
         self.opts = opts
         self._closing = False
         self.clients = set()
