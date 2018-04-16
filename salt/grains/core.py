@@ -54,6 +54,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -1000,10 +1001,10 @@ def _virtual_hv(osdata):
         version = {}
         for fn in ('major', 'minor', 'extra'):
             with salt.utils.files.fopen('/sys/hypervisor/version/{}'.format(fn), 'r') as fhr:
-                version[fn] = fhr.read().strip()
+                version[fn] = salt.utils.stringutils.to_unicode(fhr.read().strip())
         grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
-        grains['virtual_hv_version_info'] = (version['major'], version['minor'], version['extra'])
-    except:
+        grains['virtual_hv_version_info'] = [version['major'], version['minor'], version['extra']]
+    except (IOError, OSError, KeyError):
         pass
 
     # Try to read and decode the supported feature set of the hypervisor
@@ -1025,14 +1026,14 @@ def _virtual_hv(osdata):
                         14: 'ARM_SMCCC_supported'}
     try:
         with salt.utils.files.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
-            features = fhr.read().strip()
+            features = salt.utils.stringutils.to_unicode(fhr.read().strip())
         enabled_features = []
-        for bit, feat in xen_feature_table.items():
+        for bit, feat in six.iteritems(xen_feature_table):
             if int(features, 16) & (1 << bit):
                 enabled_features.append(feat)
         grains['virtual_hv_features'] = features
         grains['virtual_hv_features_list'] = enabled_features
-    except:
+    except (IOError, OSError, KeyError):
         pass
 
     return grains
