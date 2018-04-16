@@ -430,7 +430,7 @@ def avail_locations(session=None, call=None):
 
 def avail_sizes(session=None, call=None):
     '''
-    Return a list of Xen templat definitions
+    Return a list of Xen template definitions
 
     .. code-block:: bash
 
