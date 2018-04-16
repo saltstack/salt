@@ -39,10 +39,10 @@ def __virtual__():
     '''
     Only load when the platform has zfs support
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
-        return (False, "The zfs module cannot be loaded: zfs not supported")
+        return False, "The zfs module cannot be loaded: zfs not supported"
 
 
 def exists(name, **kwargs):
@@ -322,7 +322,7 @@ def list_(name=None, **kwargs):
 
     ## Configure command
     # NOTE: initialize the defaults
-    flags = ['-H', '-p']
+    flags = ['-H']
     opts = {}
 
     # NOTE: set extra config from kwargs
@@ -1198,7 +1198,7 @@ def get(*dataset, **kwargs):
     '''
     ## Configure command
     # NOTE: initialize the defaults
-    flags = ['-H', '-p']
+    flags = ['-H']
     opts = {}
 
     # NOTE: set extra config from kwargs

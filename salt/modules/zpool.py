@@ -39,10 +39,10 @@ def __virtual__():
     '''
     Only load when the platform has zfs support
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
-        return (False, "The zpool module cannot be loaded: zfs not supported")
+        return False, "The zpool module cannot be loaded: zfs not supported"
 
 
 def _clean_vdev_config(config):
@@ -405,7 +405,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='list',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(properties)},
             target=zpool
         ),
@@ -476,7 +476,7 @@ def get(zpool, prop=None, show_source=False, parsable=True):
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='get',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(value_properties)},
             property_name=prop if prop else 'all',
             target=zpool,
