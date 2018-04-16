@@ -569,7 +569,10 @@ class MinionBase(object):
                         last_exc = exc
                         pki_dirname = os.path.dirname(opts['pki_dir'])
                         if exc.strerror.startswith(
-                                'Could not access {0}'.format(pki_dirname)):
+                                'Failed to initiate connection with Master '
+                                '{0} because the Minion could not access {1}. '
+                                'Check ownership/permissions'.format(
+                                    opts['master'], pki_dirname)):
                             msg = exc.strerror
                         else:
                             msg = ('Master {0} could not be reached, trying '
