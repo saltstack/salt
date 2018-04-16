@@ -1286,3 +1286,55 @@ def destroy_template(name=None, call=None, kwargs=None):
     if not found:
         ret[name] = {'status': 'not found'}
     return ret
+
+
+def get_pv_args(name, session=None, call=None):
+    '''
+    Get PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a get_pv_args xenvm01
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    pv_args = session.xenapi.VM.get_PV_args(vm)
+    if len(pv_args) > 0:
+        return pv_args
+    return None
+
+
+def set_pv_args(name, kwargs=None, session=None, call=None):
+    '''
+    Set PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a set_pv_args xenvm01 pv_args="utf-8 graphical"
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    try:
+        log.debug('Setting PV Args: %s', kwargs['pv_args'])
+        session.xenapi.VM.set_PV_args(vm, str(kwargs['pv_args']))
+    except KeyError:
+        log.error('No pv_args parameter found.')
+        return False
+    except XenAPI.Failure:
+        log.info('Setting PV Args failed.')
+        return False
+    return True
