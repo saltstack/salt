@@ -38,7 +38,7 @@ import os
 from datetime import datetime
 
 # Import salt libs
-import salt.utils.decorators
+import salt.utils.decorators.path
 import salt.utils.files
 from salt.utils.versions import LooseVersion
 from salt.exceptions import CommandExecutionError
@@ -111,7 +111,7 @@ def __virtual__():
 ################
 # LXD Management
 ################
-@salt.utils.decorators.which('lxd')
+@salt.utils.decorators.path.which('lxd')
 def version():
     '''
     Returns the actual lxd version.
@@ -140,7 +140,7 @@ def pylxd_version():
     return pylxd.__version__
 
 
-@salt.utils.decorators.which('lxd')
+@salt.utils.decorators.path.which('lxd')
 def init(storage_backend='dir', trust_password=None, network_address=None,
          network_port=None, storage_create_device=None,
          storage_create_loop=None, storage_pool=None):
@@ -227,8 +227,8 @@ def init(storage_backend='dir', trust_password=None, network_address=None,
     return output
 
 
-@salt.utils.decorators.which('lxd')
-@salt.utils.decorators.which('lxc')
+@salt.utils.decorators.path.which('lxd')
+@salt.utils.decorators.path.which('lxc')
 def config_set(key, value):
     '''
     Set an LXD daemon config option
@@ -263,8 +263,8 @@ def config_set(key, value):
     return 'Config value "{0}" successfully set.'.format(key),
 
 
-@salt.utils.decorators.which('lxd')
-@salt.utils.decorators.which('lxc')
+@salt.utils.decorators.path.which('lxd')
+@salt.utils.decorators.path.which('lxc')
 def config_get(key):
     '''
     Get an LXD daemon config option
