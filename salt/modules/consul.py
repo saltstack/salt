@@ -61,7 +61,7 @@ def _query(function,
     :param api_version  The Consul api version
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
+    :param data:        The data to be sent for POST method. This param is ignored for GET requests.
     :return:            The json response from the API call or False.
     '''
 
