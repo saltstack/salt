@@ -391,7 +391,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             use_vt=False,
             trusted_host=None,
             no_cache_dir=False,
-            cache_dir=None):
+            cache_dir=None,
+            no_binary=None):
     '''
     Install packages with pip
 
@@ -417,7 +418,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Prefer wheel archives (requires pip>=1.4)
 
     no_use_wheel
-        Force to not use wheel archives (requires pip>=1.4)
+        Force to not use wheel archives (requires pip>=1.4,<10.0.0)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or one or more package names with commas between them
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -589,29 +595,48 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                ('The --use-wheel option is only supported in pip {0} and '
-                 'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                ('The --use-wheel option is only supported in pip between {0} and '
+                 '{1}. The version of pip detected is {2}. This option '
+                 'will be ignored.'.format(min_version, max_version, cur_version))
             )
         else:
             cmd.append('--use-wheel')
 
     if no_use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                ('The --no-use-wheel option is only supported in pip {0} and '
+                ('The --no-use-wheel option is only supported in pip between {0} and '
+                 '{1}. The version of pip detected is {2}. This option '
+                 'will be ignored.'.format(min_version, max_version, cur_version))
+            )
+        else:
+            cmd.append('--no-use-wheel')
+
+    if no_binary:
+        min_version = '7.0.0'
+        cur_version = __salt__['pip.version'](bin_env)
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            logger.error(
+                ('The --no-binary option is only supported in pip {0} and '
                  'newer. The version of pip detected is {1}. This option '
                  'will be ignored.'.format(min_version, cur_version))
             )
         else:
-            cmd.append('--no-use-wheel')
+            if isinstance(no_binary, list):
+                no_binary = ','.join(no_binary)
+            cmd.extend(['--no-binary', no_binary])
 
     if log:
         if os.path.isdir(log):

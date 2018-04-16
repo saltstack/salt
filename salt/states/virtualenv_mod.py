@@ -57,7 +57,8 @@ def managed(name,
             pip_pkgs=None,
             pip_no_cache_dir=False,
             pip_cache_dir=None,
-            process_dependency_links=False):
+            process_dependency_links=False,
+            no_binary=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -102,6 +103,11 @@ def managed(name,
 
     no_use_wheel: False
         Force to not use wheel archives (requires pip>=1.4)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or a list of one or more packages
 
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
@@ -222,27 +228,44 @@ def managed(name,
     elif venv_exists:
         ret['comment'] = 'virtualenv exists'
 
+    # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
-                              'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
             return ret
 
+    # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
-            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
-                              'in pip {0} and newer. The version of pip '
-                              'detected was {1}.').format(min_version,
-                                                          cur_version)
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
+            return ret
+
+    # Check that the pip binary supports the 'no_binary' option
+    if no_binary:
+        min_version = '7.0.0'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            ret['result'] = False
+            ret['comment'] = ('The \'no_binary\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
             return ret
 
     # Populate the venv via a requirements file
@@ -275,6 +298,7 @@ def managed(name,
             bin_env=name,
             use_wheel=use_wheel,
             no_use_wheel=no_use_wheel,
+            no_binary=no_binary,
             user=user,
             cwd=cwd,
             index_url=index_url,
