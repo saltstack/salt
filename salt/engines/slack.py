@@ -236,16 +236,16 @@ class SlackClient(object):
         XXX: instead of using Caller, make the minion to use configurable so there could be some
              restrictions placed on what pillars can be used.
         '''
-        caller = salt.client.Caller()
-        pillar_groups = caller.cmd('pillar.get', pillar_name)
-        # pillar_groups = __salt__['pillar.get'](pillar_name, {})
-        log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
-        log.debug('pillar groups is %s', pillar_groups)
-        log.debug('pillar groups type is %s', type(pillar_groups))
-        if pillar_groups:
-            return pillar_groups
+        if pillar_name:
+            caller = salt.client.Caller()
+            pillar_groups = caller.cmd('pillar.get', pillar_name)
+            # pillar_groups = __salt__['pillar.get'](pillar_name, {})
+            log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
+            log.debug('pillar groups is %s', pillar_groups)
+            log.debug('pillar groups type is %s', type(pillar_groups))
         else:
-            return {}
+            pillar_groups = {}
+        return pillar_groups
 
     def fire(self, tag, msg):
         '''
@@ -416,6 +416,11 @@ class SlackClient(object):
                               'so we look for user in '
                               'the original message.')
                     user_id = m_data['message']['user']
+                elif 'comment' in m_data and 'user' in m_data['comment']:
+                    log.debug('Comment was added, '
+                              'so we look for user in '
+                              'the comment.')
+                    user_id = m_data['comment']['user']
             else:
                 user_id = m_data.get('user')
             channel_id = m_data.get('channel')
