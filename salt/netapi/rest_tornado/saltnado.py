@@ -384,7 +384,7 @@ class EventListener(object):
             try:
                 is_matched = matcher(mtag, tag)
             except Exception:
-                logger.error('Failed to run a matcher.', exc_info=True)
+                log.error('Failed to run a matcher.', exc_info=True)
                 is_matched = False
 
             if not is_matched:
@@ -979,8 +979,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             tag = tagify([jid, 'ret', minion], 'job')
             minion_future = self.application.event_listener.get_event(self,
                                                                       tag=tag,
-                                                                      matcher=EventListener.exact_matcher,
-                                                                      timeout=self.application.opts['timeout'])
+                                                                      matcher=EventListener.exact_matcher)
             future_minion_map[minion_future] = minion
         return future_minion_map
 
