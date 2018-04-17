@@ -4080,7 +4080,7 @@ def get_managed(
         if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
-                return '', {}, 'Source file {0} not found'.format(source)
+                return '', {}, 'Source file {0} not found in saltenv \'{1}\''.format(source, saltenv)
         elif not source_hash and unix_local_source:
             source_sum = _get_local_file_source_sum(parsed_path)
         elif not source_hash and source.startswith(os.sep):

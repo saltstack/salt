@@ -61,7 +61,7 @@ def _query(function,
     :param api_version  The Consul api version
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
+    :param data:        The data to be sent for POST method. This param is ignored for GET requests.
     :return:            The json response from the API call or False.
     '''
 
@@ -78,9 +78,12 @@ def _query(function,
     base_url = urllib.parse.urljoin(consul_url, '{0}/'.format(api_version))
     url = urllib.parse.urljoin(base_url, function, False)
 
-    if data is None:
-        data = {}
-    data = salt.utils.json.dumps(data)
+    if method == 'GET':
+        data = None
+    else:
+        if data is None:
+            data = {}
+        data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         url,
