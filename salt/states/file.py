@@ -6287,7 +6287,7 @@ def serialize(name,
                         'result': False}
 
             with salt.utils.files.fopen(name, 'r') as fhr:
-                existing_data = __serializers__[deserializer_name](fhr)
+                existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
