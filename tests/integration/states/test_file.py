@@ -2176,6 +2176,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is more generic than just a file test. Feel free to move
         '''
+        self.maxDiff = None
         korean_1 = '한국어 시험'
         korean_2 = '첫 번째 행'
         korean_3 = '마지막 행'
@@ -2187,58 +2188,40 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         test_file_encoded = test_file
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
-        template_lines = [
-            '# -*- coding: utf-8 -*-',
-            'some-utf8-file-create:',
-            '  file.managed:',
-            "    - name: '{0}'".format(test_file),
-            '    - contents: |',
-            '       {0}'.format(korean_1),
-            '    - makedirs: True',
-            '    - replace: True',
-            '    - show_diff: True',
-            'some-utf8-file-create2:',
-            '  file.managed:',
-            "    - name: '{0}'".format(test_file),
-            '    - contents: |',
-            '       {0}'.format(korean_2),
-            '       {0}'.format(korean_1),
-            '       {0}'.format(korean_3),
-            '    - replace: True',
-            '    - show_diff: True',
-            'some-utf8-file-exists:',
-            '  file.exists:',
-            "    - name: '{0}'".format(test_file),
-            '    - require:',
-            '      - file: some-utf8-file-create2',
-            'some-utf8-file-content-test:',
-            '  cmd.run:',
-            '    - name: \'cat "{0}"\''.format(test_file),
-            '    - require:',
-            '      - file: some-utf8-file-exists',
-            'some-utf8-file-content-remove:',
-            '  cmd.run:',
-            '    - name: \'rm -f "{0}"\''.format(test_file),
-            '    - require:',
-            '      - cmd: some-utf8-file-content-test',
-            'some-utf8-file-removed:',
-            '  file.missing:',
-            "    - name: '{0}'".format(test_file),
-            '    - require:',
-            '      - cmd: some-utf8-file-content-remove',
-        ]
+        template = textwrap.dedent('''\
+            some-utf8-file-create:
+              file.managed:
+                - name: {test_file}
+                - contents: {korean_1}
+                - makedirs: True
+                - replace: True
+                - show_diff: True
+            some-utf8-file-create2:
+              file.managed:
+                - name: {test_file}
+                - contents: |
+                   {korean_2}
+                   {korean_1}
+                   {korean_3}
+                - replace: True
+                - show_diff: True
+            some-utf8-file-content-test:
+              cmd.run:
+                - name: 'cat "{test_file}"'
+                - require:
+                  - file: some-utf8-file-create2
+            '''.format(**locals()))
+
+        # Save template file
         with salt.utils.files.fopen(template_path, 'wb') as fp_:
-            fp_.write(
-                salt.utils.stringutils.to_bytes(
-                    os.linesep.join(template_lines)
-                )
-            )
+            fp_.write(salt.utils.stringutils.to_bytes(template))
+
         try:
-            ret = self.run_function('state.sls', mods='issue-8947')
-            if not isinstance(ret, dict):
+            result = self.run_function('state.sls', mods='issue-8947')
+            if not isinstance(result, dict):
                 raise AssertionError(
                     ('Something went really wrong while testing this sls:'
-                    ' {0}').format(repr(ret))
+                    ' {0}').format(repr(result))
                 )
             # difflib produces different output on python 2.6 than on >=2.7
             if sys.version_info < (2, 7):
@@ -2250,76 +2233,46 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ' 한국어 시험\n'
                 '+마지막 행\n'
             )
-            # future_lint: disable=blacklisted-function
-            expected = {
-                'file_|-some-utf8-file-create_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': test_file_encoded,
-                    '__run_num__': 0,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
-                    'diff': 'New file'
-                },
-                'file_|-some-utf8-file-create2_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': test_file_encoded,
-                    '__run_num__': 1,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
-                    'diff': diff
-                },
-                'file_|-some-utf8-file-exists_|-{0}_|-exists'.format(test_file_encoded): {
-                    'name': test_file_encoded,
-                    '__run_num__': 2,
-                    'comment': 'Path {0} exists'.format(test_file_encoded)
-                },
-                'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'cat "{0}"'.format(test_file_encoded),
-                    '__run_num__': 3,
-                    'comment': 'Command "cat "{0}"" run'.format(test_file_encoded),
-                    'stdout': '{0}\n{1}\n{2}'.format(
-                        korean_2,
-                        korean_1,
-                        korean_3,
-                    )
-                },
-                'cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'rm -f "{0}"'.format(test_file_encoded),
-                    '__run_num__': 4,
-                    'comment': 'Command "rm -f "{0}"" run'.format(test_file_encoded),
-                    'stdout': ''
-                },
-                'file_|-some-utf8-file-removed_|-{0}_|-missing'.format(test_file_encoded): {
-                    'name': test_file_encoded,
-                    '__run_num__': 5,
-                    'comment': 'Path {0} is missing'.format(test_file_encoded),
-                }
-            }
-            # future_lint: enable=blacklisted-function
-            result = {}
-            for name, step in six.iteritems(ret):
-                self.assertSaltTrueReturn({name: step})
-                result.update({
-                 name: {
-                    'name': step['name'],
-                    '__run_num__': step['__run_num__'],
-                    'comment': step['comment']
-                }})
-                if 'diff' in step['changes']:
-                    result[name]['diff'] = step['changes']['diff']
-                if 'stdout' in step['changes']:
-                    result[name]['stdout'] = step['changes']['stdout']
 
-            self.maxDiff = None
+            ret = {x.split('_|-')[1]: y for x, y in six.iteritems(result)}
 
-            self.assertEqual(expected, result)
-            # future_lint: disable=blacklisted-function
-            cat_id = 'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded)
-            # future_lint: enable=blacklisted-function
+            # Confirm initial creation of file
             self.assertEqual(
-                salt.utils.stringutils.to_unicode(result[cat_id]['stdout']),
-                korean_2 + '\n' + korean_1 + '\n' + korean_3
+                ret['some-utf8-file-create']['comment'],
+                'File {0} updated'.format(test_file_encoded)
             )
+            self.assertEqual(
+                ret['some-utf8-file-create']['changes'],
+                {'diff': 'New file'}
+            )
+
+            # Confirm file was modified and that the diff was as expected
+            self.assertEqual(
+                ret['some-utf8-file-create2']['comment'],
+                'File {0} updated'.format(test_file_encoded)
+            )
+            self.assertEqual(
+                ret['some-utf8-file-create2']['changes'],
+                {'diff': diff}
+            )
+
+            # Confirm that the file has the expected contents as specified in
+            # the prior state.
+            self.assertEqual(
+                ret['some-utf8-file-content-test']['comment'],
+                'Command "cat "{0}"" run'.format(test_file_encoded)
+            )
+            self.assertEqual(
+                ret['some-utf8-file-content-test']['changes']['stdout'],
+                '\n'.join((korean_2, korean_1, korean_3))
+            )
+
         finally:
-            if os.path.isdir(test_file):
-                os.unlink(test_file)
-                os.unlink(template_path)
+            for path in (test_file, template_path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
 
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
