@@ -2100,13 +2100,13 @@ are enabled and available!
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The renderer to use on the minions to render the state data.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_master:: userdata_template
 
