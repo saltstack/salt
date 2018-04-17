@@ -64,8 +64,8 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=TMP)
         full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
-        with salt.utils.fopen(full_path_to_file, 'rb') as s_fp:
-            with salt.utils.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
+        with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
+            with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
                     d_fp.write(
                         line.rstrip(b'\n').rstrip(b'\r') + os.linesep.encode('utf-8')
@@ -81,7 +81,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
                 pass
-        salt.utils.rm_rf(cls.tmp_dir)
+        salt.utils.files.rm_rf(cls.tmp_dir)
 
     def tearDown(self):
         del self.opts

@@ -20,8 +20,6 @@ from tests.support.paths import TMP_CONF_DIR
 # Import Salt libs
 import salt.config
 import salt.loader
-import salt.utils.files
-import salt.utils.yaml
 from salt.exceptions import SaltRenderError
 
 from salt.ext import six
@@ -41,6 +39,7 @@ from salt.utils.templates import JINJA, render_jinja_tmpl
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.yaml
 
 # Import 3rd party libs
 try:
@@ -50,7 +49,7 @@ except ImportError:
     HAS_TIMELIB = False
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
-BLINESEP = salt.utils.to_bytes(os.linesep)
+BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 class MockFileClient(object):
@@ -75,10 +74,10 @@ def _setup_test_dir(src_dir, test_dir):
     os.makedirs(test_dir)
     salt.utils.files.recursive_copy(src_dir, test_dir)
     filename = os.path.join(test_dir, 'non_ascii')
-    with salt.utils.fopen(filename, 'wb') as fp:
+    with salt.utils.files.fopen(filename, 'wb') as fp:
         fp.write(b'Assun\xc3\xa7\xc3\xa3o' + BLINESEP)
     filename = os.path.join(test_dir, 'hello_simple')
-    with salt.utils.fopen(filename, 'wb') as fp:
+    with salt.utils.files.fopen(filename, 'wb') as fp:
         fp.write(b'world' + BLINESEP)
     filename = os.path.join(test_dir, 'hello_import')
     lines = [
@@ -86,7 +85,7 @@ def _setup_test_dir(src_dir, test_dir):
         r"{% from 'macro' import mymacro -%}",
         r"{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}",
     ]
-    with salt.utils.fopen(filename, 'wb') as fp:
+    with salt.utils.files.fopen(filename, 'wb') as fp:
         for line in lines:
             fp.write(line.encode('utf-8') + BLINESEP)
 
@@ -112,7 +111,7 @@ class TestSaltCacheLoader(TestCase):
         super(TestSaltCacheLoader, self).setUp()
 
     def tearDown(self):
-        salt.utils.rm_rf(self.TEMPDIR)
+        salt.utils.files.rm_rf(self.TEMPDIR)
 
     def test_searchpath(self):
         '''
@@ -222,7 +221,7 @@ class TestGetTemplate(TestCase):
         super(TestGetTemplate, self).setUp()
 
     def tearDown(self):
-        salt.utils.rm_rf(self.TEMPDIR)
+        salt.utils.files.rm_rf(self.TEMPDIR)
 
     def test_fallback(self):
         '''
