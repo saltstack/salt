@@ -19,7 +19,7 @@ import textwrap
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
@@ -1318,3 +1318,92 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                            config_path,
                                            verbose=False,
                                            exit_on_config_errors=True)
+
+    @staticmethod
+    def _get_defaults(**kwargs):
+        ret = {
+            'saltenv': kwargs.pop('saltenv', None),
+            'id': 'test',
+            'cachedir': '/A',
+            'sock_dir': '/B',
+            'root_dir': '/C',
+            'fileserver_backend': 'roots',
+            'open_mode': False,
+            'auto_accept': False,
+            'file_roots': {},
+            'pillar_roots': {},
+            'file_ignore_glob': [],
+            'file_ignore_regex': [],
+            'worker_threads': 5,
+            'hash_type': 'sha256',
+            'log_file': 'foo.log',
+        }
+        ret.update(kwargs)
+        return ret
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_apply_config(self):
+        '''
+        Ensure that the environment and saltenv options work properly
+        '''
+        with patch.object(sconfig, '_adjust_log_file_override', Mock()), \
+                patch.object(sconfig, '_update_ssl_config', Mock()), \
+                patch.object(sconfig, '_update_discovery_config', Mock()):
+
+            # MASTER CONFIG
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'foo')
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo', saltenv='bar')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'bar')
+            self.assertEqual(ret['saltenv'], 'bar')
+
+            # If environment was not explicitly set, it should not be in the
+            # opts at all.
+            defaults = self._get_defaults()
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], None)
+
+            # Same test as above but with saltenv explicitly set
+            defaults = self._get_defaults(saltenv='foo')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # MINION CONFIG
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'foo')
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo', saltenv='bar')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'bar')
+            self.assertEqual(ret['saltenv'], 'bar')
+
+            # If environment was not explicitly set, it should not be in the
+            # opts at all.
+            defaults = self._get_defaults()
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], None)
+
+            # Same test as above but with saltenv explicitly set
+            defaults = self._get_defaults(saltenv='foo')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], 'foo')

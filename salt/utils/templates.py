@@ -205,7 +205,8 @@ def _get_jinja_error_slug(tb_data):
         return [
             x
             for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
+                                         'template',
+                                         '<module>')
         ][-1]
     except IndexError:
         pass

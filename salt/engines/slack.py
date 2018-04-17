@@ -33,26 +33,26 @@ In addition, other groups are being loaded from pillars.
             default:
               users:
                 - *
-            commands:
-              - test.ping
-              - cmd.run
-              - list_jobs
-              - list_commands
-            aliases:
-              list_jobs:
-                cmd: jobs.list_jobs
-              list_commands:
-                cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-            default_target:
-              target: saltmaster
-              tgt_type: glob
-            targets:
-              test.ping:
-                target: '*'
-                tgt_type: glob
-              cmd.run:
+              commands:
+                - test.ping
+                - cmd.run
+                - list_jobs
+                - list_commands
+              aliases:
+                list_jobs:
+                  cmd: jobs.list_jobs
+                list_commands:
+                  cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+              default_target:
                 target: saltmaster
-                tgt_type: list
+                tgt_type: glob
+              targets:
+                test.ping:
+                  target: '*'
+                  tgt_type: glob
+                cmd.run:
+                  target: saltmaster
+                  tgt_type: list
 
 :configuration: Example configuration using the 'default' group and a non-default group and a pillar that will be merged in
     If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
@@ -219,7 +219,7 @@ class SlackClient(object):
                 ret_groups[name]['aliases'].update(config.get('aliases', {}))
                 ret_groups[name]['default_target'].update(config.get('default_target', {}))
                 ret_groups[name]['targets'].update(config.get('targets', {}))
-            except IndexError:
+            except (IndexError, AttributeError):
                 log.warn("Couldn't use group %s. Check that targets is a dict and not a list", name)
 
         log.debug('Got the groups: %s', ret_groups)
@@ -236,16 +236,16 @@ class SlackClient(object):
         XXX: instead of using Caller, make the minion to use configurable so there could be some
              restrictions placed on what pillars can be used.
         '''
-        caller = salt.client.Caller()
-        pillar_groups = caller.cmd('pillar.get', pillar_name)
-        # pillar_groups = __salt__['pillar.get'](pillar_name, {})
-        log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
-        log.debug('pillar groups is %s', pillar_groups)
-        log.debug('pillar groups type is %s', type(pillar_groups))
-        if pillar_groups:
-            return pillar_groups
+        if pillar_name:
+            caller = salt.client.Caller()
+            pillar_groups = caller.cmd('pillar.get', pillar_name)
+            # pillar_groups = __salt__['pillar.get'](pillar_name, {})
+            log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
+            log.debug('pillar groups is %s', pillar_groups)
+            log.debug('pillar groups type is %s', type(pillar_groups))
         else:
-            return {}
+            pillar_groups = {}
+        return pillar_groups
 
     def fire(self, tag, msg):
         '''
@@ -351,7 +351,7 @@ class SlackClient(object):
 
         # maybe there are aliases, so check on that
         if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
-            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]], '')
+            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]].get('cmd', ''), '')
         else:
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
@@ -416,6 +416,11 @@ class SlackClient(object):
                               'so we look for user in '
                               'the original message.')
                     user_id = m_data['message']['user']
+                elif 'comment' in m_data and 'user' in m_data['comment']:
+                    log.debug('Comment was added, '
+                              'so we look for user in '
+                              'the comment.')
+                    user_id = m_data['comment']['user']
             else:
                 user_id = m_data.get('user')
             channel_id = m_data.get('channel')
