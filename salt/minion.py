@@ -567,13 +567,12 @@ class MinionBase(object):
                         break
                     except SaltClientError as exc:
                         last_exc = exc
-                        pki_dirname = os.path.dirname(opts['pki_dir'])
-                        if exc.strerror.startswith(
+                        if exc.strerror.startswith('Could not access'):
+                            msg = (
                                 'Failed to initiate connection with Master '
-                                '{0} because the Minion could not access {1}. '
-                                'Check ownership/permissions'.format(
-                                    opts['master'], pki_dirname)):
-                            msg = exc.strerror
+                                '{0}: check ownership/permissions. Error '
+                                'message: {1}'.format(opts['master'], exc)
+                            )
                         else:
                             msg = ('Master {0} could not be reached, trying '
                                    'next master (if any)'.format(opts['master']))
