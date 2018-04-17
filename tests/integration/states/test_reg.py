@@ -33,7 +33,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
     Reg state module tests
     These tests are destructive as the modify the registry
     '''
-    def skip_tearDown(self):
+    def tearDown(self):
         reg.delete_key_recursive(hive='HKLM',
                                  key=FAKE_KEY)
         reg.delete_key_recursive(hive='HKLM',
@@ -189,7 +189,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'vname': 'test_reg_binary',
             'success': True,
             'hive': 'HKLM',
-            'vdata': test_data,
+            'vdata': test_data.encode('utf-8'),
             'key': FAKE_KEY}
         self.assertEqual(ret, expected)
 
