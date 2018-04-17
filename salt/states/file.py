@@ -268,6 +268,7 @@ For example:
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import difflib
+import glob
 import itertools
 import logging
 import os
@@ -1232,6 +1233,50 @@ def _shortcut_check(name,
                        'should be. Did you mean to use force?'.format(name)), pchanges
 
 
+def _resolve_glob(func):
+    '''
+    Decorator that enables glob filename matching for the wrapped function.
+    Calls the wrapped function for every file that matches the glob pattern
+    specified by parameter ``name`` if parameter ``resolve_glob`` is set True.
+    If any file matches the glob pattern, this makes the wrapped function return
+    ``result`` as True only if the returning value of ``result`` of every
+    matching file is True, and also makes the values of ``changes``,
+    ``pchanges`` and ``comment`` of each matching file as dicts, indexed by the
+    matching file names, so that they can be individually tracked.
+    '''
+    def wrapper(name, *args, **kwargs):
+        combined_ret = {
+            'name': name,
+            'changes': {},
+            'result': True,
+            'comment': '',
+            'pchanges': {}
+        }
+        if not name:
+            return _error(combined_ret, 'Must provide name to file.{0}'.format(func.__name__))
+        if not os.path.isabs(name):
+            return _error(
+                combined_ret, 'Specified file {0} is not an absolute path'.format(name)
+            )
+        found = False
+        if kwargs.pop('resolve_glob', False):
+            for resolved_name in glob.iglob(name):
+                found = True
+                ret = func(resolved_name, *args, **kwargs)
+                for key in ret:
+                    if key == 'result':
+                        combined_ret[key] = combined_ret[key] and ret[key]
+                    elif key != 'name':
+                        if type(combined_ret[key]) is not dict:
+                            combined_ret[key] = {}
+                        combined_ret[key][resolved_name] = ret[key]
+        if not found:
+            return func(name, *args, **kwargs)
+        combined_ret['name'] = name
+        return combined_ret
+    return wrapper
+
+
 def symlink(
         name,
         target,
@@ -1449,6 +1494,7 @@ def symlink(
     return ret
 
 
+@_resolve_glob
 def absent(name,
            **kwargs):
     '''
@@ -1458,20 +1504,15 @@ def absent(name,
 
     name
         The path which should be deleted
+    resolve_glob
+        If True, resolve name as a glob pattern and delete all matching files
+        and/or directories.
     '''
-    name = os.path.expanduser(name)
-
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
            'result': True,
            'comment': ''}
-    if not name:
-        return _error(ret, 'Must provide name to file.absent')
-    if not os.path.isabs(name):
-        return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name)
-        )
     if name == '/':
         return _error(ret, 'Refusing to make "/" absent')
     if os.path.isfile(name) or os.path.islink(name):

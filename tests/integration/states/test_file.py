@@ -186,6 +186,20 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
+    def test_absent_file_glob(self):
+        '''
+        file.absent
+        '''
+        name = os.path.join(TMP, 'file_to_kill_*')
+        fnames = ['file_to_kill_1', 'file_to_kill_2']
+        for fname in fnames:
+            with salt.utils.files.fopen(os.path.join(TMP, fname), 'w+') as fp_:
+                fp_.write('killme')
+        ret = self.run_state('file.absent', name=name, resolve_glob=True)
+        self.assertSaltTrueReturn(ret)
+        for fname in fnames:
+            self.assertFalse(os.path.isfile(os.path.join(TMP, fname)))
+
     def test_absent_dir(self):
         '''
         file.absent
