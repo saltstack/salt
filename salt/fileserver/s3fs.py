@@ -110,13 +110,14 @@ def update():
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
         for saltenv, env_meta in six.iteritems(metadata):
-            for bucket, files in six.iteritems(_find_files(env_meta)):
-                for file_path in files:
-                    cached_file_path = _get_cached_file_name(bucket, saltenv, file_path)
-                    log.info('%s - %s : %s', bucket, saltenv, file_path)
+            for bucket_files in _find_files(env_meta):
+                for bucket, files in six.iteritems(bucket_files):
+                    for file_path in files:
+                        cached_file_path = _get_cached_file_name(bucket, saltenv, file_path)
+                        log.info('%s - %s : %s', bucket, saltenv, file_path)
 
-                    # load the file from S3 if it's not in the cache or it's old
-                    _get_file_from_s3(metadata, saltenv, bucket, file_path, cached_file_path)
+                        # load the file from S3 if it's not in the cache or it's old
+                        _get_file_from_s3(metadata, saltenv, bucket, file_path, cached_file_path)
 
         log.info('Sync local cache from S3 completed.')
 
@@ -144,10 +145,15 @@ def find_file(path, saltenv='base', **kwargs):
         path = os.path.join(saltenv, path)
 
     # look for the files and check if they're ignored globally
-    for bucket_name, files in six.iteritems(env_files):
-        if path in files and not fs.is_file_ignored(__opts__, path):
-            fnd['bucket'] = bucket_name
-            fnd['path'] = path
+    for bucket in env_files:
+        for bucket_name, files in six.iteritems(bucket):
+            if path in files and not fs.is_file_ignored(__opts__, path):
+                fnd['bucket'] = bucket_name
+                fnd['path'] = path
+                break
+        else:
+            continue # only executes if we didn't break
+        break
 
     if not fnd['path'] or not fnd['bucket']:
         return fnd
@@ -245,10 +251,10 @@ def file_list(load):
 
     if not metadata or saltenv not in metadata:
         return ret
-
-    for buckets in six.itervalues(_find_files(metadata[saltenv])):
-        files = [f for f in buckets if not fs.is_file_ignored(__opts__, f)]
-        ret += _trim_env_off_path(files, saltenv)
+    for bucket in _find_files(metadata[saltenv]):
+        for buckets in six.itervalues(bucket):
+            files = [f for f in buckets if not fs.is_file_ignored(__opts__, f)]
+            ret += _trim_env_off_path(files, saltenv)
 
     return ret
 
@@ -283,11 +289,12 @@ def dir_list(load):
         return ret
 
     # grab all the dirs from the buckets cache file
-    for dirs in six.itervalues(_find_dirs(metadata[saltenv])):
-        # trim env and trailing slash
-        dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
-        # remove empty string left by the base env dir in single bucket mode
-        ret += [_f for _f in dirs if _f]
+    for bucket in _find_dirs(metadata[saltenv]):
+        for dirs in six.itervalues(bucket):
+            # trim env and trailing slash
+            dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
+            # remove empty string left by the base env dir in single bucket mode
+            ret += [_f for _f in dirs if _f]
 
     return ret
 
@@ -418,8 +425,9 @@ def _refresh_buckets_cache_file(cache_file):
     if _is_env_per_bucket():
         # Single environment per bucket
         for saltenv, buckets in six.iteritems(_get_buckets()):
-            bucket_files = {}
+            bucket_files_list = []
             for bucket_name in buckets:
+                bucket_files = {}
                 s3_meta = __get_s3_meta(bucket_name)
 
                 # s3 query returned nothing
@@ -428,6 +436,7 @@ def _refresh_buckets_cache_file(cache_file):
 
                 # grab only the files/dirs
                 bucket_files[bucket_name] = [k for k in s3_meta if 'Key' in k]
+                bucket_files_list.append(bucket_files)
 
                 # check to see if we added any keys, otherwise investigate possible error conditions
                 if len(bucket_files[bucket_name]) == 0:
@@ -454,7 +463,7 @@ def _refresh_buckets_cache_file(cache_file):
                                  'in your S3 bucket?')
                             return {}
 
-            metadata[saltenv] = bucket_files
+            metadata[saltenv] = bucket_files_list
 
     else:
         # Multiple environments per buckets
@@ -502,12 +511,16 @@ def _refresh_buckets_cache_file(cache_file):
                 env_files = [k for k in files if k['Key'].startswith(saltenv)]
 
                 if saltenv not in metadata:
-                    metadata[saltenv] = {}
+                    metadata[saltenv] = []
 
-                if bucket_name not in metadata[saltenv]:
-                    metadata[saltenv][bucket_name] = []
-
-                metadata[saltenv][bucket_name] += env_files
+                found = False
+                for bucket_files in metadata[saltenv]:
+                    if bucket_name in bucket_files:
+                        bucket_files[bucket_name] += env_files
+                        found = True
+                        break
+                if not found:
+                    metadata[saltenv].append({bucket_name: env_files})
 
     # write the metadata to disk
     if os.path.isfile(cache_file):
@@ -543,16 +556,21 @@ def _find_files(metadata):
     Looks for all the files in the S3 bucket cache metadata
     '''
 
-    ret = {}
+    ret = []
+    found = {}
 
-    for bucket_name, data in six.iteritems(metadata):
-        if bucket_name not in ret:
-            ret[bucket_name] = []
-
-        filePaths = [k['Key'] for k in data]
-        # filter out the dirs
-        ret[bucket_name] += [k for k in filePaths if not k.endswith('/')]
-
+    for bucket_dict in metadata:
+        for bucket_name, data in six.iteritems(bucket_dict):
+            filepaths = [k['Key'] for k in data]
+            filepaths = [k for k in filepaths if not k.endswith('/')]
+            if bucket_name not in found:
+                found[bucket_name] = True
+                ret.append({bucket_name: filepaths})
+            else:
+                for bucket in ret:
+                    if bucket_name in bucket:
+                        bucket[bucket_name] += filepaths
+                        break
     return ret
 
 
@@ -564,19 +582,27 @@ def _find_dirs(metadata):
     directories discovered in the path of file keys.
     '''
 
-    ret = {}
+    ret = []
+    found = {}
 
-    for bucket_name, data in six.iteritems(metadata):
-        if bucket_name not in ret:
-            ret[bucket_name] = set()
-
-        for path in [k['Key'] for k in data]:
-            prefix = ''
-            for part in path.split('/')[:-1]:
-                directory = prefix + part + '/'
-                ret[bucket_name].add(directory)
-                prefix = directory
-
+    for bucket_dict in metadata:
+        for bucket_name, data in six.iteritems(bucket_dict):
+            dirpaths = set()
+            for path in [k['Key'] for k in data]:
+                prefix = ''
+                for part in path.split('/')[:-1]:
+                    directory = prefix + part + '/'
+                    dirpaths.add(directory)
+                    prefix = directory
+            if bucket_name not in found:
+                found[bucket_name] = True
+                ret.append({bucket_name: list(dirpaths)})
+            else:
+                for bucket in ret:
+                    if bucket_name in bucket:
+                        bucket[bucket_name] += list(dirpaths)
+                        bucket[bucket_name] = list(set(bucket[bucket_name]))
+                        break
     return ret
 
 
@@ -585,7 +611,10 @@ def _find_file_meta(metadata, bucket_name, saltenv, path):
     Looks for a file's metadata in the S3 bucket cache file
     '''
     env_meta = metadata[saltenv] if saltenv in metadata else {}
-    bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
+    bucket_meta = {}
+    for bucket in env_meta:
+        if bucket_name in bucket:
+            bucket_meta = bucket[bucket_name]
     files_meta = list(list(filter((lambda k: 'Key' in k), bucket_meta)))
 
     for item_meta in files_meta:
