@@ -2942,7 +2942,7 @@ class BaseHighState(object):
         mopts = self.client.master_opts()
         if not isinstance(mopts, dict):
             # An error happened on the master
-            opts['renderer'] = 'yaml_jinja'
+            opts['renderer'] = 'jinja|yaml'
             opts['failhard'] = False
             opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}

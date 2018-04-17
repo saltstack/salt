@@ -577,7 +577,7 @@
 #external_nodes: None
 
 # The renderer to use on the minions to render the state data
-#renderer: yaml_jinja
+#renderer: jinja|yaml
 
 # Default Jinja environment options for all templates except sls templates
 #jinja_env:
@@ -587,8 +587,8 @@
 #  variable_end_string: '}}'
 #  comment_start_string: '{#'
 #  comment_end_string: '#}'
-#  line_statement_prefix: 
-#  line_comment_prefix: 
+#  line_statement_prefix:
+#  line_comment_prefix:
 #  trim_blocks: False
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
@@ -602,8 +602,8 @@
 #  variable_end_string: '}}'
 #  comment_start_string: '{#'
 #  comment_end_string: '#}'
-#  line_statement_prefix: 
-#  line_comment_prefix: 
+#  line_statement_prefix:
+#  line_comment_prefix:
 #  trim_blocks: False
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
