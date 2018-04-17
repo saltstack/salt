@@ -14,7 +14,6 @@ import string
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
-from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs

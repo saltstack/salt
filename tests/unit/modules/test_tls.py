@@ -19,7 +19,6 @@ except Exception:
 # Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
