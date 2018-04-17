@@ -46,7 +46,7 @@ if HAS_PIP is True:
         # pip 10.0.0 move req module under pip._internal
         try:
             from pip._internal.req import InstallRequirement
-        except:
+        except ImportError:
             HAS_PIP = False
             # Remove references to the loaded pip module above so reloading works
             import sys
