@@ -393,3 +393,21 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
             with patch.object(useradd, 'info', mock):
                 self.assertFalse(useradd.rename('salt', 'salt'))
+
+    def test_build_gecos_field(self):
+        '''
+        Test if gecos fields are built correctly (removing trailing commas)
+        '''
+        test_gecos = {'fullname': 'Testing',
+                      'roomnumber': 1234,
+                      'workphone': 22222,
+                      'homephone': 99999}
+        expected_gecos_fields = 'Testing,1234,22222,99999'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        test_gecos.pop('roomnumber')
+        test_gecos.pop('workphone')
+        expected_gecos_fields = 'Testing,,,99999'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        test_gecos.pop('homephone')
+        expected_gecos_fields = 'Testing'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
