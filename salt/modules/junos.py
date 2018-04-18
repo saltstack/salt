@@ -71,8 +71,9 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The junos module could not be loaded: '
-                       'junos-eznc or jxmlease or proxy could not be loaded.')
+        return (False, 'The junos or dependent module could not be loaded: '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
+                       'proxy could not be loaded.')
 
 
 def facts_refresh():
