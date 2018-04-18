@@ -205,6 +205,7 @@ def _get_redis_cache_opts():
     return {
         'host': __opts__.get('cache.redis.host', 'localhost'),
         'port': __opts__.get('cache.redis.port', 6379),
+        'unix_socket_path': __opts__.get('cache.redis.unix_socket_path', None),
         'db': __opts__.get('cache.redis.db', '0'),
         'password': __opts__.get('cache.redis.password', ''),
         'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
@@ -231,6 +232,7 @@ def _get_redis_server(opts=None):
     else:
         REDIS_SERVER = redis.StrictRedis(opts['host'],
                                    opts['port'],
+                                   unix_socket_path=opts['unix_socket_path'],
                                    db=opts['db'],
                                    password=opts['password'])
     return REDIS_SERVER
