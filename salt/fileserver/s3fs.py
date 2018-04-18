@@ -152,7 +152,7 @@ def find_file(path, saltenv='base', **kwargs):
                 fnd['path'] = path
                 break
         else:
-            continue # only executes if we didn't break
+            continue  # only executes if we didn't break
         break
 
     if not fnd['path'] or not fnd['bucket']:
