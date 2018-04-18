@@ -105,6 +105,7 @@ Example output with no special settings in configuration files:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import pprint
+import re
 import textwrap
 
 # Import salt libs
@@ -141,8 +142,9 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     if 'data' in data:
         data = data.pop('data')
 
+    indent_level = kwargs.get('indent_level', 1)
     ret = [
-        _format_host(host, hostdata)[0]
+        _format_host(host, hostdata, indent_level=indent_level)[0]
         for host, hostdata in six.iteritems(data)
     ]
     if ret:
@@ -155,7 +157,11 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     return ''
 
 
-def _format_host(host, data):
+def _format_host(host, data, indent_level=1):
+    '''
+    Main highstate formatter. can be called recursively if a nested highstate
+    contains other highstates (ie in an orchestration)
+    '''
     host = salt.utils.data.decode(host)
 
     colors = salt.utils.color.get_colors(
@@ -217,15 +223,17 @@ def _format_host(host, data):
                 try:
                     rdurations.append(float(rduration))
                 except ValueError:
-                    log.error('Cannot parse a float from duration {0}'
-                              .format(ret.get('duration', 0)))
+                    log.error('Cannot parse a float from duration %s', ret.get('duration', 0))
 
             tcolor = colors['GREEN']
-            orchestration = ret.get('__orchestration__', False)
-            schanged, ctext = _format_changes(ret['changes'], orchestration)
-            if not ctext and 'pchanges' in ret:
-                schanged, ctext = _format_changes(ret['pchanges'], orchestration)
-            nchanges += 1 if schanged else 0
+            if ret.get('name') in ['state.orch', 'state.orchestrate', 'state.sls']:
+                nested = output(ret['changes']['return'], indent_level=indent_level+1)
+                ctext = re.sub('^', ' ' * 14 * indent_level, '\n'+nested, flags=re.MULTILINE)
+                schanged = True
+                nchanges += 1
+            else:
+                schanged, ctext = _format_changes(ret['changes'])
+                nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \

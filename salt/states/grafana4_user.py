@@ -124,7 +124,7 @@ def present(name,
         if ret['changes']:
             ret['comment'] = 'User {0} updated'.format(name)
         else:
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'User {0} already up-to-date'.format(name)
 
     return ret

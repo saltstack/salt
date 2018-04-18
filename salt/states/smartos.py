@@ -25,14 +25,14 @@ Management of SmartOS Standalone Compute Nodes
               label: 'test vm'
               owner: 'sjorge'
             nics:
-              "82:1b:8e:49:e9:12"
+              "82:1b:8e:49:e9:12":
                 nic_tag: trunk
                 mtu: 1500
                 ips:
                   - 172.16.1.123/16
                   - 192.168.2.123/24
                 vlan_id: 10
-              "82:1b:8e:49:e9:13"
+              "82:1b:8e:49:e9:13":
                 nic_tag: trunk
                 mtu: 1500
                 ips:
@@ -64,7 +64,7 @@ Management of SmartOS Standalone Compute Nodes
                 compression: lz4
                 boot: true
             nics:
-              "82:1b:8e:49:e9:15"
+              "82:1b:8e:49:e9:15":
                 nic_tag: trunk
                 mtu: 1500
                 ips:
@@ -378,7 +378,7 @@ def image_vacuum(name):
     # list of images to keep
     images = []
 
-    # retreive image_present state data for host
+    # retrieve image_present state data for host
     for state in __salt__['state.show_lowstate']():
         # don't throw exceptions when not highstate run
         if 'state' not in state:

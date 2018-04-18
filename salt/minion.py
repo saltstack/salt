@@ -144,10 +144,10 @@ def resolve_dns(opts, fallback=True):
     if (opts.get('file_client', 'remote') == 'local' and
             not opts.get('use_master_when_local', False)):
         check_dns = False
+    # Since salt.log is imported below, salt.utils.network needs to be imported here as well
+    import salt.utils.network
 
     if check_dns is True:
-        # Because I import salt.log below I need to re-import salt.utils here
-        import salt.utils
         try:
             if opts['master'] == '':
                 raise SaltSystemExit
@@ -2604,7 +2604,7 @@ class Minion(MinionBase):
             def ping_master():
                 try:
                     def ping_timeout_handler(*_):
-                        if not self.opts.get('auth_safemode', True):
+                        if self.opts.get('auth_safemode', False):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)

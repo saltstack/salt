@@ -41,14 +41,18 @@ except ImportError:
 
 if HAS_PIP is True:
     try:
-        import pip.req
+        from pip.req import InstallRequirement
     except ImportError:
-        HAS_PIP = False
-        # Remove references to the loaded pip module above so reloading works
-        import sys
-        del pip
-        if 'pip' in sys.modules:
-            del sys.modules['pip']
+        # pip 10.0.0 move req module under pip._internal
+        try:
+            from pip._internal.req import InstallRequirement
+        except ImportError:
+            HAS_PIP = False
+            # Remove references to the loaded pip module above so reloading works
+            import sys
+            del pip
+            if 'pip' in sys.modules:
+                del sys.modules['pip']
 
     try:
         from pip.exceptions import InstallationError
@@ -127,7 +131,7 @@ def _check_pkg_version_format(pkg):
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
             log.debug('Installed pip version: %s', pip.__version__)
-            install_req = pip.req.InstallRequirement.from_line(pkg)
+            install_req = InstallRequirement.from_line(pkg)
         except AttributeError:
             log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
@@ -135,12 +139,12 @@ def _check_pkg_version_format(pkg):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
                         from_vcs = True
-                        install_req = pip.req.InstallRequirement.from_line(
+                        install_req = InstallRequirement.from_line(
                             pkg.split('{0}+'.format(vcs))[-1]
                         )
                         break
             else:
-                install_req = pip.req.InstallRequirement.from_line(pkg)
+                install_req = InstallRequirement.from_line(pkg)
     except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
@@ -180,8 +184,8 @@ def _check_pkg_version_format(pkg):
 
 def _check_if_installed(prefix, state_pkg_name, version_spec,
                         ignore_installed, force_reinstall,
-                        upgrade, user, cwd, bin_env, index_url):
-
+                        upgrade, user, cwd, bin_env, env_vars,
+                        index_url):
     # result: None means the command failed to run
     # result: True means the package is installed
     # result: False means the package is not installed
@@ -190,7 +194,8 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # Check if the requested package is already installed.
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd)
+                                        user=user, cwd=cwd,
+                                        env_vars=env_vars)
         prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = None
@@ -682,7 +687,8 @@ def installed(name,
                 version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
-                                          upgrade, user, cwd, bin_env, index_url)
+                                          upgrade, user, cwd, bin_env, env_vars,
+                                          index_url)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -823,9 +829,10 @@ def installed(name,
                 # Case for packages that are not an URL
                 if prefix:
                     pipsearch = __salt__['pip.list'](prefix, bin_env,
-                                                     user=user, cwd=cwd)
+                                                     user=user, cwd=cwd,
+                                                     env_vars=env_vars)
 
-                    # If we didnt find the package in the system after
+                    # If we didn't find the package in the system after
                     # installing it report it
                     if not pipsearch:
                         pkg_404_comms.append(

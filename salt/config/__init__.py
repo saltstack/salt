@@ -653,10 +653,11 @@ VALID_OPTS = {
     's3fs_update_interval': int,
     'svnfs_update_interval': int,
 
-    'git_pillar_base': six.string_types,
-    'git_pillar_branch': six.string_types,
-    'git_pillar_env': six.string_types,
-    'git_pillar_root': six.string_types,
+    # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
+    # git_pillar_root omitted here because their values could conceivably be
+    # loaded as non-string types, which is OK because git_pillar will normalize
+    # them to strings. But rather than include all the possible types they
+    # could be, we'll just skip type-checking.
     'git_pillar_ssl_verify': bool,
     'git_pillar_global_lock': bool,
     'git_pillar_user': six.string_types,
@@ -668,12 +669,11 @@ VALID_OPTS = {
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
     'git_pillar_verify_config': bool,
+    # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
+    # their values could conceivably be loaded as non-string types, which is OK
+    # because gitfs will normalize them to strings. But rather than include all
+    # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
-    'gitfs_mountpoint': six.string_types,
-    'gitfs_root': six.string_types,
-    'gitfs_base': six.string_types,
-    'gitfs_user': six.string_types,
-    'gitfs_password': six.string_types,
     'gitfs_insecure_auth': bool,
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
@@ -738,6 +738,9 @@ VALID_OPTS = {
 
     # Recursively merge lists by aggregating them instead of replacing them.
     'pillar_merge_lists': bool,
+
+    # If True, values from included pillar SLS targets will override
+    'pillar_includes_override_sls': bool,
 
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
@@ -888,11 +891,14 @@ VALID_OPTS = {
     'winrepo_dir': six.string_types,
     'winrepo_dir_ng': six.string_types,
     'winrepo_cachefile': six.string_types,
+    # NOTE: winrepo_branch omitted here because its value could conceivably be
+    # loaded as a non-string type, which is OK because winrepo will normalize
+    # them to strings. But rather than include all the possible types it could
+    # be, we'll just skip type-checking.
     'winrepo_cache_expire_max': int,
     'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
-    'winrepo_branch': six.string_types,
     'winrepo_ssl_verify': bool,
     'winrepo_user': six.string_types,
     'winrepo_password': six.string_types,
@@ -1224,7 +1230,7 @@ DEFAULT_MINION_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'sock_pool_size': 1,
     'backup_mode': '',
-    'renderer': 'yaml_jinja',
+    'renderer': 'jinja|yaml',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
     'random_startup_delay': 0,
@@ -1235,6 +1241,9 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
+    'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -1613,6 +1622,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
@@ -1639,6 +1649,7 @@ DEFAULT_MASTER_OPTS = {
     'eauth_acl_module': '',
     'eauth_tokens': 'localfs',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
+    'module_dirs': [],
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
@@ -1654,13 +1665,14 @@ DEFAULT_MASTER_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
-    'renderer': 'yaml_jinja',
+    'renderer': 'jinja|yaml',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'master_tops': {},
+    'master_tops_first': False,
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -3674,6 +3686,8 @@ def apply_minion_config(overrides=None,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'minion'
@@ -3682,7 +3696,7 @@ def apply_minion_config(overrides=None,
         opts.update(overrides)
 
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' minion config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3782,7 +3796,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3871,6 +3885,8 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'master'
@@ -3879,7 +3895,7 @@ def apply_master_config(overrides=None, defaults=None):
         opts.update(overrides)
 
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' master config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3929,7 +3945,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Insert all 'utils_dirs' directories to the system path
     insert_system_path(opts, opts['utils_dirs'])
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0

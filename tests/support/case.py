@@ -139,15 +139,26 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self,
+                arg_str,
+                with_retcode=False,
+                catch_stderr=False,
+                async=False,
+                timeout=60,
+                config_dir=None):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
-                                                 arg_str,
-                                                 timeout=timeout,
-                                                 async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(
+                config_dir or self.get_config_dir(),
+                arg_str,
+                timeout=timeout,
+                async_flag=' --async' if async else '')
+        return self.run_script('salt-run',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
 
     def run_run_plus(self, fun, *arg, **kwargs):
         '''
@@ -462,8 +473,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_spm for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
-                timeout=60, wipe=True, raw=False):  # pylint: disable=W0221
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+                timeout=60, wipe=True, raw=False):
         '''
         Execute salt-ssh
         '''
@@ -483,7 +494,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_ssh for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=180, config_dir=None):
         '''
         Execute salt-run
         '''
@@ -836,9 +847,9 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=90, wipe=True, raw=False, **kwargs):
+    def run_function(self, function, arg=(), timeout=180, wipe=True, raw=False, **kwargs):
         '''
-        We use a 90s timeout here, which some slower systems do end up needing
+        We use a 180s timeout here, which some slower systems do end up needing
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
                            wipe=wipe, raw=raw)
