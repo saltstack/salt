@@ -653,7 +653,7 @@ foo1:
         self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub2_sls.write(b'''
 foo2:
-  bar2 
+  bar2
 ''')
         sub2_sls.flush()
 
