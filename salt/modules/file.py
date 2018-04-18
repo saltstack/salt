@@ -5230,12 +5230,12 @@ def manage_file(name,
             if salt.utils.platform.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.files.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
-                    log.debug('File will be encoded with {0}'.format(encoding))
+                    log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
-                    tmp_.write(salt.utils.stringutils.to_str(contents))
+                    tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             try:
                 differences = get_diff(
@@ -5438,12 +5438,12 @@ def manage_file(name,
             if salt.utils.platform.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.files.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
-                    log.debug('File will be encoded with {0}'.format(encoding))
+                    log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
-                    tmp_.write(salt.utils.stringutils.to_str(contents))
+                    tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             # Copy into place
             salt.utils.files.copyfile(tmp,

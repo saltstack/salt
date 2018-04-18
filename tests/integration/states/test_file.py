@@ -57,6 +57,8 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 IS_WINDOWS = salt.utils.platform.is_windows()
 
+BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
     FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
@@ -2190,7 +2192,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'some-utf8-file-create:',
             '  file.managed:',
             "    - name: '{0}'".format(test_file),
-            "    - contents: {0}".format(korean_1),
+            '    - contents: |',
+            '       {0}'.format(korean_1),
             '    - makedirs: True',
             '    - replace: True',
             '    - show_diff: True',
@@ -2502,6 +2505,23 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
+
+    def test_binary_contents(self):
+        '''
+        This tests to ensure that binary contents do not cause a traceback.
+        '''
+        name = os.path.join(TMP, '1px.gif')
+        try:
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                contents=BINARY_FILE)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            try:
+                os.remove(name)
+            except OSError:
+                pass
 
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
