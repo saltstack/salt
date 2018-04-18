@@ -169,7 +169,9 @@ def write_secret(path, **kwargs):
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('POST', url, json=data)
-        if response.status_code != 204:
+        if response.status_code == 200:
+            return response.json()['data']
+        elif response.status_code != 204:
             response.raise_for_status()
         return True
     except Exception as err:

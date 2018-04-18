@@ -41,14 +41,18 @@ except ImportError:
 
 if HAS_PIP is True:
     try:
-        import pip.req
+        from pip.req import InstallRequirement
     except ImportError:
-        HAS_PIP = False
-        # Remove references to the loaded pip module above so reloading works
-        import sys
-        del pip
-        if 'pip' in sys.modules:
-            del sys.modules['pip']
+        # pip 10.0.0 move req module under pip._internal
+        try:
+            from pip._internal.req import InstallRequirement
+        except ImportError:
+            HAS_PIP = False
+            # Remove references to the loaded pip module above so reloading works
+            import sys
+            del pip
+            if 'pip' in sys.modules:
+                del sys.modules['pip']
 
     try:
         from pip.exceptions import InstallationError
@@ -127,7 +131,7 @@ def _check_pkg_version_format(pkg):
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
             log.debug('Installed pip version: %s', pip.__version__)
-            install_req = pip.req.InstallRequirement.from_line(pkg)
+            install_req = InstallRequirement.from_line(pkg)
         except AttributeError:
             log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
@@ -135,12 +139,12 @@ def _check_pkg_version_format(pkg):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
                         from_vcs = True
-                        install_req = pip.req.InstallRequirement.from_line(
+                        install_req = InstallRequirement.from_line(
                             pkg.split('{0}+'.format(vcs))[-1]
                         )
                         break
             else:
-                install_req = pip.req.InstallRequirement.from_line(pkg)
+                install_req = InstallRequirement.from_line(pkg)
     except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:

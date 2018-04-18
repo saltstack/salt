@@ -2456,9 +2456,8 @@ def get_server_id():
     if py_ver >= (3, 3):
         # Python 3.3 enabled hash randomization, so we need to shell out to get
         # a reliable hash.
-        py_bin = 'python{0}.{1}'.format(*py_ver)
         id_hash = __salt__['cmd.run'](
-            [py_bin, '-c', 'print(hash("{0}"))'.format(id_)],
+            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
             env={'PYTHONHASHSEED': '0'}
         )
         try:

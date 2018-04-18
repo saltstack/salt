@@ -20,7 +20,6 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
       token: be8fd96b-04eb-4d39-b6ba-a9edbcf17f12
       driver: scaleway
 
-:depends: requests
 '''
 
 # Import Python Libs
@@ -44,13 +43,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import Third Party Libs
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'scaleway'
@@ -64,9 +56,6 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    if get_dependencies() is False:
-        return False
-
     return __virtualname__
 
 
@@ -77,16 +66,6 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or __virtualname__,
         ('token',)
-    )
-
-
-def get_dependencies():
-    '''
-    Warn if dependencies aren't met.
-    '''
-    return config.check_driver_dependencies(
-        __virtualname__,
-        {'requests': HAS_REQUESTS}
     )
 
 
@@ -363,11 +342,12 @@ def query(method='servers', server_id=None, command=None, args=None,
 
     data = salt.utils.json.dumps(args)
 
-    requester = getattr(requests, http_method)
-    request = requester(
-        path, data=data,
-        headers={'X-Auth-Token': token, 'Content-Type': 'application/json'}
-    )
+    request = __utils__["http.query"](path,
+                                      method=http_method,
+                                      data=data,
+                                      headers={'X-Auth-Token': token,
+                                               'User-Agent': "salt-cloud",
+                                               'Content-Type': 'application/json'})
     if request.status_code > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
