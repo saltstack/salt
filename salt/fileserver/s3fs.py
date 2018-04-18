@@ -57,6 +57,25 @@ structure::
 
 .. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
+
+.. note:: This fileserver back-end is only compatible with MD5 ETag hashes in
+    the S3 metadata. This means that you must use SSE-S3 or plaintext for
+    bucket encryption, and that you must not use multipart upload when
+    uploading to your bucket. More information here:
+    https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+
+    Objects without an MD5 ETag will be fetched on every fileserver update.
+
+    If you deal with objects greater than 8MB, then you should use the
+    following AWS CLI config to avoid mutipart upload:
+
+    .. code-block::
+
+        s3 =
+          multipart_threshold = 1024MB
+
+    More info here:
+    https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
 '''
 
 # Import python libs
