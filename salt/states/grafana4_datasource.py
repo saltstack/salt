@@ -163,7 +163,7 @@ def present(name,
             datasource[key] = None
 
     if data == datasource:
-        ret['changes'] = None
+        ret['changes'] = {}
         ret['comment'] = 'Data source {0} already up-to-date'.format(name)
         return ret
 

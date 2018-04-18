@@ -130,7 +130,8 @@ def _get_pip_bin(bin_env):
              'pip{0}'.format(sys.version_info[0]),
              'pip', 'pip-python']
         )
-        if salt.utils.platform.is_windows() and six.PY2:
+        if salt.utils.platform.is_windows() and six.PY2 \
+           and isinstance(which_result, str):
             which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')

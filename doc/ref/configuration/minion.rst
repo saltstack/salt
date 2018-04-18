@@ -1879,13 +1879,13 @@ State Management Settings
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The default renderer used for local state executions
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_minion:: test
 
