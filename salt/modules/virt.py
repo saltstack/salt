@@ -2,6 +2,50 @@
 '''
 Work with virtual machines managed by libvirt
 
+Connection
+==========
+
+The connection to the virtualization host can be either setup in the minion configuration,
+pillar data or overridden for each individual call.
+
+By default, the libvirt connection URL will be guessed: the first available libvirt
+hypervisor driver will be used. This can be overridden like this:
+
+.. code-block:: yaml
+
+    virt:
+        connection:
+            uri: lxc:///
+
+If the connection requires an authentication like for ESXi, this can be defined in the
+minion pillar data like this:
+
+.. code-block:: yaml
+
+    virt:
+        connection:
+            uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
+            auth:
+                username: user
+                password: secret
+
+Connecting with SSH protocol
+----------------------------
+
+Libvirt can connect to remote hosts using SSH using one of the ``ssh``, ``libssh`` and
+``libssh2`` transports. Note that ``libssh2`` is likely to fail as it doesn't read the
+``known_hosts`` file. Libvirt may also have been built without ``libssh`` or ``libssh2``
+support.
+
+To use the SSH transport, on the minion setup an SSH agent with a key authorized on
+the remote libvirt machine.
+
+Reference:
+
+ - http://libvirt.org/drvesx.html#uriformat
+ - http://libvirt.org/uri.html#URI_config
+ - http://libvirt.org/auth.html#Auth_client_config
+
 :depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
@@ -70,6 +114,31 @@ def __virtual__():
     return 'virt'
 
 
+# pylint: disable=unused-argument
+def __request_auth(credentials, user_data):
+    '''Callback method passed to libvirt.openAuth().
+
+    The credentials argument is a list of credentials that libvirt
+    would like to request. An element of this list is a list containing
+    5 items (4 inputs, 1 output):
+      - the credential type, e.g. libvirt.VIR_CRED_AUTHNAME
+      - a prompt to be displayed to the user
+      - a challenge
+      - a default result for the request
+      - a place to store the actual result for the request
+
+    The user_data argument is currently not set in the openAuth call.
+    '''
+    for credential in credentials:
+        if credential[0] == libvirt.VIR_CRED_AUTHNAME:
+            credential[4] = __salt__['config.get']('virt:connection:auth:username', credential[3])
+        elif credential[0] == libvirt.VIR_CRED_NOECHOPROMPT:
+            credential[4] = __salt__['config.get']('virt:connection:auth:password', credential[3])
+        else:
+            log.info('Unhandled credential type: %s', credential[0])
+    return 0
+
+
 def __get_conn():
     '''
     Detects what type of dom this node is and attempts to connect to the
@@ -77,72 +146,6 @@ def __get_conn():
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
-
-    def __esxi_uri():
-        '''
-        Connect to an ESXi host with a configuration like so:
-
-        .. code-block:: yaml
-
-            libvirt:
-              hypervisor: esxi
-              connection: esx01
-
-        The connection setting can either be an explicit libvirt URI,
-        or a libvirt URI alias as in this example. No, it cannot be
-        just a hostname.
-
-
-        Example libvirt `/etc/libvirt/libvirt.conf`:
-
-        .. code-block::
-
-            uri_aliases = [
-              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
-              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
-            ]
-
-        Reference:
-
-         - http://libvirt.org/drvesx.html#uriformat
-         - http://libvirt.org/uri.html#URI_config
-        '''
-        connection = __salt__['config.get']('libvirt:connection', 'esx')
-        if connection is not None:
-            salt.utils.warn_until(
-                'Sodium',
-                '\'libvirt.connection\' configuration property has been deprecated in favor '
-                'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
-                '{version}.'
-            )
-
-        connection = __salt__['config.get']('virt:connection:uri', connection)
-        return connection
-
-    def __esxi_auth():
-        '''
-        We rely on that the credentials is provided to libvirt through
-        its built in mechanisms.
-
-        Example libvirt `/etc/libvirt/auth.conf`:
-
-        .. code-block::
-
-            [credentials-myvirt]
-            username=user
-            password=secret
-
-            [auth-esx-10.1.1.101]
-            credentials=myvirt
-
-            [auth-esx-10.1.1.102]
-            credentials=myvirt
-
-        Reference:
-
-          - http://libvirt.org/auth.html#Auth_client_config
-        '''
-        return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
     conn_str = __salt__['config.get']('virt.connect', None)
     if conn_str is not None:
@@ -164,23 +167,39 @@ def __get_conn():
 
     conn_str = __salt__['config.get']('virt:connection:uri', conn_str)
 
-    conn_func = {
-        'esxi': [libvirt.openAuth, [__esxi_uri(),
-                                    __esxi_auth(),
-                                    0]],
-        'qemu': [libvirt.open, [conn_str]],
-    }
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', None)
+    if hypervisor is not None:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'libvirt.hypervisor\' configuration property has been deprecated. '
+            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+            'stop being used in {version}.'
+        )
 
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
+    if hypervisor == 'esxi' and conn_str is None:
+        salt.utils.warn_until(
+            'Sodium',
+            'esxi hypervisor default with no default connection URI detected, '
+            'please set \'virt:connection:uri\' to \'esx\' for keep the legacy '
+            'behavior. Will default to libvirt guess once \'libvirt:hypervisor\' '
+            'configuration is removed in {version}.'
+        )
+        conn_str = 'esx'
 
     try:
-        conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
+        auth_types = [libvirt.VIR_CRED_AUTHNAME,
+                      libvirt.VIR_CRED_NOECHOPROMPT,
+                      libvirt.VIR_CRED_ECHOPROMPT,
+                      libvirt.VIR_CRED_PASSPHRASE,
+                      libvirt.VIR_CRED_EXTERNAL]
+        conn = libvirt.openAuth(conn_str, [auth_types, __request_auth, None], 0)
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
                 __grains__['fqdn'],
-                conn_func[hypervisor][1][0]
+                conn_str
             )
         )
     return conn
