@@ -2804,7 +2804,8 @@ def create(vm_):
             if deploy:
                 vm_['key_filename'] = key_filename
                 # if specified, prefer ssh_host to the discovered ip address
-                vm_['ssh_host'] = vm_.get('ssh_host', ip)
+                if 'ssh_host' not in vm_:
+                    vm_['ssh_host'] = ip
                 log.info("[ {0} ] Deploying to {1}".format(vm_name, vm_['ssh_host']))
 
                 out = __utils__['cloud.bootstrap'](vm_, __opts__)
