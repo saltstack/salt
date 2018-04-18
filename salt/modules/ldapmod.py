@@ -86,7 +86,7 @@ def _config(name, key=None, **kwargs):
         value = kwargs[name]
     else:
         value = __salt__['config.option']('ldap.{0}'.format(key))
-    return value
+    return salt.utils.data.decode(value, to_str=True)
 
 
 def _connect(**kwargs):
@@ -141,7 +141,7 @@ def search(filter,      # pylint: disable=C0103
     if attrs == '':  # Allow command line 'return all' attr override
         attrs = None
     elif attrs is None:
-        attrs = salt.utils.data.decode(_config('attrs'), to_str=True)
+        attrs = _config('attrs')
     _ldap = _connect(**kwargs)
     start = time.time()
     log.debug(
