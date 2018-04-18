@@ -1620,7 +1620,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install' if pkg_type is not 'advisory' else 'update')
+            cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,
