@@ -204,3 +204,130 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
         # Glob non-match
         self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))
+
+    def test_check_whitelist_blacklist(self):
+        '''
+        Ensure that whitelist matching works on both PY2 and PY3
+        '''
+        whitelist = ['one/two/three', r'web[0-9]']
+        blacklist = ['four/five/six', r'web[5-9]']
+
+        # Tests with string whitelist/blacklist
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_one',
+                whitelist=whitelist[1],
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web1',
+                whitelist=whitelist[1],
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                blacklist=blacklist[1],
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_five',
+                blacklist=blacklist[1],
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                whitelist=whitelist[1],
+                blacklist=blacklist[1],
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web4',
+                whitelist=whitelist[1],
+                blacklist=blacklist[1],
+            )
+        )
+
+        # Tests with list whitelist/blacklist
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_one',
+                whitelist=whitelist,
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web1',
+                whitelist=whitelist,
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                blacklist=blacklist,
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_five',
+                blacklist=blacklist,
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                whitelist=whitelist,
+                blacklist=blacklist,
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web4',
+                whitelist=whitelist,
+                blacklist=blacklist,
+            )
+        )
+
+        # Tests with list whitelist/blacklist
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_one',
+                whitelist=set(whitelist),
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web1',
+                whitelist=set(whitelist),
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                blacklist=set(blacklist),
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web_five',
+                blacklist=set(blacklist),
+            )
+        )
+        self.assertFalse(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web5',
+                whitelist=set(whitelist),
+                blacklist=set(blacklist),
+            )
+        )
+        self.assertTrue(
+            salt.utils.stringutils.check_whitelist_blacklist(
+                'web4',
+                whitelist=set(whitelist),
+                blacklist=set(blacklist),
+            )
+        )
