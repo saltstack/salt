@@ -57,14 +57,14 @@ def _zfs_pool_data():
     # collect zpool data
     zpool_list_cmd = __utils__['zfs.zpool_command'](
         'list',
-        flags=['-H', '-p'],
+        flags=['-H'],
         opts={'-o': 'name,size'},
     )
-    for zpool in __salt__['cmd.run'](zpool_list_cmd).splitlines():
+    for zpool in __salt__['cmd.run'](zpool_list_cmd, ignore_retcode=True).splitlines():
         if 'zpool' not in grains:
             grains['zpool'] = {}
         zpool = zpool.split()
-        grains['zpool'][zpool[0]] = __utils__['zfs.to_size'](zpool[1], True)
+        grains['zpool'][zpool[0]] = __utils__['zfs.to_size'](zpool[1], False)
 
     # return grain data
     return grains

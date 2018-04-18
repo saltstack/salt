@@ -16,7 +16,6 @@ import stat
 import subprocess
 import tempfile
 import time
-import urllib
 
 # Import Salt libs
 import salt.utils.path
@@ -29,6 +28,7 @@ from salt.utils.decorators.jinja import jinja_filter
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 try:
     import fcntl
     HAS_FCNTL = True
@@ -583,7 +583,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe='')
+        return quote(re_obj.group(0), safe='')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',

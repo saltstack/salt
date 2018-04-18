@@ -689,11 +689,11 @@ def create(vm_):
                     __opts__
                 )
             )
-        data = show_instance(vm_['instance_id'], conn=conn, call='action')
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data = request_instance(conn=conn, call='action', vm_=vm_)
+        request_instance(conn=conn, call='action', vm_=vm_)
+    data = show_instance(vm_.get('instance_id', vm_['name']), conn=conn, call='action')
     log.debug('VM is now running')
 
     def __query_node(vm_):
@@ -708,7 +708,7 @@ def create(vm_):
     try:
         ip_address = __utils__['cloud.wait_for_fun'](
             __query_node,
-            update_args=(vm_,)
+            vm_=vm_
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:

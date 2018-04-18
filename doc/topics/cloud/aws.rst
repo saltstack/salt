@@ -721,6 +721,28 @@ them have never been used, much less tested, by the Salt Stack team.
 .. __: https://aws.amazon.com/marketplace
 
 
+NOTE: If ``image`` of a profile does not start with ``ami-``, latest
+image with that name will be used. For example, to create a CentOS 7
+profile, instead of using the AMI like ``image: ami-1caef165``, we 
+can use its name like ``image: 'CentOS Linux 7 x86_64 HVM EBS ENA 1803_01'``.
+We can also use a pattern like below to get the latest CentOS 7:
+
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      subnetid: subnet-XXXXXXXX
+      image: 'CentOS Linux 7 x86_64 HVM EBS *'
+      size: m1.medium
+      ssh_username: centos
+      securitygroupid:
+        - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
+
+
 show_image
 ==========
 This is a function that describes an AMI on EC2. This will give insight as to

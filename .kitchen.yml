@@ -31,7 +31,7 @@ provisioner:
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
   salt_bootstrap_options: -X -p rsync stable <%= version %>
-  log_level: info
+  log_level: debug
   sudo: true
   require_chef: false
   retry_on_exit_code:
@@ -50,6 +50,8 @@ provisioner:
     - Gemfile.lock
     - README.rst
     - .travis.yml
+    - '*.pyc'
+    - __pycache__
   state_top:
     base:
       "os:Windows":
@@ -134,6 +136,35 @@ platforms:
     provisioner:
       salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
 <% if vagrant != false %>
+  - name: windows-2012r2
+    driver:
+      box: mwrock/Windows2012R2
+      name: vagrant
+      gui: true
+    transport:
+      name: winrm
+      username: Administrator
+      password: Pass@word1
+    provisioner:
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
+    verifier:
+      windows: true
+      types:
+        - unit
+      coverage_xml: false
+      save:
+        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
+        /salt/var/log/salt/minion: artifacts/logs/minion
   - name: windows-2016
     driver:
       box: mwrock/Windows2016
@@ -156,12 +187,18 @@ platforms:
         $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
         $NewPath= $OldPath + ";" + $AddedLocation
         Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
     verifier:
       windows: true
       types:
         - unit
       coverage_xml: false
+      xml: /tmp/xml-unittests-output/
       save:
+        /tmp/xml-unittests-output/: artifacts/
         $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
         /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
@@ -189,7 +226,6 @@ suites:
 verifier:
   name: runtests
   sudo: true
-  verbose: true
   run_destructive: true
   transport: zeromq
   types:

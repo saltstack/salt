@@ -29,6 +29,78 @@ class MinionTestCase(TestCase):
         with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
             self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, __opts__)
 
+    def test_source_int_name_local(self):
+        '''
+        test when file_client local and
+        source_interface_name is set
+        '''
+        interfaces = {'bond0.1234': {'hwaddr': '01:01:01:d0:d0:d0',
+                                     'up': True, 'inet':
+                                     [{'broadcast': '111.1.111.255',
+                                     'netmask': '111.1.0.0',
+                                     'label': 'bond0',
+                                     'address': '111.1.0.1'}]}}
+        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+                                   'master_port': '4555', 'file_client': 'local',
+                                   'source_interface_name': 'bond0.1234',
+                                   'source_ret_port': 49017,
+                                   'source_publish_port': 49018}), \
+            patch('salt.utils.network.interfaces',
+                  MagicMock(return_value=interfaces)):
+            assert salt.minion.resolve_dns(__opts__) == {'master_ip': '127.0.0.1',
+                                                         'source_ip': '111.1.0.1',
+                                                         'source_ret_port': 49017,
+                                                         'source_publish_port': 49018,
+                                                         'master_uri': 'tcp://127.0.0.1:4555'}
+
+    def test_source_int_name_remote(self):
+        '''
+        test when file_client remote and
+        source_interface_name is set and
+        interface is down
+        '''
+        interfaces = {'bond0.1234': {'hwaddr': '01:01:01:d0:d0:d0',
+                                     'up': False, 'inet':
+                                     [{'broadcast': '111.1.111.255',
+                                     'netmask': '111.1.0.0',
+                                     'label': 'bond0',
+                                     'address': '111.1.0.1'}]}}
+        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+                                   'master_port': '4555', 'file_client': 'remote',
+                                   'source_interface_name': 'bond0.1234',
+                                   'source_ret_port': 49017,
+                                   'source_publish_port': 49018}), \
+            patch('salt.utils.network.interfaces',
+                  MagicMock(return_value=interfaces)):
+            assert salt.minion.resolve_dns(__opts__) == {'master_ip': '127.0.0.1',
+                                                         'source_ret_port': 49017,
+                                                         'source_publish_port': 49018,
+                                                         'master_uri': 'tcp://127.0.0.1:4555'}
+
+    def test_source_address(self):
+        '''
+        test when source_address is set
+        '''
+        interfaces = {'bond0.1234': {'hwaddr': '01:01:01:d0:d0:d0',
+                                     'up': False, 'inet':
+                                     [{'broadcast': '111.1.111.255',
+                                     'netmask': '111.1.0.0',
+                                     'label': 'bond0',
+                                     'address': '111.1.0.1'}]}}
+        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+                                   'master_port': '4555', 'file_client': 'local',
+                                   'source_interface_name': '',
+                                   'source_address': '111.1.0.1',
+                                   'source_ret_port': 49017,
+                                   'source_publish_port': 49018}), \
+            patch('salt.utils.network.interfaces',
+                  MagicMock(return_value=interfaces)):
+            assert salt.minion.resolve_dns(__opts__) == {'source_publish_port': 49018,
+                                                         'source_ret_port': 49017,
+                                                         'master_uri': 'tcp://127.0.0.1:4555',
+                                                         'source_ip': '111.1.0.1',
+                                                         'master_ip': '127.0.0.1'}
+
     @skip_if_not_root
     def test_sock_path_len(self):
         '''

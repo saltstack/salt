@@ -114,6 +114,16 @@ def _get_vault_connection():
                         errmsg = 'An error occured while getting a token from approle'
                         raise salt.exceptions.CommandExecutionError(errmsg)
                     __opts__['vault']['auth']['token'] = response.json()['auth']['client_token']
+            if __opts__['vault']['auth']['method'] == 'wrapped_token':
+                verify = __opts__['vault'].get('verify', None)
+                if _wrapped_token_valid():
+                    url = '{0}/v1/sys/wrapping/unwrap'.format(__opts__['vault']['url'])
+                    headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+                    response = requests.post(url, headers=headers, verify=verify)
+                    if response.status_code != 200:
+                        errmsg = 'An error occured while unwrapping vault token'
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__['vault']['auth']['token'] = response.json()['auth']['client_token']
             return {
                 'url': __opts__['vault']['url'],
                 'token': __opts__['vault']['auth']['token'],
@@ -169,4 +179,24 @@ def _selftoken_expired():
     except Exception as e:
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(e)
+        )
+
+
+def _wrapped_token_valid():
+    '''
+    Validate the wrapped token exists and is still valid
+    '''
+    try:
+        verify = __opts__['vault'].get('verify', None)
+        url = '{0}/v1/sys/wrapping/lookup'.format(__opts__['vault']['url'])
+        if 'token' not in __opts__['vault']['auth']:
+            return False
+        headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+        response = requests.post(url, headers=headers, verify=verify)
+        if response.status_code != 200:
+            return False
+        return True
+    except Exception as e:
+        raise salt.exceptions.CommandExecutionError(
+            'Error while looking up wrapped token : {0}'.format(e)
         )

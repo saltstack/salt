@@ -41,46 +41,55 @@ def to_bytes(s, encoding=None, errors='strict'):
                 return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
-                except UnicodeEncodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return s.encode('utf-8', errors)
+                except UnicodeEncodeError:
+                    # Fall back to detected encoding
+                    return s.encode(__salt_system_encoding__, errors)
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
 
 
-def to_str(s, encoding=None, errors='strict'):
+def to_str(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str, bytes, bytearray, or unicode (py2), return str
     '''
+    def _normalize(s):
+        try:
+            return unicodedata.normalize('NFC', s) if normalize else s
+        except TypeError:
+            return s
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
-        return s
+        return _normalize(s)
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
             if encoding:
-                return s.decode(encoding, errors)
+                return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
+                    # Try UTF-8 first
+                    return _normalize(s.decode('utf-8', errors))
                 except UnicodeDecodeError:
-                    # Fall back to UTF-8
-                    return s.decode('utf-8', errors)
+                    # Fall back to detected encoding
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             if encoding:
-                return s.encode(encoding, errors)
+                return _normalize(s).encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__, errors)
+                    # Try UTF-8 first
+                    return _normalize(s).encode('utf-8', errors)
                 except UnicodeEncodeError:
-                    # Fall back to UTF-8
-                    return s.encode('utf-8', errors)
+                    # Fall back to detected encoding
+                    return _normalize(s).encode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -108,10 +117,11 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
                 return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
+                    # Try UTF-8 first
                     return _normalize(s.decode('utf-8', errors))
+                except UnicodeDecodeError:
+                    # Fall back to detected encoding
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str or bytearray')
 
 
@@ -294,20 +304,29 @@ def build_whitespace_split_regex(text):
 
 def expr_match(line, expr):
     '''
-    Evaluate a line of text against an expression. First try a full-string
-    match, next try globbing, and then try to match assuming expr is a regular
-    expression. Originally designed to match minion IDs for
-    whitelists/blacklists.
+    Checks whether or not the passed value matches the specified expression.
+    Tries to match expr first as a glob using fnmatch.fnmatch(), and then tries
+    to match expr as a regular expression. Originally designed to match minion
+    IDs for whitelists/blacklists.
+
+    Note that this also does exact matches, as fnmatch.fnmatch() will return
+    ``True`` when no glob characters are used and the string is an exact match:
+
+    .. code-block:: python
+
+        >>> fnmatch.fnmatch('foo', 'foo')
+        True
     '''
-    if line == expr:
-        return True
-    if fnmatch.fnmatch(line, expr):
-        return True
     try:
-        if re.match(r'\A{0}\Z'.format(expr), line):
+        if fnmatch.fnmatch(line, expr):
             return True
-    except re.error:
-        pass
+        try:
+            if re.match(r'\A{0}\Z'.format(expr), line):
+                return True
+        except re.error:
+            pass
+    except TypeError:
+        log.exception('Value %r or expression %r is not a string', line, expr)
     return False
 
 
@@ -335,24 +354,18 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     found in the whitelist, the function returns ``False``.
     '''
     if blacklist is not None:
-        if not hasattr(blacklist, '__iter__'):
+        if not isinstance(blacklist, list):
             blacklist = [blacklist]
-        try:
-            for expr in blacklist:
-                if expr_match(value, expr):
-                    return False
-        except TypeError:
-            log.error('Non-iterable blacklist %s', blacklist)
+        for expr in blacklist:
+            if expr_match(value, expr):
+                return False
 
     if whitelist:
-        if not hasattr(whitelist, '__iter__'):
+        if not isinstance(whitelist, list):
             whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    return True
-        except TypeError:
-            log.error('Non-iterable whitelist %s', whitelist)
+        for expr in whitelist:
+            if expr_match(value, expr):
+                return True
     else:
         return True
 

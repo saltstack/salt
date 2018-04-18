@@ -11,7 +11,7 @@ configuration file:
 
     my_etcd_config:
       etcd.host: 127.0.0.1
-      etcd.port: 4001
+      etcd.port: 2379
 
 It is technically possible to configure etcd without using a profile, but this
 is not considered to be a best practice, especially when multiple etcd servers
@@ -20,7 +20,7 @@ or clusters are available.
 .. code-block:: yaml
 
     etcd.host: 127.0.0.1
-    etcd.port: 4001
+    etcd.port: 2379
 
 Additionally, two more options must be specified in the top-level configuration
 in order to use the etcd returner:
@@ -77,9 +77,6 @@ try:
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +138,7 @@ def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''
+    log.debug('sdstack_etcd returner <save_load> called jid: {0}'.format(jid))
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
@@ -161,34 +159,53 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     pass
 
 
+def clean_old_jobs():
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
+    log.debug('sdstack_etcd returner <get_load> called jid: {0}'.format(jid))
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
-    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
+    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))).value)
 
 
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
+    log.debug('sdstack_etcd returner <get_jid> called jid: {0}'.format(jid))
+    ret = {}
     client, path = _get_conn(__opts__)
-    jid_path = '/'.join((path, 'jobs', jid))
-    return client.tree(jid_path)
+    items = client.get('/'.join((path, 'jobs', jid)))
+    for item in items.children:
+        if str(item.key).endswith('.load.p'):
+            continue
+        comps = str(item.key).split('/')
+        data = client.get('/'.join((path, 'jobs', jid, comps[-1], 'return'))).value
+        ret[comps[-1]] = {'return': salt.utils.json.loads(data)}
+    return ret
 
 
-def get_fun():
+def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
+    log.debug('sdstack_etcd returner <get_fun> called fun: {0}'.format(fun))
     ret = {}
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
-        comps = six.text_type(item.key).split('/')
-        ret[comps[-1]] = item.value
+        comps = str(item.key).split('/')
+        efun = salt.utils.json.loads(client.get('/'.join((path, 'jobs', str(item.value), comps[-1], 'fun'))).value)
+        if efun == fun:
+            ret[comps[-1]] = str(efun)
     return ret
 
 
@@ -196,14 +213,14 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    ret = {}
+    log.debug('sdstack_etcd returner <get_jids> called')
+    ret = []
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'jobs')))
     for item in items.children:
         if item.dir is True:
-            jid = six.text_type(item.key).split('/')[-1]
-            load = client.get('/'.join((item.key, '.load.p'))).value
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
+            jid = str(item.key).split('/')[-1]
+            ret.append(jid)
     return ret
 
 
@@ -211,11 +228,12 @@ def get_minions():
     '''
     Return a list of minions
     '''
+    log.debug('sdstack_etcd returner <get_minions> called')
     ret = []
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
-        comps = six.text_type(item.key).split('/')
+        comps = str(item.key).split('/')
         ret.append(comps[-1])
     return ret
 

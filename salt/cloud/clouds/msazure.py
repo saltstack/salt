@@ -49,6 +49,7 @@ import time
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+import salt.utils.stringutils
 import salt.utils.yaml
 
 # Import 3rd-party libs
@@ -117,9 +118,11 @@ def get_conn():
         'certificate_path',
         get_configured_provider(), __opts__, search_global=False
     )
-    subscription_id = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    subscription_id = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
     management_host = config.get_cloud_config_value(
         'management_host',
@@ -3369,9 +3372,11 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         'certificate_path',
         get_configured_provider(), __opts__, search_global=False
     )
-    subscription_id = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    subscription_id = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
     management_host = config.get_cloud_config_value(
         'management_host',

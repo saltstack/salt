@@ -171,6 +171,10 @@ def expand_classes_in_order(minion_dict,
             # Fix corner case where class is loaded but doesn't contain anything
             if expanded_classes[klass] is None:
                 expanded_classes[klass] = {}
+
+            # Merge newly found pillars into existing ones
+            dict_merge(salt_data['__pillar__'], expanded_classes[klass].get('pillars', {}))
+
             # Now replace class element in classes_to_expand by expansion
             if 'classes' in expanded_classes[klass]:
                 l_id = classes_to_expand.index(klass)
@@ -237,6 +241,9 @@ def expanded_dict_from_minion(minion_id, salt_data):
     else:
         log.warning('%s: Node definition not found', minion_id)
         node_dict[minion_id] = {}
+
+    # Merge newly found pillars into existing ones
+    dict_merge(salt_data['__pillar__'], node_dict[minion_id].get('pillars', {}))
 
     # Get 2 ordered lists:
     # expanded_classes: A list of all the dicts

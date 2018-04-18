@@ -51,13 +51,14 @@ import salt.utils.stringutils
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
+
 try:
-    # Try to import MySQLdb
+    # Trying to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    HAS_MYSQLDB = True
+    from MySQLdb.connections import OperationalError
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -67,10 +68,9 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.constants import FIELD_TYPE, FLAG
-        HAS_MYSQLDB = True
+        from MySQLdb.err import OperationalError
     except ImportError:
-        # No MySQL Connector installed, return False
-        HAS_MYSQLDB = False
+        MySQLdb = None
 
 log = logging.getLogger(__name__)
 
@@ -195,11 +195,9 @@ And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 
 def __virtual__():
     '''
-    Only load this module if the mysql libraries exist
+    Confirm that a python mysql client is installed.
     '''
-    if HAS_MYSQLDB:
-        return True
-    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 def __check_table(name, table, **connection_args):
@@ -331,7 +329,7 @@ def _connect(**kwargs):
         connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -647,7 +645,7 @@ def query(database, query, **connection_args):
     log.debug('Using db: %s to run query %s', database, query)
     try:
         affected = _execute(cur, query)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -772,7 +770,7 @@ def status(**connection_args):
     qry = 'SHOW STATUS'
     try:
         _execute(cur, qry)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -1691,11 +1689,11 @@ def __grant_generate(grant,
     table = db_part[2]
 
     if escape:
-        if dbc is not '*':
+        if dbc != '*':
             # _ and % are authorized on GRANT queries and should get escaped
             # on the db name, but only if not requesting a table level grant
-            dbc = quote_identifier(dbc, for_grants=(table is '*'))
-        if table is not '*':
+            dbc = quote_identifier(dbc, for_grants=(table == '*'))
+        if table != '*':
             table = quote_identifier(table)
     # identifiers cannot be used as values, and same thing for grants
     qry = 'GRANT {0} ON {1}.{2} TO %(user)s@%(host)s'.format(grant, dbc, table)
@@ -1790,8 +1788,10 @@ def grant_exists(grant,
             if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
+            grant_tokens_database = grant_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
+            target_tokens_database = target_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
             if grant_tokens['user'] == target_tokens['user'] and \
-                    grant_tokens['database'] == target_tokens['database'] and \
+                    grant_tokens_database == target_tokens_database and \
                     grant_tokens['host'] == target_tokens['host'] and \
                     set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
@@ -1893,16 +1893,16 @@ def grant_revoke(grant,
     db_part = database.rpartition('.')
     dbc = db_part[0]
     table = db_part[2]
-    if dbc is not '*':
+    if dbc != '*':
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
-        s_database = quote_identifier(dbc, for_grants=(table is '*'))
-    if dbc is '*':
+        s_database = quote_identifier(dbc, for_grants=(table == '*'))
+    if dbc == '*':
         # add revoke for *.*
         # before the modification query send to mysql will looks like
         # REVOKE SELECT ON `*`.* FROM %(user)s@%(host)s
         s_database = dbc
-    if table is not '*':
+    if table != '*':
         table = quote_identifier(table)
     # identifiers cannot be used as values, same thing for grants
     qry = 'REVOKE {0} ON {1}.{2} FROM %(user)s@%(host)s;'.format(
