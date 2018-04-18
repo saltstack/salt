@@ -993,7 +993,10 @@ def _virtual_hv(osdata):
     grains = {}
 
     # Bail early if we're not running on Xen
-    if 'xen' not in osdata['virtual']:
+    try:
+        if 'xen' not in osdata['virtual']:
+            return grains
+    except KeyError:
         return grains
 
     # Try to get the exact hypervisor version from sysfs
