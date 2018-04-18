@@ -220,7 +220,7 @@ def _zmq(address, port, **kwargs):
         addr=address,
         port=port)
     )
-    socket.setsockopt(zmq.SUBSCRIBE, '')
+    socket.setsockopt(zmq.SUBSCRIBE, b'')
     return socket.recv
 
 
