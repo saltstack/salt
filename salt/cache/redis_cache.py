@@ -74,7 +74,7 @@ cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
@@ -102,7 +102,7 @@ password:
 
 Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.host: localhost
     cache.redis.port: 6379
@@ -115,7 +115,7 @@ Configuration Example:
 
 Cluster Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.cluster_mode: true
     cache.redis.cluster.skip_full_coverage_check: true
