@@ -1322,7 +1322,7 @@ def install(name=None,
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, saltenv=saltenv, normalize=normalize
+            name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
