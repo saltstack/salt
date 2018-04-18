@@ -454,7 +454,9 @@ class PillarTestCase(TestCase):
             'osrelease': '13.04',
             'kernel': 'Linux'
         }
-        with patch('salt.pillar.compile_template') as compile_template:
+        with patch('salt.pillar.compile_template') as compile_template, \
+                patch.object(salt.pillar.Pillar, '_Pillar__gather_avail',
+                             MagicMock(return_value={'base': ['blah', 'foo']})):
 
             # Test with option set to True
             opts['pillar_includes_override_sls'] = True
