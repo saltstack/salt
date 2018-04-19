@@ -353,12 +353,11 @@ class SlackClient(object):
         # maybe there are aliases, so check on that
         if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
             use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]].get('cmd', ''), '')
+            # Include any additional elements from cmdline
+            use_cmdline.extend(cmdline[1:])
         else:
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
-
-        # Include any additional elements from cmdline
-        use_cmdline.extend(cmdline[1:])
 
         return (True, target, use_cmdline)
 
