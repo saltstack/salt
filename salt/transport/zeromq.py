@@ -662,7 +662,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
 
         try:
             id_ = payload['load'].get('id', '')
-            if '\0' in id_:
+            if str('\0') in id_:
                 log.error('Payload contains an id with a null byte: %s', payload)
                 stream.send(self.serial.dumps('bad load: id contains a null byte'))
                 raise tornado.gen.Return()
