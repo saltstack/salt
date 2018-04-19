@@ -17,6 +17,7 @@ integration.modules.test_pillar
 integration.modules.test_pkg
 integration.modules.test_publish
 integration.modules.test_state
+integration.modules.test_status
 integration.modules.test_sysmod
 integration.modules.test_test
 integration.modules.test_useradd
