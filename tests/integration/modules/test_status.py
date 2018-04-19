@@ -28,7 +28,7 @@ class StatusModuleTest(ModuleCase):
         grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'])
         self.assertIn(random_pid, grep_salt)
 
-    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_cpuload(self):
         '''
         status.cpuload
@@ -36,7 +36,7 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function('status.cpuload')
         self.assertTrue(isinstance(ret, float))
 
-    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_saltmem(self):
         '''
         status.saltmem
@@ -49,7 +49,7 @@ class StatusModuleTest(ModuleCase):
         status.diskusage
         '''
         ret = self.run_function('status.diskusage')
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertTrue(isinstance(ret['percent'], float))
         else:
             self.assertIn('total', str(ret))
@@ -69,7 +69,7 @@ class StatusModuleTest(ModuleCase):
         '''
         ret = self.run_function('status.uptime')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertTrue(isinstance(ret, float))
         else:
             self.assertTrue(isinstance(ret['days'], int))

@@ -191,7 +191,6 @@ def managed(name,
             ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
             return ret
         if venv_exists and not clear:
-            #ret['result'] = None
             ret['comment'] = 'Virtualenv {0} is already created'.format(name)
             return ret
         ret['result'] = None
@@ -240,8 +239,8 @@ def managed(name,
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
@@ -254,8 +253,8 @@ def managed(name,
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
@@ -267,7 +266,7 @@ def managed(name,
     if no_binary:
         min_version = '7.0.0'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             ret['result'] = False
             ret['comment'] = ('The \'no_binary\' option is only supported in '
