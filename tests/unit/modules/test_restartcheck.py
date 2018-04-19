@@ -11,7 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
-    mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -30,6 +29,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         return {restartcheck: {}}
+
     def test_kernel_versions_debian(self):
         '''
         Test kernel version debian
@@ -253,4 +253,3 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file('/SYSV/test'))
         self.assertFalse(restartcheck._valid_deleted_file('/SYSV/test (deleted)'))
         self.assertFalse(restartcheck._valid_deleted_file('/SYSV/test (path inode=1)'))
-
