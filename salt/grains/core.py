@@ -2225,7 +2225,10 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read().strip()
+                        try:
+                            grains[key] = ifile.read().strip().decode('utf-8')
+                        except UnicodeDecodeError:
+                            grains[key] = ''
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:
