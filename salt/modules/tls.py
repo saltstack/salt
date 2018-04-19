@@ -554,8 +554,8 @@ def _read_cert(cert):
                     OpenSSL.crypto.FILETYPE_PEM,
                     rfh.read()
                 )
-        except Exception as exc:
-            log.error('Failed to read cert from path %s: %s', cert, exc)
+        except Exception:
+            log.exception('Failed to read cert from path %s', cert)
             return None
     else:
         if not hasattr(cert, 'get_notAfter'):
