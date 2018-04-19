@@ -22,11 +22,9 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
+from xml.dom import minidom
 import jinja2
 import jinja2.exceptions
-from salt.ext import six
-from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
-from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
@@ -43,6 +41,8 @@ import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
+from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -175,18 +175,64 @@ def _get_domain(*vms, **kwargs):
         raise CommandExecutionError('No virtual machines found.')
 
     if vms:
-        for vm in vms:
-            if vm not in all_vms:
-                raise CommandExecutionError('The VM "{name}" is not present'.format(name=vm))
+        for name in vms:
+            if name not in all_vms:
+                raise CommandExecutionError('The VM "{name}" is not present'.format(name=name))
             else:
-                lookup_vms.append(vm)
+                lookup_vms.append(name)
     else:
         lookup_vms = list(all_vms)
 
-    for vm in lookup_vms:
-        ret.append(conn.lookupByName(vm))
+    for name in lookup_vms:
+        ret.append(conn.lookupByName(name))
 
     return len(ret) == 1 and not kwargs.get('iterable') and ret[0] or ret
+
+
+def _parse_qemu_img_info(info):
+    '''
+    Parse qemu-img info output into disk infos YAML
+    '''
+    output = []
+    snapshots = False
+    columns = None
+    lines = info.strip().split('\n')
+    for line in lines:
+        if line.startswith('Snapshot list:'):
+            snapshots = True
+            continue
+
+        # If this is a copy-on-write image, then the backing file
+        # represents the base image
+        #
+        # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
+        elif line.startswith('backing file'):
+            matches = re.match(r'.*\(actual path: (.*?)\)', line)
+            if matches:
+                output.append('backing file: {0}'.format(matches.group(1)))
+            continue
+
+        elif snapshots:
+            if line.startswith('ID'):  # Do not parse table headers
+                line = line.replace('VM SIZE', 'VMSIZE')
+                line = line.replace('VM CLOCK', 'TIME VMCLOCK')
+                columns = re.split(r'\s+', line)
+                columns = [c.lower() for c in columns]
+                output.append('snapshots:')
+                continue
+            fields = re.split(r'\s+', line)
+            for i, field in enumerate(fields):
+                sep = ' '
+                if i == 0:
+                    sep = '-'
+                output.append(
+                    '{0} {1}: "{2}"'.format(
+                        sep, columns[i], field
+                    )
+                )
+            continue
+        output.append(line)
+    return '\n'.join(output)
 
 
 def _libvirt_creds():
@@ -197,15 +243,15 @@ def _libvirt_creds():
     u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
         stdout = subprocess.Popen(g_cmd,
-                    shell=True,
-                    stdout=subprocess.PIPE).communicate()[0]
+                                  shell=True,
+                                  stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
         stdout = subprocess.Popen(u_cmd,
-                    shell=True,
-                    stdout=subprocess.PIPE).communicate()[0]
+                                  shell=True,
+                                  stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = 'root'
@@ -223,6 +269,9 @@ def _get_migrate_command():
 
 
 def _get_target(target, ssh):
+    '''
+    Compute libvirt URL for target migration host.
+    '''
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
@@ -253,10 +302,7 @@ def _gen_xml(name,
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
-    if kwargs.get('enable_vnc', True):
-        context['enable_vnc'] = True
-    else:
-        context['enable_vnc'] = False
+    context['enable_vnc'] = bool(kwargs.get('enable_vnc', True))
 
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []
@@ -469,10 +515,10 @@ def _qemu_image_create(vm_name,
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as e:
+        except (IOError, OSError) as err:
             raise CommandExecutionError(
                 'Problem while copying image. {0} - {1}'
-                .format(disk_image, e)
+                .format(disk_image, err)
             )
 
     else:
@@ -497,10 +543,10 @@ def _qemu_image_create(vm_name,
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as e:
+        except (IOError, OSError) as err:
             raise CommandExecutionError(
                 'Problem while creating volume {0} - {1}'
-                .format(img_dest, e)
+                .format(img_dest, err)
             )
 
     return img_dest
@@ -515,8 +561,7 @@ def _image_type(vda):
     out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
     if 'file format: qcow2' in out:
         return 'qcow2'
-    else:
-        return 'raw'
+    return 'raw'
 
 
 # TODO: this function is deprecated, should be merged and replaced
@@ -577,21 +622,16 @@ def _disk_profile(profile, hypervisor, **kwargs):
     The ``format`` and ``model`` parameters are optional, and will
     default to whatever is best suitable for the active hypervisor.
     '''
-    default = [
-          {'system':
-             {'size': '8192'}
-          }
-    ]
+    default = [{'system':
+                {'size': '8192'}}]
     if hypervisor in ['esxi', 'vmware']:
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
-                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))
-                  }
+                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
                    'model': 'virtio',
-                   'pool': __salt__['config.option']('virt.images')
-                  }
+                   'pool': __salt__['config.option']('virt.images')}
     else:
         overlay = {}
 
@@ -606,6 +646,9 @@ def _disk_profile(profile, hypervisor, **kwargs):
 
 
 def _nic_profile(profile_name, hypervisor, **kwargs):
+    '''
+    Compute NIC data based on profile
+    '''
 
     default = [{'eth0': {}}]
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
@@ -629,7 +672,11 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
 
     interfaces = []
 
+    # pylint: disable=invalid-name
     def append_dict_profile_to_interface_list(profile_dict):
+        '''
+        Append dictionary profile data to interfaces list
+        '''
         for interface_name, attributes in six.iteritems(profile_dict):
             attributes['name'] = interface_name
             interfaces.append(attributes)
@@ -693,11 +740,17 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         attributes['source'] = attributes.get('source', None)
 
     def _apply_default_overlay(attributes):
+        '''
+        Apply the default overlay to attributes
+        '''
         for key, value in six.iteritems(overlays[hypervisor]):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
     def _assign_mac(attributes, hypervisor):
+        '''
+        Compute mac address for NIC depending on hypervisor
+        '''
         dmac = kwargs.get('dmac', None)
         if dmac is not None:
             log.debug('DMAC address is %s', dmac)
@@ -767,10 +820,10 @@ def init(name,
         diskp[0][disk_name]['image'] = image
 
     # Create multiple disks, empty or from specified images.
-    for disk in diskp:
-        log.debug("Creating disk for VM [ %s ]: %s", name, disk)
+    for _disk in diskp:
+        log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
 
-        for disk_name, args in six.iteritems(disk):
+        for disk_name, args in six.iteritems(_disk):
 
             if hypervisor in ['esxi', 'vmware']:
                 if 'image' in args:
@@ -781,7 +834,7 @@ def init(name,
                     )
                 else:
                     # assume libvirt manages disks for us
-                    log.debug('Generating libvirt XML for %s', disk)
+                    log.debug('Generating libvirt XML for %s', _disk)
                     xml = _gen_vol_xml(
                         name,
                         disk_name,
@@ -924,6 +977,9 @@ def vm_info(vm_=None):
         salt '*' virt.vm_info
     '''
     def _info(vm_):
+        '''
+        Compute the infos of a domain
+        '''
         dom = _get_domain(vm_)
         raw = dom.info()
         return {'cpu': raw[3],
@@ -938,8 +994,8 @@ def vm_info(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in list_domains():
+            info[domain] = _info(domain)
     return info
 
 
@@ -957,6 +1013,9 @@ def vm_state(vm_=None):
         salt '*' virt.vm_state <domain>
     '''
     def _info(vm_):
+        '''
+        Compute domain state
+        '''
         state = ''
         dom = _get_domain(vm_)
         raw = dom.info()
@@ -966,8 +1025,8 @@ def vm_state(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in list_domains():
+            info[domain] = _info(domain)
     return info
 
 
@@ -1099,11 +1158,11 @@ def get_disks(vm_):
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
-        if len(sources) > 0:
+        if sources:
             source = sources[0]
         else:
             continue
-        if len(targets) > 0:
+        if targets:
             target = targets[0]
         else:
             continue
@@ -1128,51 +1187,12 @@ def get_disks(vm_):
             if hypervisor not in ['qemu', 'kvm']:
                 break
 
-            output = []
             stdout = subprocess.Popen(
                         ['qemu-img', 'info', disks[dev]['file']],
                         shell=False,
                         stdout=subprocess.PIPE).communicate()[0]
             qemu_output = salt.utils.stringutils.to_str(stdout)
-            snapshots = False
-            columns = None
-            lines = qemu_output.strip().split('\n')
-            for line in lines:
-                if line.startswith('Snapshot list:'):
-                    snapshots = True
-                    continue
-
-                # If this is a copy-on-write image, then the backing file
-                # represents the base image
-                #
-                # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
-                elif line.startswith('backing file'):
-                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
-                    if matches:
-                        output.append('backing file: {0}'.format(matches.group(1)))
-                    continue
-
-                elif snapshots:
-                    if line.startswith('ID'):  # Do not parse table headers
-                        line = line.replace('VM SIZE', 'VMSIZE')
-                        line = line.replace('VM CLOCK', 'TIME VMCLOCK')
-                        columns = re.split(r'\s+', line)
-                        columns = [c.lower() for c in columns]
-                        output.append('snapshots:')
-                        continue
-                    fields = re.split(r'\s+', line)
-                    for i, field in enumerate(fields):
-                        sep = ' '
-                        if i == 0:
-                            sep = '-'
-                        output.append(
-                            '{0} {1}: "{2}"'.format(
-                                sep, columns[i], field
-                            )
-                        )
-                    continue
-                output.append(line)
-            output = '\n'.join(output)
+            output = _parse_qemu_img_info(qemu_output)
             disks[dev].update(salt.utils.yaml.safe_load(output))
         except TypeError:
             disks[dev].update({'image': 'Does not exist'})
@@ -1578,8 +1598,8 @@ def migrate_non_shared(vm_, target, ssh=False):
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1597,8 +1617,8 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1616,8 +1636,8 @@ def migrate(vm_, target, ssh=False):
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1640,8 +1660,8 @@ def seed_non_shared_migrate(disks, force=False):
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if it is compatible
             pre = salt.utils.yaml.safe_load(subprocess.Popen('qemu-img info arch',
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0])
+                                                             shell=True,
+                                                             stdout=subprocess.PIPE).communicate()[0])
             if pre['file format'] != data['file format']\
                     and pre['virtual size'] != data['virtual size']:
                 return False
@@ -1677,9 +1697,8 @@ def set_autostart(vm_, state='on'):
     elif state == 'off':
         return dom.setAutostart(0) == 0
 
-    else:
-        # return False if state is set to something other then on or off
-        return False
+    # return False if state is set to something other then on or off
+    return False
 
 
 def undefine(vm_):
@@ -1842,6 +1861,9 @@ def vm_cputime(vm_=None):
     host_cpus = __get_conn().getInfo()[2]
 
     def _info(vm_):
+        '''
+        Compute cputime info of a domain
+        '''
         dom = _get_domain(vm_)
         raw = dom.info()
         vcpus = int(raw[3])
@@ -1858,8 +1880,8 @@ def vm_cputime(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in list_domains():
+            info[domain] = _info(domain)
     return info
 
 
@@ -1894,6 +1916,9 @@ def vm_netstats(vm_=None):
         salt '*' virt.vm_netstats
     '''
     def _info(vm_):
+        '''
+        Compute network stats of a domain
+        '''
         dom = _get_domain(vm_)
         nics = get_nics(vm_)
         ret = {
@@ -1924,8 +1949,8 @@ def vm_netstats(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in list_domains():
+            info[domain] = _info(domain)
     return info
 
 
@@ -1957,6 +1982,9 @@ def vm_diskstats(vm_=None):
         salt '*' virt.vm_blockstats
     '''
     def get_disk_devs(vm_):
+        '''
+        Extract the disk devices names from the domain XML definition
+        '''
         doc = minidom.parse(_StringIO(get_xml(vm_)))
         disks = []
         for elem in doc.getElementsByTagName('disk'):
@@ -1966,6 +1994,9 @@ def vm_diskstats(vm_=None):
         return disks
 
     def _info(vm_):
+        '''
+        Compute the disk stats of a domain
+        '''
         dom = _get_domain(vm_)
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
@@ -1990,12 +2021,12 @@ def vm_diskstats(vm_=None):
         info[vm_] = _info(vm_)
     else:
         # Can not run function blockStats on inactive VMs
-        for vm_ in list_active_vms():
-            info[vm_] = _info(vm_)
+        for domain in list_active_vms():
+            info[domain] = _info(domain)
     return info
 
 
-def _parse_snapshot_description(snapshot, unix_time=False):
+def _parse_snapshot_description(vm_snapshot, unix_time=False):
     '''
     Parse XML doc and return a dict with the status values.
 
@@ -2003,17 +2034,17 @@ def _parse_snapshot_description(snapshot, unix_time=False):
     :return:
     '''
     ret = dict()
-    tree = ElementTree.fromstring(snapshot.getXMLDesc())
+    tree = ElementTree.fromstring(vm_snapshot.getXMLDesc())
     for node in tree:
         if node.tag == 'name':
             ret['name'] = node.text
         elif node.tag == 'creationTime':
-            ret['created'] = not unix_time and datetime.datetime.fromtimestamp(
-                float(node.text)).isoformat(' ') or float(node.text)
+            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ') \
+                                if not unix_time else float(node.text)
         elif node.tag == 'state':
             ret['running'] = node.text == 'running'
 
-    ret['current'] = snapshot.isCurrent() == 1
+    ret['current'] = vm_snapshot.isCurrent() == 1
 
     return ret
 
@@ -2076,7 +2107,7 @@ def snapshot(domain, name=None, suffix=None):
     return {'name': name}
 
 
-def delete_snapshots(name, *names, **kwargs):
+def delete_snapshots(name, *names):
     '''
     Delete one or more snapshots of the given VM.
 
@@ -2103,7 +2134,7 @@ def delete_snapshots(name, *names, **kwargs):
     return {'available': list_snapshots(name), 'deleted': deleted}
 
 
-def revert_snapshot(name, snapshot=None, cleanup=False):
+def revert_snapshot(name, vm_snapshot=None, cleanup=False):
     '''
     Revert snapshot to the previous from current (if available) or to the specific.
 
@@ -2137,17 +2168,17 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
 
     snap = None
     for p_snap in snapshots:
-        if not snapshot:
+        if not vm_snapshot:
             if p_snap.isCurrent() and snapshots[snapshots.index(p_snap) + 1:]:
                 snap = snapshots[snapshots.index(p_snap) + 1:][0]
                 break
-        elif p_snap.getName() == snapshot:
+        elif p_snap.getName() == vm_snapshot:
             snap = p_snap
             break
 
     if not snap:
         raise CommandExecutionError(
-            snapshot and 'Snapshot "{0}" not found'.format(snapshot) or 'No more previous snapshots available')
+            snapshot and 'Snapshot "{0}" not found'.format(vm_snapshot) or 'No more previous snapshots available')
     elif snap.isCurrent():
         raise CommandExecutionError('Cannot revert to the currently running snapshot.')
 
@@ -2230,9 +2261,10 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
 
         cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue
         while cpu_model:
-            cpu_specs = [el for el in cpu_map.getElementsByTagName('model') if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
+            cpu_map_models = cpu_map.getElementsByTagName('model')
+            cpu_specs = [el for el in cpu_map_models if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
 
-            if not len(cpu_specs):
+            if not cpu_specs:
                 raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
             elif len(cpu_specs) > 1:
                 raise ValueError('Multiple models {0} found in CPU map'.format(cpu_model))
@@ -2240,7 +2272,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
             cpu_specs = cpu_specs[0]
 
             cpu_model = cpu_specs.getElementsByTagName('model')
-            if not len(cpu_model):
+            if not cpu_model:
                 cpu_model = None
             else:
                 cpu_model = cpu_model[0].getAttribute('name')
@@ -2248,14 +2280,13 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
             for feature in cpu_specs.getElementsByTagName('feature'):
                 cpu.appendChild(feature)
 
-    if out == 'libvirt':
-        return cpu.toxml()
-    elif out == 'salt':
+    if out == 'salt':
         return {
             'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
             'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
             'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
         }
+    return cpu.toxml()
 
 
 def net_define(name, bridge, forward, **kwargs):
