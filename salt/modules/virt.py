@@ -205,13 +205,12 @@ def __get_conn():
     return conn
 
 
-def _get_domain(*vms, **kwargs):
+def _get_domain(conn, *vms, **kwargs):
     '''
     Return a domain object for the named VM or return domain object for all VMs.
     '''
     ret = list()
     lookup_vms = list()
-    conn = __get_conn()
 
     all_vms = []
     if kwargs.get('active', True):
@@ -1041,19 +1040,22 @@ def init(name,
     log.debug('Generating VM XML')
     kwargs['enable_vnc'] = enable_vnc
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
+    conn = __get_conn()
     try:
-        define_xml_str(xml)
+        conn.defineXML(xml)
     except libvirtError as err:
         # check if failure is due to this domain already existing
         if "domain '{}' already exists".format(name) in six.text_type(err):
             # continue on to seeding
             log.warning(err)
         else:
+            conn.close()
             raise err  # a real error we should report upwards
 
     if start:
         log.debug('Starting VM %s', name)
-        _get_domain(name).create()
+        _get_domain(conn, name).create()
+    conn.close()
 
     return True
 
@@ -1069,8 +1071,10 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     vms = []
-    for dom in _get_domain(iterable=True):
+    conn = __get_conn()
+    for dom in _get_domain(conn, iterable=True):
         vms.append(dom.name())
+    conn.close()
     return vms
 
 
@@ -1085,8 +1089,10 @@ def list_active_vms():
         salt '*' virt.list_active_vms
     '''
     vms = []
-    for dom in _get_domain(iterable=True, inactive=False):
+    conn = __get_conn()
+    for dom in _get_domain(conn, iterable=True, inactive=False):
         vms.append(dom.name())
+    conn.close()
     return vms
 
 
@@ -1101,8 +1107,10 @@ def list_inactive_vms():
         salt '*' virt.list_inactive_vms
     '''
     vms = []
-    for dom in _get_domain(iterable=True, active=False):
+    conn = __get_conn()
+    for dom in _get_domain(conn, iterable=True, active=False):
         vms.append(dom.name())
+    conn.close()
     return vms
 
 
@@ -1147,11 +1155,13 @@ def vm_info(vm_=None):
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     info = {}
+    conn = __get_conn()
     if vm_:
-        info[vm_] = _info(_get_domain(vm_))
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for domain in _get_domain(iterable=True):
+        for domain in _get_domain(conn, iterable=True):
             info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
@@ -1177,11 +1187,13 @@ def vm_state(vm_=None):
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
     info = {}
+    conn = __get_conn()
     if vm_:
-        info[vm_] = _info(_get_domain(vm_))
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for domain in _get_domain(iterable=True):
+        for domain in _get_domain(conn, iterable=True):
             info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
@@ -1205,6 +1217,7 @@ def node_info():
             'numanodes': raw[4],
             'phymemory': raw[1],
             'sockets': raw[5]}
+    conn.close()
     return info
 
 
@@ -1218,7 +1231,10 @@ def get_nics(vm_):
 
         salt '*' virt.get_nics <domain>
     '''
-    return _get_nics(_get_domain(vm_))
+    conn = __get_conn()
+    nics = _get_nics(_get_domain(conn, vm_))
+    conn.close()
+    return nics
 
 
 def get_macs(vm_):
@@ -1251,7 +1267,10 @@ def get_graphics(vm_):
 
         salt '*' virt.get_graphics <domain>
     '''
-    return _get_graphics(_get_domain(vm_))
+    conn = __get_conn()
+    graphics = _get_graphics(_get_domain(conn, vm_))
+    conn.close()
+    return graphics
 
 
 def get_disks(vm_):
@@ -1264,7 +1283,10 @@ def get_disks(vm_):
 
         salt '*' virt.get_disks <domain>
     '''
-    return _get_disks(_get_domain(vm_))
+    conn = __get_conn()
+    disks = _get_disks(_get_domain(conn, vm_))
+    conn.close()
+    return disks
 
 
 def setmem(vm_, memory, config=False):
@@ -1285,7 +1307,8 @@ def setmem(vm_, memory, config=False):
     if vm_state(vm_)[vm_] != 'shutdown':
         return False
 
-    dom = _get_domain(vm_)
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
 
     # libvirt has a funny bitwise system for the flags in that the flag
     # to affect the "current" setting is 0, which means that to set the
@@ -1296,6 +1319,8 @@ def setmem(vm_, memory, config=False):
 
     ret1 = dom.setMemoryFlags(memory * 1024, flags)
     ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    conn.close()
 
     # return True if both calls succeeded
     return ret1 == ret2 == 0
@@ -1319,7 +1344,8 @@ def setvcpus(vm_, vcpus, config=False):
     if vm_state(vm_)[vm_] != 'shutdown':
         return False
 
-    dom = _get_domain(vm_)
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
 
     # see notes in setmem
     flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
@@ -1328,6 +1354,8 @@ def setvcpus(vm_, vcpus, config=False):
 
     ret1 = dom.setVcpusFlags(vcpus, flags)
     ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    conn.close()
 
     return ret1 == ret2 == 0
 
@@ -1347,9 +1375,10 @@ def freemem():
     mem = conn.getInfo()[1]
     # Take off just enough to sustain the hypervisor
     mem -= 256
-    for dom in _get_domain(iterable=True):
+    for dom in _get_domain(conn, iterable=True):
         if dom.ID() > 0:
             mem -= dom.info()[2] / 1024
+    conn.close()
     return mem
 
 
@@ -1366,9 +1395,10 @@ def freecpu():
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
-    for dom in _get_domain(iterable=True):
+    for dom in _get_domain(conn, iterable=True):
         if dom.ID() > 0:
             cpus -= dom.info()[3]
+    conn.close()
     return cpus
 
 
@@ -1398,8 +1428,10 @@ def get_xml(vm_):
 
         salt '*' virt.get_xml <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.XMLDesc(0)
+    conn = __get_conn()
+    xml_desc = _get_domain(conn, vm_).XMLDesc(0)
+    conn.close()
+    return xml_desc
 
 
 def get_profiles(hypervisor=None):
@@ -1444,8 +1476,11 @@ def shutdown(vm_):
 
         salt '*' virt.shutdown <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.shutdown() == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    ret = dom.shutdown() == 0
+    conn.close()
+    return ret
 
 
 def pause(vm_):
@@ -1458,8 +1493,11 @@ def pause(vm_):
 
         salt '*' virt.pause <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.suspend() == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    ret = dom.suspend() == 0
+    conn.close()
+    return ret
 
 
 def resume(vm_):
@@ -1472,8 +1510,11 @@ def resume(vm_):
 
         salt '*' virt.resume <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.resume() == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    ret = dom.resume() == 0
+    conn.close()
+    return ret
 
 
 def start(name):
@@ -1486,7 +1527,10 @@ def start(name):
 
         salt '*' virt.start <domain>
     '''
-    return _get_domain(name).create() == 0
+    conn = __get_conn()
+    ret = _get_domain(conn, name).create == 0
+    conn.close()
+    return ret
 
 
 def stop(name):
@@ -1499,7 +1543,10 @@ def stop(name):
 
         salt '*' virt.stop <domain>
     '''
-    return _get_domain(name).destroy() == 0
+    conn = __get_conn()
+    ret = _get_domain(conn, name).destroy() == 0
+    conn.close()
+    return ret
 
 
 def reboot(name):
@@ -1512,7 +1559,10 @@ def reboot(name):
 
         salt '*' virt.reboot <domain>
     '''
-    return _get_domain(name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
+    conn = __get_conn()
+    ret = _get_domain(conn, name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
+    conn.close()
+    return ret
 
 
 def reset(vm_):
@@ -1525,12 +1575,15 @@ def reset(vm_):
 
         salt '*' virt.reset <domain>
     '''
-    dom = _get_domain(vm_)
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
 
     # reset takes a flag, like reboot, but it is not yet used
     # so we just pass in 0
     # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
-    return dom.reset(0) == 0
+    ret = dom.reset(0) == 0
+    conn.close()
+    return ret
 
 
 def ctrl_alt_del(vm_):
@@ -1543,8 +1596,11 @@ def ctrl_alt_del(vm_):
 
         salt '*' virt.ctrl_alt_del <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    ret = dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+    conn.close()
+    return ret
 
 
 def create_xml_str(xml):
@@ -1558,7 +1614,9 @@ def create_xml_str(xml):
         salt '*' virt.create_xml_str <XML in string format>
     '''
     conn = __get_conn()
-    return conn.createXML(xml, 0) is not None
+    ret = conn.createXML(xml, 0) is not None
+    conn.close()
+    return ret
 
 
 def create_xml_path(path):
@@ -1591,7 +1649,9 @@ def define_xml_str(xml):
         salt '*' virt.define_xml_str <XML in string format>
     '''
     conn = __get_conn()
-    return conn.defineXML(xml) is not None
+    ret = conn.defineXML(xml) is not None
+    conn.close()
+    return ret
 
 
 def define_xml_path(path):
@@ -1627,7 +1687,9 @@ def define_vol_xml_str(xml):
     poolname = __salt__['config.get']('libvirt:storagepool', 'default')
     conn = __get_conn()
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
-    return pool.createXML(xml, 0) is not None
+    ret = pool.createXML(xml, 0) is not None
+    conn.close()
+    return ret
 
 
 def define_vol_xml_path(path):
@@ -1754,17 +1816,20 @@ def set_autostart(vm_, state='on'):
 
         salt "*" virt.set_autostart <domain> <on | off>
     '''
-
-    dom = _get_domain(vm_)
-
-    if state == 'on':
-        return dom.setAutostart(1) == 0
-
-    elif state == 'off':
-        return dom.setAutostart(0) == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
 
     # return False if state is set to something other then on or off
-    return False
+    ret = False
+
+    if state == 'on':
+        ret = dom.setAutostart(1) == 0
+
+    elif state == 'off':
+        ret = dom.setAutostart(0) == 0
+
+    conn.close()
+    return ret
 
 
 def undefine(vm_):
@@ -1778,8 +1843,11 @@ def undefine(vm_):
 
         salt '*' virt.undefine <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.undefine() == 0
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    ret = dom.undefine() == 0
+    conn.close()
+    return ret
 
 
 def purge(vm_, dirs=False, removables=None):
@@ -1924,7 +1992,8 @@ def vm_cputime(vm_=None):
 
         salt '*' virt.vm_cputime
     '''
-    host_cpus = __get_conn().getInfo()[2]
+    conn = __get_conn()
+    host_cpus = conn.getInfo()[2]
 
     def _info(dom):
         '''
@@ -1943,10 +2012,11 @@ def vm_cputime(vm_=None):
                }
     info = {}
     if vm_:
-        info[vm_] = _info(_get_domain(vm_))
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for domain in _get_domain(iterable=True):
+        for domain in _get_domain(conn, iterable=True):
             info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
@@ -2010,11 +2080,13 @@ def vm_netstats(vm_=None):
 
         return ret
     info = {}
+    conn = __get_conn()
     if vm_:
-        info[vm_] = _info(_get_domain(vm_))
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for domain in _get_domain(iterable=True):
+        for domain in _get_domain(conn, iterable=True):
             info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
@@ -2080,12 +2152,14 @@ def vm_diskstats(vm_=None):
 
         return ret
     info = {}
+    conn = __get_conn()
     if vm_:
-        info[vm_] = _info(_get_domain(vm_))
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
         # Can not run function blockStats on inactive VMs
-        for domain in _get_domain(iterable=True, inactive=False):
+        for domain in _get_domain(conn, iterable=True, inactive=False):
             info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
@@ -2126,9 +2200,11 @@ def list_snapshots(domain=None):
         salt '*' virt.list_snapshots <domain>
     '''
     ret = dict()
-    for vm_domain in _get_domain(*(domain and [domain] or list()), iterable=True):
+    conn = __get_conn()
+    for vm_domain in _get_domain(conn, *(domain and [domain] or list()), iterable=True):
         ret[vm_domain.name()] = [_parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()] or 'N/A'
 
+    conn.close()
     return ret
 
 
@@ -2165,7 +2241,9 @@ def snapshot(domain, name=None, suffix=None):
     n_name = ElementTree.SubElement(doc, 'name')
     n_name.text = name
 
-    _get_domain(domain).snapshotCreateXML(ElementTree.tostring(doc))
+    conn = __get_conn()
+    _get_domain(conn, domain).snapshotCreateXML(ElementTree.tostring(doc))
+    conn.close()
 
     return {'name': name}
 
@@ -2189,10 +2267,13 @@ def delete_snapshots(name, *names):
         salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
     '''
     deleted = dict()
-    for snap in _get_domain(name).listAllSnapshots():
+    conn = __get_conn()
+    domain = _get_domain(conn, name)
+    for snap in domain.listAllSnapshots():
         if snap.getName() in names or not names:
             deleted[snap.getName()] = _parse_snapshot_description(snap)
             snap.delete()
+    conn.close()
 
     return {'available': list_snapshots(name), 'deleted': deleted}
 
@@ -2215,7 +2296,8 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False):
         salt '*' virt.revert <domain> <snapshot>
     '''
     ret = dict()
-    domain = _get_domain(name)
+    conn = __get_conn()
+    domain = _get_domain(conn, name)
     snapshots = domain.listAllSnapshots()
 
     _snapshots = list()
@@ -2225,8 +2307,10 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False):
     del _snapshots
 
     if not snapshots:
+        conn.close()
         raise CommandExecutionError('No snapshots found')
     elif len(snapshots) == 1:
+        conn.close()
         raise CommandExecutionError('Cannot revert to itself: only one snapshot is available.')
 
     snap = None
@@ -2240,9 +2324,11 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False):
             break
 
     if not snap:
+        conn.close()
         raise CommandExecutionError(
             snapshot and 'Snapshot "{0}" not found'.format(vm_snapshot) or 'No more previous snapshots available')
     elif snap.isCurrent():
+        conn.close()
         raise CommandExecutionError('Cannot revert to the currently running snapshot.')
 
     domain.revertToSnapshot(snap)
@@ -2260,16 +2346,17 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False):
     else:
         ret['deleted'] = 'N/A'
 
+    conn.close()
+
     return ret
 
 
-def _capabilities():
+def _capabilities(conn):
     '''
     Return connection capabilities
     It's a huge klutz to parse right,
     so hide func for now and pass on the XML instead
     '''
-    conn = __get_conn()
     caps = conn.getCapabilities()
     caps = minidom.parseString(caps)
 
@@ -2294,7 +2381,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
 
     '''
     conn = __get_conn()
-    caps = _capabilities()
+    caps = _capabilities(conn)
 
     cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
 
@@ -2306,6 +2393,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
         if getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_MIGRATABLE', False):
             flags += libvirt.VIR_CONNECT_BASELINE_CPU_MIGRATABLE
         else:
+            conn.close()
             raise ValueError
 
     if full and getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
@@ -2315,6 +2403,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     cpu = conn.baselineCPU([cpu.toxml()], flags)
     cpu = minidom.parseString(cpu).getElementsByTagName('cpu')
     cpu = cpu[0]
+    conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
@@ -2386,15 +2475,18 @@ def net_define(name, bridge, forward, **kwargs):
         conn.networkDefineXML(xml)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     try:
         network = conn.networkLookupByName(name)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     if network is None:
+        conn.close()
         return False
 
     if (starting is True or autostart is True) and network.isActive() != 1:
@@ -2404,6 +2496,8 @@ def net_define(name, bridge, forward, **kwargs):
         network.setAutostart(int(autostart))
     elif autostart is False and network.autostart() == 1:
         network.setAutostart(int(autostart))
+
+    conn.close()
 
     return True
 
@@ -2446,14 +2540,17 @@ def pool_define_build(name, **kwargs):
         if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
             exist = True
         else:
+            conn.close()
             raise err  # a real error we should report upwards
     try:
         pool = conn.storagePoolLookupByName(name)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     if pool is None:
+        conn.close()
         return False
 
     if (starting is True or autostart is True) and pool.isActive() != 1:
@@ -2471,6 +2568,9 @@ def pool_define_build(name, **kwargs):
         if exist is True:
             update = True
         pool.setAutostart(int(autostart))
+
+    conn.close()
+
     if exist is True:
         if update is True:
             return (True, 'Pool exist', 'Pool update')
