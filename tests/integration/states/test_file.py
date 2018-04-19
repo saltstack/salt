@@ -7,7 +7,6 @@ Tests for the file state
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
-import glob
 import logging
 import os
 import re
@@ -27,6 +26,7 @@ from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
     skip_if_not_root,
     with_system_user_and_group,
+    with_tempdir,
     with_tempfile,
     Webserver,
 )
@@ -223,19 +223,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if self.run_function('file.is_link', [name]):
                 self.run_function('file.remove', [name])
 
-    def test_test_absent(self):
+    @with_tempfile()
+    def test_test_absent(self, name):
         '''
         file.absent test interface
         '''
-        name = os.path.join(TMP, 'file_to_kill')
         with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
-        try:
-            self.assertSaltNoneReturn(ret)
-            self.assertTrue(os.path.isfile(name))
-        finally:
-            os.remove(name)
+        self.assertSaltNoneReturn(ret)
+        self.assertTrue(os.path.isfile(name))
 
     def test_managed(self):
         '''
@@ -458,7 +455,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.managed test that 'salt://|' protects unusual characters in file path
         '''
-        funny_file = tempfile.mkstemp(prefix='?f!le? n@=3&', suffix='.file type')[1]
+        funny_file = salt.utils.files.mkstemp(prefix='?f!le? n@=3&', suffix='.file type')
         funny_file_name = os.path.split(funny_file)[1]
         funny_url = 'salt://|' + funny_file_name
         funny_url_path = os.path.join(STATE_DIR, funny_file_name)
@@ -468,24 +465,22 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = os.path.join(STATE_DIR, state_file_name)
         state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
 
-        try:
-            with salt.utils.files.fopen(funny_url_path, 'w'):
-                pass
-            with salt.utils.files.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
-                {0}:
-                  file.managed:
-                    - source: {1}
-                    - makedirs: True
-                '''.format(funny_file, funny_url)))
+        self.addCleanup(os.remove, state_file)
+        self.addCleanup(os.remove, funny_file)
+        self.addCleanup(os.remove, funny_url_path)
 
-            ret = self.run_function('state.sls', [state_name])
-            self.assertTrue(ret[state_key]['result'])
+        with salt.utils.files.fopen(funny_url_path, 'w'):
+            pass
+        with salt.utils.files.fopen(state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            {0}:
+              file.managed:
+                - source: {1}
+                - makedirs: True
+            '''.format(funny_file, funny_url)))
 
-        finally:
-            os.remove(state_file)
-            os.remove(funny_file)
-            os.remove(funny_url_path)
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(ret[state_key]['result'])
 
     def test_managed_contents(self):
         '''
@@ -557,6 +552,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
+    @skipIf(not salt.utils.path.which('visudo'), 'sudo is missing')
     def test_managed_check_cmd(self):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
@@ -564,8 +560,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         r_group = 'root'
         if salt.utils.platform.is_darwin():
             r_group = 'wheel'
-        if not salt.utils.path.which('visudo'):
-            self.fail('sudo is missing')
         try:
             ret = self.run_state(
                 'file.managed',
@@ -755,13 +749,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isdir(name))
 
-    def test_directory_clean(self):
+    @with_tempdir()
+    def test_directory_clean(self, base_dir):
         '''
         file.directory with clean=True
         '''
-        name = os.path.join(TMP, 'directory_clean_dir')
-        if not os.path.isdir(name):
-            os.makedirs(name)
+        name = os.path.join(base_dir, 'directory_clean_dir')
+        os.mkdir(name)
 
         strayfile = os.path.join(name, 'strayfile')
         with salt.utils.files.fopen(strayfile, 'w'):
@@ -775,19 +769,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             pass
 
         ret = self.run_state('file.directory', name=name, clean=True)
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertFalse(os.path.exists(strayfile))
-            self.assertFalse(os.path.exists(straydir))
-            self.assertTrue(os.path.isdir(name))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(os.path.exists(strayfile))
+        self.assertFalse(os.path.exists(straydir))
+        self.assertTrue(os.path.isdir(name))
 
-    def test_directory_clean_exclude(self):
+    @with_tempdir()
+    def test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with clean=True and exclude_pat set
         '''
-        name = os.path.join(TMP, 'directory_clean_dir')
+        name = os.path.join(base_dir, 'directory_clean_dir')
         if not os.path.isdir(name):
             os.makedirs(name)
 
@@ -816,21 +808,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              clean=True,
                              exclude_pat=exclude_pat)
 
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertFalse(os.path.exists(strayfile))
-            self.assertFalse(os.path.exists(strayfile2))
-            self.assertTrue(os.path.exists(keepfile))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(os.path.exists(strayfile))
+        self.assertFalse(os.path.exists(strayfile2))
+        self.assertTrue(os.path.exists(keepfile))
 
-    def test_test_directory_clean_exclude(self):
+    @with_tempdir()
+    def test_test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with test=True, clean=True and exclude_pat set
         '''
-        name = os.path.join(TMP, 'directory_clean_dir')
-        if not os.path.isdir(name):
-            os.makedirs(name)
+        name = os.path.join(base_dir, 'directory_clean_dir')
+        os.mkdir(name)
 
         strayfile = os.path.join(name, 'strayfile')
         with salt.utils.files.fopen(strayfile, 'w'):
@@ -860,17 +849,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         comment = next(six.itervalues(ret))['comment']
 
-        try:
-            self.assertSaltNoneReturn(ret)
-            self.assertTrue(os.path.exists(strayfile))
-            self.assertTrue(os.path.exists(strayfile2))
-            self.assertTrue(os.path.exists(keepfile))
+        self.assertSaltNoneReturn(ret)
+        self.assertTrue(os.path.exists(strayfile))
+        self.assertTrue(os.path.exists(strayfile2))
+        self.assertTrue(os.path.exists(keepfile))
 
-            self.assertIn(strayfile, comment)
-            self.assertIn(strayfile2, comment)
-            self.assertNotIn(keepfile, comment)
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertIn(strayfile, comment)
+        self.assertIn(strayfile2, comment)
+        self.assertNotIn(keepfile, comment)
 
     def test_directory_clean_require_in(self):
         '''
@@ -980,78 +966,58 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    def test_recurse(self):
+    @with_tempdir(create=False)
+    def test_recurse(self, name):
         '''
         file.recurse
         '''
-        name = os.path.join(TMP, 'recurse_dir')
         ret = self.run_state('file.recurse', name=name, source='salt://grail')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-        finally:
-            if os.path.isdir(name):
-                shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
 
-    def test_recurse_specific_env(self):
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    def test_recurse_specific_env(self, dir1, dir2):
         '''
         file.recurse passing __env__
         '''
-        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
-                             name=name,
+                             name=dir1,
                              source='salt://holy',
                              __env__='prod')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-        finally:
-            if os.path.isdir(name):
-                shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(dir1, '32', 'scene')))
 
-        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
-                             name=name,
+                             name=dir2,
                              source='salt://holy',
                              saltenv='prod')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-        finally:
-            if os.path.isdir(name):
-                shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(dir2, '32', 'scene')))
 
-    def test_recurse_specific_env_in_url(self):
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    def test_recurse_specific_env_in_url(self, dir1, dir2):
         '''
         file.recurse passing __env__
         '''
-        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
-                             name=name,
+                             name=dir1,
                              source='salt://holy?saltenv=prod')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-        finally:
-            if os.path.isdir(name):
-                shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(dir1, '32', 'scene')))
 
-        name = os.path.join(TMP, 'recurse_dir_prod_env')
         ret = self.run_state('file.recurse',
-                             name=name,
+                             name=dir2,
                              source='salt://holy?saltenv=prod')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-        finally:
-            if os.path.isdir(name):
-                shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(dir2, '32', 'scene')))
 
-    def test_test_recurse(self):
+    @with_tempdir(create=False)
+    def test_test_recurse(self, name):
         '''
         file.recurse test interface
         '''
-        name = os.path.join(TMP, 'recurse_test_dir')
         ret = self.run_state(
             'file.recurse', test=True, name=name, source='salt://grail',
         )
@@ -1059,56 +1025,51 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
         self.assertFalse(os.path.exists(name))
 
-    def test_test_recurse_specific_env(self):
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    def test_test_recurse_specific_env(self, dir1, dir2):
         '''
         file.recurse test interface
         '''
-        name = os.path.join(TMP, 'recurse_test_dir_prod_env')
         ret = self.run_state('file.recurse',
                              test=True,
-                             name=name,
+                             name=dir1,
                              source='salt://holy',
                              __env__='prod'
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
-        self.assertFalse(os.path.exists(name))
+        self.assertFalse(os.path.isfile(os.path.join(dir1, '32', 'scene')))
+        self.assertFalse(os.path.exists(dir1))
 
-        name = os.path.join(TMP, 'recurse_test_dir_prod_env')
         ret = self.run_state('file.recurse',
                              test=True,
-                             name=name,
+                             name=dir2,
                              source='salt://holy',
                              saltenv='prod'
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(name, '32', 'scene')))
-        self.assertFalse(os.path.exists(name))
+        self.assertFalse(os.path.isfile(os.path.join(dir2, '32', 'scene')))
+        self.assertFalse(os.path.exists(dir2))
 
-    def test_recurse_template(self):
+    @with_tempdir(create=False)
+    def test_recurse_template(self, name):
         '''
         file.recurse with jinja template enabled
         '''
         _ts = 'TEMPLATE TEST STRING'
-        name = os.path.join(TMP, 'recurse_template_dir')
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail',
             template='jinja', defaults={'spam': _ts})
-        try:
-            self.assertSaltTrueReturn(ret)
-            with salt.utils.files.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
-                contents = fp_.read()
-            self.assertIn(_ts, contents)
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
+            contents = fp_.read()
+        self.assertIn(_ts, contents)
 
-    def test_recurse_clean(self):
+    @with_tempdir()
+    def test_recurse_clean(self, name):
         '''
         file.recurse with clean=True
         '''
-        name = os.path.join(TMP, 'recurse_clean_dir')
-        if not os.path.isdir(name):
-            os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
         with salt.utils.files.fopen(strayfile, 'w'):
             pass
@@ -1119,21 +1080,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.makedirs(os.path.join(name, 'scene33'))
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail', clean=True)
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertFalse(os.path.exists(strayfile))
-            self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-            self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(os.path.exists(strayfile))
+        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+        self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
 
-    def test_recurse_clean_specific_env(self):
+    @with_tempdir()
+    def test_recurse_clean_specific_env(self, name):
         '''
         file.recurse with clean=True and __env__=prod
         '''
-        name = os.path.join(TMP, 'recurse_clean_dir_prod_env')
-        if not os.path.isdir(name):
-            os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
         with salt.utils.files.fopen(strayfile, 'w'):
             pass
@@ -1147,15 +1103,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              source='salt://holy',
                              clean=True,
                              __env__='prod')
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertFalse(os.path.exists(strayfile))
-            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-            self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(os.path.exists(strayfile))
+        self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
 
-    def test_recurse_issue_34945(self):
+    @with_tempdir()
+    def test_recurse_issue_34945(self, base_dir):
         '''
         This tests the case where the source dir for the file.recurse state
         does not contain any files (only subdirectories), and the dir_mode is
@@ -1172,60 +1126,50 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         dir_mode = '2775'
         issue_dir = 'issue-34945'
-        name = os.path.join(TMP, issue_dir)
+        name = os.path.join(base_dir, issue_dir)
 
-        try:
-            ret = self.run_state('file.recurse',
-                                 name=name,
-                                 source='salt://' + issue_dir,
-                                 dir_mode=dir_mode)
-            self.assertSaltTrueReturn(ret)
-            actual_dir_mode = oct(stat.S_IMODE(os.stat(name).st_mode))[-4:]
-            self.assertEqual(dir_mode, actual_dir_mode)
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://' + issue_dir,
+                             dir_mode=dir_mode)
+        self.assertSaltTrueReturn(ret)
+        actual_dir_mode = oct(stat.S_IMODE(os.stat(name).st_mode))[-4:]
+        self.assertEqual(dir_mode, actual_dir_mode)
 
-    def test_recurse_issue_40578(self):
+    @with_tempdir(create=False)
+    def test_recurse_issue_40578(self, name):
         '''
         This ensures that the state doesn't raise an exception when it
         encounters a file with a unicode filename in the process of invoking
         file.source_list.
         '''
-        issue_dir = 'issue-40578'
-        name = os.path.join(TMP, issue_dir)
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://соль')
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(
+            sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+            sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
+        )
 
-        try:
-            ret = self.run_state('file.recurse',
-                                 name=name,
-                                 source='salt://соль')
-            self.assertSaltTrueReturn(ret)
-            self.assertEqual(
-                sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
-                sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
-            )
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
-
-    def test_replace(self):
+    @with_tempfile()
+    def test_replace(self, name):
         '''
         file.replace
         '''
-        name = os.path.join(TMP, 'replace_test')
         with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('change_me')
 
         ret = self.run_state('file.replace',
                 name=name, pattern='change', repl='salt', backup=False)
 
-        try:
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertIn('salt', fp_.read())
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertIn('salt', fp_.read())
 
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(name)
+        self.assertSaltTrueReturn(ret)
 
-    def test_replace_issue_18612(self):
+    @with_tempdir()
+    def test_replace_issue_18612(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
 
@@ -1239,7 +1183,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         The commented line should be uncommented in the end, nothing else should change
         '''
         test_name = 'test_replace_issue_18612'
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         with salt.utils.files.fopen(path_test, 'w+') as fp_test_:
             fp_test_.write('# en_US.UTF-8')
@@ -1249,22 +1193,20 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret.append(self.run_state('file.replace',
                 name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
 
-        try:
-            # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
-            with salt.utils.files.fopen(path_test, 'r') as fp_test_:
-                self.assertTrue((sum(1 for _ in fp_test_) == 1))
+        # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
+        with salt.utils.files.fopen(path_test, 'r') as fp_test_:
+            self.assertTrue((sum(1 for _ in fp_test_) == 1))
 
-            # ensure, the replacement succeeded
-            with salt.utils.files.fopen(path_test, 'r') as fp_test_:
-                self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
+        # ensure, the replacement succeeded
+        with salt.utils.files.fopen(path_test, 'r') as fp_test_:
+            self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
 
-            # ensure, all runs of 'file.replace' reported success
-            for item in ret:
-                self.assertSaltTrueReturn(item)
-        finally:
-            os.remove(path_test)
+        # ensure, all runs of 'file.replace' reported success
+        for item in ret:
+            self.assertSaltTrueReturn(item)
 
-    def test_replace_issue_18612_prepend(self):
+    @with_tempdir()
+    def test_replace_issue_18612_prepend(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
 
@@ -1284,7 +1226,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_out = os.path.join(
             FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1294,20 +1236,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret.append(self.run_state('file.replace',
                 name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', prepend_if_not_found=True))
 
-        try:
-            # ensure, the resulting file contains the expected lines
-            self.assertTrue(filecmp.cmp(path_test, path_out))
+        # ensure, the resulting file contains the expected lines
+        self.assertTrue(filecmp.cmp(path_test, path_out))
 
-            # ensure the initial file was properly backed up
-            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        # ensure the initial file was properly backed up
+        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
 
-            # ensure, all runs of 'file.replace' reported success
-            for item in ret:
-                self.assertSaltTrueReturn(item)
-        finally:
-            os.remove(path_test)
+        # ensure, all runs of 'file.replace' reported success
+        for item in ret:
+            self.assertSaltTrueReturn(item)
 
-    def test_replace_issue_18612_append(self):
+    @with_tempdir()
+    def test_replace_issue_18612_append(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
 
@@ -1327,7 +1267,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_out = os.path.join(
             FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1337,20 +1277,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret.append(self.run_state('file.replace',
                 name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
 
-        try:
-            # ensure, the resulting file contains the expected lines
-            self.assertTrue(filecmp.cmp(path_test, path_out))
+        # ensure, the resulting file contains the expected lines
+        self.assertTrue(filecmp.cmp(path_test, path_out))
 
-            # ensure the initial file was properly backed up
-            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        # ensure the initial file was properly backed up
+        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
 
-            # ensure, all runs of 'file.replace' reported success
-            for item in ret:
-                self.assertSaltTrueReturn(item)
-        finally:
-            os.remove(path_test)
+        # ensure, all runs of 'file.replace' reported success
+        for item in ret:
+            self.assertSaltTrueReturn(item)
 
-    def test_replace_issue_18612_append_not_found_content(self):
+    @with_tempdir()
+    def test_replace_issue_18612_append_not_found_content(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
 
@@ -1370,7 +1308,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_out = os.path.join(
             FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1386,20 +1324,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     not_found_content='THIS LINE WASN\'T FOUND! SO WE\'RE APPENDING IT HERE!'
             ))
 
-        try:
-            # ensure, the resulting file contains the expected lines
-            self.assertTrue(filecmp.cmp(path_test, path_out))
+        # ensure, the resulting file contains the expected lines
+        self.assertTrue(filecmp.cmp(path_test, path_out))
 
-            # ensure the initial file was properly backed up
-            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        # ensure the initial file was properly backed up
+        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
 
-            # ensure, all runs of 'file.replace' reported success
-            for item in ret:
-                self.assertSaltTrueReturn(item)
-        finally:
-            os.remove(path_test)
+        # ensure, all runs of 'file.replace' reported success
+        for item in ret:
+            self.assertSaltTrueReturn(item)
 
-    def test_replace_issue_18612_change_mid_line_with_comment(self):
+    @with_tempdir()
+    def test_replace_issue_18612_change_mid_line_with_comment(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
 
@@ -1420,7 +1356,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_out = os.path.join(
             FILES, 'file.replace', '{0}.out'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1430,20 +1366,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret.append(self.run_state('file.replace',
                 name=path_test, pattern='^#foo=bar$', repl='foo=salt', append_if_not_found=True))
 
-        try:
-            # ensure, the resulting file contains the expected lines
-            self.assertTrue(filecmp.cmp(path_test, path_out))
+        # ensure, the resulting file contains the expected lines
+        self.assertTrue(filecmp.cmp(path_test, path_out))
 
-            # ensure the initial file was properly backed up
-            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        # ensure the initial file was properly backed up
+        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
 
-            # ensure, all 'file.replace' runs reported success
-            for item in ret:
-                self.assertSaltTrueReturn(item)
-        finally:
-            os.remove(path_test)
+        # ensure, all 'file.replace' runs reported success
+        for item in ret:
+            self.assertSaltTrueReturn(item)
 
-    def test_replace_issue_18841_no_changes(self):
+    @with_tempdir()
+    def test_replace_issue_18841_no_changes(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18841:
 
@@ -1462,7 +1396,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_in = os.path.join(
             FILES, 'file.replace', '{0}.in'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1488,20 +1422,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # get (m|a)time of file
         fstats_post = os.stat(path_test)
 
-        try:
-            # ensure, the file content didn't change
-            self.assertTrue(filecmp.cmp(path_in, path_test))
+        # ensure, the file content didn't change
+        self.assertTrue(filecmp.cmp(path_in, path_test))
 
-            # ensure no backup file was created
-            self.assertFalse(os.path.exists(path_test + '.bak'))
+        # ensure no backup file was created
+        self.assertFalse(os.path.exists(path_test + '.bak'))
 
-            # ensure the file's mtime didn't change
-            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+        # ensure the file's mtime didn't change
+        self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
 
-            # ensure, all 'file.replace' runs reported success
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(path_test)
+        # ensure, all 'file.replace' runs reported success
+        self.assertSaltTrueReturn(ret)
 
     def test_serialize(self):
         '''
@@ -1532,7 +1463,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 '''
         self.assertEqual(serialized_file, expected_file)
 
-    def test_replace_issue_18841_omit_backup(self):
+    @with_tempdir()
+    def test_replace_issue_18841_omit_backup(self, base_dir):
         '''
         Test the (mis-)behaviour of file.replace as described in #18841:
 
@@ -1551,7 +1483,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         path_in = os.path.join(
             FILES, 'file.replace', '{0}.in'.format(test_name)
         )
-        path_test = os.path.join(TMP, test_name)
+        path_test = os.path.join(base_dir, test_name)
 
         # create test file based on initial template
         shutil.copyfile(path_in, path_test)
@@ -1576,301 +1508,242 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # get (m|a)time of file
         fstats_post = os.stat(path_test)
 
-        try:
-            # ensure, the file content didn't change
-            self.assertTrue(filecmp.cmp(path_in, path_test))
+        # ensure, the file content didn't change
+        self.assertTrue(filecmp.cmp(path_in, path_test))
 
-            # ensure no backup file was created
-            self.assertFalse(os.path.exists(path_test + '.bak'))
+        # ensure no backup file was created
+        self.assertFalse(os.path.exists(path_test + '.bak'))
 
-            # ensure the file's mtime didn't change
-            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+        # ensure the file's mtime didn't change
+        self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
 
-            # ensure, all 'file.replace' runs reported success
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(path_test)
+        # ensure, all 'file.replace' runs reported success
+        self.assertSaltTrueReturn(ret)
 
-    def test_comment(self):
+    @with_tempfile()
+    def test_comment(self, name):
         '''
         file.comment
         '''
-        name = os.path.join(TMP, 'comment_test')
-        try:
-            # write a line to file
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('comment_me')
+        # write a line to file
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('comment_me')
 
-            # Look for changes with test=True: return should be "None" at the first run
-            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
-            self.assertSaltNoneReturn(ret)
+        # Look for changes with test=True: return should be "None" at the first run
+        ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+        self.assertSaltNoneReturn(ret)
 
-            # comment once
-            ret = self.run_state('file.comment', name=name, regex='^comment')
-            # result is positive
-            self.assertSaltTrueReturn(ret)
-            # line is commented
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertTrue(fp_.read().startswith('#comment'))
+        # comment once
+        ret = self.run_state('file.comment', name=name, regex='^comment')
+        # result is positive
+        self.assertSaltTrueReturn(ret)
+        # line is commented
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#comment'))
 
-            # comment twice
-            ret = self.run_state('file.comment', name=name, regex='^comment')
+        # comment twice
+        ret = self.run_state('file.comment', name=name, regex='^comment')
 
-            # result is still positive
-            self.assertSaltTrueReturn(ret)
-            # line is still commented
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertTrue(fp_.read().startswith('#comment'))
+        # result is still positive
+        self.assertSaltTrueReturn(ret)
+        # line is still commented
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#comment'))
 
-            # Test previously commented file returns "True" now and not "None" with test=True
-            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
-            self.assertSaltTrueReturn(ret)
+        # Test previously commented file returns "True" now and not "None" with test=True
+        ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+        self.assertSaltTrueReturn(ret)
 
-        finally:
-            os.remove(name)
-
-    def test_test_comment(self):
+    @with_tempfile()
+    def test_test_comment(self, name):
         '''
         file.comment test interface
         '''
-        name = os.path.join(TMP, 'comment_test_test')
-        try:
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('comment_me')
-            ret = self.run_state(
-                'file.comment', test=True, name=name, regex='.*comment.*',
-            )
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertNotIn('#comment', fp_.read())
-            self.assertSaltNoneReturn(ret)
-        finally:
-            os.remove(name)
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('comment_me')
+        ret = self.run_state(
+            'file.comment', test=True, name=name, regex='.*comment.*',
+        )
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertNotIn('#comment', fp_.read())
+        self.assertSaltNoneReturn(ret)
 
-    def test_uncomment(self):
+    @with_tempfile()
+    def test_uncomment(self, name):
         '''
         file.uncomment
         '''
-        name = os.path.join(TMP, 'uncomment_test')
-        try:
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('#comment_me')
-            ret = self.run_state('file.uncomment', name=name, regex='^comment')
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertNotIn('#comment', fp_.read())
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(name)
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('#comment_me')
+        ret = self.run_state('file.uncomment', name=name, regex='^comment')
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertNotIn('#comment', fp_.read())
+        self.assertSaltTrueReturn(ret)
 
-    def test_test_uncomment(self):
+    @with_tempfile()
+    def test_test_uncomment(self, name):
         '''
         file.comment test interface
         '''
-        name = os.path.join(TMP, 'uncomment_test_test')
-        try:
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('#comment_me')
-            ret = self.run_state(
-                'file.uncomment', test=True, name=name, regex='^comment.*'
-            )
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertIn('#comment', fp_.read())
-            self.assertSaltNoneReturn(ret)
-        finally:
-            os.remove(name)
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('#comment_me')
+        ret = self.run_state(
+            'file.uncomment', test=True, name=name, regex='^comment.*'
+        )
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertIn('#comment', fp_.read())
+        self.assertSaltNoneReturn(ret)
 
-    def test_append(self):
+    @with_tempfile()
+    def test_append(self, name):
         '''
         file.append
         '''
-        name = os.path.join(TMP, 'append_test')
-        try:
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('#salty!')
-            ret = self.run_state('file.append', name=name, text='cheese')
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertIn('cheese', fp_.read())
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(name)
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('#salty!')
+        ret = self.run_state('file.append', name=name, text='cheese')
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertIn('cheese', fp_.read())
+        self.assertSaltTrueReturn(ret)
 
-    def test_test_append(self):
+    @with_tempfile()
+    def test_test_append(self, name):
         '''
         file.append test interface
         '''
-        name = os.path.join(TMP, 'append_test_test')
-        try:
-            with salt.utils.files.fopen(name, 'w+') as fp_:
-                fp_.write('#salty!')
-            ret = self.run_state(
-                'file.append', test=True, name=name, text='cheese'
-            )
-            with salt.utils.files.fopen(name, 'r') as fp_:
-                self.assertNotIn('cheese', fp_.read())
-            self.assertSaltNoneReturn(ret)
-        finally:
-            os.remove(name)
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write('#salty!')
+        ret = self.run_state(
+            'file.append', test=True, name=name, text='cheese'
+        )
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            self.assertNotIn('cheese', fp_.read())
+        self.assertSaltNoneReturn(ret)
 
-    def test_append_issue_1864_makedirs(self):
+    @with_tempdir()
+    def test_append_issue_1864_makedirs(self, base_dir):
         '''
         file.append but create directories if needed as an option, and create
         the file if it doesn't exist
         '''
         fname = 'append_issue_1864_makedirs'
-        name = os.path.join(TMP, fname)
+        name = os.path.join(base_dir, fname)
 
-        # Make sure the file is not there to begin with
-        if os.path.isfile(name):
-            self.run_function('file.remove', [name])
-
-        try:
-            # Non existing file get's touched
-            ret = self.run_state(
-                'file.append', name=name, text='cheese', makedirs=True
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isfile(name):
-                self.run_function('file.remove', [name])
+        # Non existing file get's touched
+        ret = self.run_state(
+            'file.append', name=name, text='cheese', makedirs=True
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Nested directory and file get's touched
-        name = os.path.join(TMP, 'issue_1864', fname)
-
-        try:
-            ret = self.run_state(
-                'file.append', name=name, text='cheese', makedirs=True
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isfile(name):
-                self.run_function('file.remove', [name])
+        name = os.path.join(base_dir, 'issue_1864', fname)
+        ret = self.run_state(
+            'file.append', name=name, text='cheese', makedirs=True
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Parent directory exists but file does not and makedirs is False
-        try:
-            ret = self.run_state(
-                'file.append', name=name, text='cheese'
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(name))
-        finally:
-            self.run_function('file.remove', [os.path.join(TMP, 'issue_1864')])
+        name = os.path.join(base_dir, 'issue_1864', fname + '2')
+        ret = self.run_state(
+            'file.append', name=name, text='cheese'
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(name))
 
-    def test_prepend_issue_27401_makedirs(self):
+    @with_tempdir()
+    def test_prepend_issue_27401_makedirs(self, base_dir):
         '''
         file.prepend but create directories if needed as an option, and create
         the file if it doesn't exist
         '''
         fname = 'prepend_issue_27401'
-        name = os.path.join(TMP, fname)
-        try:
-            self.assertFalse(os.path.exists(name))
-        except AssertionError:
-            os.remove(name)
-        try:
-            # Non existing file get's touched
-            if os.path.isfile(name):
-                # left over
-                os.remove(name)
-            ret = self.run_state(
-                'file.prepend', name=name, text='cheese', makedirs=True
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isfile(name):
-                os.remove(name)
+        name = os.path.join(base_dir, fname)
+
+        # Non existing file get's touched
+        ret = self.run_state(
+            'file.prepend', name=name, text='cheese', makedirs=True
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Nested directory and file get's touched
-        name = os.path.join(TMP, 'issue_27401', fname)
-        try:
-            ret = self.run_state(
-                'file.prepend', name=name, text='cheese', makedirs=True
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isfile(name):
-                os.remove(name)
+        name = os.path.join(base_dir, 'issue_27401', fname)
+        ret = self.run_state(
+            'file.prepend', name=name, text='cheese', makedirs=True
+        )
+        self.assertSaltTrueReturn(ret)
 
-        try:
-            # Parent directory exists but file does not and makedirs is False
-            ret = self.run_state(
-                'file.prepend', name=name, text='cheese'
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(name))
-        finally:
-            shutil.rmtree(
-                os.path.join(TMP, 'issue_27401'),
-                ignore_errors=True
-            )
+        # Parent directory exists but file does not and makedirs is False
+        name = os.path.join(base_dir, 'issue_27401', fname + '2')
+        ret = self.run_state(
+            'file.prepend', name=name, text='cheese'
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(name))
 
-    def test_touch(self):
+    @with_tempfile()
+    def test_touch(self, name):
         '''
         file.touch
         '''
-        name = os.path.join(TMP, 'touch_test')
         ret = self.run_state('file.touch', name=name)
-        try:
-            self.assertTrue(os.path.isfile(name))
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(name)
+        self.assertTrue(os.path.isfile(name))
+        self.assertSaltTrueReturn(ret)
 
-    def test_test_touch(self):
+    @with_tempfile(create=False)
+    def test_test_touch(self, name):
         '''
         file.touch test interface
         '''
-        name = os.path.join(TMP, 'touch_test')
         ret = self.run_state('file.touch', test=True, name=name)
         self.assertFalse(os.path.isfile(name))
         self.assertSaltNoneReturn(ret)
 
-    def test_touch_directory(self):
+    @with_tempdir()
+    def test_touch_directory(self, base_dir):
         '''
         file.touch a directory
         '''
-        name = os.path.join(TMP, 'touch_test_dir')
-        try:
-            if not os.path.isdir(name):
-                # left behind... Don't fail because of this!
-                os.makedirs(name)
-        except OSError:
-            self.skipTest('Failed to create directory {0}'.format(name))
+        name = os.path.join(base_dir, 'touch_test_dir')
+        os.mkdir(name)
 
-        self.assertTrue(os.path.isdir(name))
         ret = self.run_state('file.touch', name=name)
-        try:
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(name))
-        finally:
-            os.removedirs(name)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(name))
 
-    def test_issue_2227_file_append(self):
+    @with_tempdir()
+    def test_issue_2227_file_append(self, base_dir):
         '''
         Text to append includes a percent symbol
         '''
         # let's make use of existing state to create a file with contents to
         # test against
-        tmp_file_append = os.path.join(
-            TMP, 'test.append'
-        )
-        if os.path.isfile(tmp_file_append):
-            os.remove(tmp_file_append)
-        self.run_function('state.sls', mods='testappend')
-        self.run_function('state.sls', mods='testappend.step1')
-        self.run_function('state.sls', mods='testappend.step2')
+        tmp_file_append = os.path.join(base_dir, 'test.append')
+
+        self.run_state('file.touch', name=tmp_file_append)
+        self.run_state(
+            'file.append',
+            name=tmp_file_append,
+            source='salt://testappend/firstif')
+        self.run_state(
+            'file.append',
+            name=tmp_file_append,
+            source='salt://testappend/secondif')
 
         # Now our real test
         try:
-            ret = self.run_function(
-                'state.sls', mods='testappend.issue-2227'
-            )
+            ret = self.run_state(
+                'file.append',
+                name=tmp_file_append,
+                text="HISTTIMEFORMAT='%F %T '")
             self.assertSaltTrueReturn(ret)
             with salt.utils.files.fopen(tmp_file_append, 'r') as fp_:
                 contents_pre = fp_.read()
 
             # It should not append text again
-            ret = self.run_function(
-                'state.sls', mods='testappend.issue-2227'
-            )
+            ret = self.run_state(
+                'file.append',
+                name=tmp_file_append,
+                text="HISTTIMEFORMAT='%F %T '")
             self.assertSaltTrueReturn(ret)
 
             with salt.utils.files.fopen(tmp_file_append, 'r') as fp_:
@@ -1881,9 +1754,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists(tmp_file_append):
                 shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
-        finally:
-            if os.path.isfile(tmp_file_append):
-                os.remove(tmp_file_append)
 
     def do_patch(self, patch_name='hello', src='Hello\n'):
         if not self.run_function('cmd.has_exec', ['patch']):
@@ -1918,9 +1788,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment('Patch is already applied', ret)
 
-    def test_issue_2401_file_comment(self):
+    @with_tempdir()
+    def test_issue_2401_file_comment(self, base_dir):
         # Get a path to the temporary file
-        tmp_file = os.path.join(TMP, 'issue-2041-comment.txt')
+        tmp_file = os.path.join(base_dir, 'issue-2041-comment.txt')
         # Write some data to it
         with salt.utils.files.fopen(tmp_file, 'w') as fp_:
             fp_.write('hello\nworld\n')
@@ -1949,13 +1820,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
-        finally:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
 
-    def test_issue_2379_file_append(self):
+    @with_tempdir()
+    def test_issue_2379_file_append(self, base_dir):
         # Get a path to the temporary file
-        tmp_file = os.path.join(TMP, 'issue-2379-file-append.txt')
+        tmp_file = os.path.join(base_dir, 'issue-2379-file-append.txt')
         # Write some data to it
         with salt.utils.files.fopen(tmp_file, 'w') as fp_:
             fp_.write(
@@ -1978,16 +1847,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
-        finally:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
 
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
-    def test_issue_2726_mode_kwarg(self):
-        testcase_temp_dir = os.path.join(TMP, 'issue_2726')
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    def test_issue_2726_mode_kwarg(self, dir1, dir2):
         # Let's test for the wrong usage approach
         bad_mode_kwarg_testfile = os.path.join(
-            testcase_temp_dir, 'bad_mode_kwarg', 'testfile'
+            dir1, 'bad_mode_kwarg', 'testfile'
         )
         bad_template = [
             '{0}:'.format(bad_mode_kwarg_testfile),
@@ -1995,28 +1862,24 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '    - source: salt://testfile',
             '    - mode: 644'
         ]
-        try:
-            ret = self.run_function(
-                'state.template_str', [os.linesep.join(bad_template)]
-            )
-            self.assertSaltFalseReturn(ret)
-            self.assertInSaltComment(
-                '\'mode\' is not allowed in \'file.recurse\'. Please use '
-                '\'file_mode\' and \'dir_mode\'.',
-                ret
-            )
-            self.assertNotInSaltComment(
-                'TypeError: managed() got multiple values for keyword '
-                'argument \'mode\'',
-                ret
-            )
-        finally:
-            if os.path.isdir(testcase_temp_dir):
-                shutil.rmtree(testcase_temp_dir)
+        ret = self.run_function(
+            'state.template_str', [os.linesep.join(bad_template)]
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(
+            '\'mode\' is not allowed in \'file.recurse\'. Please use '
+            '\'file_mode\' and \'dir_mode\'.',
+            ret
+        )
+        self.assertNotInSaltComment(
+            'TypeError: managed() got multiple values for keyword '
+            'argument \'mode\'',
+            ret
+        )
 
         # Now, the correct usage approach
         good_mode_kwargs_testfile = os.path.join(
-            testcase_temp_dir, 'good_mode_kwargs', 'testappend'
+            dir2, 'good_mode_kwargs', 'testappend'
         )
         good_template = [
             '{0}:'.format(good_mode_kwargs_testfile),
@@ -2025,18 +1888,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '    - dir_mode: 744',
             '    - file_mode: 644',
         ]
-        try:
-            ret = self.run_function(
-                'state.template_str', [os.linesep.join(good_template)]
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(testcase_temp_dir):
-                shutil.rmtree(testcase_temp_dir)
+        ret = self.run_function(
+            'state.template_str', [os.linesep.join(good_template)]
+        )
+        self.assertSaltTrueReturn(ret)
 
-    def test_issue_8343_accumulated_require_in(self):
+    @with_tempdir()
+    def test_issue_8343_accumulated_require_in(self, base_dir):
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8343.sls')
-        testcase_filedest = os.path.join(TMP, 'issue-8343.txt')
+        testcase_filedest = os.path.join(base_dir, 'issue-8343.txt')
         sls_template = [
             '{0}:',
             '  file.managed:',
@@ -2083,34 +1943,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write(
                 os.linesep.join(sls_template).format(testcase_filedest))
 
-        try:
-            ret = self.run_function('state.sls', mods='issue-8343')
-            for name, step in six.iteritems(ret):
-                self.assertSaltTrueReturn({name: step})
-            with salt.utils.files.fopen(testcase_filedest) as fp_:
-                contents = fp_.read().split(os.linesep)
+        ret = self.run_function('state.sls', mods='issue-8343')
+        for name, step in six.iteritems(ret):
+            self.assertSaltTrueReturn({name: step})
+        with salt.utils.files.fopen(testcase_filedest) as fp_:
+            contents = fp_.read().split(os.linesep)
 
-            expected = [
-                '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
-                'foo',
-                '#-- end salt managed zonestart --',
-                '#',
-                '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
-                'bar',
-                '#-- end salt managed zoneend --',
-                '']
+        expected = [
+            '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+            'foo',
+            '#-- end salt managed zonestart --',
+            '#',
+            '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+            'bar',
+            '#-- end salt managed zoneend --',
+            '']
 
-            self.assertEqual(expected, contents)
-        finally:
-            if os.path.isdir(testcase_filedest):
-                os.unlink(testcase_filedest)
-            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
-                os.unlink(filename)
+        self.assertEqual(expected, contents)
 
-    def test_issue_11003_immutable_lazy_proxy_sum(self):
+    @with_tempdir()
+    def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')
-        testcase_filedest = os.path.join(TMP, 'issue-11003.txt')
+        testcase_filedest = os.path.join(base_dir, 'issue-11003.txt')
         sls_template = [
             'a{0}:',
             '  file.absent:',
@@ -2150,27 +2005,22 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(sls_template).format(testcase_filedest))
 
-        try:
-            ret = self.run_function('state.sls', mods='issue-11003')
-            for name, step in six.iteritems(ret):
-                self.assertSaltTrueReturn({name: step})
-            with salt.utils.files.fopen(testcase_filedest) as fp_:
-                contents = fp_.read().split(os.linesep)
+        ret = self.run_function('state.sls', mods='issue-11003')
+        for name, step in six.iteritems(ret):
+            self.assertSaltTrueReturn({name: step})
+        with salt.utils.files.fopen(testcase_filedest) as fp_:
+            contents = fp_.read().split(os.linesep)
 
-            begin = contents.index(
-                '#-- start managed zone PLEASE, DO NOT EDIT') + 1
-            end = contents.index('#-- end managed zone')
-            block_contents = contents[begin:end]
-            for item in ('', 'bar', 'baz'):
-                block_contents.remove(item)
-            self.assertEqual(block_contents, [])
-        finally:
-            if os.path.isdir(testcase_filedest):
-                os.unlink(testcase_filedest)
-            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
-                os.unlink(filename)
+        begin = contents.index(
+            '#-- start managed zone PLEASE, DO NOT EDIT') + 1
+        end = contents.index('#-- end managed zone')
+        block_contents = contents[begin:end]
+        for item in ('', 'bar', 'baz'):
+            block_contents.remove(item)
+        self.assertEqual(block_contents, [])
 
-    def test_issue_8947_utf8_sls(self):
+    @with_tempdir()
+    def test_issue_8947_utf8_sls(self, base_dir):
         '''
         Test some file operation with utf-8 characters on the sls
 
@@ -2180,11 +2030,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         korean_1 = '한국어 시험'
         korean_2 = '첫 번째 행'
         korean_3 = '마지막 행'
-        test_file = os.path.join(
-            TMP,
-            'salt_utf8_tests',
-            '{0}.txt'.format(korean_1)
-        )
+        test_file = os.path.join(base_dir, '{0}.txt'.format(korean_1))
         test_file_encoded = test_file
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
@@ -2268,186 +2114,135 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
         finally:
-            for path in (test_file, template_path):
-                try:
-                    os.remove(path)
-                except OSError:
-                    pass
+            try:
+                os.remove(template_path)
+            except OSError:
+                pass
 
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
-    def test_issue_12209_follow_symlinks(self, user, group):
+    @with_tempdir()
+    def test_issue_12209_follow_symlinks(self, tempdir, user, group):
         '''
         Ensure that symlinks are properly chowned when recursing (following
         symlinks)
         '''
-        tmp_dir = os.path.join(TMP, 'test.12209')
-
-        # Cleanup the path if it already exists
-        if os.path.isdir(tmp_dir):
-            shutil.rmtree(tmp_dir)
-        elif os.path.isfile(tmp_dir):
-            os.remove(tmp_dir)
-
         # Make the directories for this test
-        onedir = os.path.join(tmp_dir, 'one')
-        twodir = os.path.join(tmp_dir, 'two')
-        os.makedirs(onedir)
+        onedir = os.path.join(tempdir, 'one')
+        twodir = os.path.join(tempdir, 'two')
+        os.mkdir(onedir)
         os.symlink(onedir, twodir)
 
-        try:
-            # Run the state
-            ret = self.run_state(
-                'file.directory', name=tmp_dir, follow_symlinks=True,
-                user=user, group=group, recurse=['user', 'group']
-            )
-            self.assertSaltTrueReturn(ret)
+        # Run the state
+        ret = self.run_state(
+            'file.directory', name=tempdir, follow_symlinks=True,
+            user=user, group=group, recurse=['user', 'group']
+        )
+        self.assertSaltTrueReturn(ret)
 
-            # Double-check, in case state mis-reported a True result. Since we are
-            # following symlinks, we expect twodir to still be owned by root, but
-            # onedir should be owned by the 'issue12209' user.
-            onestats = os.stat(onedir)
-            twostats = os.lstat(twodir)
-            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
-            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            if salt.utils.path.which('id'):
-                root_group = self.run_function('user.primary_group', ['root'])
-                self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
-        finally:
-            if os.path.isdir(tmp_dir):
-                shutil.rmtree(tmp_dir)
+        # Double-check, in case state mis-reported a True result. Since we are
+        # following symlinks, we expect twodir to still be owned by root, but
+        # onedir should be owned by the 'issue12209' user.
+        onestats = os.stat(onedir)
+        twostats = os.lstat(twodir)
+        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
+        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+        if salt.utils.path.which('id'):
+            root_group = self.run_function('user.primary_group', ['root'])
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
 
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
-    def test_issue_12209_no_follow_symlinks(self, user, group):
+    @with_tempdir()
+    def test_issue_12209_no_follow_symlinks(self, tempdir, user, group):
         '''
         Ensure that symlinks are properly chowned when recursing (not following
         symlinks)
         '''
-        tmp_dir = os.path.join(TMP, 'test.12209')
-
-        # Cleanup the path if it already exists
-        if os.path.isdir(tmp_dir):
-            shutil.rmtree(tmp_dir)
-        elif os.path.isfile(tmp_dir):
-            os.remove(tmp_dir)
-
         # Make the directories for this test
-        onedir = os.path.join(tmp_dir, 'one')
-        twodir = os.path.join(tmp_dir, 'two')
-        os.makedirs(onedir)
+        onedir = os.path.join(tempdir, 'one')
+        twodir = os.path.join(tempdir, 'two')
+        os.mkdir(onedir)
         os.symlink(onedir, twodir)
 
-        try:
-            # Run the state
-            ret = self.run_state(
-                'file.directory', name=tmp_dir, follow_symlinks=False,
-                user=user, group=group, recurse=['user', 'group']
-            )
-            self.assertSaltTrueReturn(ret)
+        # Run the state
+        ret = self.run_state(
+            'file.directory', name=tempdir, follow_symlinks=False,
+            user=user, group=group, recurse=['user', 'group']
+        )
+        self.assertSaltTrueReturn(ret)
 
-            # Double-check, in case state mis-reported a True result. Since we
-            # are not following symlinks, we expect twodir to now be owned by
-            # the 'issue12209' user, just link onedir.
-            onestats = os.stat(onedir)
-            twostats = os.lstat(twodir)
-            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
-            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
-        finally:
-            if os.path.isdir(tmp_dir):
-                shutil.rmtree(tmp_dir)
+        # Double-check, in case state mis-reported a True result. Since we
+        # are not following symlinks, we expect twodir to now be owned by
+        # the 'issue12209' user, just link onedir.
+        onestats = os.stat(onedir)
+        twostats = os.lstat(twodir)
+        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
 
-    def test_template_local_file(self):
+    @with_tempfile(create=False)
+    @with_tempfile()
+    def test_template_local_file(self, source, dest):
         '''
         Test a file.managed state with a local file as the source. Test both
         with the file:// protocol designation prepended, and without it.
         '''
-        fd_, source = tempfile.mkstemp()
-        try:
-            os.close(fd_)
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                raise exc
-
-        fd_, dest = tempfile.mkstemp()
-        try:
-            os.close(fd_)
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                raise exc
-
         with salt.utils.files.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
-        try:
-            for prefix in ('file://', ''):
-                ret = self.run_state(
-                    'file.managed',
-                    name=dest,
-                    source=prefix + source,
-                    template='jinja',
-                    context={'foo': 'Hello world!'}
-                )
-                self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(source)
-            os.remove(dest)
+        for prefix in ('file://', ''):
+            ret = self.run_state(
+                'file.managed',
+                name=dest,
+                source=prefix + source,
+                template='jinja',
+                context={'foo': 'Hello world!'}
+            )
+            self.assertSaltTrueReturn(ret)
 
-    def test_template_local_file_noclobber(self):
+    @with_tempfile()
+    def test_template_local_file_noclobber(self, source):
         '''
         Test the case where a source file is in the minion's local filesystem,
         and the source path is the same as the destination path.
         '''
-        fd_, source = tempfile.mkstemp()
-        try:
-            os.close(fd_)
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                raise exc
-
         with salt.utils.files.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
-        try:
-            ret = self.run_state(
-                'file.managed',
-                name=source,
-                source=source,
-                template='jinja',
-                context={'foo': 'Hello world!'}
-            )
-            self.assertSaltFalseReturn(ret)
-            self.assertIn(
-                ('Source file cannot be the same as destination'),
-                ret[next(iter(ret))]['comment'],
-            )
-        finally:
-            os.remove(source)
+        ret = self.run_state(
+            'file.managed',
+            name=source,
+            source=source,
+            template='jinja',
+            context={'foo': 'Hello world!'}
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertIn(
+            ('Source file cannot be the same as destination'),
+            ret[next(iter(ret))]['comment'],
+        )
 
-    def test_issue_25250_force_copy_deletes(self):
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_issue_25250_force_copy_deletes(self, source, dest):
         '''
         ensure force option in copy state does not delete target file
         '''
-        dest = os.path.join(TMP, 'dest')
-        source = os.path.join(TMP, 'source')
         shutil.copyfile(os.path.join(FILES, 'hosts'), source)
         shutil.copyfile(os.path.join(FILES, 'file/base/cheese'), dest)
 
         self.run_state('file.copy', name=dest, source=source, force=True)
         self.assertTrue(os.path.exists(dest))
         self.assertTrue(filecmp.cmp(source, dest))
-
-        os.remove(source)
-        os.remove(dest)
 
     def test_contents_pillar_with_pillar_list(self):
         '''
@@ -2574,7 +2369,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(src, 'rb') as fp_:
             return salt.utils.stringutils.to_unicode(fp_.read())
 
-    @with_tempfile
+    @with_tempfile()
     def test_prepend(self, name):
         '''
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -2627,7 +2422,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_prepend_append_newline(self, name):
         '''
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -2685,7 +2480,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_prepend_no_append_newline(self, name):
         '''
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -2744,7 +2539,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_append(self, name):
         '''
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -2797,7 +2592,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_append_append_newline(self, name):
         '''
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -2855,7 +2650,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_append_no_append_newline(self, name):
         '''
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -2913,7 +2708,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), expected)
 
-    @with_tempfile
+    @with_tempfile()
     def test_prepend_auto_line_separator(self, name):
         '''
         This tests the line separator auto-detection when prepending the block
@@ -2970,7 +2765,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_block_prepended_explicit_posix_newlines)
 
-    @with_tempfile
+    @with_tempfile()
     def test_append_auto_line_separator(self, name):
         '''
         This tests the line separator auto-detection when appending the block
@@ -3027,7 +2822,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_block_appended_explicit_posix_newlines)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block(self, name):
         '''
         Test blockreplace when block exists but its contents are not a
@@ -3073,7 +2868,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block_append_newline(self, name):
         '''
         Test blockreplace when block exists but its contents are not a
@@ -3127,7 +2922,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block_no_append_newline(self, name):
         '''
         Test blockreplace when block exists but its contents are not a
@@ -3181,7 +2976,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline(self, name):
         '''
         Test blockreplace when block exists but its contents are not a
@@ -3231,7 +3026,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline_append_newline(self, name):
         '''
         Test blockreplace when block exists but its contents are not a match,
@@ -3290,7 +3085,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
         '''
         Test blockreplace when block exists but its contents are not a match,
@@ -3349,7 +3144,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block(self, name):
         '''
         Test blockreplace when block exists and its contents are a match. No
@@ -3395,7 +3190,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block_append_newline(self, name):
         '''
         Test blockreplace when block exists and its contents are a match. Test
@@ -3451,7 +3246,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block_no_append_newline(self, name):
         '''
         Test blockreplace when block exists and its contents are a match. Test
@@ -3507,7 +3302,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block_and_marker_not_after_newline(self, name):
         '''
         Test blockreplace when block exists and its contents are a match, but
@@ -3557,7 +3352,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block_and_marker_not_after_newline_append_newline(self, name):
         '''
         Test blockreplace when block exists and its contents are a match, but
@@ -3618,7 +3413,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
 
-    @with_tempfile
+    @with_tempfile()
     def test_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
         '''
         Test blockreplace when block exists and its contents are a match, but
@@ -3694,16 +3489,9 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDownClass(cls):
         cls.webserver.stop()
 
-    def setUp(self):
-        fd_, self.name = tempfile.mkstemp(dir=TMP)
-        try:
-            os.close(fd_)
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                raise exc
-        # Remove the file that mkstemp just created so that the states can test
-        # creating a new file instead of a diff from a zero-length file.
-        self.tearDown()
+    @with_tempfile(create=False)
+    def setUp(self, name):  # pylint: disable=arguments-differ
+        self.name = name
 
     def tearDown(self):
         try:

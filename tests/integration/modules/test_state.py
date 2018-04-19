@@ -11,6 +11,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
 from tests.support.paths import TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -187,21 +188,24 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.run_request')
         self.assertEqual(ret, {})
 
-    def test_issue_1896_file_append_source(self):
+    @with_tempdir()
+    def test_issue_1896_file_append_source(self, base_dir):
         '''
         Verify that we can append a file's contents
         '''
-        testfile = os.path.join(TMP, 'test.append')
-        if os.path.isfile(testfile):
-            os.unlink(testfile)
+        testfile = os.path.join(base_dir, 'test.append')
 
-        ret = self.run_function('state.sls', mods='testappend')
+        ret = self.run_state('file.touch', name=testfile)
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-1')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
@@ -224,14 +228,17 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             contents = os.linesep.join(new_contents)
             contents += os.linesep
 
-        self.assertMultiLineEqual(
-                contents, testfile_contents)
+        self.assertMultiLineEqual(contents, testfile_contents)
 
-        # Re-append switching order
-        ret = self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-1')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
