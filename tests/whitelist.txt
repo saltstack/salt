@@ -27,6 +27,7 @@ integration.runners.test_jobs
 integration.runners.test_salt
 integration.sdb.test_env
 integration.states.test_host
+integration.states.test_reg
 integration.states.test_renderers
 integration.utils.testprogram
 integration.wheel.test_client
