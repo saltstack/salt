@@ -248,7 +248,7 @@ def build(runas,
     srpm_dir = os.path.join(dest_dir, 'SRPMS')
     srpm_build_dir = tempfile.mkdtemp()
     try:
-        srpms = make_src_pkg(srpm_build_dir, spec, sources, env, template, saltenv)
+        srpms = make_src_pkg(srpm_build_dir, spec, sources, env, saltenv)
     except Exception as exc:
         shutil.rmtree(srpm_build_dir)
         log.error('Failed to make src package')
