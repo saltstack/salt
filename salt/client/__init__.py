@@ -477,6 +477,7 @@ class LocalClient(object):
             sub=3,
             cli=False,
             progress=False,
+            full_return=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -525,6 +526,7 @@ class LocalClient(object):
                 ret=ret,
                 kwarg=kwarg,
                 progress=progress,
+                full_return=full_return,
                 **kwargs)
 
     def cmd_batch(
