@@ -9,6 +9,7 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.platform
 
 
@@ -26,3 +27,49 @@ class StatusModuleTest(ModuleCase):
         random_pid = random.choice(grab_pids)
         grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'])
         self.assertIn(random_pid, grep_salt)
+
+    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    def test_status_cpuload(self):
+        '''
+        status.cpuload
+        '''
+        ret = self.run_function('status.cpuload')
+        self.assertTrue(isinstance(ret, float))
+
+    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    def test_status_saltmem(self):
+        '''
+        status.saltmem
+        '''
+        ret = self.run_function('status.saltmem')
+        self.assertTrue(isinstance(ret, int))
+
+    def test_status_diskusage(self):
+        '''
+        status.diskusage
+        '''
+        ret = self.run_function('status.diskusage')
+        if salt.utils.is_windows():
+            self.assertTrue(isinstance(ret['percent'], float))
+        else:
+            self.assertIn('total', str(ret))
+            self.assertIn('available', str(ret))
+
+    def test_status_procs(self):
+        '''
+        status.procs
+        '''
+        ret = self.run_function('status.procs')
+        for x, y in six.iteritems(ret):
+            self.assertIn('cmd', y)
+
+    def test_status_uptime(self):
+        '''
+        status.uptime
+        '''
+        ret = self.run_function('status.uptime')
+
+        if salt.utils.is_windows():
+            self.assertTrue(isinstance(ret, float))
+        else:
+            self.assertTrue(isinstance(ret['days'], int))

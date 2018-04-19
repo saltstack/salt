@@ -302,7 +302,7 @@ class EventListener(object):
 
         self.event.set_event_handler(self._handle_event_socket_recv)
 
-    def clean_timeout_futures(self, request):
+    def clean_by_request(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
         '''
@@ -494,7 +494,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         timeout a session
         '''
         # TODO: set a header or something??? so we know it was a timeout
-        self.application.event_listener.clean_timeout_futures(self)
+        self.application.event_listener.clean_by_request(self)
 
     def on_finish(self):
         '''
@@ -977,8 +977,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             tag = tagify([jid, 'ret', minion], 'job')
             minion_future = self.application.event_listener.get_event(self,
                                                                       tag=tag,
-                                                                      matcher=EventListener.exact_matcher,
-                                                                      timeout=self.application.opts['timeout'])
+                                                                      matcher=EventListener.exact_matcher)
             future_minion_map[minion_future] = minion
         return future_minion_map
 
@@ -1044,8 +1043,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
-                                                                  timeout=self.application.opts['gather_job_timeout'],
-                                                                  )
+                                                                  timeout=self.application.opts['gather_job_timeout'])
                 f = yield Any([event, is_finished])
                 # When finished entire routine, cleanup other futures and return result
                 if f is is_finished:
