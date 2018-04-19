@@ -1192,6 +1192,12 @@ VALID_OPTS = {
 
     # Enable calling ssh minions from the salt master
     'enable_ssh_minions': bool,
+
+    # Thorium saltenv
+    'thoriumenv': six.string_types,
+
+    # Thorium top file location
+    'thorium_top': six.string_types,
 }
 
 # default configurations
@@ -1255,6 +1261,8 @@ DEFAULT_MINION_OPTS = {
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
+    'thoriumenv': None,
+    'thorium_top': 'top.sls',
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
@@ -1530,6 +1538,8 @@ DEFAULT_MASTER_OPTS = {
     'decrypt_pillar_delimiter': ':',
     'decrypt_pillar_default': 'gpg',
     'decrypt_pillar_renderers': ['gpg'],
+    'thoriumenv': None,
+    'thorium_top': 'top.sls',
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
