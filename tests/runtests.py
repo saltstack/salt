@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 import time
+import warnings
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -481,7 +482,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         not is_admin,
                         not self.options.run_destructive)) \
                     and self._check_enabled_suites(include_unit=True):
-                log.warn("Test suite not running with elevated priviledges")
+                warnings.warn("Test suite not running with elevated priviledges")
         else:
             is_admin = os.geteuid() == 0
 
