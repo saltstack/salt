@@ -439,8 +439,8 @@ class PillarTestCase(TestCase):
             'renderer_blacklist': [],
             'renderer_whitelist': [],
             'state_top': '',
-            'pillar_roots': [],
-            'file_roots': [],
+            'pillar_roots': {},
+            'file_roots': {},
             'extension_modules': ''
         }
         grains = {
