@@ -1866,10 +1866,10 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
 
     opts = {}
 
+    opts['conf_file'] = path
     if salt.utils.validate.path.is_readable(path):
         try:
             opts = _read_conf_file(path)
-            opts['conf_file'] = path
         except salt.exceptions.SaltConfigurationError as error:
             log.error(error)
             if exit_on_config_errors:
