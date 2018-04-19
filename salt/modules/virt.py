@@ -278,6 +278,114 @@ def _parse_qemu_img_info(info):
     return '\n'.join(output)
 
 
+def _get_nics(dom):
+    '''
+    Get domain network interfaces from a libvirt domain object.
+    '''
+    nics = {}
+    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
+        for i_node in i_nodes:
+            nic = {}
+            nic['type'] = i_node.getAttribute('type')
+            for v_node in i_node.getElementsByTagName('*'):
+                if v_node.tagName == 'mac':
+                    nic['mac'] = v_node.getAttribute('address')
+                if v_node.tagName == 'model':
+                    nic['model'] = v_node.getAttribute('type')
+                if v_node.tagName == 'target':
+                    nic['target'] = v_node.getAttribute('dev')
+                # driver, source, and match can all have optional attributes
+                if re.match('(driver|source|address)', v_node.tagName):
+                    temp = {}
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
+                    nic[six.text_type(v_node.tagName)] = temp
+                # virtualport needs to be handled separately, to pick up the
+                # type attribute of the virtualport itself
+                if v_node.tagName == 'virtualport':
+                    temp = {}
+                    temp['type'] = v_node.getAttribute('type')
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
+                    nic['virtualport'] = temp
+            if 'mac' not in nic:
+                continue
+            nics[nic['mac']] = nic
+    return nics
+
+
+def _get_graphics(dom):
+    '''
+    Get domain graphics from a libvirt domain object.
+    '''
+    out = {'autoport': 'None',
+           'keymap': 'None',
+           'listen': 'None',
+           'port': 'None',
+           'type': 'None'}
+    xml = dom.getXMLDesc(0)
+    ssock = _StringIO(xml)
+    doc = minidom.parse(ssock)
+    for node in doc.getElementsByTagName('domain'):
+        g_nodes = node.getElementsByTagName('graphics')
+        for g_node in g_nodes:
+            for key, value in g_node.attributes.items():
+                out[key] = value
+    return out
+
+
+def _get_disks(dom):
+    '''
+    Get domain disks from a libvirt domain object.
+    '''
+    disks = {}
+    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    for elem in doc.getElementsByTagName('disk'):
+        sources = elem.getElementsByTagName('source')
+        targets = elem.getElementsByTagName('target')
+        if sources:
+            source = sources[0]
+        else:
+            continue
+        if targets:
+            target = targets[0]
+        else:
+            continue
+        if target.hasAttribute('dev'):
+            qemu_target = ''
+            if source.hasAttribute('file'):
+                qemu_target = source.getAttribute('file')
+            elif source.hasAttribute('dev'):
+                qemu_target = source.getAttribute('dev')
+            elif source.hasAttribute('protocol') and \
+                    source.hasAttribute('name'):  # For rbd network
+                qemu_target = '{0}:{1}'.format(
+                        source.getAttribute('protocol'),
+                        source.getAttribute('name'))
+            if qemu_target:
+                disks[target.getAttribute('dev')] = {
+                    'file': qemu_target,
+                    'type': elem.getAttribute('device')}
+    for dev in disks:
+        try:
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
+            if hypervisor not in ['qemu', 'kvm']:
+                break
+
+            stdout = subprocess.Popen(
+                        ['qemu-img', 'info', disks[dev]['file']],
+                        shell=False,
+                        stdout=subprocess.PIPE).communicate()[0]
+            qemu_output = salt.utils.stringutils.to_str(stdout)
+            output = _parse_qemu_img_info(qemu_output)
+            disks[dev].update(salt.utils.yaml.safe_load(output))
+        except TypeError:
+            disks[dev].update({'image': 'Does not exist'})
+    return disks
+
+
 def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
@@ -1106,38 +1214,7 @@ def get_nics(vm_):
 
         salt '*' virt.get_nics <domain>
     '''
-    nics = {}
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            nic = {}
-            nic['type'] = i_node.getAttribute('type')
-            for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == 'mac':
-                    nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == 'model':
-                    nic['model'] = v_node.getAttribute('type')
-                if v_node.tagName == 'target':
-                    nic['target'] = v_node.getAttribute('dev')
-                # driver, source, and match can all have optional attributes
-                if re.match('(driver|source|address)', v_node.tagName):
-                    temp = {}
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic[six.text_type(v_node.tagName)] = temp
-                # virtualport needs to be handled separately, to pick up the
-                # type attribute of the virtualport itself
-                if v_node.tagName == 'virtualport':
-                    temp = {}
-                    temp['type'] = v_node.getAttribute('type')
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic['virtualport'] = temp
-            if 'mac' not in nic:
-                continue
-            nics[nic['mac']] = nic
-    return nics
+    return _get_nics(_get_domain(vm_))
 
 
 def get_macs(vm_):
@@ -1170,20 +1247,7 @@ def get_graphics(vm_):
 
         salt '*' virt.get_graphics <domain>
     '''
-    out = {'autoport': 'None',
-           'keymap': 'None',
-           'listen': 'None',
-           'port': 'None',
-           'type': 'None'}
-    xml = get_xml(vm_)
-    ssock = _StringIO(xml)
-    doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName('domain'):
-        g_nodes = node.getElementsByTagName('graphics')
-        for g_node in g_nodes:
-            for key, value in g_node.attributes.items():
-                out[key] = value
-    return out
+    return _get_graphics(_get_domain(vm_))
 
 
 def get_disks(vm_):
@@ -1196,50 +1260,7 @@ def get_disks(vm_):
 
         salt '*' virt.get_disks <domain>
     '''
-    disks = {}
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for elem in doc.getElementsByTagName('disk'):
-        sources = elem.getElementsByTagName('source')
-        targets = elem.getElementsByTagName('target')
-        if sources:
-            source = sources[0]
-        else:
-            continue
-        if targets:
-            target = targets[0]
-        else:
-            continue
-        if target.hasAttribute('dev'):
-            qemu_target = ''
-            if source.hasAttribute('file'):
-                qemu_target = source.getAttribute('file')
-            elif source.hasAttribute('dev'):
-                qemu_target = source.getAttribute('dev')
-            elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'):  # For rbd network
-                qemu_target = '{0}:{1}'.format(
-                        source.getAttribute('protocol'),
-                        source.getAttribute('name'))
-            if qemu_target:
-                disks[target.getAttribute('dev')] = {
-                    'file': qemu_target,
-                    'type': elem.getAttribute('device')}
-    for dev in disks:
-        try:
-            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
-            if hypervisor not in ['qemu', 'kvm']:
-                break
-
-            stdout = subprocess.Popen(
-                        ['qemu-img', 'info', disks[dev]['file']],
-                        shell=False,
-                        stdout=subprocess.PIPE).communicate()[0]
-            qemu_output = salt.utils.stringutils.to_str(stdout)
-            output = _parse_qemu_img_info(qemu_output)
-            disks[dev].update(salt.utils.yaml.safe_load(output))
-        except TypeError:
-            disks[dev].update({'image': 'Does not exist'})
-    return disks
+    return _get_disks(_get_domain(vm_))
 
 
 def setmem(vm_, memory, config=False):
