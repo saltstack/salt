@@ -934,7 +934,7 @@ def hold(tag, *snapshot, **kwargs):
 
     .. warning::
 
-        As of Fluorine the tag parameter no longer accepts a comma-separated value.
+        As of 2018.3.1 the tag parameter no longer accepts a comma-separated value.
         It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
@@ -949,7 +949,7 @@ def hold(tag, *snapshot, **kwargs):
     if ',' in tag:
         salt.utils.versions.warn_until(
             'Sodium',
-            'A comma-separated tag is no support as of Salt Fluorine. '
+            'A comma-separated tag is no support as of Salt 2018.3.1 '
             'This warning will be removed in Salt Sodium.')
 
     ## Configure command
@@ -1002,7 +1002,7 @@ def release(tag, *snapshot, **kwargs):
 
     .. warning::
 
-        As of Fluorine the tag parameter no longer accepts a comma-seprated value.
+        As of 2018.3.1 the tag parameter no longer accepts a comma-seprated value.
         It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
@@ -1017,7 +1017,7 @@ def release(tag, *snapshot, **kwargs):
     if ',' in tag:
         salt.utils.versions.warn_until(
             'Sodium',
-            'A comma-separated tag is no support as of Salt Fluorine. '
+            'A comma-separated tag is no support as of Salt 2018.3.0 '
             'This warning will be removed in Salt Sodium.')
 
     ## Configure command
