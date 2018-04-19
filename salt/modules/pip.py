@@ -603,8 +603,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             logger.error(
                 'The --use-wheel option is only supported in pip between %s and '
@@ -618,8 +618,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             logger.error(
                 'The --no-use-wheel option is only supported in pip between %s and '
@@ -632,7 +632,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if no_binary:
         min_version = '7.0.0'
         cur_version = __salt__['pip.version'](bin_env)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             logger.error(
                 'The --no-binary option is only supported in pip %s and '
