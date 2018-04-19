@@ -51,6 +51,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.lookupByName.return_value = mock_domain
         mock_domain.getXMLDesc.return_value = xml
 
+        # Return state as shutdown
+        mock_domain.info.return_value = [4, 0, 0, 0]
+
     def test_boot_default_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
