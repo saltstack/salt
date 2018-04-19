@@ -213,7 +213,15 @@ def _get_domain(*vms, **kwargs):
     lookup_vms = list()
     conn = __get_conn()
 
-    all_vms = list_domains()
+    all_vms = []
+    if kwargs.get('active', True):
+        for id_ in conn.listDomainsID():
+            all_vms.append(conn.lookupByID(id_).name())
+
+    if kwargs.get('inactive', True):
+        for id_ in conn.listDefinedDomains():
+            all_vms.append(id_)
+
     if not all_vms:
         raise CommandExecutionError('No virtual machines found.')
 
@@ -1061,8 +1069,8 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     vms = []
-    vms.extend(list_active_vms())
-    vms.extend(list_inactive_vms())
+    for dom in _get_domain():
+        vms.append(dom.name())
     return vms
 
 
@@ -1076,10 +1084,9 @@ def list_active_vms():
 
         salt '*' virt.list_active_vms
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDomainsID():
-        vms.append(conn.lookupByID(id_).name())
+    for dom in _get_domain(inactive=False):
+        vms.append(dom.name())
     return vms
 
 
@@ -1093,10 +1100,9 @@ def list_inactive_vms():
 
         salt '*' virt.list_inactive_vms
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDefinedDomains():
-        vms.append(id_)
+    for dom in _get_domain(active=False):
+        vms.append(dom.name())
     return vms
 
 
