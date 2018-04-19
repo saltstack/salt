@@ -31,14 +31,25 @@ class LibvirtMock(MagicMock):
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        self.mock_libvirt = LibvirtMock()
+        self.mock_conn = MagicMock()
+        self.mock_libvirt.openAuth.return_value = self.mock_conn
+        self.addCleanup(delattr, self, 'mock_libvirt')
+        self.addCleanup(delattr, self, 'mock_conn')
         loader_globals = {
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
             },
-            'libvirt': LibvirtMock()
+            'libvirt': self.mock_libvirt
         }
         return {virt: loader_globals, config: loader_globals}
+
+    def set_mock_vm(self, name, xml):
+        self.mock_conn.listDefinedDomains.return_value = [name]
+        mock_domain = MagicMock()
+        self.mock_conn.lookupByName.return_value = mock_domain
+        mock_domain.getXMLDesc.return_value = xml
 
     def test_boot_default_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
@@ -481,7 +492,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     interface_attrs['mac'], re.I))
 
     def test_get_graphics(self):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
@@ -489,15 +500,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </graphics>
               </devices>
             </domain>
-        ''')
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            graphics = virt.get_graphics('test-vm')
-            self.assertEqual('vnc', graphics['type'])
-            self.assertEqual('5900', graphics['port'])
-            self.assertEqual('0.0.0.0', graphics['listen'])
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        graphics = virt.get_graphics('test-vm')
+        self.assertEqual('vnc', graphics['type'])
+        self.assertEqual('5900', graphics['port'])
+        self.assertEqual('0.0.0.0', graphics['listen'])
 
     def test_get_nics(self):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <interface type='bridge'>
@@ -508,17 +520,18 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </interface>
               </devices>
             </domain>
-        ''')
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            nics = virt.get_nics('test-vm')
-            nic = nics[list(nics)[0]]
-            self.assertEqual('bridge', nic['type'])
-            self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        nics = virt.get_nics('test-vm')
+        nic = nics[list(nics)[0]]
+        self.assertEqual('bridge', nic['type'])
+        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
     @patch('subprocess.Popen')
     @patch('subprocess.Popen.communicate', return_value="")
     def test_get_disks(self, mock_communicate, mock_popen):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <disk type='file' device='disk'>
@@ -534,15 +547,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </disk>
               </devices>
             </domain>
-        ''')
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            disks = virt.get_disks('test-vm')
-            disk = disks[list(disks)[0]]
-            self.assertEqual('/disks/test.qcow2', disk['file'])
-            self.assertEqual('disk', disk['type'])
-            cdrom = disks[list(disks)[1]]
-            self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
-            self.assertEqual('cdrom', cdrom['type'])
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        disks = virt.get_disks('test-vm')
+        disk = disks[list(disks)[0]]
+        self.assertEqual('/disks/test.qcow2', disk['file'])
+        self.assertEqual('disk', disk['type'])
+        cdrom = disks[list(disks)[1]]
+        self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
+        self.assertEqual('cdrom', cdrom['type'])
 
     @patch('subprocess.Popen')
     @patch('subprocess.Popen.communicate', return_value="")
@@ -550,7 +564,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.virt.undefine')
     @patch('os.remove')
     def test_purge_default(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <disk type='file' device='disk'>
@@ -566,13 +580,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </disk>
               </devices>
             </domain>
-        ''')
-        mock = MagicMock(return_value={})
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            res = virt.purge('test-vm')
-            self.assertTrue(res)
-            mock_remove.assert_any_call('/disks/test.qcow2')
-            mock_remove.assert_any_call('/disks/test-cdrom.iso')
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        res = virt.purge('test-vm')
+        self.assertTrue(res)
+        mock_remove.assert_any_call('/disks/test.qcow2')
+        mock_remove.assert_any_call('/disks/test-cdrom.iso')
 
     @patch('subprocess.Popen')
     @patch('subprocess.Popen.communicate', return_value="")
@@ -580,7 +594,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.virt.undefine')
     @patch('os.remove')
     def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <disk type='file' device='disk'>
@@ -602,13 +617,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </disk>
               </devices>
             </domain>
-        ''')
-        mock = MagicMock(return_value={})
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            res = virt.purge('test-vm', removables=False)
-            self.assertTrue(res)
-            mock_remove.assert_called_once()
-            mock_remove.assert_any_call('/disks/test.qcow2')
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        res = virt.purge('test-vm', removables=False)
+        self.assertTrue(res)
+        mock_remove.assert_called_once()
+        mock_remove.assert_any_call('/disks/test.qcow2')
 
     def test_network(self):
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
