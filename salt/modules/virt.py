@@ -1069,7 +1069,7 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     vms = []
-    for dom in _get_domain():
+    for dom in _get_domain(iterable=True):
         vms.append(dom.name())
     return vms
 
@@ -1085,7 +1085,7 @@ def list_active_vms():
         salt '*' virt.list_active_vms
     '''
     vms = []
-    for dom in _get_domain(inactive=False):
+    for dom in _get_domain(iterable=True, inactive=False):
         vms.append(dom.name())
     return vms
 
@@ -1101,7 +1101,7 @@ def list_inactive_vms():
         salt '*' virt.list_inactive_vms
     '''
     vms = []
-    for dom in _get_domain(active=False):
+    for dom in _get_domain(iterable=True, active=False):
         vms.append(dom.name())
     return vms
 
@@ -1133,26 +1133,25 @@ def vm_info(vm_=None):
 
         salt '*' virt.vm_info
     '''
-    def _info(vm_):
+    def _info(dom):
         '''
         Compute the infos of a domain
         '''
-        dom = _get_domain(vm_)
         raw = dom.info()
         return {'cpu': raw[3],
                 'cputime': int(raw[4]),
-                'disks': get_disks(vm_),
-                'graphics': get_graphics(vm_),
-                'nics': get_nics(vm_),
+                'disks': _get_disks(dom),
+                'graphics': _get_graphics(dom),
+                'nics': _get_nics(dom),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(vm_))
     else:
-        for domain in list_domains():
-            info[domain] = _info(domain)
+        for domain in _get_domain(iterable=True):
+            info[domain.name()] = _info(domain)
     return info
 
 
@@ -1169,21 +1168,20 @@ def vm_state(vm_=None):
 
         salt '*' virt.vm_state <domain>
     '''
-    def _info(vm_):
+    def _info(dom):
         '''
         Compute domain state
         '''
         state = ''
-        dom = _get_domain(vm_)
         raw = dom.info()
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(vm_))
     else:
-        for domain in list_domains():
-            info[domain] = _info(domain)
+        for domain in _get_domain(iterable=True):
+            info[domain.name()] = _info(domain)
     return info
 
 
@@ -1349,8 +1347,7 @@ def freemem():
     mem = conn.getInfo()[1]
     # Take off just enough to sustain the hypervisor
     mem -= 256
-    for vm_ in list_domains():
-        dom = _get_domain(vm_)
+    for dom in _get_domain(iterable=True):
         if dom.ID() > 0:
             mem -= dom.info()[2] / 1024
     return mem
@@ -1369,8 +1366,7 @@ def freecpu():
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
-    for vm_ in list_domains():
-        dom = _get_domain(vm_)
+    for dom in _get_domain(iterable=True):
         if dom.ID() > 0:
             cpus -= dom.info()[3]
     return cpus
@@ -1930,11 +1926,10 @@ def vm_cputime(vm_=None):
     '''
     host_cpus = __get_conn().getInfo()[2]
 
-    def _info(vm_):
+    def _info(dom):
         '''
         Compute cputime info of a domain
         '''
-        dom = _get_domain(vm_)
         raw = dom.info()
         vcpus = int(raw[3])
         cputime = int(raw[4])
@@ -1948,10 +1943,10 @@ def vm_cputime(vm_=None):
                }
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(vm_))
     else:
-        for domain in list_domains():
-            info[domain] = _info(domain)
+        for domain in _get_domain(iterable=True):
+            info[domain.name()] = _info(domain)
     return info
 
 
@@ -1985,12 +1980,11 @@ def vm_netstats(vm_=None):
 
         salt '*' virt.vm_netstats
     '''
-    def _info(vm_):
+    def _info(dom):
         '''
         Compute network stats of a domain
         '''
-        dom = _get_domain(vm_)
-        nics = get_nics(vm_)
+        nics = _get_nics(dom)
         ret = {
                 'rx_bytes': 0,
                 'rx_packets': 0,
@@ -2017,10 +2011,10 @@ def vm_netstats(vm_=None):
         return ret
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(vm_))
     else:
-        for domain in list_domains():
-            info[domain] = _info(domain)
+        for domain in _get_domain(iterable=True):
+            info[domain.name()] = _info(domain)
     return info
 
 
@@ -2051,11 +2045,11 @@ def vm_diskstats(vm_=None):
 
         salt '*' virt.vm_blockstats
     '''
-    def get_disk_devs(vm_):
+    def get_disk_devs(dom):
         '''
         Extract the disk devices names from the domain XML definition
         '''
-        doc = minidom.parse(_StringIO(get_xml(vm_)))
+        doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
         disks = []
         for elem in doc.getElementsByTagName('disk'):
             targets = elem.getElementsByTagName('target')
@@ -2063,14 +2057,13 @@ def vm_diskstats(vm_=None):
             disks.append(target.getAttribute('dev'))
         return disks
 
-    def _info(vm_):
+    def _info(dom):
         '''
         Compute the disk stats of a domain
         '''
-        dom = _get_domain(vm_)
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
-        disks = get_disk_devs(vm_)
+        disks = get_disk_devs(dom)
         ret = {'rd_req': 0,
                'rd_bytes': 0,
                'wr_req': 0,
@@ -2088,11 +2081,11 @@ def vm_diskstats(vm_=None):
         return ret
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(vm_))
     else:
         # Can not run function blockStats on inactive VMs
-        for domain in list_active_vms():
-            info[domain] = _info(domain)
+        for domain in _get_domain(iterable=True, inactive=False):
+            info[domain.name()] = _info(domain)
     return info
 
 
