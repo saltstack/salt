@@ -1197,6 +1197,22 @@ def vm_state(vm_=None):
     return info
 
 
+def _node_info(conn):
+    '''
+    Internal variant of node_info taking a libvirt connection as parameter
+    '''
+    raw = conn.getInfo()
+    info = {'cpucores': raw[6],
+            'cpumhz': raw[3],
+            'cpumodel': six.text_type(raw[0]),
+            'cpus': raw[2],
+            'cputhreads': raw[7],
+            'numanodes': raw[4],
+            'phymemory': raw[1],
+            'sockets': raw[5]}
+    return info
+
+
 def node_info():
     '''
     Return a dict with information about this node
@@ -1208,15 +1224,7 @@ def node_info():
         salt '*' virt.node_info
     '''
     conn = __get_conn()
-    raw = conn.getInfo()
-    info = {'cpucores': raw[6],
-            'cpumhz': raw[3],
-            'cpumodel': six.text_type(raw[0]),
-            'cpus': raw[2],
-            'cputhreads': raw[7],
-            'numanodes': raw[4],
-            'phymemory': raw[1],
-            'sockets': raw[5]}
+    info = _node_info(conn)
     conn.close()
     return info
 
@@ -1304,11 +1312,11 @@ def setmem(vm_, memory, config=False):
         salt '*' virt.setmem <domain> <size>
         salt '*' virt.setmem my_domain 768
     '''
-    if vm_state(vm_)[vm_] != 'shutdown':
-        return False
-
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
+
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
+        return False
 
     # libvirt has a funny bitwise system for the flags in that the flag
     # to affect the "current" setting is 0, which means that to set the
@@ -1341,11 +1349,11 @@ def setvcpus(vm_, vcpus, config=False):
         salt '*' virt.setvcpus <domain> <amount>
         salt '*' virt.setvcpus my_domain 4
     '''
-    if vm_state(vm_)[vm_] != 'shutdown':
-        return False
-
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
+
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
+        return False
 
     # see notes in setmem
     flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
@@ -1360,6 +1368,19 @@ def setvcpus(vm_, vcpus, config=False):
     return ret1 == ret2 == 0
 
 
+def _freemem(conn):
+    '''
+    Internal variant of freemem taking a libvirt connection as parameter
+    '''
+    mem = conn.getInfo()[1]
+    # Take off just enough to sustain the hypervisor
+    mem -= 256
+    for dom in _get_domain(conn, iterable=True):
+        if dom.ID() > 0:
+            mem -= dom.info()[2] / 1024
+    return mem
+
+
 def freemem():
     '''
     Return an int representing the amount of memory (in MB) that has not
@@ -1372,14 +1393,20 @@ def freemem():
         salt '*' virt.freemem
     '''
     conn = __get_conn()
-    mem = conn.getInfo()[1]
-    # Take off just enough to sustain the hypervisor
-    mem -= 256
-    for dom in _get_domain(conn, iterable=True):
-        if dom.ID() > 0:
-            mem -= dom.info()[2] / 1024
+    mem = _freemem(conn)
     conn.close()
     return mem
+
+
+def _freecpu(conn):
+    '''
+    Internal variant of freecpu taking a libvirt connection as parameter
+    '''
+    cpus = conn.getInfo()[2]
+    for dom in _get_domain(conn, iterable=True):
+        if dom.ID() > 0:
+            cpus -= dom.info()[3]
+    return cpus
 
 
 def freecpu():
@@ -1394,10 +1421,7 @@ def freecpu():
         salt '*' virt.freecpu
     '''
     conn = __get_conn()
-    cpus = conn.getInfo()[2]
-    for dom in _get_domain(conn, iterable=True):
-        if dom.ID() > 0:
-            cpus -= dom.info()[3]
+    cpus = _freecpu(conn)
     conn.close()
     return cpus
 
@@ -1412,10 +1436,13 @@ def full_info():
 
         salt '*' virt.full_info
     '''
-    return {'freecpu': freecpu(),
-            'freemem': freemem(),
-            'node_info': node_info(),
+    conn = __get_conn()
+    info = {'freecpu': _freecpu(conn),
+            'freemem': _freemem(conn),
+            'node_info': _node_info(conn),
             'vm_info': vm_info()}
+    conn.close()
+    return info
 
 
 def get_xml(vm_):
@@ -1866,7 +1893,9 @@ def purge(vm_, dirs=False, removables=None):
 
         salt '*' virt.purge <domain> removables=False
     '''
-    disks = get_disks(vm_)
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    disks = _get_disks(dom)
     if removables is None:
         salt.utils.versions.warn_until(
             'Sodium',
@@ -1875,12 +1904,8 @@ def purge(vm_, dirs=False, removables=None):
             'the current behavior in the future.'
         )
         removables = True
-    try:
-        if not stop(vm_):
-            return False
-    except libvirt.libvirtError:
-        # This is thrown if the machine is already shut down
-        pass
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown' and dom.destroy() != 0:
+        return False
     directories = set()
     for disk in disks:
         if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
@@ -1890,7 +1915,8 @@ def purge(vm_, dirs=False, removables=None):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
-    undefine(vm_)
+    dom.undefine()
+    conn.close()
     return True
 
 
@@ -2275,7 +2301,9 @@ def delete_snapshots(name, *names):
             snap.delete()
     conn.close()
 
-    return {'available': list_snapshots(name), 'deleted': deleted}
+    available = {name: [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()] or 'N/A'}
+
+    return {'available': available, 'deleted': deleted}
 
 
 def revert_snapshot(name, vm_snapshot=None, cleanup=False):
