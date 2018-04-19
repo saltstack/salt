@@ -186,7 +186,7 @@ execution modules
     iwtools
     jboss7
     jboss7_cli
-    jenkins
+    jenkinsmod
     junos
     k8s
     kapacitor
