@@ -46,6 +46,7 @@ try:
     import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
     from jnpr.junos.factory.optable import OpTable
+    from jnpr.junos.exception import ConnectClosedError
     import jxmlease
     import yamlordereddictloader
     # pylint: enable=W0611
@@ -1422,6 +1423,11 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
 
             ret['reply'] = _tuple_key_to_str(ret['table'][table],
                                              dict(data))
+    except ConnectClosedError:
+        conn.connected = False
+        ret['message'] = 'Connection lost with %s' % conn
+        ret['out'] = False
+        return ret
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
