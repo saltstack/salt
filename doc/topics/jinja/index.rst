@@ -870,7 +870,7 @@ Example:
 .. note::
 
     This option may have adverse effects when using the default renderer,
-    ``yaml_jinja``. This is due to the fact that YAML requires proper handling
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
     support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
     <yaml-idiosyncrasies>` documentation for more information.
@@ -1364,11 +1364,11 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
 

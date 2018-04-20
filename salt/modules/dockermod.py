@@ -6558,7 +6558,7 @@ def _generate_tmp_path():
         'salt.docker.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
+def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=''):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
@@ -6566,7 +6566,7 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
     chunks = _compile_state(sls_opts, mods)
     # reuse it from salt.ssh, however this function should
     # be somewhere else
-    refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
         sls_opts,
@@ -6757,7 +6757,8 @@ def sls(name, mods=None, **kwargs):
         name,
         sls_opts,
         mods=mods,
-        pillar=pillar)
+        pillar=pillar,
+        extra_filerefs=kwargs.get('extra_filerefs', ''))
 
     # where to put the salt trans tar
     trans_dest_path = _generate_tmp_path()
@@ -6890,7 +6891,7 @@ def sls_build(repository,
         repository = name
 
     create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
-    for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
+    for key in ('image', 'name', 'cmd', 'interactive', 'tty', 'extra_filerefs'):
         try:
             del create_kwargs[key]
         except KeyError:
