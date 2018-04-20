@@ -715,7 +715,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if mirrors:
         # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
-        pip_version = version(pip_bin)
+        pip_version = version(bin_env)
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
             raise CommandExecutionError(
                     'pip >= 7.0.0 does not support mirror argument:'
@@ -781,7 +781,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version = version(pip_bin)
+        pip_version = version(bin_env)
 
         # From pip v1.4 the --pre flag is available
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
