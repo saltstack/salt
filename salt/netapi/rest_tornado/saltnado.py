@@ -301,7 +301,7 @@ class EventListener(object):
 
         self.event.set_event_handler(self._handle_event_socket_recv)
 
-    def clean_timeout_futures(self, request):
+    def clean_by_request(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
         '''
@@ -493,7 +493,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         timeout a session
         '''
         # TODO: set a header or something??? so we know it was a timeout
-        self.application.event_listener.clean_timeout_futures(self)
+        self.application.event_listener.clean_by_request(self)
 
     def on_finish(self):
         '''
@@ -967,7 +967,18 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                              minions_remaining=list(minions_remaining),
                                              )
         yield job_not_running_future
-        raise tornado.gen.Return((yield all_return_future))
+        raise tornado.gen.Return((yield minion_returns_future))
+
+    def subscribe_minion_returns(self, jid, minions):
+        # Subscribe each minion event
+        future_minion_map = {}
+        for minion in minions:
+            tag = tagify([jid, 'ret', minion], 'job')
+            minion_future = self.application.event_listener.get_event(self,
+                                                                      tag=tag,
+                                                                      matcher=EventListener.exact_matcher)
+            future_minion_map[minion_future] = minion
+        return future_minion_map
 
     @tornado.gen.coroutine
     def all_returns(self,
@@ -1049,8 +1060,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
-                                                                  timeout=self.application.opts['gather_job_timeout'],
-                                                                  )
+                                                                  timeout=self.application.opts['gather_job_timeout'])
                 f = yield Any([event, is_finished])
                 # When finished entire routine, cleanup other futures and return result
                 if f is is_finished:

@@ -325,7 +325,8 @@ def installed(name,
               use_vt=False,
               trusted_host=None,
               no_cache_dir=False,
-              cache_dir=None):
+              cache_dir=None,
+              no_binary=None):
     '''
     Make sure the package is installed
 
@@ -359,6 +360,25 @@ def installed(name,
 
     no_use_wheel : False
         Force to not use wheel archives (requires pip>=1.4)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or a list of one or more packages
+
+    Example:
+
+    .. code-block:: yaml
+
+        django:
+          pip.installed:
+            - no_binary: ':all:'
+
+        flask:
+          pip.installed:
+            - no_binary:
+              - itsdangerous
+              - click
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -602,23 +622,39 @@ def installed(name,
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
-                              'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
+            return ret
+
+    # Check that the pip binary supports the 'no_binary' option
+    if no_binary:
+        min_version = '7.0.0'
+        cur_version = __salt__['pip.version'](bin_env)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            ret['result'] = False
+            ret['comment'] = ('The \'no_binary\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -735,6 +771,7 @@ def installed(name,
         bin_env=bin_env,
         use_wheel=use_wheel,
         no_use_wheel=no_use_wheel,
+        no_binary=no_binary,
         log=log,
         proxy=proxy,
         timeout=timeout,
