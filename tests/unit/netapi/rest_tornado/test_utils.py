@@ -173,7 +173,7 @@ class TestEventListener(AsyncTestCase):
                 self.stop()
 
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
+            me = salt.utils.event.MasterEvent(SOCK_DIR)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
