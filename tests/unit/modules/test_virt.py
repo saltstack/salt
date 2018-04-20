@@ -455,31 +455,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     def test_mixed_dict_and_list_as_profile_objects(self):
 
         yaml_config = '''
-          virt.nic:
-             new-listonly-profile:
-                - bridge: br0
-                  name: eth0
-                - model: virtio
-                  name: eth1
-                  source: test_network
-                  type: network
-             new-list-with-legacy-names:
-                - eth0:
-                     bridge: br0
-                - eth1:
-                     bridge: br1
-                     model: virtio
-             non-default-legacy-profile:
-                eth0:
-                   bridge: br0
-                eth1:
-                   bridge: br1
-                   model: virtio
+          virt:
+             nic:
+                new-listonly-profile:
+                   - bridge: br0
+                     name: eth0
+                   - model: virtio
+                     name: eth1
+                     source: test_network
+                     type: network
+                new-list-with-legacy-names:
+                   - eth0:
+                        bridge: br0
+                   - eth1:
+                        bridge: br1
+                        model: virtio
+                non-default-legacy-profile:
+                   eth0:
+                      bridge: br0
+                   eth1:
+                      bridge: br1
+                      model: virtio
         '''
         mock_config = salt.utils.yaml.safe_load(yaml_config)
         with patch.dict(salt.modules.config.__opts__, mock_config):
 
-            for name in six.iterkeys(mock_config['virt.nic']):
+            for name in six.iterkeys(mock_config['virt']['nic']):
                 profile = salt.modules.virt._nic_profile(name, 'kvm')
                 self.assertEqual(len(profile), 2)
 

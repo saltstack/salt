@@ -839,7 +839,13 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         profile_name, None
     )
 
-    if config_data is None:
+    if config_data is not None:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'virt.nic\' has been deprecated in favor of \'virt:nic\'. '
+            '\'virt.nic\' will stop being used in {version}.'
+        )
+    else:
         config_data = __salt__['config.get']('virt:nic', {}).get(
             profile_name, default
         )
