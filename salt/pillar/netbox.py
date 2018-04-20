@@ -51,6 +51,13 @@ except ImportError:
     HAS_PYNETBOX = False
     log.error('pynetbox must be installed')
 
+try:
+    import netaddr
+    HAS_NETADDR = True
+except ImportError:
+    HAS_NETADDR = False
+    log.error('netaddr must be installed')
+
 # Pull the following from Netbox
 DEVICE_FIELDS = [
     'id',
@@ -76,9 +83,19 @@ INTERFACE_FIELDS = [
     'lag'
 ]
 
+IP_FIELDS = [
+    'id',
+    'address',
+    'role',
+    'description',
+    'tenant',
+    'vrf.name',
+    'vrf.rd'
+]
+
 
 def __virtual__():
-    if HAS_PYNETBOX:
+    if HAS_PYNETBOX and HAS_NETADDR:
         return True
     return False
 
@@ -103,13 +120,6 @@ def ext_pillar(minion_id,
         # a napalm driver is assigned to the device platform then add it to salt
         device_info['netbox'] = {}
         if hasattr(device, 'primary_ip') and device.status.label == 'Active' and napalm_driver:
-            for device_field in DEVICE_FIELDS:
-                device_info['netbox'][device_field] = getattr(device, device_field)
-                if isinstance(
-                            device_info['netbox'][device_field],
-                            (pynetbox.ipam.IpAddresses, pynetbox.lib.response.Record)
-                            ):
-                    device_info['netbox'][device_field] = str(device_info['netbox'][device_field])
 
             # If proxy_config enabled in config, then add proxy pillar information
             if proxy_config:
@@ -141,27 +151,48 @@ def ext_pillar(minion_id,
                             if 'password' in credentials:
                                 device_info['proxy']['passwd'] = credentials['password']
 
-        # Get interface and ip addressing information from Netbox and add to the pillar
+        # Get device information from Netbox and add to the pillar
+        device_info['netbox'] = get_netbox_info(device, DEVICE_FIELDS)
+
+        # Get interface information from Netbox and add to the pillar
         interfaces = nb_api.dcim.interfaces.filter(device=minion_id)
         device_info['netbox']['interfaces'] = {}
         for interface in interfaces:
-            device_info['netbox']['interfaces'][interface.name] = {}
-            for field in INTERFACE_FIELDS:
-                device_info['netbox']['interfaces'][interface.name][field] = getattr(interface, field)
-                if isinstance(
-                            device_info['netbox']['interfaces'][interface.name][field],
-                            (pynetbox.ipam.IpAddresses, pynetbox.lib.response.Record)
-                            ):
-                    device_info['netbox']['interfaces'][interface.name][field] = str(
-                        device_info['netbox']['interfaces'][interface.name][field]
-                    )
+            device_info['netbox']['interfaces'][interface.name] = get_netbox_info(interface, INTERFACE_FIELDS)
 
+            # Get interface ip address information from Netbox and add to the pillar
             ip_addresses = nb_api.ipam.ip_addresses.filter(interface_id=interface.id)
-            if ip_addresses:
-                device_info['netbox']['interfaces'][interface.name]['ip_addresses'] = []
-                for ip_address in ip_addresses:
-                    device_info['netbox']['interfaces'][interface.name]['ip_addresses'].append(
-                        str(ip_address)
-                    )
+            device_info['netbox']['interfaces'][interface.name]['ip_addresses'] = []
+
+            for ip_address in ip_addresses:
+                device_info['netbox']['interfaces'][interface.name]['ip_addresses'].append(
+                    get_netbox_info(ip_address, IP_FIELDS)
+                )
 
     return device_info
+
+
+def get_netbox_info(obj, attributes):
+    '''
+    Get netbox information fro pynetbox object
+    '''
+    ret = {}
+    for field in attributes:
+        ret[field] = get_nested_attr(obj, field)
+        if isinstance(ret[field], (pynetbox.ipam.IpAddresses, pynetbox.lib.response.Record, netaddr.ip.IPNetwork)):
+            ret[field] = str(ret[field])
+    return ret
+
+
+def get_nested_attr(obj, attr):
+    '''
+    Get nested attribute
+    '''
+    if attr:
+        attributes = attr.split(".")
+        for i in attributes:
+            try:
+                obj = getattr(obj, i)
+            except AttributeError:
+                obj = None
+    return obj
