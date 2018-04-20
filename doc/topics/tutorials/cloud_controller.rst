@@ -322,16 +322,17 @@ opened on hypervisors:
 
     :ref:`Opening the Firewall up for Salt <firewall>`
 
-Salt also needs the ``virt.tunnel`` option to be turned on.
+Salt also needs the ``virt:tunnel`` option to be turned on.
 This flag tells Salt to run migrations securely via the libvirt TLS tunnel and to
-use port 16514. Without ``virt.tunnel`` libvirt tries to bind to random ports when
+use port 16514. Without ``virt:tunnel`` libvirt tries to bind to random ports when
 running migrations.
 
-To turn on ``virt.tunnel`` simple apply it to the master config file:
+To turn on ``virt:tunnel`` simply apply it to the master config file:
 
 .. code-block:: yaml
 
-    virt.tunnel: True
+    virt:
+        tunnel: True
 
 Once the master config has been updated, restart the master and send out a call
 to the minions to refresh the pillar to pick up on the change:

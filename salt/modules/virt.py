@@ -420,7 +420,16 @@ def _get_migrate_command():
     '''
     Returns the command shared by the different migration types
     '''
-    if __salt__['config.option']('virt.tunnel'):
+    tunnel = __salt__['config.option']('virt.tunnel')
+    if tunnel:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'virt.tunnel\' has been deprecated in favor of '
+            '\'virt:tunnel\'. \'virt.tunnel\' will stop '
+            'being used in {version}.')
+    else:
+        tunnel = __salt__['config.get']('virt:tunnel')
+    if tunnel:
         return ('virsh migrate --p2p --tunnelled --live --persistent '
                 '--undefinesource ')
     return 'virsh migrate --live --persistent --undefinesource '
@@ -1754,6 +1763,17 @@ def migrate_non_shared(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
         + _get_target(target, ssh)
@@ -1773,6 +1793,17 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
         + _get_target(target, ssh)
@@ -1792,6 +1823,17 @@ def migrate(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate <domain> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)

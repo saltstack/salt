@@ -50,7 +50,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
             'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
-            'virt.tunnel': False,
+            'virt': {'tunnel': False},
             }
 
 
