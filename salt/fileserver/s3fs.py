@@ -75,7 +75,7 @@ structure::
           multipart_threshold = 1024MB
 
     More info here:
-    https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+    https://docs.aws.amazon.com/cli/latest/topic/s3-config.html
 '''
 
 # Import python libs
