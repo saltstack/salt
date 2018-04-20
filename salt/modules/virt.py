@@ -615,6 +615,26 @@ def _qemu_image_info(path):
     return ret
 
 
+def _get_images_dir():
+    '''
+    Extract the images dir from the configuration. First attempts to
+    find legacy virt.images, then tries virt:images.
+    '''
+    img_dir = __salt__['config.option']('virt.images')
+    if img_dir:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'virt.images\' has been deprecated in favor of '
+            '\'virt:images\'. \'virt.images\' will stop '
+            'being used in {version}.')
+    else:
+        img_dir = __salt__['config.get']('virt:images')
+
+    log.debug('Image directory from config option `virt:images`'
+              ' is %s', img_dir)
+    return img_dir
+
+
 def _qemu_image_create(vm_name,
                        disk_file_name,
                        disk_image=None,
@@ -634,9 +654,8 @@ def _qemu_image_create(vm_name,
             .format(disk_file_name)
         )
 
-    img_dir = __salt__['config.option']('virt.images')
-    log.debug('Image directory from config option `virt.images`'
-              ' is %s', img_dir)
+    img_dir = _get_images_dir()
+
     img_dest = os.path.join(
         img_dir,
         vm_name,
@@ -786,7 +805,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
                    'model': 'virtio',
-                   'pool': __salt__['config.option']('virt.images')}
+                   'pool': _get_images_dir()}
     else:
         overlay = {}
 
@@ -957,6 +976,15 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
         salt 'hypervisor' virt.init vm_name 4 512 /var/lib/libvirt/images/img.raw
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
+
+    The disk images will be created in an image folder within the directory
+    defined by the ``virt:images`` option. Its default value is
+    ``/srv/salt/salt-images/`` but this can changed with such a configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            images: /data/my/vm/images/
     '''
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     log.debug('Using hyperisor %s', hypervisor)
