@@ -1194,7 +1194,7 @@ VALID_OPTS = {
     'enable_ssh_minions': bool,
 
     # Thorium saltenv
-    'thoriumenv': six.string_types,
+    'thoriumenv': (type(None), six.string_types),
 
     # Thorium top file location
     'thorium_top': six.string_types,
