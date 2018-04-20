@@ -1698,8 +1698,26 @@ def define_vol_xml_str(xml):
     .. code-block:: bash
 
         salt '*' virt.define_vol_xml_str <XML in string format>
+
+    The storage pool where the disk image will be defined is ``default``
+    unless changed with a configuration like this:
+
+    .. code-block:: yaml
+
+        virt:
+            storagepool: mine
     '''
-    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
+    poolname = __salt__['config.get']('libvirt:storagepool', None)
+    if poolname is not None:
+        salt.utils.warn_until(
+            'Sodium',
+            '\'libvirt:storagepool\' has been deprecated in favor of '
+            '\'virt:storagepool\'. \'libvirt:storagepool\' will stop '
+            'being used in {version}.'
+        )
+    else:
+        poolname = __salt__['config.get']('virt:storagepool', 'default')
+
     conn = __get_conn()
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
     ret = pool.createXML(xml, 0) is not None
