@@ -710,18 +710,6 @@ def _qemu_image_create(vm_name,
     return img_dest
 
 
-# TODO: this function is deprecated, should be replaced with
-# _qemu_image_info()
-def _image_type(vda):
-    '''
-    Detect what driver needs to be used for the given image
-    '''
-    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
-    if 'file format: qcow2' in out:
-        return 'qcow2'
-    return 'raw'
-
-
 # TODO: this function is deprecated, should be merged and replaced
 # with _disk_profile()
 def _get_image_info(hypervisor, name, **kwargs):
