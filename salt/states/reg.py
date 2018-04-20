@@ -31,29 +31,35 @@ Values or Entries
 -----------------
 
 Values or Entries are the name/data pairs beneath the keys and subkeys. All keys
-have a default name/data pair. It is usually "(Default)"="(value not set)". The
-actual value for the name and the date is Null. The registry editor will display
-"(Default)" and "(value not set)".
+have a default name/data pair. The name is ``(Default)`` with a displayed value
+of ``(value not set)``. The actual value is Null.
 
 -------
 Example
 -------
 
 The following example is taken from the windows startup portion of the registry:
-```
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
-"RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
-"NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
-"BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
-```
+
+.. code-block:: bash
+
+    [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+    "RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
+    "NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
+    "BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
+
 In this example these are the values for each:
 
-Hive: `HKEY_LOCAL_MACHINE`
+Hive:
+    ``HKEY_LOCAL_MACHINE``
 
-Key and subkeys: `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+Key and subkeys:
+    ``SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run``
 
 Value:
-    - There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
+    - There are 3 value names:
+        - `RTHDVCPL`
+        - `NvBackend`
+        - `BTMTrayAgent`
     - Each value name has a corresponding value
 '''
 from __future__ import absolute_import, print_function, unicode_literals
@@ -122,13 +128,13 @@ def present(name,
 
         vname (str):
             The name of the value you'd like to create beneath the Key. If this
-            parameter is not passed it will assume you want to set the (Default)
-            value
+            parameter is not passed it will assume you want to set the
+            ``(Default)`` value
 
         vdata (str, int, list):
-            The value you'd like to set. If a value name (vname) is passed, this
-            will be the data for that value name. If not, this will be the
-            (Default) value for the key.
+            The value you'd like to set. If a value name (``vname``) is passed,
+            this will be the data for that value name. If not, this will be the
+            ``(Default)`` value for the key.
 
             The type of data this parameter expects is determined by the value
             type specified in ``vtype``. The correspondence is as follows:
@@ -154,9 +160,9 @@ def present(name,
                     `here <http://yaml.org/type/binary.html>`_
 
             .. note::
-                The type for the (Default) value is always REG_SZ and cannot be
-                changed. This parameter is optional. If not passed, the Key will
-                be created with no associated item/value pairs.
+                The type for the ``(Default)`` value is always REG_SZ and cannot
+                be changed. This parameter is optional. If not passed, the Key
+                will be created with no associated item/value pairs.
 
         vtype (str):
             The value type for the data you wish to store in the registry. Valid
@@ -276,8 +282,8 @@ def absent(name, vname=None, use_32bit_registry=False):
 
         vname (str):
             The name of the value you'd like to create beneath the Key. If this
-            parameter is not passed it will assume you want to set the (Default)
-            value
+            parameter is not passed it will assume you want to set the
+            ``(Default)`` value
 
         use_32bit_registry (bool):
             Use the 32bit portion of the registry. Applies only to 64bit
@@ -296,7 +302,7 @@ def absent(name, vname=None, use_32bit_registry=False):
 
         In the above example the value named ``version`` will be removed from
         the SOFTWARE\\Salt key in the HKEY_CURRENT_USER hive. If ``vname`` was
-        not passed, the (Default) value would be deleted.
+        not passed, the ``(Default)`` value would be deleted.
     '''
     ret = {'name': name,
            'result': True,

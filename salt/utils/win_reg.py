@@ -174,7 +174,7 @@ def key_exists(hive, key, use_32bit_registry=False):
 
     Usage:
 
-        .. code-block::
+        .. code-block:: python
 
             import salt.utils.win_reg
             winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
@@ -206,7 +206,7 @@ def broadcast_change():
 
     Usage:
 
-        .. code-block::
+        .. code-block:: python
 
             import salt.utils.win_reg
             winreg.broadcast_change()
@@ -246,7 +246,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
     Usage:
 
-        .. code-block::
+        .. code-block:: python
 
             import salt.utils.win_reg
             winreg.list_keys(hive='HKLM', key='SOFTWARE\\Microsoft')
@@ -313,7 +313,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
     Usage:
 
-        .. code-block::
+        .. code-block:: python
 
             import salt.utils.win_reg
             winreg.list_values(hive='HKLM', key='SYSTEM\\CurrentControlSet\\Services\\Tcpip')
@@ -398,7 +398,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
     Usage:
 
-        .. code-block::
+        .. code-block:: python
 
             import salt.utils.win_reg
             winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
@@ -513,8 +513,11 @@ def set_value(hive,
 
             .. note::
                 The type for the (Default) value is always REG_SZ and cannot be
-                changed. This parameter is optional. If not passed, the Key will
-                be created with no associated item/value pairs.
+                changed.
+
+            .. note::
+                This parameter is optional. If not passed, the Key will be
+                created with no associated item/value pairs.
 
         vtype (str):
             The value type. The possible values of the vtype parameter are

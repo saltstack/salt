@@ -21,7 +21,7 @@ can have a value assigned to them under the (Default)
 Values or Entries
 -----------------
 Values/Entries are name/data pairs. There can be many values in a key. The
-(Default) value corresponds to the Key, the rest are their own value pairs.
+``(Default)`` value corresponds to the Key, the rest are their own value pairs.
 
 :depends:   - PyWin32
 '''
@@ -74,7 +74,7 @@ def key_exists(hive, key, use_32bit_registry=False):
 
     CLI Example:
 
-        .. code-block::
+        .. code-block:: bash
 
             salt '*' reg.key_exists HKLM SOFTWARE\Microsoft
     '''
@@ -273,8 +273,11 @@ def set_value(hive,
 
             .. note::
                 The type for the (Default) value is always REG_SZ and cannot be
-                changed. This parameter is optional. If not passed, the Key will
-                be created with no associated item/value pairs.
+                changed.
+
+            .. note::
+                This parameter is optional. If ``vdata`` is not passed, the Key
+                will be created with no associated item/value pairs.
 
         vtype (str):
             The value type. The possible values of the vtype parameter are
@@ -323,7 +326,7 @@ def set_value(hive,
 
         .. code-block:: bash
 
-            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'bin_data' vtype=REG_BINARY vdata='!!binary d2hhdCdzIHRoZSBwb2ludA=='
+            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'bin_data' vtype=REG_BINARY vdata='Salty Data'
 
     CLI Example:
 
