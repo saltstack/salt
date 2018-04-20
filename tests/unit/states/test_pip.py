@@ -207,7 +207,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'successfully installed',
+                    'packages are already installed',
                     {'test': ret}
                 )
 
@@ -241,7 +241,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'were successfully installed',
+                    'packages are already installed',
                     {'test': ret}
                 )
 
@@ -264,7 +264,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                     )
                     self.assertSaltTrueReturn({'test': ret})
                     self.assertInSaltComment(
-                        'were successfully installed',
+                        'packages are already installed',
                         {'test': ret}
                     )
 
@@ -289,6 +289,6 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                                       editable=['.'])
             self.assertSaltTrueReturn({'test': ret})
             self.assertInSaltComment(
-                'successfully installed',
+                'packages are already installed',
                 {'test': ret}
             )
