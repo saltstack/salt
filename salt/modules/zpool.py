@@ -470,14 +470,13 @@ def get(zpool, prop=None, show_source=False, parsable=True):
 
     '''
     ret = OrderedDict()
-    value_properties = ['property', 'value', 'source']
+    value_properties = ['name', 'property', 'value', 'source']
 
     ## collect get output
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='get',
             flags=['-H'],
-            opts={'-o': ','.join(value_properties)},
             property_name=prop if prop else 'all',
             target=zpool,
         ),
@@ -502,6 +501,9 @@ def get(zpool, prop=None, show_source=False, parsable=True):
             value_properties,
             [x for x in line.strip().split('\t') if x not in ['']],
         )))
+
+        # NOTE: older zfs does not have -o, fall back to manually stipping the name field
+        del prop_data['name']
 
         # NOTE: normalize values
         if parsable:
