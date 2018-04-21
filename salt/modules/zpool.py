@@ -634,6 +634,8 @@ def scrub(zpool, stop=False, pause=False):
 
         .. note::
 
+            Pause is only available on recent versions of ZFS.
+
             If both ``pause`` and ``stop`` are ``True``, then ``stop`` will
             win.
 
