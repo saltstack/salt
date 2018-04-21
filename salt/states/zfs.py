@@ -454,8 +454,9 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
         ## NOTE: fetch current volume properties
         properties_current = __salt__['zfs.get'](
             name,
+            type=dataset_type,
             fields='value',
-            depth=1,
+            depth=0,
             parsable=True,
         ).get(name, OrderedDict())
 
