@@ -376,7 +376,7 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
         if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
             result = {}
             if len(properties) > 0:
-                result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
+                result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'type': 'filesystem', 'fields': 'value', 'depth': 0})
 
             for prop in properties:
                 if properties[prop] != result[name][prop]['value']:
