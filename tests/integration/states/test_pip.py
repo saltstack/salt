@@ -590,7 +590,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertEqual(
                     ret[key]['comment'],
                     ('Python package carbon < 1.3 was already installed\n'
-                     'All packages were successfully installed'))
+                     'All specified packages are already installed'))
                 break
             else:
                 raise Exception('Expected state did not run')
