@@ -706,6 +706,9 @@ def create(zpool, *vdevs, **kwargs):
 
         .. versionadded:: 2018.3.0
 
+        .. warning:
+          This is only available on illumos and Solaris
+
     CLI Examples:
 
     .. code-block:: bash
