@@ -16,6 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+from salt.exceptions import CommandExecutionError
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
@@ -661,3 +662,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(pkg_info_list), 2 if pkg_name == "virgo-dummy" else 1)
                 for info in pkg_info_list:
                     self.assertTrue(info['arch'] in ('x86_64', 'i686'))
+
+    def test_yum_base_error(self):
+        with patch('yum.YumBase') as mock_yum_yumbase:
+            mock_yum_yumbase.side_effect = CommandExecutionError
+            self.assertRaises(CommandExecutionError, yumpkg._get_yum_config)
