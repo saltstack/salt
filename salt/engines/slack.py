@@ -120,6 +120,7 @@ import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
 import salt.output.highstate
+import salt.output.yaml_out
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -352,6 +353,8 @@ class SlackClient(object):
         # maybe there are aliases, so check on that
         if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
             use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]].get('cmd', ''), '')
+            # Include any additional elements from cmdline
+            use_cmdline.extend(cmdline[1:])
         else:
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
@@ -565,15 +568,21 @@ class SlackClient(object):
 # emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
 # obviously pass in
 
-    def format_return_text(self, data, **kwargs):  # pylint: disable=unused-argument
+    def format_return_text(self, data, function, **kwargs):  # pylint: disable=unused-argument
         '''
         Print out YAML using the block mode
         '''
         try:
-            salt.output.highstate.__opts__ = __opts__
-            if 'color' not in salt.output.highstate.__opts__:
-                salt.output.highstate.__opts__.update({"color": ""})
-            return salt.output.highstate.output(data)
+            # Format results from state runs with highstate output
+            if function.startswith('state'):
+                salt.output.highstate.__opts__ = __opts__
+                # Disable colors
+                salt.output.highstate.__opts__.update({"color": False})
+                return salt.output.highstate.output(data)
+            # Format results from everything else with yaml output
+            else:
+                salt.output.yaml_out.__opts__ = __opts__
+                return salt.output.yaml_out.output(data)
         # pylint: disable=broad-except
         except Exception as exc:
             import pprint
@@ -623,12 +632,16 @@ class SlackClient(object):
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
             if self.master_minion.returners['{}.get_jid'.format(source)](jid):
-                jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
+                job_result = runner.cmd('jobs.list_job', [jid])
+                jid_result = job_result.get('Result', {})
+                jid_function = job_result.get('Function', {})
                 # emulate lookup_jid's return, which is just minion:return
                 # pylint is tripping
                 # pylint: disable=missing-whitespace-after-comma
                 job_data = salt.utils.json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = salt.utils.yaml.safe_load(job_data)
+                results[jid] = {}
+                results[jid]['data'] = salt.utils.yaml.safe_load(job_data)
+                results[jid]['function'] = jid_function
 
         return results
 
@@ -675,13 +688,15 @@ class SlackClient(object):
             start_time = time.time()
             job_status = self.get_jobs_from_runner(outstanding.keys())  # dict of job_ids:results are returned
             log.trace('Getting %s jobs status took %s seconds', len(job_status), time.time() - start_time)
-            for jid, result in job_status.items():
+            for jid in job_status:
+                result = job_status[jid]['data']
+                function = job_status[jid]['function']
                 if result:
                     log.debug('ret to send back is %s', result)
                     # formatting function?
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job['channel'])
-                    return_text = self.format_return_text(result)
+                    return_text = self.format_return_text(result, function)
                     return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
                         this_job['user_name'], this_job['cmdline'], jid, this_job['target'])
                     channel.send_message(return_prefix)
