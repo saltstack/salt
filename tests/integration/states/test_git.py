@@ -8,13 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import inspect
 import os
+import shutil
 import socket
 import string
+import tempfile
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files

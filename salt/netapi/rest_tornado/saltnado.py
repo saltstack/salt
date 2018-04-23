@@ -967,7 +967,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                              minions_remaining=list(minions_remaining),
                                              )
         yield job_not_running_future
-        raise tornado.gen.Return((yield minion_returns_future))
+        raise tornado.gen.Return((yield all_return_future))
 
     def subscribe_minion_returns(self, jid, minions):
         # Subscribe each minion event
