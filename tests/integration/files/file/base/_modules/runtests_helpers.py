@@ -91,6 +91,7 @@ def get_invalid_docs():
         'vsphere.wraps',
     )
     allow_failure_glob = (
+        'runtests_decorators.*',
         'runtests_helpers.*',
         'vsphere.*',
     )
