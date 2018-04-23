@@ -390,6 +390,15 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
                 delimiter=delimiter)
             if ret != '_|-':
                 return sdb.sdb_get(ret, __opts__)
+
+        ret = salt.utils.data.traverse_dict_and_list(
+            DEFAULTS,
+            key,
+            '_|-',
+            delimiter=delimiter)
+        log.debug("key: %s, ret: %s", key, ret)
+        if ret != '_|-':
+            return sdb.sdb_get(ret, __opts__)
     else:
         if merge not in ('recurse', 'overwrite'):
             log.warning('Unsupported merge strategy \'{0}\'. Falling back '
@@ -398,7 +407,8 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
 
-        data = copy.copy(__pillar__.get('master', {}))
+        data = copy.copy(DEFAULTS)
+        data = salt.utils.dictupdate.merge(data, __pillar__.get('master', {}), strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
