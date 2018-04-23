@@ -8,10 +8,6 @@ Support for APT (Advanced Packaging Tool)
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. note::
-    For virtual package support, either the ``python-apt`` or ``dctrl-tools``
-    package must be installed.
-
     For repository management, the ``python-apt`` package must be installed.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
@@ -174,40 +170,6 @@ def _has_dctrl_tools():
         return __context__['pkg._has_dctrl_tools']
 
 
-def _get_virtual():
-    '''
-    Return a dict of virtual package information
-    '''
-    try:
-        return __context__['pkg._get_virtual']
-    except KeyError:
-        __context__['pkg._get_virtual'] = {}
-        if HAS_APT:
-            try:
-                apt_cache = apt.cache.Cache()
-            except SystemError as syserr:
-                msg = 'Failed to get virtual package information ({0})'.format(syserr)
-                log.error(msg)
-                raise CommandExecutionError(msg)
-            pkgs = getattr(apt_cache._cache, 'packages', [])
-            for pkg in pkgs:
-                for item in getattr(pkg, 'provides_list', []):
-                    realpkg = item[2].parent_pkg.name
-                    if realpkg not in __context__['pkg._get_virtual']:
-                        __context__['pkg._get_virtual'][realpkg] = []
-                    __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-        elif _has_dctrl_tools():
-            cmd = ['grep-status', '-F', 'Provides', '-s',
-                   'Package,Provides', '-e', '^.+$']
-            out = __salt__['cmd.run_stdout'](cmd,
-                                             output_loglevel='trace',
-                                             python_shell=False)
-            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
-            for realpkg, provides in virtpkg_re.findall(out):
-                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
-        return __context__['pkg._get_virtual']
-
-
 def _warn_software_properties(repo):
     '''
     Warn of missing python-software-properties package.
@@ -267,14 +229,6 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db(cache_valid_time)
 
-    try:
-        virtpkgs = _get_virtual()
-    except CommandExecutionError as cee:
-        raise CommandExecutionError(cee)
-    all_virt = set()
-    for provides in six.itervalues(virtpkgs):
-        all_virt.update(provides)
-
     for name in names:
         cmd = ['apt-cache', '-q', 'policy', name]
         if repo is not None:
@@ -283,21 +237,16 @@ def latest_version(*names, **kwargs):
                                       output_loglevel='trace',
                                       python_shell=False,
                                       env={'LC_ALL': 'C', 'LANG': 'C'})
+
         candidate = ''
-        for line in out['stdout'].splitlines():
+        for line in salt.utils.itertools.split(out['stdout'], '\n'):
             if 'Candidate' in line:
-                candidate = line.split()
-        if len(candidate) >= 2:
-            candidate = candidate[-1]
-            if candidate.lower() == '(none)':
-                # Virtual package is a candidate for installation if and only
-                # if it is not currently installed.
-                if name in all_virt and name not in pkgs:
-                    candidate = '1'
-                else:
-                    candidate = ''
-        else:
-            candidate = ''
+                comps = line.split()
+                if len(comps) >= 2:
+                    candidate = comps[-1]
+                    if candidate.lower() == '(none)':
+                        candidate = ''
+                break
 
         installed = pkgs.get(name, [])
         if not installed:
@@ -1290,21 +1239,6 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
-def _clean_pkglist(pkgs):
-    '''
-    Go through package list and, if any packages have more than one virtual
-    package marker and no actual package versions, remove all virtual package
-    markers. If there is a mix of actual package versions and virtual package
-    markers, remove the virtual package markers.
-    '''
-    for name, versions in six.iteritems(pkgs):
-        stripped = [v for v in versions if v != '1']
-        if not stripped:
-            pkgs[name] = ['1']
-        elif versions != stripped:
-            pkgs[name] = stripped
-
-
 def list_pkgs(versions_as_list=False,
               removed=False,
               purge_desired=False,
@@ -1393,25 +1327,8 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
-    # Check for virtual packages
-    if not removed:
-        try:
-            virtpkgs_all = _get_virtual()
-        except CommandExecutionError as cee:
-            raise CommandExecutionError(cee)
-        virtpkgs = set()
-        for realpkg, provides in six.iteritems(virtpkgs_all):
-            # grep-available returns info on all virtual packages. Ignore any
-            # virtual packages that do not have the real package installed.
-            if realpkg in ret['installed']:
-                virtpkgs.update(provides)
-        for virtname in virtpkgs:
-            # Set virtual package versions to '1'
-            __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
-
     for pkglist_type in ('installed', 'removed', 'purge_desired'):
         __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
-        _clean_pkglist(ret[pkglist_type])
 
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
 
