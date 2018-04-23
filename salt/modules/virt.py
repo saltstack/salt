@@ -2663,7 +2663,7 @@ def pool_define_build(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.pool_defin base logical base
+        salt '*' virt.pool_define base logical base
     '''
     exist = False
     update = False
