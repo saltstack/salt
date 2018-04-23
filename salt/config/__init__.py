@@ -1764,6 +1764,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_jid_forward_cache_hwm': 100,
     'regen_thin': False,
     'ssh_passwd': '',
+    'ssh_priv_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
     'ssh_sudo_user': '',

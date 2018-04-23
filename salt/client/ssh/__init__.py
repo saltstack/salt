@@ -281,6 +281,10 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
             ),
             'priv': priv,
+            'priv_passwd': self.opts.get(
+                'ssh_priv_passwd',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_priv_passwd']
+            ),
             'timeout': self.opts.get(
                 'ssh_timeout',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
@@ -821,6 +825,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
+            priv_passwd=None,
             timeout=30,
             sudo=False,
             tty=False,
@@ -882,6 +887,7 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
+                'priv_pass': priv_passwd,
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty,
