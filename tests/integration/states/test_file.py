@@ -1755,39 +1755,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
 
-    def do_patch(self, patch_name='hello', src='Hello\n'):
-        if not self.run_function('cmd.has_exec', ['patch']):
-            self.skipTest('patch is not installed')
-        src_file = os.path.join(TMP, 'src.txt')
-        with salt.utils.files.fopen(src_file, 'w+') as fp:
-            fp.write(src)
-        ret = self.run_state(
-            'file.patch',
-            name=src_file,
-            source='salt://{0}.patch'.format(patch_name),
-            hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
-        )
-        return src_file, ret
-
-    def test_patch(self):
-        src_file, ret = self.do_patch()
-        self.assertSaltTrueReturn(ret)
-        with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello world\n')
-
-    def test_patch_hash_mismatch(self):
-        src_file, ret = self.do_patch('hello_dolly')
-        self.assertSaltFalseReturn(ret)
-        self.assertInSaltComment(
-            'Hash mismatch after patch was applied',
-            ret
-        )
-
-    def test_patch_already_applied(self):
-        src_file, ret = self.do_patch(src='Hello world\n')
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('Patch is already applied', ret)
-
     @with_tempdir()
     def test_issue_2401_file_comment(self, base_dir):
         # Get a path to the temporary file
