@@ -1140,7 +1140,7 @@ def convert_cidr(cidr):
     ret = {'network': None,
            'netmask': None}
     cidr = calc_net(cidr)
-    network_info = salt.ext.ipaddress.ip_network(cidr)
+    network_info = ipaddress.ip_network(cidr)
     ret['network'] = six.text_type(network_info.network_address)
     ret['netmask'] = six.text_type(network_info.netmask)
     return ret
