@@ -823,3 +823,17 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
+
+    def test_get_expiration_date(self):
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            self.assertEqual(
+                tls.get_expiration_date('/path/to/cert'),
+                '2016-05-04'
+            )
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            self.assertEqual(
+                tls.get_expiration_date('/path/to/cert', date_format='%d/%m/%y'),
+                '04/05/16'
+            )
