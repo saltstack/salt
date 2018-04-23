@@ -57,6 +57,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_deprecated_dict_config(self):
         config = {'time': ['all']}
         ret = status.beacon(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         if sys.platform.startswith('win'):
             expected = []
@@ -68,6 +69,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_list_config(self):
         config = [{'time': ['all']}]
         ret = status.beacon(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         if sys.platform.startswith('win'):
             expected = []
