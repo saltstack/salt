@@ -33,6 +33,11 @@ import logging
 # Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+try:
+    import salt.utils.win_reg
+    HAS_WINDOWS_MODUELS = salt.utils.win_reg.HAS_WINDOWS_MODULES
+except ImportError:
+    HAS_WINDOWS_MODULES = False
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +53,7 @@ def __virtual__():
         return (False, 'reg execution module failed to load: '
                        'The module will only run on Windows systems')
 
-    if 'reg.read_value' not in __utils__:
+    if not HAS_WINDOWS_MODULES:
         return (False, 'reg execution module failed to load: '
                        'The reg salt util is unavailable')
 

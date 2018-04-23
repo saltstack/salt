@@ -13,10 +13,7 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.platform
 if salt.utils.platform.is_windows():
-    try:
-        import salt.modules.reg
-    except ImportError:
-        pass
+    import salt.modules.reg
 
 
 def _freebsd_or_openbsd():
