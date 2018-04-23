@@ -350,6 +350,9 @@ class SSH(object):
         needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
         if needs_expansion:
             hostname = salt.utils.network.ip_to_host(hostname)
+            if hostname is None:
+                # Reverse lookup failed
+                return
             self._get_roster()
             for roster_filename in self.__parsed_rosters:
                 roster_data = self.__parsed_rosters[roster_filename]
