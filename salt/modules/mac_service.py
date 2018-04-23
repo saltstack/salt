@@ -113,6 +113,45 @@ def _always_running_service(name):
     return False
 
 
+def _get_domain_target(name, service_target=False):
+    '''
+    Returns the domain/service target and path for a service. This is used to
+    determine whether or not a service should be loaded in a user space or
+    system space.
+
+    :param str name: Service label, file name, or full path
+
+    :param bool service_target: Whether to return a full
+    service target. This is needed for the enable and disable
+    subcommands of /bin/launchctl. Defaults to False
+
+    :return: Tuple of the domain/service target and the path to the service.
+
+    :rtype: tuple
+    '''
+
+    # Get service information
+    service = _get_service(name)
+
+    # get the path to the service
+    path = service['file_path']
+
+    # most of the time we'll be at the system level.
+    domain_target = 'system'
+
+    # check if a LaunchAgent as we should treat these differently.
+    if 'LaunchAgents' in path:
+        # Get the console user so we can service in the correct session
+        uid = salt.utils.mac_utils.console_user()
+        domain_target = 'gui/{}'.format(uid)
+
+    # check to see if we need to make it a full service target.
+    if service_target is True:
+        domain_target = '{}/{}'.format(domain_target, service['plist']['Label'])
+
+    return (domain_target, path)
+
+
 def show(name):
     '''
     Show properties of a launchctl service
@@ -185,6 +224,11 @@ def list_(name=None, runas=None):
         service = _get_service(name)
         label = service['plist']['Label']
 
+        # we can assume if we are trying to list a LaunchAgent we need
+        # to run as a user, if not provided, we'll use the console user.
+        if not runas and 'LaunchAgent' in service['file_path']:
+            runas = salt.utils.mac_utils.console_user(username=True)
+
         # Collect information on service: will raise an error if it fails
         return launchctl('list',
                          label,
@@ -216,12 +260,11 @@ def enable(name, runas=None):
 
         salt '*' service.enable org.cups.cupsd
     '''
-    # Get service information and label
-    service = _get_service(name)
-    label = service['plist']['Label']
+    # Get the domain target. enable requires a full <service-target>
+    service_target = _get_domain_target(name, service_target=True)[0]
 
     # Enable the service: will raise an error if it fails
-    return launchctl('enable', 'system/{0}'.format(label), runas=runas)
+    return launchctl('enable', service_target, runas=runas)
 
 
 def disable(name, runas=None):
@@ -242,12 +285,11 @@ def disable(name, runas=None):
 
         salt '*' service.disable org.cups.cupsd
     '''
-    # Get service information and label
-    service = _get_service(name)
-    label = service['plist']['Label']
+    # Get the service target. enable requires a full <service-target>
+    service_target = _get_domain_target(name, service_target=True)[0]
 
     # disable the service: will raise an error if it fails
-    return launchctl('disable', 'system/{0}'.format(label), runas=runas)
+    return launchctl('disable', service_target, runas=runas)
 
 
 def start(name, runas=None):
@@ -271,12 +313,11 @@ def start(name, runas=None):
 
         salt '*' service.start org.cups.cupsd
     '''
-    # Get service information and file path
-    service = _get_service(name)
-    path = service['file_path']
+    # Get the domain target.
+    domain_target, path = _get_domain_target(name)
 
-    # Load the service: will raise an error if it fails
-    return launchctl('load', path, runas=runas)
+    # Load (bootstrap) the service: will raise an error if it fails
+    return launchctl('bootstrap', domain_target, path, runas=runas)
 
 
 def stop(name, runas=None):
@@ -301,12 +342,11 @@ def stop(name, runas=None):
 
         salt '*' service.stop org.cups.cupsd
     '''
-    # Get service information and file path
-    service = _get_service(name)
-    path = service['file_path']
+    # Get the domain target.
+    domain_target, path = _get_domain_target(name)
 
-    # Disable the Launch Daemon: will raise an error if it fails
-    return launchctl('unload', path, runas=runas)
+    # Stop (bootout) the service: will raise an error if it fails
+    return launchctl('bootout', domain_target, path, runas=runas)
 
 
 def restart(name, runas=None):
@@ -514,7 +554,6 @@ def get_enabled(runas=None):
     .. code-block:: bash
 
         salt '*' service.get_enabled
-        salt '*' service.get_enabled running=True
     '''
     # Collect list of enabled services
     stdout = list_(runas=runas)
