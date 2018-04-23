@@ -289,6 +289,6 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                                       editable=['.'])
             self.assertSaltTrueReturn({'test': ret})
             self.assertInSaltComment(
-                'packages are already installed',
+                'successfully installed',
                 {'test': ret}
             )
