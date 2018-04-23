@@ -87,7 +87,7 @@ def _get_token_and_url_from_master():
     return {
             'url': result['url'],
             'token': result['token'],
-            'verify': result['verify'],
+            'verify': result.get('verify', None),
            }
 
 
