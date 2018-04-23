@@ -20,9 +20,9 @@ Statistics:
 
 Changes:
 
-+This release includes a CVE Fix:
-+
-+CVE-2017-7893: Compromised salt-minions can impersonate the salt-master.
+This release includes a CVE Fix:
+
+CVE-2017-7893: Compromised salt-minions can impersonate the salt-master.
 
 - **PR** `#39855`_: (*Foxlik*) Use regular expression instead of split when replacing authorized_keys
   @ *2017-03-22T18:28:32Z*
