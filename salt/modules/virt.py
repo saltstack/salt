@@ -40,6 +40,27 @@ support.
 To use the SSH transport, on the minion setup an SSH agent with a key authorized on
 the remote libvirt machine.
 
+Per call connection setup
+-------------------------
+
+All the calls requiring the libvirt connection configuration as mentioned above can
+override this configuration using ``connection``, ``username`` and ``password`` parameters.
+
+This means that the following will list the domains on the local LXC libvirt driver,
+whatever the ``virt:connection`` is.
+
+.. code-block:: bash
+
+    salt 'hypervisor' virt.list_domains connection=lxc:///
+
+The calls not using the libvirt connection setup are:
+
+ - get_profiles
+ - seed_non_shared_migrate
+ - virt_type
+ - is_*hyper
+ - all migration functions
+
 Reference:
 
  - http://libvirt.org/drvesx.html#uriformat
@@ -114,32 +135,40 @@ def __virtual__():
     return 'virt'
 
 
-# pylint: disable=unused-argument
-def __request_auth(credentials, user_data):
-    '''Callback method passed to libvirt.openAuth().
-
-    The credentials argument is a list of credentials that libvirt
-    would like to request. An element of this list is a list containing
-    5 items (4 inputs, 1 output):
-      - the credential type, e.g. libvirt.VIR_CRED_AUTHNAME
-      - a prompt to be displayed to the user
-      - a challenge
-      - a default result for the request
-      - a place to store the actual result for the request
-
-    The user_data argument is currently not set in the openAuth call.
+def __get_request_auth(username, password):
     '''
-    for credential in credentials:
-        if credential[0] == libvirt.VIR_CRED_AUTHNAME:
-            credential[4] = __salt__['config.get']('virt:connection:auth:username', credential[3])
-        elif credential[0] == libvirt.VIR_CRED_NOECHOPROMPT:
-            credential[4] = __salt__['config.get']('virt:connection:auth:password', credential[3])
-        else:
-            log.info('Unhandled credential type: %s', credential[0])
-    return 0
+    Get libvirt.openAuth callback with username, password values overriding
+    the configuration ones.
+    '''
+
+    # pylint: disable=unused-argument
+    def __request_auth(credentials, user_data):
+        '''Callback method passed to libvirt.openAuth().
+
+        The credentials argument is a list of credentials that libvirt
+        would like to request. An element of this list is a list containing
+        5 items (4 inputs, 1 output):
+          - the credential type, e.g. libvirt.VIR_CRED_AUTHNAME
+          - a prompt to be displayed to the user
+          - a challenge
+          - a default result for the request
+          - a place to store the actual result for the request
+
+        The user_data argument is currently not set in the openAuth call.
+        '''
+        for credential in credentials:
+            if credential[0] == libvirt.VIR_CRED_AUTHNAME:
+                credential[4] = username if username else \
+                                __salt__['config.get']('virt:connection:auth:username', credential[3])
+            elif credential[0] == libvirt.VIR_CRED_NOECHOPROMPT:
+                credential[4] = password if password else \
+                                __salt__['config.get']('virt:connection:auth:password', credential[3])
+            else:
+                log.info('Unhandled credential type: %s', credential[0])
+        return 0
 
 
-def __get_conn():
+def __get_conn(**kwargs):
     '''
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
@@ -147,25 +176,29 @@ def __get_conn():
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
 
-    conn_str = __salt__['config.get']('virt.connect', None)
-    if conn_str is not None:
-        salt.utils.warn_until(
-            'Sodium',
-            '\'virt.connect\' configuration property has been deprecated in favor '
-            'of \'virt:connection:uri\'. \'virt.connect\' will stop being used in '
-            '{version}.'
-        )
-    else:
-        conn_str = __salt__['config.get']('libvirt:connection', None)
+    username = kwargs.get('username', None)
+    password = kwargs.get('password', None)
+    conn_str = kwargs.get('connection', None)
+    if not conn_str:
+        conn_str = __salt__['config.get']('virt.connect', None)
         if conn_str is not None:
             salt.utils.warn_until(
                 'Sodium',
-                '\'libvirt.connection\' configuration property has been deprecated in favor '
-                'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
+                '\'virt.connect\' configuration property has been deprecated in favor '
+                'of \'virt:connection:uri\'. \'virt.connect\' will stop being used in '
                 '{version}.'
             )
+        else:
+            conn_str = __salt__['config.get']('libvirt:connection', None)
+            if conn_str is not None:
+                salt.utils.warn_until(
+                    'Sodium',
+                    '\'libvirt.connection\' configuration property has been deprecated in favor '
+                    'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
+                    '{version}.'
+                )
 
-    conn_str = __salt__['config.get']('virt:connection:uri', conn_str)
+        conn_str = __salt__['config.get']('virt:connection:uri', conn_str)
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', None)
     if hypervisor is not None:
@@ -193,7 +226,7 @@ def __get_conn():
                       libvirt.VIR_CRED_ECHOPROMPT,
                       libvirt.VIR_CRED_PASSPHRASE,
                       libvirt.VIR_CRED_EXTERNAL]
-        conn = libvirt.openAuth(conn_str, [auth_types, __request_auth, None], 0)
+        conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
@@ -1071,7 +1104,7 @@ def init(name,
     log.debug('Generating VM XML')
     kwargs['enable_vnc'] = enable_vnc
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     try:
         conn.defineXML(xml)
     except libvirtError as err:
@@ -1091,7 +1124,7 @@ def init(name,
     return True
 
 
-def list_domains():
+def list_domains(**kwargs):
     '''
     Return a list of available domains.
 
@@ -1102,14 +1135,14 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     vms = []
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     for dom in _get_domain(conn, iterable=True):
         vms.append(dom.name())
     conn.close()
     return vms
 
 
-def list_active_vms():
+def list_active_vms(**kwargs):
     '''
     Return a list of names for active virtual machine on the minion
 
@@ -1120,14 +1153,14 @@ def list_active_vms():
         salt '*' virt.list_active_vms
     '''
     vms = []
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     for dom in _get_domain(conn, iterable=True, inactive=False):
         vms.append(dom.name())
     conn.close()
     return vms
 
 
-def list_inactive_vms():
+def list_inactive_vms(**kwargs):
     '''
     Return a list of names for inactive virtual machine on the minion
 
@@ -1138,14 +1171,14 @@ def list_inactive_vms():
         salt '*' virt.list_inactive_vms
     '''
     vms = []
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     for dom in _get_domain(conn, iterable=True, active=False):
         vms.append(dom.name())
     conn.close()
     return vms
 
 
-def vm_info(vm_=None):
+def vm_info(vm_=None, **kwargs):
     '''
     Return detailed information about the vms on this hyper in a
     list of dicts:
@@ -1186,7 +1219,7 @@ def vm_info(vm_=None):
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     info = {}
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     if vm_:
         info[vm_] = _info(_get_domain(conn, vm_))
     else:
@@ -1196,7 +1229,7 @@ def vm_info(vm_=None):
     return info
 
 
-def vm_state(vm_=None):
+def vm_state(vm_=None, **kwargs):
     '''
     Return list of all the vms and their state.
 
@@ -1218,7 +1251,7 @@ def vm_state(vm_=None):
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
     info = {}
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     if vm_:
         info[vm_] = _info(_get_domain(conn, vm_))
     else:
@@ -1244,7 +1277,7 @@ def _node_info(conn):
     return info
 
 
-def node_info():
+def node_info(**kwargs):
     '''
     Return a dict with information about this node
 
@@ -1254,13 +1287,13 @@ def node_info():
 
         salt '*' virt.node_info
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     info = _node_info(conn)
     conn.close()
     return info
 
 
-def get_nics(vm_):
+def get_nics(vm_, **kwargs):
     '''
     Return info about the network interfaces of a named vm
 
@@ -1270,13 +1303,13 @@ def get_nics(vm_):
 
         salt '*' virt.get_nics <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     nics = _get_nics(_get_domain(conn, vm_))
     conn.close()
     return nics
 
 
-def get_macs(vm_):
+def get_macs(vm_, **kwargs):
     '''
     Return a list off MAC addresses from the named vm
 
@@ -1287,7 +1320,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <domain>
     '''
     macs = []
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_, **kwargs)))
     for node in doc.getElementsByTagName('devices'):
         i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
@@ -1296,7 +1329,7 @@ def get_macs(vm_):
     return macs
 
 
-def get_graphics(vm_):
+def get_graphics(vm_, **kwargs):
     '''
     Returns the information on vnc for a given vm
 
@@ -1306,13 +1339,13 @@ def get_graphics(vm_):
 
         salt '*' virt.get_graphics <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     graphics = _get_graphics(_get_domain(conn, vm_))
     conn.close()
     return graphics
 
 
-def get_disks(vm_):
+def get_disks(vm_, **kwargs):
     '''
     Return the disks of a named vm
 
@@ -1322,13 +1355,13 @@ def get_disks(vm_):
 
         salt '*' virt.get_disks <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     disks = _get_disks(_get_domain(conn, vm_))
     conn.close()
     return disks
 
 
-def setmem(vm_, memory, config=False):
+def setmem(vm_, memory, config=False, **kwargs):
     '''
     Changes the amount of memory allocated to VM. The VM must be shutdown
     for this to work.
@@ -1343,7 +1376,7 @@ def setmem(vm_, memory, config=False):
         salt '*' virt.setmem <domain> <size>
         salt '*' virt.setmem my_domain 768
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
 
     if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
@@ -1365,7 +1398,7 @@ def setmem(vm_, memory, config=False):
     return ret1 == ret2 == 0
 
 
-def setvcpus(vm_, vcpus, config=False):
+def setvcpus(vm_, vcpus, config=False, **kwargs):
     '''
     Changes the amount of vcpus allocated to VM. The VM must be shutdown
     for this to work.
@@ -1380,7 +1413,7 @@ def setvcpus(vm_, vcpus, config=False):
         salt '*' virt.setvcpus <domain> <amount>
         salt '*' virt.setvcpus my_domain 4
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
 
     if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
@@ -1412,7 +1445,7 @@ def _freemem(conn):
     return mem
 
 
-def freemem():
+def freemem(**kwargs):
     '''
     Return an int representing the amount of memory (in MB) that has not
     been given to virtual machines on this node
@@ -1423,7 +1456,7 @@ def freemem():
 
         salt '*' virt.freemem
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     mem = _freemem(conn)
     conn.close()
     return mem
@@ -1440,7 +1473,7 @@ def _freecpu(conn):
     return cpus
 
 
-def freecpu():
+def freecpu(**kwargs):
     '''
     Return an int representing the number of unallocated cpus on this
     hypervisor
@@ -1451,13 +1484,13 @@ def freecpu():
 
         salt '*' virt.freecpu
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     cpus = _freecpu(conn)
     conn.close()
     return cpus
 
 
-def full_info():
+def full_info(**kwargs):
     '''
     Return the node_info, vm_info and freemem
 
@@ -1467,7 +1500,7 @@ def full_info():
 
         salt '*' virt.full_info
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     info = {'freecpu': _freecpu(conn),
             'freemem': _freemem(conn),
             'node_info': _node_info(conn),
@@ -1476,7 +1509,7 @@ def full_info():
     return info
 
 
-def get_xml(vm_):
+def get_xml(vm_, **kwargs):
     '''
     Returns the XML for a given vm
 
@@ -1486,7 +1519,7 @@ def get_xml(vm_):
 
         salt '*' virt.get_xml <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     xml_desc = _get_domain(conn, vm_).XMLDesc(0)
     conn.close()
     return xml_desc
@@ -1524,7 +1557,7 @@ def get_profiles(hypervisor=None):
     return ret
 
 
-def shutdown(vm_):
+def shutdown(vm_, **kwargs):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -1534,14 +1567,14 @@ def shutdown(vm_):
 
         salt '*' virt.shutdown <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     ret = dom.shutdown() == 0
     conn.close()
     return ret
 
 
-def pause(vm_):
+def pause(vm_, **kwargs):
     '''
     Pause the named vm
 
@@ -1551,14 +1584,14 @@ def pause(vm_):
 
         salt '*' virt.pause <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     ret = dom.suspend() == 0
     conn.close()
     return ret
 
 
-def resume(vm_):
+def resume(vm_, **kwargs):
     '''
     Resume the named vm
 
@@ -1568,14 +1601,14 @@ def resume(vm_):
 
         salt '*' virt.resume <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     ret = dom.resume() == 0
     conn.close()
     return ret
 
 
-def start(name):
+def start(name, **kwargs):
     '''
     Start a defined domain
 
@@ -1585,13 +1618,13 @@ def start(name):
 
         salt '*' virt.start <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ret = _get_domain(conn, name).create == 0
     conn.close()
     return ret
 
 
-def stop(name):
+def stop(name, **kwargs):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the power.
 
@@ -1601,13 +1634,13 @@ def stop(name):
 
         salt '*' virt.stop <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ret = _get_domain(conn, name).destroy() == 0
     conn.close()
     return ret
 
 
-def reboot(name):
+def reboot(name, **kwargs):
     '''
     Reboot a domain via ACPI request
 
@@ -1617,13 +1650,13 @@ def reboot(name):
 
         salt '*' virt.reboot <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ret = _get_domain(conn, name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
     conn.close()
     return ret
 
 
-def reset(vm_):
+def reset(vm_, **kwargs):
     '''
     Reset a VM by emulating the reset button on a physical machine
 
@@ -1633,7 +1666,7 @@ def reset(vm_):
 
         salt '*' virt.reset <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
 
     # reset takes a flag, like reboot, but it is not yet used
@@ -1644,7 +1677,7 @@ def reset(vm_):
     return ret
 
 
-def ctrl_alt_del(vm_):
+def ctrl_alt_del(vm_, **kwargs):
     '''
     Sends CTRL+ALT+DEL to a VM
 
@@ -1654,14 +1687,14 @@ def ctrl_alt_del(vm_):
 
         salt '*' virt.ctrl_alt_del <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     ret = dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
     conn.close()
     return ret
 
 
-def create_xml_str(xml):
+def create_xml_str(xml, **kwargs):
     '''
     Start a domain based on the XML passed to the function
 
@@ -1671,13 +1704,13 @@ def create_xml_str(xml):
 
         salt '*' virt.create_xml_str <XML in string format>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ret = conn.createXML(xml, 0) is not None
     conn.close()
     return ret
 
 
-def create_xml_path(path):
+def create_xml_path(path, **kwargs):
     '''
     Start a domain based on the XML-file path passed to the function
 
@@ -1690,13 +1723,14 @@ def create_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return create_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
 
 
-def define_xml_str(xml):
+def define_xml_str(xml, **kwargs):
     '''
     Define a domain based on the XML passed to the function
 
@@ -1706,13 +1740,13 @@ def define_xml_str(xml):
 
         salt '*' virt.define_xml_str <XML in string format>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ret = conn.defineXML(xml) is not None
     conn.close()
     return ret
 
 
-def define_xml_path(path):
+def define_xml_path(path, **kwargs):
     '''
     Define a domain based on the XML-file path passed to the function
 
@@ -1726,13 +1760,14 @@ def define_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return define_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
 
 
-def define_vol_xml_str(xml):
+def define_vol_xml_str(xml, **kwargs):
     '''
     Define a volume based on the XML passed to the function
 
@@ -1761,14 +1796,14 @@ def define_vol_xml_str(xml):
     else:
         poolname = __salt__['config.get']('virt:storagepool', 'default')
 
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
     ret = pool.createXML(xml, 0) is not None
     conn.close()
     return ret
 
 
-def define_vol_xml_path(path):
+def define_vol_xml_path(path, **kwargs):
     '''
     Define a volume based on the XML-file path passed to the function
 
@@ -1782,7 +1817,8 @@ def define_vol_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return define_vol_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
@@ -1914,7 +1950,7 @@ def seed_non_shared_migrate(disks, force=False):
     return True
 
 
-def set_autostart(vm_, state='on'):
+def set_autostart(vm_, state='on', **kwargs):
     '''
     Set the autostart flag on a VM so that the VM will start with the host
     system on reboot.
@@ -1925,7 +1961,7 @@ def set_autostart(vm_, state='on'):
 
         salt "*" virt.set_autostart <domain> <on | off>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
 
     # return False if state is set to something other then on or off
@@ -1941,7 +1977,7 @@ def set_autostart(vm_, state='on'):
     return ret
 
 
-def undefine(vm_):
+def undefine(vm_, **kwargs):
     '''
     Remove a defined vm, this does not purge the virtual machine image, and
     this only works if the vm is powered down
@@ -1952,14 +1988,14 @@ def undefine(vm_):
 
         salt '*' virt.undefine <domain>
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     ret = dom.undefine() == 0
     conn.close()
     return ret
 
 
-def purge(vm_, dirs=False, removables=None):
+def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
     Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
@@ -1975,7 +2011,7 @@ def purge(vm_, dirs=False, removables=None):
 
         salt '*' virt.purge <domain> removables=False
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     disks = _get_disks(dom)
     if removables is None:
@@ -2076,7 +2112,7 @@ def is_hyper():
     return False
 
 
-def vm_cputime(vm_=None):
+def vm_cputime(vm_=None, **kwargs):
     '''
     Return cputime used by the vms on this hyper in a
     list of dicts:
@@ -2100,7 +2136,7 @@ def vm_cputime(vm_=None):
 
         salt '*' virt.vm_cputime
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     host_cpus = conn.getInfo()[2]
 
     def _info(dom):
@@ -2128,7 +2164,7 @@ def vm_cputime(vm_=None):
     return info
 
 
-def vm_netstats(vm_=None):
+def vm_netstats(vm_=None, **kwargs):
     '''
     Return combined network counters used by the vms on this hyper in a
     list of dicts:
@@ -2188,7 +2224,7 @@ def vm_netstats(vm_=None):
 
         return ret
     info = {}
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     if vm_:
         info[vm_] = _info(_get_domain(conn, vm_))
     else:
@@ -2198,7 +2234,7 @@ def vm_netstats(vm_=None):
     return info
 
 
-def vm_diskstats(vm_=None):
+def vm_diskstats(vm_=None, **kwargs):
     '''
     Return disk usage counters used by the vms on this hyper in a
     list of dicts:
@@ -2260,7 +2296,7 @@ def vm_diskstats(vm_=None):
 
         return ret
     info = {}
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     if vm_:
         info[vm_] = _info(_get_domain(conn, vm_))
     else:
@@ -2294,7 +2330,7 @@ def _parse_snapshot_description(vm_snapshot, unix_time=False):
     return ret
 
 
-def list_snapshots(domain=None):
+def list_snapshots(domain=None, **kwargs):
     '''
     List available snapshots for certain vm or for all.
 
@@ -2308,7 +2344,7 @@ def list_snapshots(domain=None):
         salt '*' virt.list_snapshots <domain>
     '''
     ret = dict()
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     for vm_domain in _get_domain(conn, *(domain and [domain] or list()), iterable=True):
         ret[vm_domain.name()] = [_parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()] or 'N/A'
 
@@ -2316,7 +2352,7 @@ def list_snapshots(domain=None):
     return ret
 
 
-def snapshot(domain, name=None, suffix=None):
+def snapshot(domain, name=None, suffix=None, **kwargs):
     '''
     Create a snapshot of a VM.
 
@@ -2349,14 +2385,14 @@ def snapshot(domain, name=None, suffix=None):
     n_name = ElementTree.SubElement(doc, 'name')
     n_name.text = name
 
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     _get_domain(conn, domain).snapshotCreateXML(ElementTree.tostring(doc))
     conn.close()
 
     return {'name': name}
 
 
-def delete_snapshots(name, *names):
+def delete_snapshots(name, *names, **kwargs):
     '''
     Delete one or more snapshots of the given VM.
 
@@ -2375,7 +2411,7 @@ def delete_snapshots(name, *names):
         salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
     '''
     deleted = dict()
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
     for snap in domain.listAllSnapshots():
         if snap.getName() in names or not names:
@@ -2388,7 +2424,7 @@ def delete_snapshots(name, *names):
     return {'available': available, 'deleted': deleted}
 
 
-def revert_snapshot(name, vm_snapshot=None, cleanup=False):
+def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     '''
     Revert snapshot to the previous from current (if available) or to the specific.
 
@@ -2406,7 +2442,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False):
         salt '*' virt.revert <domain> <snapshot>
     '''
     ret = dict()
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
     snapshots = domain.listAllSnapshots()
 
@@ -2473,7 +2509,7 @@ def _capabilities(conn):
     return caps
 
 
-def cpu_baseline(full=False, migratable=False, out='libvirt'):
+def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     '''
     Return the optimal 'custom' CPU baseline config for VM's on this minion
 
@@ -2490,7 +2526,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
         salt '*' virt.cpu_baseline
 
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     caps = _capabilities(conn)
 
     cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
@@ -2569,7 +2605,7 @@ def net_define(name, bridge, forward, **kwargs):
 
         salt '*' virt.net_define network main bridge openvswitch
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     vport = kwargs.get('vport', None)
     tag = kwargs.get('tag', None)
     autostart = kwargs.get('autostart', True)
@@ -2631,7 +2667,7 @@ def pool_define_build(name, **kwargs):
     '''
     exist = False
     update = False
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ptype = kwargs.pop('ptype', None)
     target = kwargs.pop('target', None)
     source = kwargs.pop('source', None)
