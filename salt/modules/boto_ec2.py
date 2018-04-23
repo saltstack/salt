@@ -56,6 +56,7 @@ import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.ext import six
+from salt.ext.six.moves import map
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
@@ -1004,9 +1005,9 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 return False
             security_group_ids += [r]
 
-    network_interface_args = map(int, [network_interface_id is not None,
-                                       network_interface_name is not None,
-                                       network_interfaces is not None])
+    network_interface_args = list(map(int, [network_interface_id is not None,
+                                            network_interface_name is not None,
+                                            network_interfaces is not None]))
 
     if sum(network_interface_args) > 1:
         raise SaltInvocationError('Only one of network_interface_id, '
@@ -1035,7 +1036,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             device_index=0)
 
     if network_interfaces:
-        interfaces_specs = map(lambda x: NetworkInterfaceSpecification(**x), network_interfaces)
+        interfaces_specs = [NetworkInterfaceSpecification(**x) for x in network_interfaces]
         interfaces = NetworkInterfaceCollection(*interfaces_specs)
     else:
         interfaces = NetworkInterfaceCollection(interface)
