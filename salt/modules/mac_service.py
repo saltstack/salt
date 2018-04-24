@@ -152,6 +152,25 @@ def _get_domain_target(name, service_target=False):
     return (domain_target, path)
 
 
+def _launch_agent(name):
+    '''
+    Checks to see if the provided service is a LaunchAgent
+
+    :param str name: Service label, file name, or full path
+
+    :return: True if a LaunchAgent, False is not.
+
+    :rtype: bool
+    '''
+
+    # Get the path to the service.
+    path = _get_service(name)['file_path']
+
+    if not 'LaunchAgents' in path:
+        return False
+    return True
+
+
 def show(name):
     '''
     Show properties of a launchctl service
@@ -226,8 +245,8 @@ def list_(name=None, runas=None):
 
         # we can assume if we are trying to list a LaunchAgent we need
         # to run as a user, if not provided, we'll use the console user.
-        if not runas and 'LaunchAgent' in service['file_path']:
-            runas = salt.utils.mac_utils.console_user(username=True)
+        if not runas and _launch_agent(name):
+            runas = __utils__['mac_utils.console_user'](username=True)
 
         # Collect information on service: will raise an error if it fails
         return launchctl('list',
@@ -407,6 +426,9 @@ def status(name, sig=None, runas=None):
     # return a string 'loaded' if it shouldn't always be running and is enabled.
     if not _always_running_service(name) and enabled(name):
         return 'loaded'
+
+    if not runas and _launch_agent(name):
+        runas = __utils__['mac_utils.console_user'](username=True)
 
     output = list_(runas=runas)
 
