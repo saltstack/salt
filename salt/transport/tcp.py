@@ -32,7 +32,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 import salt.ext.six as six
-import salt.ext.six.moves import queue
+from salt.ext.six.moves import queue
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 
