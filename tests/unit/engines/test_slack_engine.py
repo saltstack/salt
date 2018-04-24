@@ -43,19 +43,20 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
         '''
         trigger_string = '!'
 
-        loaded_groups = {u'default': {u'targets': {},
-                                      u'commands': set([u'cmd.run', u'test.ping']),
-                                      u'default_target': {u'tgt_type': u'glob', u'target': u'*'},
-                                      u'users': set([u'gareth']),
-                                      u'aliases': {u'whoami': {u'cmd': u'cmd.run whoami'},
-                                                   u'list_pillar': {u'cmd': u'pillar.items'}}
-                                      }}
+        loaded_groups = {'default': {'targets': {},
+                                     'commands': set(['cmd.run', 'test.ping']),
+                                     'default_target': {'tgt_type': 'glob', 'target': '*'},
+                                     'users': set(['gareth']),
+                                     'aliases': {'whoami': {'cmd': 'cmd.run whoami'},
+                                                 'list_pillar': {'cmd': 'pillar.items'}}
+                                     }}
 
         slack_user_name = 'gareth'
 
+        # Check for correct cmdline
         _expected = (True,
-                     {u'tgt_type': u'glob', u'target': u'*'},
-                     [u'cmd.run', u'whoami'])
+                     {'tgt_type': 'glob', 'target': '*'},
+                     ['cmd.run', 'whoami'])
         text = '!cmd.run whoami'
         target_commandline = self.client.control_message_target(slack_user_name,
                                                                 text,
@@ -64,6 +65,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(target_commandline, _expected)
 
+        # Check aliases result in correct cmdline
         text = '!whoami'
         target_commandline = self.client.control_message_target(slack_user_name,
                                                                 text,
@@ -72,10 +74,23 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(target_commandline, _expected)
 
+        # Check pillar is overrided
         _expected = (True,
-                     {u'tgt_type': u'glob', u'target': u'*'},
-                     [u'pillar.items', u'pillar={"hello": "world"}'])
+                     {'tgt_type': 'glob', 'target': '*'},
+                     ['pillar.items', 'pillar={"hello": "world"}'])
         text = r"""!list_pillar pillar='{"hello": "world"}'"""
+        target_commandline = self.client.control_message_target(slack_user_name,
+                                                                text,
+                                                                loaded_groups,
+                                                                trigger_string)
+
+        self.assertEqual(target_commandline, _expected)
+
+        # Check target is overrided
+        _expected = (True,
+                     {'tgt_type': 'glob', 'target': 'localhost'},
+                     ['cmd.run', 'whoami'])
+        text = "!cmd.run whoami target='localhost'"
         target_commandline = self.client.control_message_target(slack_user_name,
                                                                 text,
                                                                 loaded_groups,

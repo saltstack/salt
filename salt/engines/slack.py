@@ -359,6 +359,12 @@ class SlackClient(object):
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
 
+        # Remove target and tgt_type from commandline
+        # that is sent along to Salt
+        use_cmdline = [item for item
+                       in use_cmdline
+                       if all(not item.startswith(x) for x in ('target', 'tgt_type'))]
+
         return (True, target, use_cmdline)
 
     def message_text(self, m_data):
