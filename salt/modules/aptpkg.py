@@ -197,7 +197,7 @@ def _get_virtual():
                         __context__['pkg._get_virtual'][realpkg] = []
                     __context__['pkg._get_virtual'][realpkg].append(pkg.name)
         elif _has_dctrl_tools():
-            cmd = ['grep-available', '-F', 'Provides', '-s',
+            cmd = ['grep-status', '-F', 'Provides', '-s',
                    'Package,Provides', '-e', '^.+$']
             out = __salt__['cmd.run_stdout'](cmd,
                                              output_loglevel='trace',
@@ -1393,8 +1393,8 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
-    # Check for virtual packages. We need dctrl-tools for this.
-    if not removed and not HAS_APT:
+    # Check for virtual packages
+    if not removed:
         try:
             virtpkgs_all = _get_virtual()
         except CommandExecutionError as cee:
