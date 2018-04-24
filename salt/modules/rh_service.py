@@ -48,6 +48,10 @@ def __virtual__():
     Only work on select distros which still use Red Hat's /usr/bin/service for
     management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
+    # Disable when booted with systemd
+    if __utils__['systemd.booted'](__context__):
+        return (False, 'The rh_service execution module failed to load: this system was booted with systemd.')
+
     # Enable on these platforms only.
     enable = set((
         'XenServer',
