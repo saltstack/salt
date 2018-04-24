@@ -351,6 +351,7 @@ class WinSystemModuleTest(ModuleCase):
         name = socket.gethostname()
         self.assertEqual(name, ret)
 
+    @destructiveTest
     def test_set_computer_desc(self):
         '''
         Test setting the computer description
@@ -370,6 +371,7 @@ class WinSystemModuleTest(ModuleCase):
         now = datetime.datetime.now()
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
+    @destructiveTest
     def test_set_system_time(self):
         '''
         Test setting the system time
@@ -387,6 +389,7 @@ class WinSystemModuleTest(ModuleCase):
         date = datetime.datetime.now().date().strftime("%m/%d/%Y")
         self.assertEqual(date, ret)
 
+    @destructiveTest
     def test_set_system_date(self):
         '''
         Test setting system date
