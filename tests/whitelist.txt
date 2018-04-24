@@ -22,6 +22,7 @@ integration.modules.test_publish
 integration.modules.test_state
 integration.modules.test_status
 integration.modules.test_sysmod
+integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
 integration.reactor.test_reactor
