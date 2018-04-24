@@ -61,7 +61,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
         utils = salt.loader.utils(opts, whitelist=['reg'])
-        return  {
+        return {
             salt.modules.reg: {
                 '__opts__': opts,
                 '__utils__': utils,
