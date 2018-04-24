@@ -3340,6 +3340,7 @@ class _policy_info(object):
             else:
                 return item
 
+
 def __virtual__():
     '''
     Only works on Windows systems
