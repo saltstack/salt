@@ -67,4 +67,8 @@ salt/transport/*                    @saltstack/team-transport
 salt/utils/zeromq.py                @saltstack/team-transport
 
 # Team Windows
-salt/**/*win*                       @saltstack/team-windows
+salt/*/*win*                        @saltstack/team-windows
+salt/modules/reg.py                 @saltstack/team-windows
+salt/states/reg.py                  @saltstack/team-windows
+tests/*/*win*                       @saltstack/team-windows
+tests/*/test_reg.py                 @saltstack/team-windows
