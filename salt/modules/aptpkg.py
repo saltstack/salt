@@ -158,18 +158,6 @@ def _check_apt():
         )
 
 
-def _has_dctrl_tools():
-    '''
-    Return a boolean depending on whether or not dctrl-tools was installed.
-    '''
-    try:
-        return __context__['pkg._has_dctrl_tools']
-    except KeyError:
-        __context__['pkg._has_dctrl_tools'] = \
-            __salt__['cmd.has_exec']('grep-available')
-        return __context__['pkg._has_dctrl_tools']
-
-
 def _warn_software_properties(repo):
     '''
     Warn of missing python-software-properties package.
@@ -1263,10 +1251,6 @@ def list_pkgs(versions_as_list=False,
             Packages in this state now correctly show up in the output of this
             function.
 
-    .. note:: External dependencies
-
-        Virtual package resolution requires the ``dctrl-tools`` package to be
-        installed. Virtual packages will show a version of ``1``.
 
     CLI Example:
 
