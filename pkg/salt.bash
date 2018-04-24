@@ -13,17 +13,17 @@
 
 _salt_get_grains(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+        salt-call --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 --hide-timeout --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
 _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt-call --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --hide-timeout --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
@@ -134,7 +134,7 @@ _salt(){
         # salt: get all functions on all minions
         # sed: remove all array overhead and convert to newline separated list
         # sort: chop out doubled entries, so overhead is minimal later during actual completion
-        salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions \
+        salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- sys.list_functions \
           | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
           | sort -u \
           > "${_salt_cache_functions}"
@@ -276,7 +276,7 @@ _saltcall(){
                 ;;
     esac
 
-    _salt_coms="$(salt-call --out=txt -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
+    _salt_coms="$(salt-call --log-level=error --out=txt -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
     COMPREPLY=( $(compgen -W "${opts} ${_salt_coms}" -- ${cur} ))
     return 0
 }
