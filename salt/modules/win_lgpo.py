@@ -449,11 +449,11 @@ class _policy_info(object):
         }
         self.lm_compat_levels = {
             0: 'Send LM & NTLM response',
-            1: 'Send LM & NTLM - use NTMLv2 session security if negotiated',
+            1: 'Send LM & NTLM - use NTLMv2 session security if negotiated',
             2: 'Send NTLM response only',
             3: 'Send NTLMv2 response only',
             4: 'Send NTLMv2 response only. Refuse LM',
-            5: 'Send NTMLv2 response only. Refuse LM & NTLM',
+            5: 'Send NTLMv2 response only. Refuse LM & NTLM',
             None: 'Not Defined',
             '(value not set)': 'Not Defined',
         }
@@ -471,14 +471,14 @@ class _policy_info(object):
             None: 'Not Defined',
             '(value not set)': 'Not Defined',
         }
-        self.ntml_audit_settings = {
+        self.ntlm_audit_settings = {
             0: 'Disable',
             1: 'Enable auditing for domain accounts',
             2: 'Enable auditing for all accounts',
             None: 'Not Defined',
             '(value not set)': 'Not Defined'
         }
-        self.ntml_domain_audit_settings = {
+        self.ntlm_domain_audit_settings = {
             0: 'Disable',
             1: 'Enable for domain accounts to domain servers',
             3: 'Enable for domain accounts',
@@ -2735,7 +2735,7 @@ class _policy_info(object):
                     },
                     'AuditReceivingNTLMTraffic': {
                         'Policy': 'Network security: Restrict NTLM: Audit Incoming NTLM Traffic',
-                        'Settings': self.ntml_audit_settings.keys(),
+                        'Settings': self.ntlm_audit_settings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -2747,11 +2747,11 @@ class _policy_info(object):
                             'Get': '_dict_lookup',
                             'Put': '_dict_lookup',
                             'GetArgs': {
-                                'lookup': self.ntml_audit_settings,
+                                'lookup': self.ntlm_audit_settings,
                                 'value_lookup': False,
                             },
                             'PutArgs': {
-                                'lookup': self.ntml_audit_settings,
+                                'lookup': self.ntlm_audit_settings,
                                 'value_lookup': True,
                             },
                         },
@@ -2759,7 +2759,7 @@ class _policy_info(object):
                     'AuditNTLMInDomain': {
                         'Policy': 'Network security: Restrict NTLM: Audit NTLM '
                                   'authentication in this domain',
-                        'Settings': self.ntml_domain_audit_settings.keys(),
+                        'Settings': self.ntlm_domain_audit_settings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -2771,11 +2771,11 @@ class _policy_info(object):
                             'Get': '_dict_lookup',
                             'Put': '_dict_lookup',
                             'GetArgs': {
-                                'lookup': self.ntml_domain_audit_settings,
+                                'lookup': self.ntlm_domain_audit_settings,
                                 'value_lookup': False,
                             },
                             'PutArgs': {
-                                'lookup': self.ntml_domain_audit_settings,
+                                'lookup': self.ntlm_domain_audit_settings,
                                 'value_lookup': True,
                             },
                         },
