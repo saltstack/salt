@@ -629,10 +629,16 @@ class MinionBase(object):
                         break
                     except SaltClientError as exc:
                         last_exc = exc
-                        log.info(
-                            'Master %s could not be reached, trying next '
-                            'next master (if any)', opts['master']
-                        )
+                        if exc.strerror.startswith('Could not access'):
+                            msg = (
+                                'Failed to initiate connection with Master '
+                                '%s: check ownership/permissions. Error '
+                                'message: %s', opts['master'], exc
+                            )
+                        else:
+                            msg = ('Master %s could not be reached, trying next '
+                                   'next master (if any)', opts['master'])
+                        log.info(msg)
                         continue
 
                 if not conn:

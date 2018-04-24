@@ -2292,9 +2292,9 @@ def managed(name,
                 .format(contents_id)
             )
 
-        contents_are_binary = \
-            isinstance(use_contents, six.string_types) and '\0' in use_contents
-        if contents_are_binary:
+        if isinstance(use_contents, bytes) and b'\0' in use_contents:
+            contents = use_contents
+        elif isinstance(use_contents, six.string_types) and str('\0') in use_contents:
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
@@ -6287,7 +6287,7 @@ def serialize(name,
                         'result': False}
 
             with salt.utils.files.fopen(name, 'r') as fhr:
-                existing_data = __serializers__[deserializer_name](fhr)
+                existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
