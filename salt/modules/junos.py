@@ -1402,8 +1402,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
                              'report: {0}'.format(str(err))
             ret['out'] = False
             return ret
+        ret['reply'] = json.loads(data.to_json())
         if data.__class__.__bases__[0] == OpTable:
-            ret['reply'] = json.loads(data.to_json())
             # Sets key value if not present in YAML. To be used by returner
             if ret['table'][table].get('key') is None:
                 ret['table'][table]['key'] = data.ITEM_NAME_XPATH
@@ -1420,9 +1420,6 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             if args is not None:
                 ret['table'][table]['args'] = data.CMD_ARGS
                 ret['table'][table]['command'] = data.GET_CMD
-
-            ret['reply'] = _tuple_key_to_str(ret['table'][table],
-                                             dict(data))
     except ConnectClosedError:
         conn.connected = False
         ret['message'] = 'Connection lost with %s' % conn
@@ -1436,16 +1433,15 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         return ret
     return ret
 
-
-def _tuple_key_to_str(table, data):
-    table_key = table.get('key')
-    if isinstance(table_key, (tuple, list)) and len(table_key)>1:
-        for key, val in data.items():
-            if isinstance(key, tuple):
-                data[str(key)] = data.pop(key)
-                if isinstance(val, dict) and table.get('fields') is not \
-                    None and key in table.get(
-                        'fields'):
-                    tbl = table.get('fields')
-                    _tuple_key_to_str(tbl, val)
-    return data
+# def _tuple_key_to_str(table, data):
+#     table_key = table.get('key')
+#     if isinstance(table_key, (tuple, list)) and len(table_key)>1:
+#         for key, val in data.items():
+#             if isinstance(key, tuple):
+#                 data[str(key)] = data.pop(key)
+#                 if isinstance(val, dict) and table.get('fields') is not \
+#                     None and key in table.get(
+#                         'fields'):
+#                     tbl = table.get('fields')
+#                     _tuple_key_to_str(tbl, val)
+#     return data
