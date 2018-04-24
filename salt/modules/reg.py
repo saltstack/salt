@@ -35,7 +35,7 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.win_reg
-    HAS_WINDOWS_MODUELS = salt.utils.win_reg.HAS_WINDOWS_MODULES
+    HAS_WINDOWS_MODULES = salt.utils.win_reg.HAS_WINDOWS_MODULES
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
