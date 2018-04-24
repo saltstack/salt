@@ -1159,7 +1159,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
-        missing = []
+        missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
@@ -1199,7 +1199,7 @@ class LocalClient(object):
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     if 'missing' in raw.get('data', {}):
-                        missing.extend(raw['data']['missing'])
+                        missing.update(raw['data']['missing'])
                     continue
                 if 'return' not in raw['data']:
                     continue
@@ -1341,6 +1341,12 @@ class LocalClient(object):
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
 
+        # Filter out any minions marked as missing for which we received
+        # returns (prevents false events sent due to higher-level masters not
+        # knowing about lower-level minions).
+        missing -= found
+
+        # Report on missing minions
         if missing:
             for minion in missing:
                 yield {minion: {'failed': True}}
