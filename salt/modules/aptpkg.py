@@ -2711,6 +2711,91 @@ def owner(*paths):
     return ret
 
 
+def show(*names, **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Runs an ``apt-cache show`` on the passed package names, and returns the
+    results in a nested dictionary. The top level of the return data will be
+    the package name, with each package name mapping to a dictionary of version
+    numbers to any additional information returned by ``apt-cache show``.
+
+    filter
+        An optional comma-separated list (or quoted Python list) of
+        case-insensitive keys on which to filter. This allows one to restrict
+        the information returned for each package to a smaller selection of
+        pertinent items.
+
+    refresh : False
+        If ``True``, the apt cache will be refreshed first. By default, no
+        refresh is performed.
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion pkg.show gawk
+        salt myminion pkg.show 'nginx-*'
+        salt myminion pkg.show 'nginx-*' filter=description,provides
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    refresh = kwargs.pop('refresh', False)
+    filter_ = salt.utils.args.split_input(
+        kwargs.pop('filter', []),
+        lambda x: six.text_type(x)
+            if not isinstance(x, six.string_types)
+            else x.lower()
+    )
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
+
+    if refresh:
+        refresh_db()
+
+    if not names:
+        return {}
+
+    cmd = ['apt-cache', 'show'] + list(names)
+    result = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    def _add(ret, pkginfo):
+        name = pkginfo.pop('Package', None)
+        version = pkginfo.pop('Version', None)
+        if name is not None and version is not None:
+            ret.setdefault(name, {}).setdefault(version, {}).update(pkginfo)
+
+    def _check_filter(key):
+        key = key.lower()
+        return True if key in ('package', 'version') or not filter_ \
+            else key in filter_
+
+    ret = {}
+    pkginfo = {}
+    for line in salt.utils.itertools.split(result['stdout'], '\n'):
+        line = line.strip()
+        if line:
+            try:
+                key, val = [x.strip() for x in line.split(':', 1)]
+            except ValueError:
+                pass
+            else:
+                if _check_filter(key):
+                    pkginfo[key] = val
+        else:
+            # We've reached a blank line, which separates packages
+            _add(ret, pkginfo)
+            # Clear out the pkginfo dict for the next package
+            pkginfo = {}
+            continue
+
+    # Make sure to add whatever was in the pkginfo dict when we reached the end
+    # of the output.
+    _add(ret, pkginfo)
+
+    return ret
+
+
 def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
