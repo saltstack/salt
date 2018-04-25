@@ -87,6 +87,9 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         mock_cnx = MagicMock()
         mock_libvirt.openReadOnly.return_value = mock_cnx
 
+        # Don't loop for ever
+        mock_libvirt.virEventRunDefaultImpl.return_value = -1
+
         mock_cnx.networkEventRegisterAny.return_value = 10000
 
         libvirt_events.start('test:///', 'test/prefix')
