@@ -3,7 +3,18 @@
 '''
 An engine that listens for libvirt events and resends them to the salt event bus.
 
-Example configuration:
+The minimal configuration is the following and will listen to all events on the
+local hypervisor and send them with a tag starting with ``salt/engines/libvirt_events``:
+
+.. code-block:: yaml
+
+    engines:
+        - libvirt_events
+
+Note that the automatically-picked libvirt connection will depend on the value
+of ``uri_default`` in ``/etc/libvirt/libvirt.conf``. To force using another
+connection like the local LXC libvirt driver, set the ``uri`` property as in the
+following example configuration.
 
 .. code-block:: yaml
 
@@ -15,9 +26,6 @@ Example configuration:
                 - domain/lifecycle
                 - domain/reboot
                 - pool
-
-The default URI is ``qemu:///system`` and the default tag prefix is
-``salt/engines/libvirt_events``.
 
 Filters is a list of event types to relay to the event bus. Items in this list
 can be either one of the main types (``domain``, ``network``, ``pool``,
@@ -654,14 +662,14 @@ def _append_callback_id(ids, obj, callback_id):
     ids[obj].append(callback_id)
 
 
-def start(uri='qemu:///system',
+def start(uri=None,
           tag_prefix='salt/engines/libvirt_events',
           filters=None):
     '''
     Listen to libvirt events and forward them to salt.
 
     :param uri: libvirt URI to listen on.
-                Defaults to 'qemu:///system'
+                Defaults to None to pick the first available local hypervisor
     :param tag_prefix: the begining of the salt event tag to use.
                        Defaults to 'salt/engines/libvirt_events'
     :param filters: the list of event of listen on. Defaults to 'all'
@@ -671,8 +679,8 @@ def start(uri='qemu:///system',
     try:
         libvirt.virEventRegisterDefaultImpl()
 
-        log.debug('Opening libvirt uri: %s', uri)
         cnx = libvirt.openReadOnly(uri)
+        log.debug('Opened libvirt uri: %s', cnx.getURI())
 
         callback_ids = {}
         all_filters = "all" in filters
