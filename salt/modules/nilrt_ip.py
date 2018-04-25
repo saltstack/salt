@@ -291,8 +291,8 @@ def _get_interface_info(interface):
                                                           format(NIRTCFG_PATH, interface, 'Subnet_Mask'))
             data['ipv4']['gateway'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
                                                           format(NIRTCFG_PATH, interface, 'Gateway'))
-            data['ipv4']['dns'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
-                                                      format(NIRTCFG_PATH, interface, 'DNS_Address'))
+            data['ipv4']['dns'] = [__salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
+                                                       format(NIRTCFG_PATH, interface, 'DNS_Address'))]
     iface_gateway_hex = __salt__['cmd.shell']("grep {0} /proc/net/route | awk '{{ if ($2 == '00000000') print $3}}'".
                                               format(interface)).strip()
     if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
