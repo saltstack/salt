@@ -444,7 +444,7 @@ class CPModuleTest(ModuleCase):
             self.assertIn('ARTHUR:', data)
             self.assertNotIn('bacon', data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_cache_master(self, tgt):
         '''
         cp.cache_master
