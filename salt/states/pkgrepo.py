@@ -343,7 +343,7 @@ def managed(name, ppa=None, **kwargs):
             if disabled is not None \
             else salt.utils.is_true(enabled)
 
-    elif __grains__['os_family'] in ('NILinuxRT',):
+    elif __grains__['os_family'] in ('NILinuxRT', 'Poky'):
         # opkg is the pkg virtual
         kwargs['enabled'] = not salt.utils.is_true(disabled) \
             if disabled is not None \
