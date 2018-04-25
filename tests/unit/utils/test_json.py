@@ -132,7 +132,7 @@ class JSONTestCase(TestCase):
         # Loading it should be equal to the original data
         self.assertEqual(salt.utils.json.loads(ret), self.data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_dump_load(self, json_out):
         '''
         Test dumping to and loading from a file handle

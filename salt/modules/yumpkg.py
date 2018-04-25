@@ -1355,7 +1355,7 @@ def install(name=None,
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, saltenv=saltenv, normalize=normalize
+            name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1653,7 +1653,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install' if pkg_type is not 'advisory' else 'update')
+            cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,

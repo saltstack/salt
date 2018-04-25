@@ -45,6 +45,7 @@ except ImportError:
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 PY2 = sys.version_info[0] == 2
 log = logging.getLogger(__name__)
@@ -169,7 +170,10 @@ def key_exists(hive, key, use_32bit_registry=False):
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
@@ -231,7 +235,10 @@ def list_keys(hive, key=None, use_32bit_registry=False):
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     subkeys = []
@@ -287,7 +294,10 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
     handle = None
     values = list()
@@ -378,7 +388,10 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         ret['vname'] = '(Default)'
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
@@ -524,26 +537,14 @@ def set_value(hive,
     local_vtype = _to_unicode(vtype)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     vtype_value = registry.vtype[local_vtype]
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
-    # Check data type and cast to expected type
-    # int will automatically become long on 64bit numbers
-    # https://www.python.org/dev/peps/pep-0237/
-
-    # String Types to Unicode
-    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-        local_vdata = _to_unicode(vdata)
-    # Don't touch binary...
-    elif vtype_value == win32con.REG_BINARY:
-        local_vdata = vdata
-    # Make sure REG_MULTI_SZ is a list of strings
-    elif vtype_value == win32con.REG_MULTI_SZ:
-        local_vdata = [_to_unicode(i) for i in vdata]
-    # Everything else is int
-    else:
-        local_vdata = int(vdata)
+    local_vdata = cast_vdata(vdata=vdata, vtype=local_vtype)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
@@ -561,6 +562,52 @@ def set_value(hive,
     except (win32api.error, SystemError, ValueError, TypeError):  # pylint: disable=E0602
         log.exception('Encountered error setting registry value')
         return False
+
+
+def cast_vdata(vdata=None, vtype='REG_SZ'):
+    '''
+    Cast the ``vdata` value to the appropriate data type for the registry type
+    specified in ``vtype``
+
+    Args:
+
+        vdata (str, list, bin): The data to cast
+
+        vtype (str):
+            The type of data to be written to the registry. Must be one of the
+            following:
+                - REG_BINARY
+                - REG_DWORD
+                - REG_EXPAND_SZ
+                - REG_MULTI_SZ
+                - REG_SZ
+
+    Returns:
+        The vdata cast to the appropriate type. Will be unicode string, binary,
+        list of unicode strings, or int
+    '''
+    # Check data type and cast to expected type
+    # int will automatically become long on 64bit numbers
+    # https://www.python.org/dev/peps/pep-0237/
+
+    registry = Registry()
+    vtype_value = registry.vtype[vtype]
+
+    # String Types to Unicode
+    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+        return _to_unicode(vdata)
+    # Don't touch binary... if it's binary
+    elif vtype_value == win32con.REG_BINARY:
+        if isinstance(vdata, six.text_type):
+            # Unicode data must be encoded
+            return vdata.encode('utf-8')
+        return vdata
+    # Make sure REG_MULTI_SZ is a list of strings
+    elif vtype_value == win32con.REG_MULTI_SZ:
+        return [_to_unicode(i) for i in vdata]
+    # Everything else is int
+    else:
+        return int(vdata)
 
 
 def delete_key_recursive(hive, key, use_32bit_registry=False):
@@ -601,7 +648,10 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
     # Instantiate the registry object
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     key_path = local_key
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
@@ -699,7 +749,10 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
     local_vname = _to_unicode(vname)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
     try:

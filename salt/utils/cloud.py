@@ -835,7 +835,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     )
     transport = 'ssl'
     if not use_ssl:
-        transport = 'plaintext'
+        transport = 'ntlm'
     trycount = 0
     while True:
         trycount += 1
