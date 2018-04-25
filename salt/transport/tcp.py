@@ -558,10 +558,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             self._socket.close()
             self._socket = None
         if hasattr(self.req_server, 'stop'):
-            try:
-                self.req_server.stop()
-            except Exception as exc:
-                log.debug("TCPReqServerChannel close generated an exception: %s", str(exc))
+            self.req_server.stop()
 
     def __del__(self):
         self.close()
@@ -753,8 +750,9 @@ if USE_LOAD_BALANCER:
             self.thread.start()
 
         def stop(self):
-            self._stop.set()
-            self.thread.join()
+            if self.thread.is_alive():
+                self._stop.set()
+                self.thread.join()
 
         def socket_queue_thread(self):
             try:
