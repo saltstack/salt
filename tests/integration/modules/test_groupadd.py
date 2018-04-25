@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import grp
 import random
 import string
 
@@ -17,6 +16,9 @@ from salt.ext.six.moves import range
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+
+if not salt.utils.platform.is_windows():
+    import grp
 
 
 @skip_if_not_root
