@@ -157,7 +157,7 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
     # Install Microsoft Visual C++ Build Tools
     Write-Output " - Installing $($ini['Prerequisites']['VCppBuildTools']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCppBuildTools'])"
-    $p    = Start-Process $file -ArgumentList '/Passive' -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList '/Quiet' -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
-    $p    = Start-Process $file -ArgumentList "/passive InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -197,17 +197,17 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 } else {
     $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
     if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
         Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
+        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
     Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
 }
 
 #==============================================================================
@@ -218,16 +218,16 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
         Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
     Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================

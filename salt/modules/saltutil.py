@@ -1429,6 +1429,9 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
         if 'saltenv' in aspec.args:
             kwarg['saltenv'] = saltenv
 
+    if name in ['state.orchestrate', 'state.orch', 'state.sls']:
+        kwarg['orchestration_jid'] = jid
+
     if jid:
         salt.utils.event.fire_args(
             __opts__,

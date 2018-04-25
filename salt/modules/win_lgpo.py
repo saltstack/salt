@@ -54,6 +54,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
+from salt.serializers.configparser import deserialize
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -4633,37 +4634,34 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
 def _getScriptSettingsFromIniFile(policy_info):
     '''
     helper function to parse/read a GPO Startup/Shutdown script file
+
+    psscript.ini and script.ini file definitions are here
+        https://msdn.microsoft.com/en-us/library/ff842529.aspx
+        https://msdn.microsoft.com/en-us/library/dd303238.aspx
     '''
-    _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    if _existingData:
-        _existingData = _existingData.split('\r\n')
-        script_settings = {}
-        this_section = None
-        for eLine in _existingData:
-            if eLine.startswith('[') and eLine.endswith(']'):
-                this_section = eLine.replace('[', '').replace(']', '')
-                log.debug('adding section {0}'.format(this_section))
-                if this_section:
-                    script_settings[this_section] = {}
-            else:
-                if '=' in eLine:
-                    log.debug('working with config line {0}'.format(eLine))
-                    eLine = eLine.split('=')
-                    if this_section in script_settings:
-                        script_settings[this_section][eLine[0]] = eLine[1]
-        if 'SettingName' in policy_info['ScriptIni']:
-            log.debug('Setting Name is in policy_info')
-            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-                log.debug('the value is set in the file')
-                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+    _existingData = None
+    if os.path.isfile(policy_info['ScriptIni']['IniPath']):
+        with salt.utils.fopen(policy_info['ScriptIni']['IniPath'], 'rb') as fhr:
+            _existingData = fhr.read()
+        if _existingData:
+            try:
+                _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
+                log.debug('Have deserialized data {0}'.format(_existingData))
+            except Exception as error:
+                log.error('An error occurred attempting to deserialize data for {0}'.format(policy_info['Policy']))
+                raise CommandExecutionError(error)
+            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
+                if 'SettingName' in policy_info['ScriptIni']:
+                    log.debug('Need to look for {0}'.format(policy_info['ScriptIni']['SettingName']))
+                    if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
+                        return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
+                    else:
+                        return None
+                else:
+                    return _existingData[policy_info['ScriptIni']['Section']]
             else:
                 return None
-        elif policy_info['ScriptIni']['Section'] in script_settings:
-            log.debug('no setting name')
-            return script_settings[policy_info['ScriptIni']['Section']]
-        else:
-            log.debug('broad else')
-            return None
+
     return None
 
 
