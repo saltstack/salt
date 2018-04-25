@@ -563,7 +563,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             except Exception as exc:
                 log.debug("TCPReqServerChannel close generated an exception: %s", str(exc))
 
-
     def __del__(self):
         self.close()
 
