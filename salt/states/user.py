@@ -460,7 +460,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
+    for gecos_field in [fullname, roomnumber, workphone]:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
