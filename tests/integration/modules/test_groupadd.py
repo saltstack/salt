@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import grp
 import random
 import string
 
@@ -14,9 +13,13 @@ from tests.support.unit import skipIf
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+
+if not salt.utils.is_windows():
+  import grp
 
 
 @skip_if_not_root
