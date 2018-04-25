@@ -18,7 +18,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 if not salt.utils.platform.is_windows():
-   import grp
+    import grp
 
 
 @skip_if_not_root
