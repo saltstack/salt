@@ -216,6 +216,13 @@ def managed(name,
         Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         result after the template was rendered.
 
+        .. note::
+
+            This argument cannot be used directly on the command line. Instead,
+            it can be passed through the ``pillar`` variable when executing one
+            of the :ref:`salt.modules.state.sls` or :ref:`salt.modules.state.apply`
+            functions (see an example below).
+
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
 
@@ -266,7 +273,7 @@ def managed(name,
 
         $ sudo salt 'juniper.device' state.sls router.config test=True
 
-        $ sudo salt -N all-routers state.sls router.config debug=True
+        $ sudo salt -N all-routers state.sls router.config pillar="{'debug': True}"
 
     ``router.config`` depends on the location of the SLS file (see above). Running this command, will be executed all
     five steps from above. These examples above are not meant to be used in a production environment, their sole purpose
@@ -334,11 +341,11 @@ def managed(name,
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __opts__.get('test', test)
-    debug = __opts__.get('debug', debug)
-    commit = __opts__.get('commit', commit)
-    replace = __opts__.get('replace', replace)  # this might be a bit risky
-    skip_verify = __opts__.get('skip_verify', skip_verify)
+    test = __salt__['config.merge']('test', test)
+    debug = __salt__['config.merge']('debug', debug)
+    commit = __salt__['config.merge']('commit', commit)
+    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
+    skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
 
     config_update_ret = _update_config(template_name,
                                        template_source=template_source,
