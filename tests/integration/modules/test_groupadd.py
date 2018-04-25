@@ -128,6 +128,7 @@ class GroupModuleTest(ModuleCase):
             self.assertFalse(self.run_function('group.add', [self._group], gid=self._gid))
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_add_system_group(self):
         '''
         Test the add group function with system=True
@@ -146,6 +147,7 @@ class GroupModuleTest(ModuleCase):
                                            [self._group]))
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_add_system_group_gid(self):
         '''
         Test the add group function with system=True and a specific gid
