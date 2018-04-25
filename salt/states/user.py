@@ -68,6 +68,7 @@ def _changes(name,
              roomnumber='',
              workphone='',
              homephone='',
+             other='',
              loginclass=None,
              date=None,
              mindays=0,
@@ -188,6 +189,12 @@ def _changes(name,
         lusr['homephone'] = sdecode_if_string(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    if 'user.chother' in __salt__ \
+            and other is not None:
+        other = sdecode_if_string(other)
+        lusr['other'] = sdecode_if_string(lusr['other'])
+        if lusr['other'] != other:
+            change['other'] = other
     # OpenBSD/FreeBSD login class
     if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if loginclass:
@@ -236,6 +243,7 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            other=None,
             loginclass=None,
             date=None,
             mindays=None,
@@ -377,7 +385,10 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
-        If GECOS field contains more than 3 commas, this field will have the rest of 'em
+
+    other
+        The user's other attribute (not supported in MacOS)
+        If GECOS field contains more than 4 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -448,6 +459,8 @@ def present(name,
         workphone = sdecode(workphone)
     if homephone is not None:
         homephone = sdecode(homephone)
+    if other is not None:
+        other = sdecode(other)
 
     # createhome not supported on Windows or Mac
     if __grains__['kernel'] in ('Darwin', 'Windows'):
@@ -519,6 +532,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           other,
                            loginclass,
                            date,
                            mindays,
@@ -654,6 +668,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           other,
                            loginclass,
                            date,
                            mindays,
@@ -705,6 +720,7 @@ def present(name,
                       'roomnumber': roomnumber,
                       'workphone': workphone,
                       'homephone': homephone,
+                      'other': other,
                       'createhome': createhome,
                       'nologinit': nologinit,
                       'loginclass': loginclass}
