@@ -26,6 +26,7 @@ class NetworkTest(ModuleCase):
         for out in exp_out:
             self.assertIn(out, ret.lower())
 
+    @skipIf(salt.utils.is_darwin(), 'not supported on macosx')
     def test_network_netstat(self):
         '''
         network.netstat
