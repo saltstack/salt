@@ -545,8 +545,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         return self._socket
 
     def close(self):
-        if hasattr(self.req_server, 'stop'):
-            self.req_server.stop()
         if self._socket is not None:
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
@@ -559,6 +557,8 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     raise exc
             self._socket.close()
             self._socket = None
+        if hasattr(self.req_server, 'stop'):
+            self.req_server.stop()
 
     def __del__(self):
         self.close()
