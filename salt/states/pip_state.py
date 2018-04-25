@@ -193,15 +193,10 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     ret = {'result': False, 'comment': None}
 
     # Check if the requested package is already installed.
-    try:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd,
-                                        env_vars=env_vars)
-        prefix_realname = _find_key(prefix, pip_list)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(state_pkg_name, err)
-        return ret
+    pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                    user=user, cwd=cwd,
+                                    env_vars=env_vars)
+    prefix_realname = _find_key(prefix, pip_list)
 
     # If the package was already installed, check
     # the ignore_installed and force_reinstall flags
@@ -619,11 +614,16 @@ def installed(name,
     ret = {'name': ';'.join(pkgs), 'result': None,
            'comment': '', 'changes': {}}
 
+    try:
+        cur_version = __salt__['pip.version'](bin_env)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = None
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        return ret
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
@@ -637,7 +637,6 @@ def installed(name,
     if no_use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
@@ -650,7 +649,6 @@ def installed(name,
     # Check that the pip binary supports the 'no_binary' option
     if no_binary:
         min_version = '7.0.0'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             ret['result'] = False

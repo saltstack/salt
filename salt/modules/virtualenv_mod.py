@@ -56,7 +56,8 @@ def create(path,
            upgrade=None,
            user=None,
            use_vt=False,
-           saltenv='base'):
+           saltenv='base',
+           **kwargs):
     '''
     Create a virtualenv
 
@@ -251,7 +252,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False, **kwargs)
     if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret

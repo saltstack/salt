@@ -123,49 +123,57 @@ def _get_pip_bin(bin_env):
     '''
     if not bin_env:
         logger.debug('PIP: Using pip from calling python')
-        return [sys.executable, '-m', 'pip']
+        return [os.path.normpath(sys.executable), '-m', 'pip']
 
-    # try to get pip bin from virtualenv, bin_env
+    # try to get python bin from virtualenv, bin_env
+    python_bin = 'python'
+    if salt.utils.is_windows():
+        python_bin = 'python.exe'
+
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
-            # A user might pass the path to the Python directory or the Scripts
-            # directory
-            pip_bins = [
-                os.path.join(bin_env, 'pip.exe'),
-                os.path.join(bin_env, 'Scripts', 'pip.exe')
-            ]
-            for pip_bin in pip_bins:
-                if six.PY2:
-                    pip_bin = pip_bin.encode('string-escape')
-                if os.path.isfile(pip_bin):
-                    logger.debug('PIP: Found pip binary: %s', pip_bin)
-                    return [pip_bin]
-        else:
-            pip_bin = os.path.join(bin_env, 'bin', 'pip')
-        if os.path.isfile(pip_bin):
-            return [pip_bin]
+        bin_paths = [os.path.join(bin_env, python_bin),
+                     os.path.join(bin_env, 'bin', python_bin),
+                     os.path.join(bin_env, 'Scripts', python_bin)]
+        for bin_path in bin_paths:
+            if six.PY2:
+                bin_path = bin_path.encode('string-escape')
+            if os.path.isfile(bin_path):
+                logger.debug('PIP: Found python binary: %s', bin_path)
+                return [os.path.normpath(bin_path), '-m', 'pip']
         msg = 'Could not find a `pip` binary in virtualenv {0}'.format(bin_env)
         raise CommandNotFoundError(msg)
-    # bin_env is the pip binary
+
+    # bin_env is the python or pip binary
     elif os.access(bin_env, os.X_OK):
         if os.path.isfile(bin_env) or os.path.islink(bin_env):
-            return [bin_env]
+            # If the python binary was passed, return it
+            if 'python' in os.path.basename(bin_env):
+                return [os.path.normpath(bin_env), '-m', 'pip']
+            # Try to find the python binary based on the location of pip in a
+            # virtual environment, should be relative
+            if 'pip' in os.path.basename(bin_env):
+                # Look in the same directory as the pip binary
+                cur_dir = os.path.dirname(bin_env)
+                bin_paths = [os.path.join(cur_dir, python_bin),
+                             os.path.join(cur_dir, 'bin', python_bin),
+                             os.path.join(cur_dir, 'Scripts', python_bin)]
+                # Look in the directory above
+                cur_dir = os.path.dirname(cur_dir)
+                bin_paths.extend([os.path.join(cur_dir, python_bin),
+                                  os.path.join(cur_dir, 'bin', python_bin),
+                                  os.path.join(cur_dir, 'Scripts', python_bin)])
+                for bin_path in bin_paths:
+                    if six.PY2:
+                        bin_path = bin_path.encode('string-escape')
+                    if os.path.isfile(bin_path):
+                        logger.debug('PIP: Found python binary: %s', bin_path)
+                        return [os.path.normpath(bin_path), '-m', 'pip']
+            # Couldn't find python, use the passed pip binary
+            # This has the limitation of being unable to update pip itself
+            return [os.path.normpath(bin_env)]
+        raise CommandExecutionError('Unknown error occurred: {0}'.format(bin_env))
     else:
-        raise CommandNotFoundError('Could not find a `pip` binary')
-
-
-def _get_pip_cwd(bin_env):
-    '''
-    Return the current working directory based on bin_env
-    '''
-    if not bin_env:
-        cwd = os.path.dirname(sys.executable)
-    else:
-        if os.path.isdir(bin_env):
-            cwd = bin_env
-        else:
-            cwd = os.path.dirname(bin_env)
-    return cwd
+        raise CommandNotFoundError('Could not find a `pip` binary: {0}'.format(bin_env))
 
 
 def _get_cached_requirements(requirements, saltenv):
@@ -595,9 +603,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
-
     cleanup_requirements, error = _process_requirements(
         requirements=requirements,
         cmd=cmd,
@@ -949,9 +954,6 @@ def uninstall(pkgs=None,
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['uninstall', '-y'])
 
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
-
     cleanup_requirements, error = _process_requirements(
         requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,
         cwd=cwd
@@ -1057,14 +1059,10 @@ def freeze(bin_env=None,
     cmd = _get_pip_bin(bin_env)
     cmd.append('freeze')
 
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
-
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
     cur_version = version(bin_env)
-    if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                       ver2=min_version):
+    if salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version):
         logger.warning(
             ('The version of pip installed is {0}, which is older than {1}. '
              'The packages pip, wheel, setuptools, and distribute will not be '
@@ -1211,9 +1209,6 @@ def list_upgrades(bin_env=None,
     if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='9.0.0'):
         cmd.extend(['--format', 'json'])
 
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
-
     cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -1319,9 +1314,6 @@ def upgrade(bin_env=None,
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['install', '-U'])
 
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
-
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
@@ -1390,9 +1382,6 @@ def list_all_versions(pkg,
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['install', '{0}==versions'.format(pkg)])
-
-    if not cwd and salt.utils.is_windows():
-        cwd = _get_pip_cwd(bin_env)
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):
