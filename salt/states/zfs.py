@@ -8,7 +8,7 @@ States for managing zfs datasets
 :platform:      smartos, illumos, solaris, freebsd, linux
 
 .. versionadded:: 2016.3.0
-.. versionchanged:: Flourine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
