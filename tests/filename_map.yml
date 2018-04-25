@@ -1,0 +1,2 @@
+salt/utils/docker/*:
+  - unit.utils.test_docker
