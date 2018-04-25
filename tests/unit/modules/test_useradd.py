@@ -46,7 +46,8 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                           'fullname': 'root',
                           'roomnumber': '',
                           'workphone': '',
-                          'homephone': ''}
+                          'homephone': '',
+                          'other': ''}
 
     @classmethod
     def tearDownClass(cls):
@@ -96,7 +97,8 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                     'fullname': 'root',
                     'roomnumber': '',
                     'workphone': '',
-                    'homephone': ''}]
+                    'homephone': '',
+                    'other': ''}]
             with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
                 self.assertEqual(useradd.getent(), ret)
 
@@ -329,6 +331,36 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value={'homephone': '3'})
                 with patch.object(useradd, 'info', mock):
                     self.assertFalse(useradd.chhomephone('salt', 1))
+
+    # 'chother' function tests: 1
+
+    def test_chother(self):
+        '''
+        Test if the user's other GECOS attribute is changed
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.object(useradd, '_get_gecos', mock):
+            self.assertFalse(useradd.chother('salt', 1))
+
+        mock = MagicMock(return_value={'other': 'foobar'})
+        with patch.object(useradd, '_get_gecos', mock):
+            self.assertTrue(useradd.chother('salt', 'foobar'))
+
+        mock = MagicMock(return_value={'other': 'foobar2'})
+        with patch.object(useradd, '_get_gecos', mock):
+            mock = MagicMock(return_value=None)
+            with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+                mock = MagicMock(return_value={'other': 'foobar3'})
+                with patch.object(useradd, 'info', mock):
+                    self.assertFalse(useradd.chother('salt', 'foobar'))
+
+        mock = MagicMock(return_value={'other': 'foobar3'})
+        with patch.object(useradd, '_get_gecos', mock):
+            mock = MagicMock(return_value=None)
+            with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+                mock = MagicMock(return_value={'other': 'foobar3'})
+                with patch.object(useradd, 'info', mock):
+                    self.assertFalse(useradd.chother('salt', 'foobar'))
 
     # 'info' function tests: 1
 
