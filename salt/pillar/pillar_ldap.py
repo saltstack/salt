@@ -104,12 +104,6 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
           memberOf:
               - cn=it-admins,ou=groups,dc=company,dc=tld
               - cn=team02,ou=groups,dc=company
-
-
-List Mode
----------
-
-TODO: see also ``_result_to_dict()`` documentation
 '''
 
 # Import python libs
