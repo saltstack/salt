@@ -300,7 +300,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
                 if salt.utils.is_windows():
                     venv_path = 'c:\\test_env'
-                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
+                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
                 else:
                     venv_path = '/test_env'
                     bin_path = os.path.join(venv_path, 'bin', 'pip')
