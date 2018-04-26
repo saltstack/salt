@@ -110,6 +110,8 @@ try:
 except ImportError:
     HAS_REDIS_CLUSTER = False
 
+REDIS_POOL = None
+
 # Define the module's virtual name
 __virtualname__ = 'redis'
 
@@ -135,6 +137,7 @@ def _get_options(ret=None):
     '''
     attrs = {'host': 'host',
              'port': 'port',
+             'unix_socket_path': 'unix_socket_path',
              'db': 'db',
              'cluster_mode': 'cluster_mode',
              'startup_nodes': 'cluster.startup_nodes',
@@ -145,6 +148,7 @@ def _get_options(ret=None):
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
+            'unix_socket_path': __opts__.get('redis.unix_socket_path', None),
             'db': __opts__.get('redis.db', '0'),
             'cluster_mode': __opts__.get('redis.cluster_mode', False),
             'startup_nodes': __opts__.get('redis.cluster.startup_nodes', {}),
@@ -159,31 +163,24 @@ def _get_options(ret=None):
     return _options
 
 
-CONN_POOL = None
-
-
-def _get_conn_pool(_options):
-    global CONN_POOL
-    if CONN_POOL is None:
-        CONN_POOL = redis.ConnectionPool(host=_options.get('host'),
-                                         port=_options.get('port'),
-                                         db=_options.get('db'))
-    return CONN_POOL
-
-
 def _get_serv(ret=None):
     '''
     Return a redis server object
     '''
     _options = _get_options(ret)
-
-    if _options.get('cluster_mode'):
-        return StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
-                                  skip_full_coverage_check=_options.get('skip_full_coverage_check'),
-                                  decode_responses=True)
+    global REDIS_POOL
+    if REDIS_POOL:
+        return REDIS_POOL
+    elif _options.get('cluster_mode'):
+        REDIS_POOL = StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
+                                        skip_full_coverage_check=_options.get('skip_full_coverage_check'),
+                                        decode_responses=True)
     else:
-        pool = _get_conn_pool(_options)
-        return redis.StrictRedis(connection_pool=pool)
+        REDIS_POOL = redis.StrictRedis(host=_options.get('host'),
+                                       port=_options.get('port'),
+                                       unix_socket_path=_options.get('unix_socket_path', None),
+                                       db=_options.get('db'))
+    return REDIS_POOL
 
 
 def _get_ttl():
