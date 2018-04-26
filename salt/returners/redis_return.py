@@ -14,7 +14,7 @@ config, these are the defaults:
 
 Cluster Mode Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     redis.db: '0'
     redis.cluster_mode: true
@@ -66,7 +66,7 @@ cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
@@ -139,7 +139,7 @@ def _get_options(ret=None):
              'cluster_mode': 'cluster_mode',
              'startup_nodes': 'cluster.startup_nodes',
              'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
-        }
+             }
 
     if salt.utils.platform.is_proxy():
         return {
