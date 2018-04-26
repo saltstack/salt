@@ -890,7 +890,7 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
-                'priv_pass': priv_passwd,
+                'priv_passwd': priv_passwd,
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty,
