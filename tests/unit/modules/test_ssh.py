@@ -93,10 +93,8 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         comment_line = '# this is a comment \n'
 
         # Write out the authorized key to a temporary file
-        if salt.utils.is_windows():
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-        else:
-            temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        temp_file.close()
 
         with salt.utils.fopen(temp_file.name, 'w') as _fh:
             # Add comment
