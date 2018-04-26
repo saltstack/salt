@@ -698,6 +698,7 @@ def start(uri=None,
         exit_loop = False
         while not exit_loop:
             exit_loop = libvirt.virEventRunDefaultImpl() < 0
+            log.debug('=== in the loop exit_loop %s ===', exit_loop)
 
     except Exception as err:  # pylint: disable=broad-except
         log.exception(err)
