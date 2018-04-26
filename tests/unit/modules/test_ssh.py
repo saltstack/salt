@@ -102,7 +102,6 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             # Add empty line for #41335
             _fh.write(empty_line)
             _fh.write('{0} {1} {2} {3}'.format(options, enc, key, email))
-            _fh.close()
 
         with patch.dict(ssh.__salt__, {'user.info': MagicMock(return_value={})}):
             with patch('salt.modules.ssh._get_config_file', MagicMock(return_value=temp_file.name)):
