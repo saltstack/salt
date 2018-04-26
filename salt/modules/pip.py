@@ -115,64 +115,82 @@ def __virtual__():
     return 'pip'
 
 
+def _clear_context(bin_env=None):
+    '''
+    Remove the cached pip version
+    '''
+    contextkey = 'pip.version'
+    if bin_env is not None:
+        contextkey = '{0}.{1}'.format(contextkey, bin_env)
+    __context__.pop(contextkey, None)
+
+
 def _get_pip_bin(bin_env):
     '''
     Locate the pip binary, either from `bin_env` as a virtualenv, as the
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        logger.debug('PIP: Using pip from calling python')
+        logger.debug('pip: Using pip from currently-running Python')
         return [os.path.normpath(sys.executable), '-m', 'pip']
 
     # try to get python bin from virtualenv, bin_env
-    python_bin = 'python'
-    if salt.utils.is_windows():
-        python_bin = 'python.exe'
+    python_bin = 'python.exe' if salt.utils.is_windows() else 'python'
+
+    def _search_paths(*basedirs):
+        ret = []
+        for path in basedirs:
+            ret.extend([
+                os.path.join(path, python_bin),
+                os.path.join(path, 'bin', python_bin),
+                os.path.join(path, 'Scripts', python_bin)
+            ])
+        return ret
 
     if os.path.isdir(bin_env):
-        bin_paths = [os.path.join(bin_env, python_bin),
-                     os.path.join(bin_env, 'bin', python_bin),
-                     os.path.join(bin_env, 'Scripts', python_bin)]
-        for bin_path in bin_paths:
-            if six.PY2:
-                bin_path = bin_path.encode('string-escape')
+        for bin_path in _search_paths(bin_env):
             if os.path.isfile(bin_path):
-                logger.debug('PIP: Found python binary: %s', bin_path)
-                return [os.path.normpath(bin_path), '-m', 'pip']
-        msg = 'Could not find a `pip` binary in virtualenv {0}'.format(bin_env)
-        raise CommandNotFoundError(msg)
+                if os.access(bin_path, os.X_OK):
+                    logger.debug('pip: Found python binary: %s', bin_path)
+                    return [os.path.normpath(bin_path), '-m', 'pip']
+                else:
+                    logger.debug(
+                        'pip: Found python binary by name but it is not '
+                        'executable: %s', bin_path
+                    )
+        raise CommandNotFoundError(
+            'Could not find a pip binary in virtualenv {0}'.format(bin_env)
+        )
 
     # bin_env is the python or pip binary
     elif os.access(bin_env, os.X_OK):
-        if os.path.isfile(bin_env) or os.path.islink(bin_env):
+        if os.path.isfile(bin_env):
             # If the python binary was passed, return it
             if 'python' in os.path.basename(bin_env):
                 return [os.path.normpath(bin_env), '-m', 'pip']
             # Try to find the python binary based on the location of pip in a
             # virtual environment, should be relative
             if 'pip' in os.path.basename(bin_env):
-                # Look in the same directory as the pip binary
-                cur_dir = os.path.dirname(bin_env)
-                bin_paths = [os.path.join(cur_dir, python_bin),
-                             os.path.join(cur_dir, 'bin', python_bin),
-                             os.path.join(cur_dir, 'Scripts', python_bin)]
-                # Look in the directory above
-                cur_dir = os.path.dirname(cur_dir)
-                bin_paths.extend([os.path.join(cur_dir, python_bin),
-                                  os.path.join(cur_dir, 'bin', python_bin),
-                                  os.path.join(cur_dir, 'Scripts', python_bin)])
-                for bin_path in bin_paths:
-                    if six.PY2:
-                        bin_path = bin_path.encode('string-escape')
+                # Look in the same directory as the pip binary, and also its
+                # parent directories.
+                pip_dirname = os.path.dirname(bin_env)
+                pip_parent_dir = os.path.dirname(pip_dirname)
+                for bin_path in _search_paths(pip_dirname, pip_parent_dir):
                     if os.path.isfile(bin_path):
-                        logger.debug('PIP: Found python binary: %s', bin_path)
+                        logger.debug('pip: Found python binary: %s', bin_path)
                         return [os.path.normpath(bin_path), '-m', 'pip']
+
             # Couldn't find python, use the passed pip binary
             # This has the limitation of being unable to update pip itself
             return [os.path.normpath(bin_env)]
-        raise CommandExecutionError('Unknown error occurred: {0}'.format(bin_env))
+
+        raise CommandExecutionError(
+            'Could not find a pip binary within {0}'.format(bin_env)
+        )
     else:
-        raise CommandNotFoundError('Could not find a `pip` binary: {0}'.format(bin_env))
+        raise CommandNotFoundError(
+            'Access denied to {0}, could not find a pip binary'.format(bin_env)
+        )
 
 
 def _get_cached_requirements(requirements, saltenv):
@@ -884,7 +902,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                                        python_shell=False,
                                        **cmd_kwargs)
     finally:
-        __context__.pop('pip.version', None)
+        _clear_context(bin_env)
         for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
@@ -1010,7 +1028,7 @@ def uninstall(pkgs=None,
     try:
         return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
-        __context__.pop('pip.version', None)
+        _clear_context(bin_env)
         for requirement in cleanup_requirements:
             if requirement:
                 try:
@@ -1170,8 +1188,12 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    if 'pip.version' in __context__:
-        return __context__['pip.version']
+    contextkey = 'pip.version'
+    if bin_env is not None:
+        contextkey = '{0}.{1}'.format(contextkey, bin_env)
+
+    if contextkey in __context__:
+        return __context__[contextkey]
 
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append('--version')
@@ -1185,7 +1207,7 @@ def version(bin_env=None):
     except AttributeError:
         pip_version = None
 
-    __context__['pip.version'] = pip_version
+    __context__[contextkey] = pip_version
     return pip_version
 
 
@@ -1228,7 +1250,7 @@ def list_upgrades(bin_env=None,
         # pyasn1 (Current: 0.2.3 Latest: 0.4.2 [wheel])
         # pycparser (Current: 2.17 Latest: 2.18 [sdist])
         if salt.utils.compare_versions(ver1=pip_version, oper='<', ver2='8.0.0'):
-            logger.debug('PIP Module: Old output format')
+            logger.debug('pip module: Old output format')
             pat = re.compile(r'(\S*)\s+\(.*Latest:\s+(.*)\)')
 
         # New output format for version 8.0.0+
@@ -1238,7 +1260,7 @@ def list_upgrades(bin_env=None,
         # pyasn1 (0.2.3) - Latest: 0.4.2 [wheel]
         # pycparser (2.17) - Latest: 2.18 [sdist]
         else:
-            logger.debug('PIP Module: New output format')
+            logger.debug('pip module: New output format')
             pat = re.compile(r'(\S*)\s+\(.*\)\s+-\s+Latest:\s+(.*)')
 
         for line in result['stdout'].splitlines():
@@ -1251,7 +1273,7 @@ def list_upgrades(bin_env=None,
             packages[name] = version_
 
     else:
-        logger.debug('PIP Module: JSON output format')
+        logger.debug('pip module: JSON output format')
         try:
             pkgs = json.loads(result['stdout'], strict=False)
         except ValueError:
@@ -1332,7 +1354,7 @@ def upgrade(bin_env=None,
     if errors:
         ret['result'] = False
 
-    __context__.pop('pip.version', None)
+    _clear_context(bin_env)
     new = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     ret['changes'] = salt.utils.compare_dicts(old, new)
