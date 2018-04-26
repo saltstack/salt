@@ -20,6 +20,7 @@ integration.modules.test_ntp
 integration.modules.test_pillar
 integration.modules.test_pkg
 integration.modules.test_publish
+integration.modules.test_service
 integration.modules.test_state
 integration.modules.test_status
 integration.modules.test_sysmod
