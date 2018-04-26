@@ -124,7 +124,7 @@ def __virtual__():
     if not HAS_REDIS:
         return False, 'Could not import redis returner; ' \
                       'redis python client is not installed.'
-    if not HAS_REDIS_CLUSTER and _get_options()['cluster_mode']:
+    if not HAS_REDIS_CLUSTER and _get_options().get('cluster_mode', False):
         return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
