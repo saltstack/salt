@@ -61,6 +61,8 @@ Value:
         - `NvBackend`
         - `BTMTrayAgent`
     - Each value name has a corresponding value
+
+:depends:   - salt.utils.win_reg
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -77,19 +79,19 @@ def __virtual__():
     '''
     if 'reg.read_value' not in __utils__:
         return (False, 'reg state module failed to load: '
-                       'missing module function: reg.read_value')
+                       'missing util function: reg.read_value')
 
     if 'reg.set_value' not in __utils__:
         return (False, 'reg state module failed to load: '
-                       'missing module function: reg.set_value')
+                       'missing util function: reg.set_value')
 
     if 'reg.delete_value' not in __utils__:
         return (False, 'reg state module failed to load: '
-                       'missing module function: reg.delete_value')
+                       'missing util function: reg.delete_value')
 
     if 'reg.delete_key_recursive' not in __utils__:
         return (False, 'reg state module failed to load: '
-                       'missing module function: reg.delete_key_recursive')
+                       'missing util function: reg.delete_key_recursive')
 
     return 'reg'
 
@@ -213,6 +215,41 @@ def present(name,
             - ``SOFTWARE\\Salt`` is the key
             - ``vname`` is the value name ('version') that will be created under the key
             - ``vdata`` is the data that will be assigned to 'version'
+
+    Example:
+
+        Binary data can be set in two ways. The following two examples will set
+        a binary value of ``Salty Test``
+
+        .. code-block:: yaml
+
+            no_conversion:
+              reg.present:
+                - name: HKLM\SOFTWARE\SaltTesting
+                - vname: test_reg_binary_state
+                - vdata: Salty Test
+                - vtype: REG_BINARY
+
+            conversion:
+              reg.present:
+                - name: HKLM\SOFTWARE\SaltTesting
+                - vname: test_reg_binary_state_with_tag
+                - vdata: !!binary U2FsdHkgVGVzdA==\n
+                - vtype: REG_BINARY
+
+    Example:
+
+        To set a ``REG_MULTI_SZ`` value:
+
+        .. code-block:: yaml
+
+            reg_multi_sz:
+              reg.present:
+                - name: HKLM\SOFTWARE\Salt
+                - vname: reg_multi_sz
+                - vdata:
+                  - list item 1
+                  - list item 2
     '''
     ret = {'name': name,
            'result': True,
@@ -348,8 +385,8 @@ def key_absent(name, use_32bit_registry=False):
     r'''
     .. versionadded:: 2015.5.4
 
-    Ensure a registry key is removed. This will remove a key and all value
-    entries it contains. It will fail if the key contains subkeys.
+    Ensure a registry key is removed. This will remove the key, subkeys, and all
+    value entries.
 
     Args:
 
@@ -372,19 +409,19 @@ def key_absent(name, use_32bit_registry=False):
 
     CLI Example:
 
-        The following example will delete the ``SOFTWARE\Salt`` key and all
-        subkeys under the ``HKEY_CURRENT_USER`` hive.
+        The following example will delete the ``SOFTWARE\DeleteMe`` key in the
+        ``HKEY_LOCAL_MACHINE` hive including all its subkeys and value pairs.
 
         .. code-block:: yaml
 
-            'HKEY_CURRENT_USER\SOFTWARE\Salt':
+            remove_key_demo:
               reg.key_absent:
-                - force: True
+                - name: HKEY_CURRENT_USER\SOFTWARE\DeleteMe
 
         In the above example the path is interpreted as follows:
 
             - ``HKEY_CURRENT_USER`` is the hive
-            - ``SOFTWARE\Salt`` is the key
+            - ``SOFTWARE\DeleteMe`` is the key
     '''
     ret = {'name': name,
            'result': True,
@@ -400,10 +437,10 @@ def key_absent(name, use_32bit_registry=False):
         ret['comment'] = '{0} is already absent'.format(name)
         return ret
 
-    ret['changes'] = {'reg': {
-        'Removed': {
-            'Key': r'{0}\{1}'.format(hive, key)
-        }}}
+    ret['changes'] = {
+        'reg': {
+            'Removed': {
+                'Key': r'{0}\{1}'.format(hive, key)}}}
 
     # Check for test option
     if __opts__['test']:
