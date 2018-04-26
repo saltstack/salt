@@ -20,10 +20,41 @@ can have a value assigned to them under the (Default)
 -----------------
 Values or Entries
 -----------------
-Values/Entries are name/data pairs. There can be many values in a key. The
-``(Default)`` value corresponds to the Key, the rest are their own value pairs.
 
-:depends:   - PyWin32
+Values or Entries are the name/data pairs beneath the keys and subkeys. All keys
+have a default name/data pair. The name is ``(Default)`` with a displayed value
+of ``(value not set)``. The actual value is Null.
+
+-------
+Example
+-------
+
+The following example is an export from the Windows startup portion of the
+registry:
+
+.. code-block:: bash
+
+    [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+    "RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
+    "NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
+    "BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
+
+In this example these are the values for each:
+
+Hive:
+    ``HKEY_LOCAL_MACHINE``
+
+Key and subkeys:
+    ``SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run``
+
+Value:
+    - There are 3 value names:
+        - `RTHDVCPL`
+        - `NvBackend`
+        - `BTMTrayAgent`
+    - Each value name has a corresponding value
+
+:depends:   - salt.utils.win_reg
 '''
 # When production windows installer is using Python 3, Python 2 code can be removed
 from __future__ import absolute_import, print_function, unicode_literals
@@ -43,7 +74,7 @@ __virtualname__ = 'reg'
 
 def __virtual__():
     '''
-    Only works on Windows systems with the PyWin32
+    Only works on Windows systems with PyWin32
     '''
     if not salt.utils.platform.is_windows():
         return (False, 'reg execution module failed to load: '
@@ -86,6 +117,10 @@ def key_exists(hive, key, use_32bit_registry=False):
 def broadcast_change():
     '''
     Refresh the windows environment.
+
+    .. note::
+        This will only effect new processes and windows. Services will not see
+        the change until the system restarts.
 
     Returns:
         bool: True if successful, otherwise False
@@ -179,7 +214,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
-    Reads a registry value entry or the default value for a key.
+    Reads a registry value entry or the default value for a key. To read the
+    default value, don't pass ``vname``
 
     Args:
 
@@ -206,17 +242,30 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         dict: A dictionary containing the passed settings as well as the
         value_data if successful. If unsuccessful, sets success to False.
 
+        bool: Returns False if the key is not found
+
         If vname is not passed:
 
             - Returns the first unnamed value (Default) as a string.
             - Returns none if first unnamed value is empty.
-            - Returns False if key not found.
 
     CLI Example:
+
+        The following will get the value of the ``version`` value name in the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
 
         .. code-block:: bash
 
             salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
+
+    CLI Example:
+
+        The following will get the default value of the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
+
+        .. code-block:: bash
+
+            salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt'
     '''
     return __utils__['reg.read_value'](hive=hive,
                                        key=key,
@@ -232,7 +281,9 @@ def set_value(hive,
               use_32bit_registry=False,
               volatile=False):
     '''
-    Sets a registry value entry or the default value for a key.
+    Sets a value in the registry. If ``vname`` is passed, it will be the value
+    for that value name, otherwise it will be the default value for the
+    specified key
 
     Args:
 
@@ -298,6 +349,9 @@ def set_value(hive,
 
     CLI Example:
 
+        This will set the version value to 2015.5.2 in the SOFTWARE\\Salt key in
+        the HKEY_LOCAL_MACHINE hive
+
         .. code-block:: bash
 
             salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
@@ -334,7 +388,7 @@ def set_value(hive,
 
         .. code-block:: bash
 
-            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'list_data' vtype=REG_MULTI_SZ vdata='["a", "b", "c"]'
+            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'list_data' vtype=REG_MULTI_SZ vdata='["Salt", "is", "great"]'
     '''
     return __utils__['reg.set_value'](hive=hive,
                                       key=key,
@@ -349,7 +403,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     '''
     .. versionadded:: 2015.5.4
 
-    Delete a registry key to include all subkeys.
+    Delete a registry key to include all subkeys and value/data pairs.
 
     Args:
 
@@ -375,12 +429,12 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
     CLI Example:
 
-        The following example will remove ``salt`` and all its subkeys from the
+        The following example will remove ``delete_me`` and all its subkeys from the
         ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
 
         .. code-block:: bash
 
-            salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
+            salt '*' reg.delete_key_recursive HKLM SOFTWARE\\delete_me
     '''
     return __utils__['reg.delete_key_recursive'](hive=hive,
                                                  key=key,

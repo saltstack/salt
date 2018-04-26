@@ -15,13 +15,14 @@ Hives are the main sections of the registry and all begin with the word HKEY.
 Keys
 ----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
-can have a value assigned to them under the (Default)
+can have a value assigned to them under the (Default) value name
 
 -----------------
 Values or Entries
 -----------------
 Values/Entries are name/data pairs. There can be many values in a key. The
-(Default) value corresponds to the Key, the rest are their own value pairs.
+(Default) value corresponds to the Key itself, the rest are their own name/value
+pairs.
 
 :depends:   - PyWin32
 '''
@@ -92,7 +93,8 @@ def _to_unicode(vdata):
 
 class Registry(object):  # pylint: disable=R0903
     '''
-    Delay usage until this module is used
+    This was put in a class to delay usage until this module is actually used
+    This class contains all the lookup dicts for working with the registry
     '''
     def __init__(self):
         self.hkeys = {
@@ -200,6 +202,10 @@ def key_exists(hive, key, use_32bit_registry=False):
 def broadcast_change():
     '''
     Refresh the windows environment.
+
+    .. note::
+        This will only effect new processes and windows. Services will not see
+        the change until the system restarts.
 
     Returns:
         bool: True if successful, otherwise False
@@ -363,7 +369,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
-    Reads a registry value entry or the default value for a key.
+    Reads a registry value entry or the default value for a key. To read the
+    default value, don't pass ``vname``
 
     Args:
 
@@ -388,20 +395,34 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
     Returns:
         dict: A dictionary containing the passed settings as well as the
-        value_data if successful. If unsuccessful, sets success to False.
+            value_data if successful. If unsuccessful, sets success to False.
+
+        bool: Returns False if the key is not found
 
         If vname is not passed:
 
             - Returns the first unnamed value (Default) as a string.
             - Returns none if first unnamed value is empty.
-            - Returns False if key not found.
 
     Usage:
+
+        The following will get the value of the ``version`` value name in the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
 
         .. code-block:: python
 
             import salt.utils.win_reg
             winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
+
+    Usage:
+
+        The following will get the default value of the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
     '''
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
@@ -471,7 +492,9 @@ def set_value(hive,
               use_32bit_registry=False,
               volatile=False):
     '''
-    Sets a registry value entry or the default value for a key.
+    Sets a value in the registry. If ``vname`` is passed, it will be the value
+    for that value name, otherwise it will be the default value for the
+    specified key
 
     Args:
 
@@ -537,6 +560,9 @@ def set_value(hive,
         bool: True if successful, otherwise False
 
     Usage:
+
+        This will set the version value to 2015.5.2 in the SOFTWARE\\Salt key in
+        the HKEY_LOCAL_MACHINE hive
 
         .. code-block:: python
 
@@ -678,7 +704,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     '''
     .. versionadded:: 2015.5.4
 
-    Delete a registry key to include all subkeys.
+    Delete a registry key to include all subkeys and value/data pairs.
 
     Args:
 
