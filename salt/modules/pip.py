@@ -102,7 +102,6 @@ __func_alias__ = {
 }
 
 VALID_PROTOS = ['http', 'https', 'ftp', 'file']
-PIP_VERSION = None
 
 rex_pip_chain_read = re.compile(r'-r\s(.*)\n?', re.MULTILINE)
 
@@ -720,8 +719,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if mirrors:
         # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
-        pip_version = version(bin_env)
-        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+        if salt.utils.compare_versions(ver1=cur_version, oper='>=', ver2='7.0.0'):
             raise CommandExecutionError(
                     'pip >= 7.0.0 does not support mirror argument:'
                     ' use index_url and/or extra_index_url instead'
@@ -749,7 +747,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if download_cache or cache_dir:
         cmd.extend(['--cache-dir' if salt.utils.compare_versions(
-            ver1=version(bin_env), oper='>=', ver2='6.0'
+            ver1=cur_version, oper='>=', ver2='6.0'
         ) else '--download-cache', download_cache or cache_dir])
 
     if source:
@@ -786,7 +784,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version = version(bin_env)
+        pip_version = cur_version
 
         # From pip v1.4 the --pre flag is available
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
@@ -886,6 +884,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                                        python_shell=False,
                                        **cmd_kwargs)
     finally:
+        __context__.pop('pip.version', None)
         for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
@@ -1011,6 +1010,7 @@ def uninstall(pkgs=None,
     try:
         return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
+        __context__.pop('pip.version', None)
         for requirement in cleanup_requirements:
             if requirement:
                 try:
@@ -1170,10 +1170,8 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    global PIP_VERSION
-
-    if PIP_VERSION:
-        return PIP_VERSION
+    if 'pip.version' in __context__:
+        return __context__['pip.version']
 
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append('--version')
@@ -1183,10 +1181,12 @@ def version(bin_env=None):
         raise CommandNotFoundError('Could not find a `pip` binary')
 
     try:
-        PIP_VERSION = re.match(r'^pip (\S+)', ret['stdout']).group(1)
-        return PIP_VERSION
+        pip_version = re.match(r'^pip (\S+)', ret['stdout']).group(1)
     except AttributeError:
-        return None
+        pip_version = None
+
+    __context__['pip.version'] = pip_version
+    return pip_version
 
 
 def list_upgrades(bin_env=None,
@@ -1332,6 +1332,7 @@ def upgrade(bin_env=None,
     if errors:
         ret['result'] = False
 
+    __context__.pop('pip.version', None)
     new = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     ret['changes'] = salt.utils.compare_dicts(old, new)
