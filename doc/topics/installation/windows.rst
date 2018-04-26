@@ -127,7 +127,7 @@ Option                     Description
                            ``/minion-name`` is passed, those values will be used
                            to update the new default config.
 ``/custom-config=``        A string value specifying the name of a custom config
-                           file in the same path as the installer of the full
+                           file in the same path as the installer or the full
                            path to a custom config file. If ``/master`` and/or
                            ``/minion-name`` is passed, those values will be used
                            to update the new custom config.
