@@ -12,6 +12,15 @@ config, these are the defaults:
     redis.host: 'salt'
     redis.port: 6379
 
+.. versionadded:: 2018.3.1
+
+    Alternatively a UNIX socket can be specified by `unix_socket_path`:
+
+.. code-block:: yaml
+
+    redis.db: '0'
+    redis.unix_socket_path: /var/run/redis/redis.sock
+
 Cluster Mode Example:
 
 .. code-block:: yaml
