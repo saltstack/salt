@@ -100,6 +100,12 @@ db: ``'0'``
 password:
     Redis connection password.
 
+unix_socket_path:
+
+    .. versionadded:: 2018.3.1
+
+    Path to a UNIX socket for access. Overrides `host` / `port`.
+
 Configuration Example:
 
 .. code-block:: yaml
