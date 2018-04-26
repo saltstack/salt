@@ -2,6 +2,24 @@
 '''
 The service module for macOS
 .. versionadded:: 2016.3.0
+
+This module has support for services in the following locations.
+
+.. code-block:: bash
+    /System/Library/LaunchDaemons/
+    /System/Library/LaunchAgents/
+    /Library/LaunchDaemons/
+    /Library/LaunchAgents/
+
+    # As of version "Fluorine" support for user-specific services were added.
+    /Users/foo/Library/LaunchAgents/
+
+.. note::
+
+    As of version "Fluorine", if a service is located in a ``LaunchAgent`` path
+    and a ``runas`` user is NOT specified the current console user will be used
+    to properly interact with the service.
+
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -128,6 +146,8 @@ def _get_domain_target(name, service_target=False):
     :return: Tuple of the domain/service target and the path to the service.
 
     :rtype: tuple
+
+    .. versionadded:: Fluorine
     '''
 
     # Get service information
@@ -158,15 +178,17 @@ def _launch_agent(name):
 
     :param str name: Service label, file name, or full path
 
-    :return: True if a LaunchAgent, False is not.
+    :return: True if a LaunchAgent, False if not.
 
     :rtype: bool
+
+    .. versionadded:: Fluorine
     '''
 
     # Get the path to the service.
     path = _get_service(name)['file_path']
 
-    if not 'LaunchAgents' in path:
+    if 'LaunchAgents' not in path:
         return False
     return True
 
