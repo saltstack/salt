@@ -21,9 +21,11 @@ import subprocess
 # Import salt libs
 from salt.ext import six
 import salt.utils.decorators.path
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import (
     SaltInvocationError,
@@ -154,7 +156,7 @@ def _replace_auth_key(
         with salt.utils.files.fopen(full, 'r') as _fh:
             for line in _fh:
                 # We don't need any whitespace-only containing lines or arbitrary doubled newlines
-                line = line.strip()
+                line = salt.utils.stringutils.to_unicode(line.strip())
                 if line == '':
                     continue
                 line += '\n'
@@ -171,10 +173,9 @@ def _replace_auth_key(
                     lines.append(line)
             _fh.close()
             # Re-open the file writable after properly closing it
-            with salt.utils.files.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'wb') as _fh:
                 # Write out any changes
-                for line in lines:
-                    _fh.write(line)
+                _fh.writelines(salt.utils.data.encode(lines))
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem reading or writing to key file: {0}'.format(exc)
@@ -192,7 +193,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
         with salt.utils.files.fopen(key_file, 'r') as _fh:
             for line in _fh:
                 # We don't need any whitespace-only containing lines or arbitrary doubled newlines
-                line = line.strip()
+                line = salt.utils.stringutils.to_unicode(line.strip())
                 if line == '':
                     continue
                 line += '\n'
@@ -359,11 +360,11 @@ def host_keys(keydir=None, private=True, certs=True):
                     # (e.g. OpenSSH) manage their own format(s).  Please see
                     # #20708 for a discussion about how to handle SSH key files
                     # in the future
-                    keys[kname] = _fh.readline()
+                    keys[kname] = salt.utils.stringutils.to_unicode(_fh.readline())
                     # only read the whole file if it is not in the legacy 1.1
                     # binary format
                     if keys[kname] != "SSH PRIVATE KEY FILE FORMAT 1.1\n":
-                        keys[kname] += _fh.read()
+                        keys[kname] += salt.utils.stringutils.to_unicode(_fh.read())
                     keys[kname] = keys[kname].strip()
             except (IOError, OSError):
                 keys[kname] = ''
@@ -586,7 +587,7 @@ def rm_auth_key(user,
             with salt.utils.files.fopen(full, 'r') as _fh:
                 for line in _fh:
                     # We don't need any whitespace-only containing lines or arbitrary doubled newlines
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line.strip())
                     if line == '':
                         continue
                     line += '\n'
@@ -620,9 +621,8 @@ def rm_auth_key(user,
 
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
-            with salt.utils.files.fopen(full, 'w') as _fh:
-                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
-                _fh.writelines(lines)
+            with salt.utils.files.fopen(full, 'wb') as _fh:
+                _fh.writelines(salt.utils.data.encode(lines))
         except (IOError, OSError) as exc:
             log.warning('Could not read/write key file: %s',
                         exc)
@@ -1257,16 +1257,16 @@ def set_known_host(user=None,
         if remove_lines:
             try:
                 with salt.utils.files.fopen(full, 'r+') as ofile:
-                    known_hosts_lines = [salt.utils.stringutils.to_unicode(_l)
-                                         for _l in list(ofile)]
+                    known_hosts_lines = salt.utils.data.decode(list(ofile))
                     # Delete from last line to first to avoid invalidating earlier indexes
                     for line_no in sorted(remove_lines, reverse=True):
                         del known_hosts_lines[line_no - 1]
                     # Write out changed known_hosts file
                     ofile.seek(0)
                     ofile.truncate()
-                    for line in known_hosts_lines:
-                        ofile.write(salt.utils.stringutils.to_str(line))
+                    ofile.writelines(
+                        salt.utils.data.decode(known_hosts_lines, to_str=True)
+                    )
             except (IOError, OSError) as exception:
                 raise CommandExecutionError(
                     "Couldn't remove old entry(ies) from known hosts file: '{0}'".format(exception)
@@ -1310,9 +1310,8 @@ def set_known_host(user=None,
 
     # write line to known_hosts file
     try:
-        with salt.utils.files.fopen(full, 'a') as ofile:
-            for line in lines:
-                ofile.write(salt.utils.stringutils.to_str(line))
+        with salt.utils.files.fopen(full, 'ab') as ofile:
+            ofile.writelines(salt.utils.data.encode(lines))
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
             "Couldn't append to known hosts file: '{0}'".format(exception)
