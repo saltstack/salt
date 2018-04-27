@@ -37,19 +37,44 @@ class StringutilsTestCase(TestCase):
 
     def test_is_binary(self):
         self.assertFalse(salt.utils.stringutils.is_binary(LOREM_IPSUM))
+        # Also test bytestring
+        self.assertFalse(
+            salt.utils.stringutils.is_binary(
+                salt.utils.stringutils.is_binary(LOREM_IPSUM)
+            )
+        )
 
         zero_str = '{0}{1}'.format(LOREM_IPSUM, '\0')
         self.assertTrue(salt.utils.stringutils.is_binary(zero_str))
+        # Also test bytestring
+        self.assertTrue(
+            salt.utils.stringutils.is_binary(
+                salt.utils.stringutils.to_bytes(zero_str)
+            )
+        )
 
         # To to ensure safe exit if str passed doesn't evaluate to True
         self.assertFalse(salt.utils.stringutils.is_binary(''))
+        self.assertFalse(salt.utils.stringutils.is_binary(b''))
 
         nontext = 3 * (''.join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)]))
         almost_bin_str = '{0}{1}'.format(LOREM_IPSUM[:100], nontext[:42])
         self.assertFalse(salt.utils.stringutils.is_binary(almost_bin_str))
+        # Also test bytestring
+        self.assertFalse(
+            salt.utils.stringutils.is_binary(
+                salt.utils.stringutils.to_bytes(almost_bin_str)
+            )
+        )
 
         bin_str = almost_bin_str + '\x01'
         self.assertTrue(salt.utils.stringutils.is_binary(bin_str))
+        # Also test bytestring
+        self.assertTrue(
+            salt.utils.stringutils.is_binary(
+                salt.utils.stringutils.to_bytes(bin_str)
+            )
+        )
 
     def test_to_str(self):
         for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
@@ -179,3 +204,7 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
         # Glob non-match
         self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))
+        # Regex match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, r'foo/\w+/baz'))
+        # Regex non-match
+        self.assertFalse(salt.utils.stringutils.expr_match(val, r'foo/\w/baz'))

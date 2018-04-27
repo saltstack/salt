@@ -820,7 +820,7 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')

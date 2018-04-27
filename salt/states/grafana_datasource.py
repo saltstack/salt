@@ -100,7 +100,7 @@ def present(name,
         if ret['changes']['new'] or ret['changes']['old']:
             ret['comment'] = 'Data source {0} updated'.format(name)
         else:
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Data source {0} already up-to-date'.format(name)
     else:
         requests.post(

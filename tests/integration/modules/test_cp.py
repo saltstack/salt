@@ -44,7 +44,7 @@ class CPModuleTest(ModuleCase):
             super(CPModuleTest, self).run_function(*args, **kwargs)
         )
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_file(self, tgt):
         '''
         cp.get_file
@@ -76,7 +76,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
         self.assertNotIn('bacon', data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_file_templated_paths(self, tgt):
         '''
         cp.get_file
@@ -94,7 +94,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('Gromit', data)
         self.assertNotIn('bacon', data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_file_gzipped(self, tgt):
         '''
         cp.get_file
@@ -137,7 +137,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
         self.assertNotIn('bacon', data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_template(self, tgt):
         '''
         cp.get_template
@@ -186,7 +186,7 @@ class CPModuleTest(ModuleCase):
 
     # cp.get_url tests
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_url(self, tgt):
         '''
         cp.get_url with salt:// source given
@@ -277,7 +277,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
         self.assertNotIn('bacon', data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_url_https(self, tgt):
         '''
         cp.get_url with https:// source given
@@ -444,12 +444,14 @@ class CPModuleTest(ModuleCase):
             self.assertIn('ARTHUR:', data)
             self.assertNotIn('bacon', data)
 
-    def test_cache_master(self):
+    @with_tempfile()
+    def test_cache_master(self, tgt):
         '''
         cp.cache_master
         '''
         ret = self.run_function(
                 'cp.cache_master',
+                [tgt],
                 )
         for path in ret:
             self.assertTrue(os.path.exists(path))
@@ -619,7 +621,7 @@ class CPModuleTest(ModuleCase):
             self.assertEqual(
                 sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_file_from_env_predefined(self, tgt):
         '''
         cp.get_file
@@ -634,7 +636,7 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt)
 
-    @with_tempfile
+    @with_tempfile()
     def test_get_file_from_env_in_url(self, tgt):
         tgt = os.path.join(paths.TMP, 'cheese')
         try:

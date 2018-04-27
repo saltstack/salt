@@ -546,7 +546,7 @@ def thin_sum(cachedir, form='sha1'):
     thintar = gen_thin(cachedir)
     code_checksum_path = os.path.join(cachedir, 'thin', 'code-checksum')
     if os.path.isfile(code_checksum_path):
-        with salt.utils.fopen(code_checksum_path, 'r') as fh:
+        with salt.utils.files.fopen(code_checksum_path, 'r') as fh:
             code_checksum = "'{0}'".format(fh.read().strip())
     else:
         code_checksum = "'0'"

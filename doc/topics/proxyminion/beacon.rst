@@ -46,7 +46,9 @@ This should complete the proxy setup for ``p8000``
 
     beacons:
       salt_proxy:
-        - p8000: {}
+        - proxies:
+            p8000: {}
+            p8001: {}
 
 
 Once this beacon is configured it will automatically start the ``salt-proxy``
