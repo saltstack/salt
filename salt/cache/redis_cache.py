@@ -341,10 +341,7 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug(
-            'Setting the value for %s under %s (%s)',
-            key=key, bank=bank, redis_key=redis_key
-        )
+        log.debug('Setting the value for %s under %s (%s)', key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
         log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()
@@ -392,7 +389,7 @@ def flush(bank, key=None):
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitely allow Salt inject scripts in their Redis instance.
+    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     '''
     redis_server = _get_redis_server()
     redis_pipe = redis_server.pipeline()

@@ -193,8 +193,7 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = []
-    l.append(socket.getfqdn())
+    l = [socket.getfqdn()]
 
     # try socket.getaddrinfo
     try:
@@ -218,7 +217,8 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception:
+    except Exception as exc:
+        log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
 

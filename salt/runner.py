@@ -232,7 +232,7 @@ class Runner(RunnerClient):
                 else:
                     user = salt.utils.user.get_specific_user()
 
-                if low['fun'] in ('state.orchestrate', 'state.orch'):
+                if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
@@ -256,7 +256,7 @@ class Runner(RunnerClient):
                 # otherwise run it in the main process
                 if self.opts.get('eauth'):
                     ret = self.cmd_sync(low)
-                    if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                    if isinstance(ret, dict) and set(ret) == {'data', 'outputter'}:
                         outputter = ret['outputter']
                         ret = ret['data']
                     else:

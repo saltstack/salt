@@ -144,10 +144,10 @@ def resolve_dns(opts, fallback=True):
     if (opts.get('file_client', 'remote') == 'local' and
             not opts.get('use_master_when_local', False)):
         check_dns = False
+    # Since salt.log is imported below, salt.utils.network needs to be imported here as well
+    import salt.utils.network
 
     if check_dns is True:
-        # Because I import salt.log below I need to re-import salt.utils here
-        import salt.utils
         try:
             if opts['master'] == '':
                 raise SaltSystemExit
@@ -629,10 +629,16 @@ class MinionBase(object):
                         break
                     except SaltClientError as exc:
                         last_exc = exc
-                        log.info(
-                            'Master %s could not be reached, trying next '
-                            'next master (if any)', opts['master']
-                        )
+                        if exc.strerror.startswith('Could not access'):
+                            msg = (
+                                'Failed to initiate connection with Master '
+                                '%s: check ownership/permissions. Error '
+                                'message: %s', opts['master'], exc
+                            )
+                        else:
+                            msg = ('Master %s could not be reached, trying next '
+                                   'next master (if any)', opts['master'])
+                        log.info(msg)
                         continue
 
                 if not conn:
@@ -2524,6 +2530,7 @@ class Minion(MinionBase):
                     self.opts,
                     self.functions,
                     self.returners,
+                    utils=self.utils,
                     cleanup=[master_event(type='alive')])
 
             try:

@@ -12,7 +12,6 @@ import functools
 import glob
 import logging
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -37,6 +36,7 @@ import salt.utils.timed_subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
+import salt.utils.win_reg
 import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
@@ -437,10 +437,16 @@ def _run(cmd,
     if runas or group:
         try:
             # Getting the environment for the runas user
+            # Use markers to thwart any stdout noise
             # There must be a better way to do this.
+            import uuid
+            marker = '<<<' + str(uuid.uuid4()) + '>>>'
+            marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
-                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
+                'sys.stdout.write(\"' + marker + '\"); '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items()))); '
+                'sys.stdout.write(\"' + marker + '\");'
             )
 
             if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
@@ -466,11 +472,34 @@ def _run(cmd,
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             msg = 'env command: {0}'.format(env_cmd)
             log.debug(log_callback(msg))
-            env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
+
+            env_bytes, env_encoded_err = subprocess.Popen(
                 env_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0])
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            marker_count = env_bytes.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_bytes
+                )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_bytes = b''
+            elif marker_count != 2:
+                raise CommandExecutionError(
+                    'Environment could not be retrieved for user \'{0}\'',
+                    info={'stderr': repr(env_encoded_err),
+                          'stdout': repr(env_bytes)}
+                )
+            else:
+                # Strip the marker
+                env_bytes = env_bytes.split(marker_b)[1]
+
             if six.PY2:
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_bytes.split(b'\0'))]*2))
@@ -488,10 +517,11 @@ def _run(cmd,
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
             env = env_runas
-        except ValueError:
+        except ValueError as exc:
+            log.exception('Error raised retrieving environment for user %s', runas)
             raise CommandExecutionError(
-                'Environment could not be retrieved for User \'{0}\''.format(
-                    runas
+                'Environment could not be retrieved for user \'{0}\': {1}'.format(
+                    runas, exc
                 )
             )
 
@@ -630,7 +660,7 @@ def _run(cmd,
             ret['retcode'] = 1
             return ret
 
-        if output_encoding is not None:
+        if output_loglevel != 'quiet' and output_encoding is not None:
             log.debug('Decoding output from command %s using %s encoding',
                       cmd, output_encoding)
 
@@ -646,10 +676,11 @@ def _run(cmd,
                 proc.stdout,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stdout from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stdout from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         try:
             err = salt.utils.stringutils.to_unicode(
@@ -663,10 +694,11 @@ def _run(cmd,
                 proc.stderr,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stderr from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stderr from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         if rstrip:
             if out is not None:
@@ -3103,9 +3135,9 @@ def shell_info(shell, list_modules=False):
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {'installed': False}
     if salt.utils.platform.is_windows() and shell == 'powershell':
-        pw_keys = __salt__['reg.list_keys'](
-            'HKEY_LOCAL_MACHINE',
-            'Software\\Microsoft\\PowerShell')
+        pw_keys = salt.utils.win_reg.list_keys(
+            hive='HKEY_LOCAL_MACHINE',
+            key='Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
             return {
@@ -3114,16 +3146,16 @@ def shell_info(shell, list_modules=False):
                 'installed': False,
             }
         for reg_ver in pw_keys:
-            install_data = __salt__['reg.read_value'](
-                'HKEY_LOCAL_MACHINE',
-                'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
-                'Install')
+            install_data = salt.utils.win_reg.read_value(
+                hive='HKEY_LOCAL_MACHINE',
+                key='Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
+                vname='Install')
             if install_data.get('vtype') == 'REG_DWORD' and \
                     install_data.get('vdata') == 1:
-                details = __salt__['reg.list_values'](
-                    'HKEY_LOCAL_MACHINE',
-                    'Software\\Microsoft\\PowerShell\\{0}\\'
-                    'PowerShellEngine'.format(reg_ver))
+                details = salt.utils.win_reg.list_values(
+                    hive='HKEY_LOCAL_MACHINE',
+                    key='Software\\Microsoft\\PowerShell\\{0}\\'
+                        'PowerShellEngine'.format(reg_ver))
 
                 # reset data, want the newest version details only as powershell
                 # is backwards compatible
@@ -3418,11 +3450,9 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    # ConvertTo-JSON is only available on Versions of Windows greater than
-    # `7.1.7600`. We have to use `platform.version` instead of `__grains__` here
-    # because this function is called by `salt/grains/core.py` before
-    # `__grains__` is populated
-    if salt.utils.versions.version_cmp(platform.version(), '7.1.7600') == 1:
+    # ConvertTo-JSON is only available on PowerShell 3.0 and later
+    psversion = shell_info('powershell')['psversion']
+    if salt.utils.versions.version_cmp(psversion, '2.0') == 1:
         cmd += ' | ConvertTo-JSON'
         if depth is not None:
             cmd += ' -Depth {0}'.format(depth)

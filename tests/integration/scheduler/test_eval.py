@@ -469,4 +469,90 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_splay(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+              'splay': '10'
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_splay_range(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+              'splay': {'start': 5, 'end': 10}
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_splay_global(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'splay': {'start': 5, 'end': 10},
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)

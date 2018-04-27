@@ -2803,7 +2803,10 @@ def create(vm_):
             # ssh or smb using ip and install salt only if deploy is True
             if deploy:
                 vm_['key_filename'] = key_filename
-                vm_['ssh_host'] = ip
+                # if specified, prefer ssh_host to the discovered ip address
+                if 'ssh_host' not in vm_:
+                    vm_['ssh_host'] = ip
+                log.info("[ {0} ] Deploying to {1}".format(vm_name, vm_['ssh_host']))
 
                 out = __utils__['cloud.bootstrap'](vm_, __opts__)
 

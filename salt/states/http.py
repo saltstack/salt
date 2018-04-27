@@ -144,7 +144,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
 
     .. note::
 
-        All other arguements are passed to the http.query state.
+        All other arguments are passed to the http.query state.
     '''
     starttime = time.time()
 

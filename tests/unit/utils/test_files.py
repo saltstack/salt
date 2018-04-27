@@ -6,15 +6,13 @@ Unit Tests for functions located in salt.utils.files.py.
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
-import shutil
-import tempfile
 
 # Import Salt libs
 import salt.utils.files
 from salt.ext import six
 
 # Import Salt Testing libs
-from tests.support.paths import TMP
+from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -43,33 +41,30 @@ class FilesUtilTestCase(TestCase):
             error = True
         self.assertFalse(error, 'salt.utils.files.safe_rm raised exception when it should not have')
 
-    def test_safe_walk_symlink_recursion(self):
-        tmp = tempfile.mkdtemp(dir=TMP)
-        try:
-            if os.stat(tmp).st_ino == 0:
-                self.skipTest('inodes not supported in {0}'.format(tmp))
-            os.mkdir(os.path.join(tmp, 'fax'))
-            os.makedirs(os.path.join(tmp, 'foo/bar'))
-            os.symlink('../..', os.path.join(tmp, 'foo/bar/baz'))
-            os.symlink('foo', os.path.join(tmp, 'root'))
-            expected = [
-                (os.path.join(tmp, 'root'), ['bar'], []),
-                (os.path.join(tmp, 'root/bar'), ['baz'], []),
-                (os.path.join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
-                (os.path.join(tmp, 'root/bar/baz/fax'), [], []),
-            ]
-            paths = []
-            for root, dirs, names in salt.utils.files.safe_walk(os.path.join(tmp, 'root')):
-                paths.append((root, sorted(dirs), names))
-            if paths != expected:
-                raise AssertionError(
-                    '\n'.join(
-                        ['got:'] + [repr(p) for p in paths] +
-                        ['', 'expected:'] + [repr(p) for p in expected]
-                    )
+    @with_tempdir()
+    def test_safe_walk_symlink_recursion(self, tmp):
+        if os.stat(tmp).st_ino == 0:
+            self.skipTest('inodes not supported in {0}'.format(tmp))
+        os.mkdir(os.path.join(tmp, 'fax'))
+        os.makedirs(os.path.join(tmp, 'foo/bar'))
+        os.symlink('../..', os.path.join(tmp, 'foo/bar/baz'))
+        os.symlink('foo', os.path.join(tmp, 'root'))
+        expected = [
+            (os.path.join(tmp, 'root'), ['bar'], []),
+            (os.path.join(tmp, 'root/bar'), ['baz'], []),
+            (os.path.join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
+            (os.path.join(tmp, 'root/bar/baz/fax'), [], []),
+        ]
+        paths = []
+        for root, dirs, names in salt.utils.files.safe_walk(os.path.join(tmp, 'root')):
+            paths.append((root, sorted(dirs), names))
+        if paths != expected:
+            raise AssertionError(
+                '\n'.join(
+                    ['got:'] + [repr(p) for p in paths] +
+                    ['', 'expected:'] + [repr(p) for p in expected]
                 )
-        finally:
-            shutil.rmtree(tmp)
+            )
 
     @skipIf(not six.PY3, 'This test only applies to Python 3')
     def test_fopen_with_disallowed_fds(self):

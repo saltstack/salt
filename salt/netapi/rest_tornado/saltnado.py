@@ -301,7 +301,7 @@ class EventListener(object):
 
         self.event.set_event_handler(self._handle_event_socket_recv)
 
-    def clean_timeout_futures(self, request):
+    def clean_by_request(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
         '''
@@ -493,7 +493,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         timeout a session
         '''
         # TODO: set a header or something??? so we know it was a timeout
-        self.application.event_listener.clean_timeout_futures(self)
+        self.application.event_listener.clean_by_request(self)
 
     def on_finish(self):
         '''
@@ -740,8 +740,19 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # Grab eauth config for the current backend for the current user
         try:
-            perms = self.application.opts['external_auth'][token['eauth']][token['name']]
+            eauth = self.application.opts['external_auth'][token['eauth']]
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
 
+            if 'groups' in token and token['groups']:
+                user_groups = set(token['groups'])
+                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+
+                for group in user_groups & eauth_groups:
+                    perms.extend(eauth['{0}%'.format(group)])
+
+            perms = sorted(list(set(perms)))
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
@@ -942,10 +953,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # seed minions_remaining with the pub_data
         minions_remaining = pub_data['minions']
 
-        syndic_min_wait = None
-        if self.application.opts['order_masters']:
-            syndic_min_wait = tornado.gen.sleep(self.application.opts['syndic_wait'])
-
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
         is_finished = Future()
         job_not_running_future = self.job_not_running(pub_data['jid'],
@@ -955,16 +962,23 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                                       minions_remaining=list(minions_remaining),
                                                       )
 
-        # if we have a min_wait, do that
-        if syndic_min_wait is not None:
-            yield syndic_min_wait
-
         all_return_future = self.all_returns(pub_data['jid'],
                                              is_finished,
                                              minions_remaining=list(minions_remaining),
                                              )
         yield job_not_running_future
         raise tornado.gen.Return((yield all_return_future))
+
+    def subscribe_minion_returns(self, jid, minions):
+        # Subscribe each minion event
+        future_minion_map = {}
+        for minion in minions:
+            tag = tagify([jid, 'ret', minion], 'job')
+            minion_future = self.application.event_listener.get_event(self,
+                                                                      tag=tag,
+                                                                      matcher=EventListener.exact_matcher)
+            future_minion_map[minion_future] = minion
+        return future_minion_map
 
     @tornado.gen.coroutine
     def all_returns(self,
@@ -982,16 +996,21 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         chunk_ret = {}
 
         minion_events = {}
+
+        syndic_min_wait = 0
+        if self.application.opts['order_masters']:
+            syndic_min_wait = self.application.opts['syndic_wait']
+
         for minion in minions_remaining:
             tag = tagify([jid, 'ret', minion], 'job')
             minion_event = self.application.event_listener.get_event(self,
                                                                      tag=tag,
                                                                      matcher=EventListener.exact_matcher,
-                                                                     timeout=self.application.opts['timeout'])
+                                                                     timeout=self.application.opts['timeout'] + syndic_min_wait)
             minion_events[minion_event] = minion
 
         while True:
-            f = yield Any(minion_events.keys() + [is_finished])
+            f = yield Any(list(minion_events.keys()) + [is_finished])
             try:
                 if f is is_finished:
                     for event in minion_events:
@@ -1041,8 +1060,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
-                                                                  timeout=self.application.opts['gather_job_timeout'],
-                                                                  )
+                                                                  timeout=self.application.opts['gather_job_timeout'])
                 f = yield Any([event, is_finished])
                 # When finished entire routine, cleanup other futures and return result
                 if f is is_finished:
