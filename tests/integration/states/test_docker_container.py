@@ -493,7 +493,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -506,7 +505,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -540,7 +538,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltFalseReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -558,7 +555,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('docker_container.absent',
             name=name,
             force=True,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below

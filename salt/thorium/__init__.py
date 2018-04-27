@@ -45,6 +45,8 @@ class ThorState(salt.state.HighState):
         self.pillar = pillar
         self.pillar_keys = pillar_keys
         opts['file_roots'] = opts['thorium_roots']
+        opts['saltenv'] = opts['thoriumenv']
+        opts['state_top'] = opts['thorium_top']
         opts['file_client'] = 'local'
         self.opts = opts
         if opts.get('minion_data_cache'):

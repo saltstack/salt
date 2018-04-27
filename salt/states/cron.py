@@ -267,6 +267,8 @@ def present(name,
             special=None):
     '''
     Verifies that the specified cron job is present for the specified user.
+    It is recommended to use `identifier`. Otherwise the cron job is installed
+    twice if you change the name.
     For more advanced information about what exactly can be set in the cron
     timing parameters, check your cron system's documentation. Most Unix-like
     systems' cron documentation can be found via the crontab man page:

@@ -44,7 +44,8 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'eauth',
     'fun',
     'kwarg',
-    'match'
+    'match',
+    'print_event'
 ])
 
 

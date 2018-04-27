@@ -41,14 +41,6 @@ try:
 except ImportError:
     HAS_CAPIRCA = False
 
-try:
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
 import salt.utils.napalm
 
 # ------------------------------------------------------------------------------
@@ -70,7 +62,7 @@ def __virtual__():
     '''
     This module requires both NAPALM and Capirca.
     '''
-    if HAS_CAPIRCA and HAS_NAPALM:
+    if HAS_CAPIRCA and salt.utils.napalm.virtual(__opts__, __virtualname__, __file__):
         return __virtualname__
     else:
         return (False, 'The netacl state cannot be loaded: \
