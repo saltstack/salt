@@ -63,8 +63,8 @@ def beacon(config):
         beacons:
           diskusage:
             -  interval: 120
-            - 'c:\': 90%
-            - 'd:\': 50%
+            - 'c:\\': 90%
+            - 'd:\\': 50%
 
     Regular expressions can be used as mount points.
 
@@ -73,7 +73,7 @@ def beacon(config):
         beacons:
           diskusage:
             - '^\/(?!home).*$': 90%
-            - '^[a-zA-Z]:\$': 50%
+            - '^[a-zA-Z]:\\$': 50%
 
     The first one will match all mounted disks beginning with "/", except /home
     The second one will match disks from A:\ to Z:\ on a Windows system
