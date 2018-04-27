@@ -130,11 +130,11 @@ class IPCServer(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        tornado.netutil.add_accept_handler(
-            self.sock,
-            self.handle_connection,
-            io_loop=self.io_loop,
-        )
+        with salt.utils.async.current_ioloop(self.io_loop):
+            tornado.netutil.add_accept_handler(
+                self.sock,
+                self.handle_connection,
+            )
         self._started = True
 
     @tornado.gen.coroutine
@@ -197,10 +197,10 @@ class IPCServer(object):
         log.trace('IPCServer: Handling connection '
                   'to address: {0}'.format(address))
         try:
-            stream = IOStream(
-                connection,
-                io_loop=self.io_loop,
-            )
+            with salt.utils.async.current_ioloop(self.io_loop):
+                stream = IOStream(
+                    connection,
+                )
             self.io_loop.spawn_callback(self.handle_stream, stream)
         except Exception as exc:
             log.error('IPC streaming error: {0}'.format(exc))
@@ -296,7 +296,7 @@ class IPCClient(object):
         else:
             if hasattr(self, '_connecting_future'):
                 # read previous future result to prevent the "unhandled future exception" error
-                self._connecting_future.exc_info()  # pylint: disable=E0203
+                self._connecting_future.exception()  # pylint: disable=E0203
             future = tornado.concurrent.Future()
             self._connecting_future = future
             self._connect(timeout=timeout)
@@ -330,10 +330,10 @@ class IPCClient(object):
                 break
 
             if self.stream is None:
-                self.stream = IOStream(
-                    socket.socket(sock_type, socket.SOCK_STREAM),
-                    io_loop=self.io_loop,
-                )
+                with salt.utils.async.current_ioloop(self.io_loop):
+                    self.stream = IOStream(
+                        socket.socket(sock_type, socket.SOCK_STREAM),
+                    )
 
             try:
                 log.trace('IPCClient: Connecting to socket: {0}'.format(self.socket_path))
@@ -511,11 +511,11 @@ class IPCMessagePublisher(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        tornado.netutil.add_accept_handler(
-            self.sock,
-            self.handle_connection,
-            io_loop=self.io_loop,
-        )
+        with salt.utils.async.current_ioloop(self.io_loop):
+            tornado.netutil.add_accept_handler(
+                self.sock,
+                self.handle_connection,
+            )
         self._started = True
 
     @tornado.gen.coroutine
@@ -546,17 +546,14 @@ class IPCMessagePublisher(object):
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
         try:
+            kwargs = {}
             if self.opts['ipc_write_buffer'] > 0:
+                kwargs['max_write_buffer_size'] = self.opts['ipc_write_buffer']
                 log.trace('Setting IPC connection write buffer: {0}'.format((self.opts['ipc_write_buffer'])))
+            with salt.utils.async.current_ioloop(self.io_loop):
                 stream = IOStream(
                     connection,
-                    io_loop=self.io_loop,
-                    max_write_buffer_size=self.opts['ipc_write_buffer']
-                )
-            else:
-                stream = IOStream(
-                    connection,
-                    io_loop=self.io_loop
+                    **kwargs
                 )
             self.streams.add(stream)
 
@@ -756,9 +753,9 @@ class IPCMessageSubscriber(IPCClient):
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'
             if self._read_sync_future is not None:
-                self._read_sync_future.exc_info()
+                self._read_sync_future.exception()
             if self._read_stream_future is not None:
-                self._read_stream_future.exc_info()
+                self._read_stream_future.exception()
 
     def __del__(self):
         if IPCMessageSubscriber in globals():

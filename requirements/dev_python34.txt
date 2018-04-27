@@ -1,4 +1,4 @@
--r base.txt
+-r base-py3.txt
 
 mock>=2.0.0
 apache-libcloud>=0.14.0
@@ -11,5 +11,5 @@ moto>=0.3.6
 # prevent it from being successfully installed (at least on Python 3.4).
 httpretty
 SaltPyLint>=v2017.2.29
-pytest
+pytest>=3.5.0
 git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt
