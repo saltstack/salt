@@ -331,3 +331,15 @@ class StringutilsTestCase(TestCase):
                 blacklist=set(blacklist),
             )
         )
+
+        # Test with invalid type for whitelist/blacklist
+        self.assertRaises(
+            TypeError,
+            salt.utils.stringutils.check_whitelist_blacklist,
+            'foo', whitelist=123
+        )
+        self.assertRaises(
+            TypeError,
+            salt.utils.stringutils.check_whitelist_blacklist,
+            'foo', blacklist=123
+        )

@@ -364,6 +364,12 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if blacklist is not None:
         if isinstance(blacklist, six.string_types):
             blacklist = [blacklist]
+        if not hasattr(blacklist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable blacklist, but got {0} ({1})'.format(
+                    type(blacklist).__name__, blacklist
+                )
+            )
         for expr in blacklist:
             if expr_match(value, expr):
                 return False
@@ -371,6 +377,12 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if whitelist is not None:
         if isinstance(whitelist, six.string_types):
             whitelist = [whitelist]
+        if not hasattr(whitelist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable whitelist, but got {0} ({1})'.format(
+                    type(whitelist).__name__, whitelist
+                )
+            )
         for expr in whitelist:
             if expr_match(value, expr):
                 return True
