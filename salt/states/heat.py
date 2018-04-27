@@ -16,7 +16,7 @@ Stack can be set as either absent or deploy.
   heat.deployed:
     - name:
     - template: #Required
-    - enviroment:
+    - environment:
     - params: {}
     - poll: 5
     - rollback: False
@@ -33,6 +33,12 @@ mysql:
       image: Debian 7
     - rollback: True
 
+.. versionadded:: 2017.7.5,2018.3.1
+
+    The spelling mistake in parameter `enviroment` was corrected to `environment`.
+    The misspelled version is still supported for backward compatibility, but will
+    be removed in Salt Neon.
+
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -43,6 +49,7 @@ import salt.exceptions
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.yaml
 
 # Import 3rd-party libs
@@ -92,7 +99,7 @@ def _parse_template(tmpl_str):
     return tpl
 
 
-def deployed(name, template=None, enviroment=None, params=None, poll=5,
+def deployed(name, template=None, environment=None, params=None, poll=5,
              rollback=False, timeout=60, update=False, profile=None,
              **connection_args):
     '''
@@ -104,14 +111,14 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
     template
         File of template
 
-    enviroment
-        File of enviroment
+    environment
+        File of environment
 
     params
         Parameter dict used to create the stack
 
     poll
-        Poll(in sec.) and report events until stack complete
+        Poll (in sec.) and report events until stack complete
 
     rollback
         Enable rollback on create failure
@@ -122,10 +129,22 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
     profile
         Profile to use
 
+    .. versionadded:: 2017.7.5,2018.3.1
+
+        The spelling mistake in parameter `enviroment` was corrected to `environment`.
+        The misspelled version is still supported for backward compatibility, but will
+        be removed in Salt Neon.
+
     '''
+    if environment is None and 'enviroment' in connection_args:
+        salt.utils.versions.warn_until('Neon', (
+            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
+            "parameter which will be removed in Salt Neon."
+        ))
+        environment = connection_args.pop('enviroment')
     log.debug('Deployed with(' +
               '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})'
-              .format(name, template, enviroment, params, poll, rollback,
+              .format(name, template, environment, params, poll, rollback,
                       timeout, update, profile, connection_args))
     ret = {'name': None,
            'comment': '',
@@ -234,7 +253,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
         else:
             stack = __salt__['heat.update_stack'](name=name,
                                                   template_file=template,
-                                                  enviroment=enviroment,
+                                                  environment=environment,
                                                   parameters=params, poll=poll,
                                                   rollback=rollback,
                                                   timeout=timeout,
@@ -250,7 +269,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
         else:
             stack = __salt__['heat.create_stack'](name=name,
                                                   template_file=template,
-                                                  enviroment=enviroment,
+                                                  environment=environment,
                                                   parameters=params, poll=poll,
                                                   rollback=rollback,
                                                   timeout=timeout,
