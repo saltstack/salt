@@ -308,7 +308,6 @@ def installed(name,
               install_options=None,
               global_options=None,
               user=None,
-              no_chown=False,
               cwd=None,
               pre_releases=False,
               cert=None,
@@ -321,7 +320,8 @@ def installed(name,
               trusted_host=None,
               no_cache_dir=False,
               cache_dir=None,
-              no_binary=None):
+              no_binary=None,
+              **kwargs):
     '''
     Make sure the package is installed
 
@@ -442,10 +442,6 @@ def installed(name,
 
     no_install
         Download and unpack all packages, but don't actually install them
-
-    no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file
 
     no_cache_dir:
         Disable the cache.
@@ -589,6 +585,12 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
+    if 'no_chown' in kwargs:
+        salt.utils.warn_until(
+            'Flourine',
+            'The no_chown argument has been deprecated and is no longer used. '
+            'Its functionality was removed in Boron.')
+        kwargs.pop('no_chown')
 
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -801,7 +803,6 @@ def installed(name,
         install_options=install_options,
         global_options=global_options,
         user=user,
-        no_chown=no_chown,
         cwd=cwd,
         pre_releases=pre_releases,
         cert=cert,

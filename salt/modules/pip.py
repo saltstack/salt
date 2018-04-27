@@ -417,7 +417,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             global_options=None,
             install_options=None,
             user=None,
-            no_chown=False,
             cwd=None,
             pre_releases=False,
             cert=None,
@@ -431,7 +430,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             trusted_host=None,
             no_cache_dir=False,
             cache_dir=None,
-            no_binary=None):
+            no_binary=None,
+            **kwargs):
     '''
     Install packages with pip
 
@@ -553,10 +553,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     user
         The user under which to run pip
 
-    no_chown
-        When user is given, do not attempt to copy and chown a requirements
-        file
-
     cwd
         Current working directory to run pip from
 
@@ -617,6 +613,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
+    if 'no_chown' in kwargs:
+        salt.utils.warn_until(
+            'Flourine',
+            'The no_chown argument has been deprecated and is no longer used. '
+            'Its functionality was removed in Boron.')
+        kwargs.pop('no_chown')
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -915,7 +917,6 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               user=None,
-              no_chown=False,
               cwd=None,
               saltenv='base',
               use_vt=False):
@@ -948,11 +949,6 @@ def uninstall(pkgs=None,
         Set the socket timeout (default 15 seconds)
     user
         The user under which to run pip
-    no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file (needed if the requirements file refers to other
-        files via relative paths, as the copy-and-chown procedure does not
-        account for such files)
     cwd
         Current working directory to run pip from
     use_vt
