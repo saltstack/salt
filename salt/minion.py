@@ -1057,7 +1057,7 @@ class Minion(MinionBase):
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
-        future_exception = self._connect_master_future.exc_info()
+        future_exception = self._connect_master_future.exception()
         if future_exception:
             # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
