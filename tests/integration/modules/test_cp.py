@@ -444,12 +444,14 @@ class CPModuleTest(ModuleCase):
             self.assertIn('ARTHUR:', data)
             self.assertNotIn('bacon', data)
 
-    def test_cache_master(self):
+    @with_tempfile()
+    def test_cache_master(self, tgt):
         '''
         cp.cache_master
         '''
         ret = self.run_function(
                 'cp.cache_master',
+                [tgt],
                 )
         for path in ret:
             self.assertTrue(os.path.exists(path))

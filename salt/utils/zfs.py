@@ -9,7 +9,7 @@ These functions are for dealing with type conversion and basic execution
 :depends:       salt.utils.stringutils, salt.ext, salt.module.cmdmod
 :platform:      illumos,freebsd,linux
 
-.. versionadded:: Fluorine
+.. versionadded:: 2018.3.1
 
 '''
 

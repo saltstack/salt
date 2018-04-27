@@ -81,8 +81,7 @@ class ArgsTestCase(TestCase):
             self.assertRaises(SaltInvocationError, salt.utils.args.format_call, dummy_func, {'1': 2})
 
             # Make sure we warn on invalid kwargs
-            ret = salt.utils.args.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
-            self.assertGreaterEqual(len(ret['warnings']), 1)
+            self.assertRaises(SaltInvocationError, salt.utils.args.format_call, dummy_func, {'first': 2, 'seconds': 2, 'third': 3})
 
             ret = salt.utils.args.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
                                          expected_extra_kws=('first', 'second', 'third'))
