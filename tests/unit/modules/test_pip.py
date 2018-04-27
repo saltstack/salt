@@ -50,7 +50,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting'
         ]
 
-        expected = [sys.executable, '-m','pip', 'install']
+        expected = [sys.executable, '-m', 'pip', 'install']
         for item in editables:
             expected.extend(['--editable', item])
 
