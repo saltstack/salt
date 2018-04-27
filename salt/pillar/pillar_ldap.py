@@ -324,6 +324,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
             'pillar_ldap: search_order missing from configuration. See the '
             'documentation for more information.'
         )
+        return {}
 
     data = {}
     for source in opts['search_order']:
