@@ -282,3 +282,19 @@ class TestM2CryptoRegression47124(TestCase):
         with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
             salt.crypt.verify_signature('/keydir/keyname.pub', message, self.SIGNATURE)
 
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_sign_bytes(self):
+        message = salt.utils.stringutils.to_unicode('meh')
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        with patch('salt.crypt.get_rsa_key', return_value=key):
+            signature = salt.crypt.sign_message('/keydir/keyname.pem', message, passphrase='password')
+        self.assertEqual(signature, self.SIGNATURE)
+
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_sign_unicode(self):
+        message = salt.utils.stringutils.to_bytes('meh')
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        with patch('salt.crypt.get_rsa_key', return_value=key):
+            signature = salt.crypt.sign_message('/keydir/keyname.pem', message, passphrase='password')
+        self.assertEqual(signature, self.SIGNATURE)
