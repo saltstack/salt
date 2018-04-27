@@ -296,7 +296,7 @@ class IPCClient(object):
         else:
             if hasattr(self, '_connecting_future'):
                 # read previous future result to prevent the "unhandled future exception" error
-                self._connecting_future.exc_info()  # pylint: disable=E0203
+                self._connecting_future.exception()  # pylint: disable=E0203
             future = tornado.concurrent.Future()
             self._connecting_future = future
             self._connect(timeout=timeout)
@@ -753,9 +753,9 @@ class IPCMessageSubscriber(IPCClient):
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'
             if self._read_sync_future is not None:
-                self._read_sync_future.exc_info()
+                self._read_sync_future.exception()
             if self._read_stream_future is not None:
-                self._read_stream_future.exc_info()
+                self._read_stream_future.exception()
 
     def __del__(self):
         if IPCMessageSubscriber in globals():
