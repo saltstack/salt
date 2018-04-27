@@ -243,6 +243,8 @@ class CkMinions(object):
             # Compiling pillar directly on the master, just return the master's
             # ID as that is the only one that is available.
             return [self.opts['id']]
+        if self.opts.get('__role') == 'minion': # Return self if running masterless
+            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
         try:
