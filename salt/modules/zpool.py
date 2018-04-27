@@ -8,7 +8,7 @@ Module for running ZFS zpool command
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -247,7 +247,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         display data in pythonc values (True, False, Bytes,...)
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2018.3.1
 
         Added ```parsable``` parameter that defaults to True
 
@@ -1480,7 +1480,7 @@ def clear(zpool, device=None):
     device : string
         (optional) specific device to clear
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2018.3.1
 
     CLI Example:
 

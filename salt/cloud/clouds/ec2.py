@@ -75,6 +75,7 @@ import time
 import uuid
 import pprint
 import logging
+import random
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -2180,8 +2181,9 @@ def query_instance(vm_=None, call=None):
 
     provider = get_provider(vm_)
 
-    attempts = 5
-    while attempts > 0:
+    attempts = 0
+    # perform exponential backoff and wait up to one minute (2**6 seconds)
+    while attempts < 7:
         data, requesturl = aws.query(params,                # pylint: disable=unbalanced-tuple-unpacking
                                      location=location,
                                      provider=provider,
@@ -2195,22 +2197,17 @@ def query_instance(vm_=None, call=None):
                 'There was an error in the query. %s attempts '
                 'remaining: %s', attempts, data['error']
             )
-            attempts -= 1
-            # Just a little delay between attempts...
-            time.sleep(1)
-            continue
-
-        if isinstance(data, list) and not data:
+        elif isinstance(data, list) and not data:
             log.warning(
                 'Query returned an empty list. %s attempts '
                 'remaining.', attempts
             )
-            attempts -= 1
-            # Just a little delay between attempts...
-            time.sleep(1)
-            continue
+        else:
+            break
 
-        break
+        time.sleep(random.uniform(1, 2**attempts))
+        attempts += 1
+        continue
     else:
         raise SaltCloudSystemExit(
             'An error occurred while creating VM: {0}'.format(data['error'])
