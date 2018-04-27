@@ -5,6 +5,232 @@ Salt Release Notes - Codename Fluorine
 ======================================
 
 
+"Virtual Package" Support Dropped for APT
+-----------------------------------------
+
+In APT, some packages have an associated list of packages which they provide.
+This allows one to do things like run ``apt-get install foo`` when the real
+package name is ``foo1.0``, and get the right package installed.
+
+Salt has traditionally designated as "virtual packages" those which are
+provided by an installed package, but for which there is no real package by
+that name installed. Given the above example, if one were to run a
+:py:func:`pkg.installed <salt.states.pkg.installed>` state for a package named
+``foo``, then :py:func:`pkg.list_pkgs <salt.modules.aptpkg.list_pkgs>` would
+show a package version of simply ``1`` for package ``foo``, denoting that it is
+a virtual package.
+
+However, while this makes certain aspects of package management convenient,
+there are issues with this approach that make relying on "virtual packages"
+problematic. For instance, Ubuntu has four different mutually-conflicting
+packages for ``nginx``:
+
+- nginx-core_
+- nginx-full_
+- nginx-light_
+- nginx-extras_
+
+All four of these provide ``nginx``. Yet there is an nginx_ package as well,
+which has no actual content and merely has dependencies on any one of the above
+four packages. If one used ``nginx`` in a :py:func:`pkg.installed
+<salt.states.pkg.installed>` state, and none of the above four packages were
+installed, then the nginx_ metapackage would be installed, which would pull in
+`nginx-core_`.  Later, if ``nginx`` were used in a :py:func:`pkg.removed
+<salt.states.pkg.removed>` state, the nginx_ metapackage would be removed,
+leaving nginx-core_ installed. The result would be that, since `nginx-core_`
+provides `nginx_`, Salt would now see nginx_ as an installed virtual package,
+and the :py:func:`pkg.removed <salt.states.pkg.removed>` state would fail.
+Moreover, *nginx would not actually have been removed*, since nginx-core_ would
+remain installed.
+
+.. _nginx-core: https://packages.ubuntu.com/xenial/nginx-core
+.. _nginx-full: https://packages.ubuntu.com/xenial/nginx-full
+.. _nginx-light: https://packages.ubuntu.com/xenial/nginx-light
+.. _nginx-extras: https://packages.ubuntu.com/xenial/nginx-extras
+.. _nginx: https://packages.ubuntu.com/xenial/nginx
+
+Starting with this release, Salt will no longer support using "virtual package"
+names in ``pkg`` states, and package names will need to be specified using the
+proper package name. The :py:func:`pkg.list_repo_pkgs
+<salt.modules.aptpkg.list_repo_pkgs>` function can be used to find matching
+package names in the repositories, given a package name (or glob):
+
+.. code-block:: bash
+
+    # salt myminion pkg.list_repo_pkgs 'nginx*'
+    myminion:
+        ----------
+        nginx:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-common:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-core:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-core-dbg:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-doc:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-extras:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-extras-dbg:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-full:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-full-dbg:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-light:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+        nginx-light-dbg:
+            - 1.10.3-0ubuntu0.16.04.2
+            - 1.9.15-0ubuntu1
+
+Alternatively, the newly-added :py:func:`pkg.show <salt.modules.aptpkg.show>`
+function can be used to get more detailed information about a given package and
+help determine what package name is correct:
+
+.. code-block:: bash
+
+    # salt myminion pkg.show 'nginx*' filter=description,provides
+    myminion:
+        ----------
+        nginx:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server
+        nginx-common:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server - common files
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server - common files
+        nginx-core:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (core version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (core version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+        nginx-core-dbg:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (core version) - debugging symbols
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (core version) - debugging symbols
+        nginx-doc:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server - documentation
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    small, powerful, scalable web/proxy server - documentation
+        nginx-extras:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (extended version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (extended version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+        nginx-extras-dbg:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (extended version) - debugging symbols
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (extended version) - debugging symbols
+        nginx-full:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (standard version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (standard version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+        nginx-full-dbg:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (standard version) - debugging symbols
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (standard version) - debugging symbols
+        nginx-light:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (basic version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (basic version)
+                Provides:
+                    httpd, httpd-cgi, nginx
+        nginx-light-dbg:
+            ----------
+            1.10.3-0ubuntu0.16.04.2:
+                ----------
+                Description:
+                    nginx web/proxy server (basic version) - debugging symbols
+            1.9.15-0ubuntu1:
+                ----------
+                Description:
+                    nginx web/proxy server (basic version) - debugging symbols
+
+
 Minion Startup Events
 ---------------------
 

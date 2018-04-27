@@ -1934,7 +1934,7 @@ def fqdns():
         try:
             fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
         except socket.herror as err:
-            if err.errno == 1:
+            if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:

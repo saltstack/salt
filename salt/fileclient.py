@@ -1381,7 +1381,17 @@ class RemoteClient(Client):
         '''
         Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_master_tops',
+        salt.utils.versions.warn_until(
+            'Magnesium',
+            'The _ext_nodes master function has '
+            'been renamed to _master_tops. To ensure '
+            'compatibility when using older Salt masters '
+            'we continue to pass the function as _ext_nodes.'
+        )
+
+        # TODO: Change back to _master_tops
+        # for Magnesium release
+        load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
