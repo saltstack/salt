@@ -556,7 +556,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ['g']
                         assert y['g'] == 2
                     else:
-                        raise ValueError("Unexpected value %s" % y)
+                        raise ValueError("Unexpected value {0}".format(y))
             elif 'h' in x:
                 assert len(x['h']) == 1
                 for y in x['h']:
@@ -567,9 +567,9 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         assert y['k'] == 4
                     else:
-                        raise ValueError("Unexpected value %s" % y)
+                        raise ValueError("Unexpected value {0}".format(y))
             else:
-                raise ValueError("Unexpected value %s" % x)
+                raise ValueError("Unexpected value {0}".format(x))
 
     def test_302_process_results_with_lists_consecutive(self):
         '''
@@ -609,7 +609,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ['g']
                         assert y['g'] == 2
                     else:
-                        raise ValueError("Unexpected value %s" % y)
+                        raise ValueError("Unexpected value {0}".format(y))
             elif len(x[0][0]) == 2:
                 for y in x[0]:
                     if 'j' in y:
@@ -619,6 +619,8 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         y['k'] == 4
                     else:
-                        raise ValueError("Unexpected value %s" % len(x[0][0]))
+                        raise ValueError(
+                            "Unexpected value {0}".format(len(x[0][0]))
+                        )
             else:
-                raise ValueError("Unexpected value %s" % x)
+                raise ValueError("Unexpected value {0}".format(x))
