@@ -362,14 +362,14 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     found in the whitelist, the function returns ``False``.
     '''
     if blacklist is not None:
-        if not isinstance(blacklist, list):
+        if not isinstance(blacklist, (list, tuple, set)):
             blacklist = [blacklist]
         for expr in blacklist:
             if expr_match(value, expr):
                 return False
 
     if whitelist:
-        if not isinstance(whitelist, list):
+        if not isinstance(whitelist, (list, tuple, set)):
             whitelist = [whitelist]
         for expr in whitelist:
             if expr_match(value, expr):
