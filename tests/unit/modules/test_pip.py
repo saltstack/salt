@@ -301,14 +301,18 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.isdir.return_value = True
             mock_path.join = join
 
+            if salt.utils.is_windows():
+                venv_path = 'C:\\test_env'
+                bin_path = os.path.join(venv_path, 'python.exe')
+            else:
+                venv_path = '/test_env'
+                bin_path = os.path.join(venv_path, 'python')
+
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                if salt.utils.is_windows():
-                    venv_path = 'C:\\test_env'
-                    bin_path = os.path.join(venv_path, 'python.exe')
-                else:
-                    venv_path = '/test_env'
-                    bin_path = os.path.join(venv_path, 'python')
+            pip_bin = MagicMock(return_value=[bin_path, '-m', 'pip'])
+
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}), \
+                    patch.object(pip, '_get_pip_bin', pip_bin):
                 pip.install('mock', bin_env=venv_path)
                 mock.assert_called_with(
                     [bin_path, '-m', 'pip', 'install', 'mock'],
