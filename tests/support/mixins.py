@@ -39,6 +39,7 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 import salt.exceptions
+import salt.utils.process
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt._compat import ElementTree as etree
@@ -638,6 +639,29 @@ class SaltReturnAssertsMixin(object):
             self.assertNotEqual(saltret, comparison)
 
 
+def _fetch_events(q):
+    '''
+    Collect events and store them
+    '''
+    def _clean_queue():
+        print('Cleaning queue!')
+        while not q.empty():
+            queue_item = q.get()
+            queue_item.task_done()
+
+    atexit.register(_clean_queue)
+    a_config = AdaptedConfigurationTestCaseMixin()
+    event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
+    while True:
+        try:
+            events = event.get_event(full=False)
+        except Exception:
+            # This is broad but we'll see all kinds of issues right now
+            # if we drop the proc out from under the socket while we're reading
+            pass
+        q.put(events)
+
+
 class SaltMinionEventAssertsMixin(object):
     '''
     Asserts to verify that a given event was seen
@@ -646,35 +670,14 @@ class SaltMinionEventAssertsMixin(object):
     def __new__(cls, *args, **kwargs):
         # We have to cross-call to re-gen a config
         cls.q = multiprocessing.Queue()
-        cls.fetch_proc = multiprocessing.Process(target=cls._fetch, args=(cls.q,))
+        cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+            target=_fetch_events, args=(cls.q,)
+        )
         cls.fetch_proc.start()
         return object.__new__(cls)
 
     def __exit__(self, *args, **kwargs):
         self.fetch_proc.join()
-
-    @staticmethod
-    def _fetch(q):
-        '''
-        Collect events and store them
-        '''
-        def _clean_queue():
-            print('Cleaning queue!')
-            while not q.empty():
-                queue_item = q.get()
-                queue_item.task_done()
-
-        atexit.register(_clean_queue)
-        a_config = AdaptedConfigurationTestCaseMixin()
-        event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
-        while True:
-            try:
-                events = event.get_event(full=False)
-            except Exception:
-                # This is broad but we'll see all kinds of issues right now
-                # if we drop the proc out from under the socket while we're reading
-                pass
-            q.put(events)
 
     def assertMinionEventFired(self, tag):
         #TODO
