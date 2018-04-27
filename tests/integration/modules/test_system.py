@@ -361,7 +361,7 @@ class SystemModuleTest(ModuleCase):
             self.assertTrue(self._hwclock_has_compare())
 
 
-@skipIf(not salt.utils.is_windows(), 'These tests can only be run on windows')
+@skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on windows')
 class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module

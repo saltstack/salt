@@ -9,10 +9,10 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_windows(), 'Tests for only Windows')
+@skipIf(not salt.utils.platform.is_windows(), 'Tests for only Windows')
 class NTPTest(ModuleCase):
     '''
     Validate windows ntp module

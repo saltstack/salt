@@ -8,10 +8,10 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_windows(), 'windows tests only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows tests only')
 class AutoRunsModuleTest(ModuleCase):
     '''
     Test the autoruns module
