@@ -4979,7 +4979,7 @@ def get_diff(file1,
         )
 
     args = []
-    for idx, filename in enumerate(files):
+    for filename in files:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -4991,23 +4991,25 @@ def get_diff(file1,
                 )
             )
 
-    if args[0] != args[1]:
-        if template and __salt__['config.option']('obfuscate_templates'):
-            ret = '<Obfuscated Template>'
-        elif not show_changes:
-            ret = '<show_changes=False>'
+    if args[0] == args[1]:
+        return ''
+
+    if template and __salt__['config.option']('obfuscate_templates'):
+        ret = '<Obfuscated Template>'
+    elif not show_changes:
+        ret = '<show_changes=False>'
+    else:
+        bdiff = _binary_replace(*files)
+        if bdiff:
+            ret = bdiff
         else:
-            bdiff = _binary_replace(*files)
-            if bdiff:
-                ret = bdiff
-            else:
-                if show_filenames:
-                    args.extend(files)
-                ret = ''.join(
-                    difflib.unified_diff(
-                        *salt.utils.data.decode(args)
-                    )
+            if show_filenames:
+                args.extend(files)
+            ret = ''.join(
+                difflib.unified_diff(
+                    *salt.utils.data.decode(args)
                 )
+            )
     return ret
 
 
