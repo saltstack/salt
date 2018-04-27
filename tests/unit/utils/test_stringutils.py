@@ -292,7 +292,7 @@ class StringutilsTestCase(TestCase):
             )
         )
 
-        # Tests with list whitelist/blacklist
+        # Tests with set whitelist/blacklist
         self.assertFalse(
             salt.utils.stringutils.check_whitelist_blacklist(
                 'web_one',
