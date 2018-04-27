@@ -858,3 +858,21 @@ SwapTotal:       4789244 kB'''
                        'options': []}}
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
+
+    def test_core_virtual(self):
+        '''
+        test virtual grain with cmd virt-what
+        '''
+        virt = 'kvm'
+        with patch.object(salt.utils, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils, 'which',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'cmd.run_all':
+                                                MagicMock(return_value={'pid': 78,
+                                                                        'retcode': 0,
+                                                                        'stderr': '',
+                                                                        'stdout': virt})}):
+                    osdata = {'kernel': 'test', }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret['virtual'], virt)

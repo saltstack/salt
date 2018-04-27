@@ -11,6 +11,16 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 import salt.pillar.mysql as mysql
 
 
+def sorted_result(result):
+    sorted_result = {}
+    for x in result:
+        sorted_result[x] = sorted(result[x])
+        for y in sorted_result[x]:
+            for z in y:
+                y[z] = sorted(y[z])
+    return sorted_result
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not mysql.HAS_MYSQL, 'MySQL-python module not installed')
 class MysqlPillarTestCase(TestCase):
@@ -541,7 +551,7 @@ class MysqlPillarTestCase(TestCase):
                       ]
                   }
             ]},
-             return_data.result
+             sorted_result(return_data.result)
         )
 
     def test_302_process_results_with_lists_consecutive(self):
@@ -566,5 +576,5 @@ class MysqlPillarTestCase(TestCase):
                       ]
                   ]
             ]},
-             return_data.result
+             sorted_result(return_data.result)
         )
