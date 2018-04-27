@@ -614,10 +614,10 @@ class MysqlPillarTestCase(TestCase):
                 for y in x[0]:
                     if 'j' in y:
                         assert len(y.keys()) == 2
-                        y['j'] == 3
+                        assert y['j'] == 3
                     elif 'k' in y:
                         assert len(y.keys()) == 2
-                        y['k'] == 4
+                        assert y['k'] == 4
                     else:
                         raise ValueError(
                             "Unexpected value {0}".format(len(x[0][0]))
