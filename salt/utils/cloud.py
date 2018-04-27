@@ -835,7 +835,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     )
     transport = 'ssl'
     if not use_ssl:
-        transport = 'plaintext'
+        transport = 'ntlm'
     trycount = 0
     while True:
         trycount += 1
@@ -2290,16 +2290,16 @@ def is_public_ip(ip):
             return False
         return True
     addr = ip_to_int(ip)
-    if addr > 167772160 and addr < 184549375:
+    if 167772160 < addr < 184549375:
         # 10.0.0.0/8
         return False
-    elif addr > 3232235520 and addr < 3232301055:
+    elif 3232235520 < addr < 3232301055:
         # 192.168.0.0/16
         return False
-    elif addr > 2886729728 and addr < 2887778303:
+    elif 2886729728 < addr < 2887778303:
         # 172.16.0.0/12
         return False
-    elif addr > 2130706432 and addr < 2147483647:
+    elif 2130706432 < addr < 2147483647:
         # 127.0.0.0/8
         return False
     return True

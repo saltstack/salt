@@ -12,6 +12,7 @@ proxy modules
 
     cimc
     chronos
+    cimc
     cisconso
     dummy
     esxi

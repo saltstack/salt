@@ -739,6 +739,9 @@ VALID_OPTS = {
     # Recursively merge lists by aggregating them instead of replacing them.
     'pillar_merge_lists': bool,
 
+    # If True, values from included pillar SLS targets will override
+    'pillar_includes_override_sls': bool,
+
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
     'top_file_merging_strategy': six.string_types,
@@ -1189,6 +1192,12 @@ VALID_OPTS = {
 
     # Enable calling ssh minions from the salt master
     'enable_ssh_minions': bool,
+
+    # Thorium saltenv
+    'thoriumenv': (type(None), six.string_types),
+
+    # Thorium top file location
+    'thorium_top': six.string_types,
 }
 
 # default configurations
@@ -1227,7 +1236,7 @@ DEFAULT_MINION_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'sock_pool_size': 1,
     'backup_mode': '',
-    'renderer': 'yaml_jinja',
+    'renderer': 'jinja|yaml',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
     'random_startup_delay': 0,
@@ -1238,6 +1247,9 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
+    'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -1249,6 +1261,8 @@ DEFAULT_MINION_OPTS = {
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
+    'thoriumenv': None,
+    'thorium_top': 'top.sls',
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
@@ -1524,6 +1538,8 @@ DEFAULT_MASTER_OPTS = {
     'decrypt_pillar_delimiter': ':',
     'decrypt_pillar_default': 'gpg',
     'decrypt_pillar_renderers': ['gpg'],
+    'thoriumenv': None,
+    'thorium_top': 'top.sls',
     'thorium_interval': 0.5,
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
@@ -1616,6 +1632,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
+    'pillar_includes_override_sls': False,
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
@@ -1658,13 +1675,14 @@ DEFAULT_MASTER_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
-    'renderer': 'yaml_jinja',
+    'renderer': 'jinja|yaml',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'master_tops': {},
+    'master_tops_first': False,
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -3678,6 +3696,8 @@ def apply_minion_config(overrides=None,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'minion'
@@ -3686,7 +3706,7 @@ def apply_minion_config(overrides=None,
         opts.update(overrides)
 
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' minion config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3786,7 +3806,7 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
@@ -3875,6 +3895,8 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
+    if overrides is None:
+        overrides = {}
 
     opts = defaults.copy()
     opts['__role'] = 'master'
@@ -3882,8 +3904,12 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides:
         opts.update(overrides)
 
+    opts['__cli'] = salt.utils.stringutils.to_unicode(
+        os.path.basename(sys.argv[0])
+    )
+
     if 'environment' in opts:
-        if 'saltenv' in opts:
+        if opts['saltenv'] is not None:
             log.warning(
                 'The \'saltenv\' and \'environment\' master config options '
                 'cannot both be used. Ignoring \'environment\' in favor of '
@@ -3933,7 +3959,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Insert all 'utils_dirs' directories to the system path
     insert_system_path(opts, opts['utils_dirs'])
 
-    if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0

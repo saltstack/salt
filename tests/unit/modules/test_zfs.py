@@ -304,15 +304,15 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         res = OrderedDict([
             ('myzpool', OrderedDict([
-                ('used', 905792561152),
-                ('avail', 1024795238400),
+                ('used', 849329782784),
+                ('avail', 1081258016768),
                 ('refer', 98304),
                 ('mountpoint', '/myzpool'),
             ])),
         ])
         ret = {}
         ret['retcode'] = 0
-        ret['stdout'] = 'myzpool\t905792561152\t1024795238400\t98304\t/myzpool'
+        ret['stdout'] = 'myzpool\t791G\t1007G\t96K\t/myzpool'
         ret['stderr'] = ''
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
@@ -325,15 +325,15 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         res = OrderedDict([
             ('myzpool', OrderedDict([
-                ('used', '844G'),
-                ('avail', '954G'),
+                ('used', '791G'),
+                ('avail', '1007G'),
                 ('refer', '96K'),
                 ('mountpoint', '/myzpool'),
             ])),
         ])
         ret = {}
         ret['retcode'] = 0
-        ret['stdout'] = 'myzpool\t905792561152\t1024795238400\t98304\t/myzpool'
+        ret['stdout'] = 'myzpool\t791G\t1007G\t96K\t/myzpool'
         ret['stderr'] = ''
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
@@ -347,14 +347,14 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         res = OrderedDict([
             ('myzpool', OrderedDict([
                 ('canmount', True),
-                ('used', 834786304),
-                ('avail', 87502848),
+                ('used', 849329782784),
+                ('avail', 1081258016768),
                 ('compression', False),
             ])),
         ])
         ret = {}
         ret['retcode'] = 0
-        ret['stdout'] = 'myzpool\ton\t834786304\t87502848\toff'
+        ret['stdout'] = 'myzpool\ton\t791G\t1007G\toff'
         ret['stderr'] = ''
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
@@ -368,14 +368,14 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         res = OrderedDict([
             ('myzpool', OrderedDict([
                 ('canmount', 'on'),
-                ('used', '796M'),
-                ('avail', '83.4M'),
+                ('used', '791G'),
+                ('avail', '1007G'),
                 ('compression', 'off'),
             ])),
         ])
         ret = {}
         ret['retcode'] = 0
-        ret['stdout'] = 'myzpool\ton\t834786304\t87502848\toff'
+        ret['stdout'] = 'myzpool\ton\t791G\t1007G\toff'
         ret['stderr'] = ''
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \

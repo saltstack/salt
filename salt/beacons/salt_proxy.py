@@ -54,6 +54,7 @@ def validate(config):
             if not isinstance(_config['proxies'], dict):
                 return False, ('Proxies for salt_proxy '
                                'beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):

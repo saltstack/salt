@@ -15,7 +15,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import socket
 import sys
-import glob
 import re
 import platform
 import logging
@@ -54,6 +53,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -71,7 +71,6 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
-    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
@@ -83,9 +82,8 @@ if salt.utils.platform.is_windows():
         import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         import win32api
-        import salt.modules.reg
+        import salt.utils.win_reg
         HAS_WMI = True
-        __salt__['reg.read_value'] = salt.modules.reg.read_value
     except ImportError:
         log.exception(
             'Unable to import Python wmi module, some core grains '
@@ -110,10 +108,10 @@ def _windows_cpudata():
             grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
         except ValueError:
             grains['num_cpus'] = 1
-    grains['cpu_model'] = __salt__['reg.read_value'](
-                       "HKEY_LOCAL_MACHINE",
-                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                       "ProcessorNameString").get('vdata')
+    grains['cpu_model'] = salt.utils.win_reg.read_value(
+        hive="HKEY_LOCAL_MACHINE",
+        key="HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+        vname="ProcessorNameString").get('vdata')
     return grains
 
 
@@ -815,19 +813,6 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'chroot'
             except (IOError, OSError):
                 pass
-        if os.path.isfile('/proc/1/cgroup'):
-            try:
-                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
-                    fhr_contents = fhr.read()
-                if ':/lxc/' in fhr_contents:
-                    grains['virtual_subtype'] = 'LXC'
-                else:
-                    if any(x in fhr_contents
-                           for x in (':/system.slice/docker', ':/docker/',
-                                     ':/docker-ce/')):
-                        grains['virtual_subtype'] = 'Docker'
-            except IOError:
-                pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -877,6 +862,24 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile('/proc/1/cgroup'):
+            try:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
+                    fhr_contents = fhr.read()
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
+                        grains['virtual_subtype'] = 'Docker'
+            except IOError:
+                pass
         if os.path.isfile('/proc/cpuinfo'):
             with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
@@ -1494,6 +1497,12 @@ def os_data():
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif salt.utils.path.which('dumb-init') in init_cmdline:
+                        # https://github.com/Yelp/dumb-init
+                        grains['init'] = 'dumb-init'
+                    elif salt.utils.path.which('tini') in init_cmdline:
+                        # https://github.com/krallin/tini
+                        grains['init'] = 'tini'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
                     elif '/sbin/my_init' in init_cmdline:
@@ -1918,16 +1927,21 @@ def fqdns():
     fqdns = set()
 
     addresses = salt.utils.network.ip_addrs(include_loopback=False,
-        interface_data=_INTERFACES)
+                                            interface_data=_INTERFACES)
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-        interface_data=_INTERFACES))
-
+                                                  interface_data=_INTERFACES))
+    err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.gethostbyaddr(ip)[0])
-        except (socket.error, socket.herror,
-            socket.gaierror, socket.timeout) as e:
-            log.info("Exception during resolving address: " + str(e))
+            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+        except socket.herror as err:
+            if err.errno == 0:
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
 
     grains['fqdns'] = sorted(list(fqdns))
     return grains
@@ -2212,7 +2226,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read().strip()
+                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:
@@ -2437,7 +2451,29 @@ def get_server_id():
 
     if salt.utils.platform.is_proxy():
         return {}
-    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        id_hash = __salt__['cmd.run'](
+            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+            env={'PYTHONHASHSEED': '0'}
+        )
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug(
+                'Failed to hash the ID to get the server_id grain. Result of '
+                'hash command: %s', id_hash
+            )
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return {'server_id': abs(id_hash % (2 ** 31))}
 
 
 def get_master():
@@ -2494,123 +2530,3 @@ def default_gateway():
         except Exception:
             continue
     return grains
-
-
-def fc_wwn():
-    '''
-    Return list of fiber channel HBA WWNs
-    '''
-    grains = {}
-    grains['fc_wwn'] = False
-    if salt.utils.platform.is_linux():
-        grains['fc_wwn'] = _linux_wwns()
-    elif salt.utils.platform.is_windows():
-        grains['fc_wwn'] = _windows_wwns()
-    return grains
-
-
-def iscsi_iqn():
-    '''
-    Return iSCSI IQN
-    '''
-    grains = {}
-    grains['iscsi_iqn'] = False
-    if salt.utils.platform.is_linux():
-        grains['iscsi_iqn'] = _linux_iqn()
-    elif salt.utils.platform.is_windows():
-        grains['iscsi_iqn'] = _windows_iqn()
-    elif salt.utils.platform.is_aix():
-        grains['iscsi_iqn'] = _aix_iqn()
-    return grains
-
-
-def _linux_iqn():
-    '''
-    Return iSCSI IQN from a Linux host.
-    '''
-    ret = []
-
-    initiator = '/etc/iscsi/initiatorname.iscsi'
-    try:
-        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
-            for line in _iscsi:
-                line = line.strip()
-                if line.startswith('InitiatorName='):
-                    ret.append(line.split('=', 1)[1])
-    except IOError as ex:
-        if ex.errno != os.errno.ENOENT:
-            log.debug("Error while accessing '%s': %s", initiator, ex)
-
-    return ret
-
-
-def _aix_iqn():
-    '''
-    Return iSCSI IQN from an AIX host.
-    '''
-    ret = []
-
-    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
-
-    aixret = __salt__['cmd.run'](aixcmd)
-    if aixret[0].isalpha():
-        try:
-            ret.append(aixret.split()[1].rstrip())
-        except IndexError:
-            pass
-    return ret
-
-
-def _linux_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Linux host.
-    '''
-    ret = []
-
-    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
-        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
-            for line in _wwn:
-                ret.append(line.rstrip()[2:])
-    return ret
-
-
-def _windows_iqn():
-    '''
-    Return iSCSI IQN from a Windows host.
-    '''
-    ret = []
-
-    wmic = salt.utils.path.which('wmic')
-
-    if not wmic:
-        return ret
-
-    namespace = r'\\root\WMI'
-    mspath = 'MSiSCSIInitiator_MethodClass'
-    get = 'iSCSINodeName'
-
-    cmdret = __salt__['cmd.run_all'](
-        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
-            wmic, namespace, mspath, get))
-
-    for line in cmdret['stdout'].splitlines():
-        if line.startswith('iqn.'):
-            line = line.rstrip()
-            ret.append(line.rstrip())
-    return ret
-
-
-def _windows_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Windows host.
-    '''
-    ps_cmd = r'Get-WmiObject -ErrorAction Stop -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
-
-    ret = []
-
-    cmdret = __salt__['cmd.run_ps'](ps_cmd)
-
-    for line in cmdret:
-        ret.append(line.rstrip())
-
-    return ret
