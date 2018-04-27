@@ -1728,7 +1728,7 @@ def running(name,
     # container does not already exist)
     try:
         temp_container = __salt__['docker.create'](
-            image_id,
+            image,
             name=name if not exists else None,
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
@@ -2185,7 +2185,7 @@ def run(name,
     try:
         if 'networks' in kwargs:
             kwargs['networks'] = _parse_networks(kwargs['networks'])
-        image_id = _resolve_image(ret, image, client_timeout)
+        _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
         ret['result'] = False
         if exc.info is not None:
@@ -2242,7 +2242,7 @@ def run(name,
 
     try:
         ret['changes'] = __salt__['docker.run_container'](
-            image_id,
+            image,
             name=name,
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
