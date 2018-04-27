@@ -151,7 +151,7 @@ def serve_file(load, fnd):
     '''
     ret = {'data': '',
            'dest': ''}
-    required_load_keys = set(['path', 'loc', 'saltenv'])
+    required_load_keys = ('path', 'loc', 'saltenv')
     if not all(x in load for x in required_load_keys):
         log.debug(
             'Not all of the required keys present in payload. Missing: %s',

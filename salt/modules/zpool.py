@@ -8,7 +8,7 @@ Module for running ZFS zpool command
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -39,10 +39,10 @@ def __virtual__():
     '''
     Only load when the platform has zfs support
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
-        return (False, "The zpool module cannot be loaded: zfs not supported")
+        return False, "The zpool module cannot be loaded: zfs not supported"
 
 
 def _clean_vdev_config(config):
@@ -247,7 +247,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         display data in pythonc values (True, False, Bytes,...)
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2018.3.1
 
         Added ```parsable``` parameter that defaults to True
 
@@ -347,34 +347,20 @@ def iostat(zpool=None, sample_time=5, parsable=True):
 
 def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=True):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Return information about (all) storage pools
 
     zpool : string
         optional name of storage pool
 
     properties : string
-<<<<<<< HEAD
-        comma-separated list of properties to display
-    parsable : boolean
-        display data in pythonc values (True, False, Bytes,...)
-
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
-
-        Added ```parsable``` parameter that defaults to True
-=======
         comma-separated list of properties to list
 
     parsable : boolean
         display numbers in parsable (exact) values
 
         .. versionadded:: 2018.3.0
->>>>>>> 2018.3
 
     .. note::
 
@@ -419,7 +405,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='list',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(properties)},
             target=zpool
         ),
@@ -458,11 +444,8 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
 
 def get(zpool, prop=None, show_source=False, parsable=True):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2016.3.0
 
->>>>>>> 2018.3
     Retrieves the given list of properties
 
     zpool : string
@@ -475,18 +458,9 @@ def get(zpool, prop=None, show_source=False, parsable=True):
         Show source of property
 
     parsable : boolean
-<<<<<<< HEAD
-        display data in pythonc values (True, False, Bytes,...)
-
-    .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
-
-        Added ```parsable``` parameter that defaults to True
-=======
         Display numbers in parsable (exact) values
 
         .. versionadded:: 2018.3.0
->>>>>>> 2018.3
 
     CLI Example:
 
@@ -502,7 +476,7 @@ def get(zpool, prop=None, show_source=False, parsable=True):
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='get',
-            flags=['-H', '-p'],
+            flags=['-H'],
             opts={'-o': ','.join(value_properties)},
             property_name=prop if prop else 'all',
             target=zpool,
@@ -654,24 +628,14 @@ def scrub(zpool, stop=False, pause=False):
         If ``True``, cancel ongoing scrub
 
     pause : boolean
-<<<<<<< HEAD
-        if true, pause ongoing scrub
-=======
         If ``True``, pause ongoing scrub
 
->>>>>>> 2018.3
         .. versionadded:: 2018.3.0
 
         .. note::
 
-<<<<<<< HEAD
-            If both pause and stop are true, stop will win.
-            Pause support was added in this PR:
-            https://github.com/openzfs/openzfs/pull/407
-=======
             If both ``pause`` and ``stop`` are ``True``, then ``stop`` will
             win.
->>>>>>> 2018.3
 
     CLI Example:
 
@@ -711,11 +675,8 @@ def scrub(zpool, stop=False, pause=False):
 
 def create(zpool, *vdevs, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
     zpool : string
@@ -741,12 +702,6 @@ def create(zpool, *vdevs, **kwargs):
         Additional filesystem properties
 
     createboot : boolean
-<<<<<<< HEAD
-        ..versionadded:: 2018.3.0
-        create a boot partition
-
-    .. versionadded:: 2015.5.0
-=======
         create a boot partition
 
         .. versionadded:: 2018.3.0
@@ -760,7 +715,6 @@ def create(zpool, *vdevs, **kwargs):
         salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
         salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
         salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] spare /path/to/vdev3 [...] [force=True|False]
->>>>>>> 2018.3
 
     .. note::
 
@@ -994,11 +948,8 @@ def detach(zpool, device):
 
 def split(zpool, newzpool, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2018.3.0
 
->>>>>>> 2018.3
     Splits devices off pool creating newpool.
 
     .. note::
@@ -1023,16 +974,12 @@ def split(zpool, newzpool, **kwargs):
     properties : dict
         Additional pool properties for newzpool
 
-<<<<<<< HEAD
-    .. versionadded:: 2018.3.0
-=======
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' zpool.split datamirror databackup
         salt '*' zpool.split datamirror databackup altroot=/backup
->>>>>>> 2018.3
 
     .. note::
 
@@ -1086,11 +1033,7 @@ def split(zpool, newzpool, **kwargs):
 
 def replace(zpool, old_device, new_device=None, force=False):
     '''
-<<<<<<< HEAD
-    Replaces old_device with new_device.
-=======
     Replaces ``old_device`` with ``new_device``
->>>>>>> 2018.3
 
     .. note::
 
@@ -1157,13 +1100,7 @@ def replace(zpool, old_device, new_device=None, force=False):
 @salt.utils.decorators.path.which('mkfile')
 def create_file_vdev(size, *vdevs):
     '''
-<<<<<<< HEAD
-    Creates file based ``virtual devices`` for a zpool
-
-    ``*vdevs`` is a list of full paths for mkfile to create
-=======
     Creates file based virtual devices for a zpool
->>>>>>> 2018.3
 
     CLI Example:
 
@@ -1206,11 +1143,8 @@ def create_file_vdev(size, *vdevs):
 
 def export(*pools, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Export storage pools
 
     pools : string
@@ -1218,8 +1152,6 @@ def export(*pools, **kwargs):
 
     force : boolean
         Force export of storage pools
-
-    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -1256,11 +1188,8 @@ def export(*pools, **kwargs):
 
 def import_(zpool=None, new_name=None, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Import storage pools or list pools available for import
 
     zpool : string
@@ -1287,8 +1216,8 @@ def import_(zpool=None, new_name=None, **kwargs):
         Import the pool without mounting any file systems.
 
     only_destroyed : boolean
-<<<<<<< HEAD
-        imports destroyed pools only. this also sets force=True.
+        Imports destroyed pools only. This also sets ``force=True``.
+
     recovery : bool|str
         false: do not try to recovery broken pools
         true: try to recovery the pool by rolling back the latest transactions
@@ -1301,9 +1230,6 @@ def import_(zpool=None, new_name=None, **kwargs):
         .. warning::
             When recovery is set to 'test' the result will be have imported set to True if the pool
             can be imported. The pool might also be imported if the pool was not broken to begin with.
-=======
-        Imports destroyed pools only. this also sets force=True.
->>>>>>> 2018.3
 
     properties : dict
         Additional pool properties
@@ -1318,8 +1244,6 @@ def import_(zpool=None, new_name=None, **kwargs):
         .. code-block:: text
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
-
-    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -1387,11 +1311,8 @@ def import_(zpool=None, new_name=None, **kwargs):
 
 def online(zpool, *vdevs, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Ensure that the specified devices are online
 
     zpool : string
@@ -1407,8 +1328,6 @@ def online(zpool, *vdevs, **kwargs):
 
             If the device is part of a mirror or raidz then all devices must be
             expanded before the new space will become available to the pool.
-
-    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -1457,11 +1376,8 @@ def online(zpool, *vdevs, **kwargs):
 
 def offline(zpool, *vdevs, **kwargs):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2015.5.0
 
->>>>>>> 2018.3
     Ensure that the specified devices are offline
 
     .. warning::
@@ -1478,8 +1394,6 @@ def offline(zpool, *vdevs, **kwargs):
 
     temporary : boolean
         Enable temporarily offline
-
-    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -1516,24 +1430,15 @@ def offline(zpool, *vdevs, **kwargs):
 
 def labelclear(device, force=False):
     '''
-<<<<<<< HEAD
-=======
     .. versionadded:: 2018.3.0
 
->>>>>>> 2018.3
     Removes ZFS label information from the specified device
 
     device : string
-<<<<<<< HEAD
-        device, must not be part of an active pool configuration.
-=======
-        Device name
+        Device name; must not be part of an active pool configuration.
 
->>>>>>> 2018.3
     force : boolean
         Treat exported or foreign devices as inactive
-
-    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1568,7 +1473,7 @@ def clear(zpool, device=None):
     device : string
         (optional) specific device to clear
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -1659,24 +1564,15 @@ def reopen(zpool):
 
 def upgrade(zpool=None, version=None):
     '''
+    .. versionadded:: 2016.3.0
+
     Enables all supported features on the given pool
 
-<<<<<<< HEAD
-=======
-    .. warning::
-        Once this is done, the pool will no longer be accessible on systems
-        that do not support feature flags. See ``zpool-features(5)`` for
-        details on compatibility with systems that support feature flags, but
-        do not support all features enabled on the pool.
-
->>>>>>> 2018.3
     zpool : string
         Optional storage pool, applies to all otherwize
 
     version : int
         Version to upgrade to, if unspecified upgrade to the highest possible
-
-    .. versionadded:: 2016.3.0
 
     .. warning::
         Once this is done, the pool will no longer be accessible on systems that do not
@@ -1717,14 +1613,10 @@ def upgrade(zpool=None, version=None):
 
 def history(zpool=None, internal=False, verbose=False):
     '''
-<<<<<<< HEAD
-    Displays the command history of the specified pools or all pools if no pool is specified
-=======
     .. versionadded:: 2016.3.0
 
     Displays the command history of the specified pools, or all pools if no
     pool is specified
->>>>>>> 2018.3
 
     zpool : string
         Optional storage pool
@@ -1735,8 +1627,6 @@ def history(zpool=None, internal=False, verbose=False):
     verbose : boolean
         Toggle display of the user name, the hostname, and the zone in which
         the operation was performed
-
-    .. versionadded:: 2016.3.0
 
     CLI Example:
 

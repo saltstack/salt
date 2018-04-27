@@ -1083,7 +1083,7 @@ class SPMClient(object):
         Render a [pre|post]_local_state or [pre|post]_tgt_state script
         '''
         # FORMULA can contain a renderer option
-        renderer = formula_def.get('renderer', self.opts.get('renderer', 'yaml_jinja'))
+        renderer = formula_def.get('renderer', self.opts.get('renderer', 'jinja|yaml'))
         rend = salt.loader.render(self.opts, {})
         blacklist = self.opts.get('renderer_blacklist')
         whitelist = self.opts.get('renderer_whitelist')

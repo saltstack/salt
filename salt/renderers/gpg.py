@@ -218,6 +218,7 @@ from subprocess import Popen, PIPE
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
@@ -263,22 +264,28 @@ def _get_key_dir():
     return gpg_keydir
 
 
-def _decrypt_ciphertext(matchobj):
+def _decrypt_ciphertext(cipher):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cipher = matchobj.group()
-    if six.PY3:
-        cipher = cipher.encode(__salt_system_encoding__)
+    try:
+        cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
+    except UnicodeDecodeError:
+        # ciphertext is binary
+        pass
+    cipher = salt.utils.stringutils.to_bytes(cipher)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
            '--no-tty', '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
-        if six.PY3:
-            cipher = cipher.decode(__salt_system_encoding__)
+        try:
+            cipher = salt.utils.stringutils.to_unicode(cipher)
+        except UnicodeDecodeError:
+            # decrypted data contains undecodable binary data
+            pass
         log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
@@ -286,15 +293,25 @@ def _decrypt_ciphertext(matchobj):
         )
         return cipher
     else:
-        if six.PY3 and isinstance(decrypted_data, bytes):
-            decrypted_data = decrypted_data.decode(__salt_system_encoding__)
-        return six.text_type(decrypted_data)
+        try:
+            decrypted_data = salt.utils.stringutils.to_unicode(decrypted_data)
+        except UnicodeDecodeError:
+            # decrypted data contains undecodable binary data
+            pass
+        return decrypted_data
 
 
 def _decrypt_ciphertexts(cipher, translate_newlines=False):
     if translate_newlines:
         cipher = cipher.replace(r'\n', '\n')
-    return GPG_CIPHERTEXT.sub(_decrypt_ciphertext, cipher)
+    ret, num = GPG_CIPHERTEXT.subn(lambda m: _decrypt_ciphertext(m.group()), cipher)
+    if num > 0:
+        # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
+        # it will conain unexpected trailing newline.
+        return ret.rstrip('\n')
+    else:
+        # Possibly just encrypted data without begin/end marks
+        return _decrypt_ciphertext(cipher)
 
 
 def _decrypt_object(obj, translate_newlines=False):

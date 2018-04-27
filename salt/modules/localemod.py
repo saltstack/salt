@@ -87,7 +87,7 @@ def _localectl_status():
                         ret[ctl_key] = {}
                     ret[ctl_key][loc_set[0]] = loc_set[1]
             else:
-                ret[ctl_key] = ctl_data
+                ret[ctl_key] = {'data': None if ctl_data == 'n/a' else ctl_data}
     if not ret:
         log.debug("Unable to find any locale information inside the following data:\n%s", locale_ctl_out)
         raise CommandExecutionError('Unable to parse result of "localectl"')
@@ -102,7 +102,7 @@ def _localectl_set(locale=''):
     '''
     locale_params = _parse_dbus_locale() if dbus is not None else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
-    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params)])
+    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params) if v is not None])
     return not __salt__['cmd.retcode']('localectl set-locale {0}'.format(args), python_shell=False)
 
 

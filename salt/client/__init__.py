@@ -41,7 +41,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.versions
 import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
@@ -249,7 +248,7 @@ class LocalClient(object):
 
         return pub_data
 
-    def _check_pub_data(self, pub_data):
+    def _check_pub_data(self, pub_data, listen=True):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
@@ -282,7 +281,13 @@ class LocalClient(object):
                 print('No minions matched the target. '
                       'No command was sent, no jid was assigned.')
                 return {}
-        else:
+
+        # don't install event subscription listeners when the request is async
+        # and doesn't care. this is important as it will create event leaks otherwise
+        if not listen:
+            return pub_data
+
+        if self.opts.get('order_masters'):
             self.event.subscribe('syndic/.*/{0}'.format(pub_data['jid']), 'regex')
 
         self.event.subscribe('salt/job/{0}'.format(pub_data['jid']))
@@ -315,15 +320,6 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -346,7 +342,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        return self._check_pub_data(pub_data)
+        return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
         _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
@@ -380,15 +376,6 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -412,7 +399,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise tornado.gen.Return(self._check_pub_data(pub_data))
+        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
             self,
@@ -437,15 +424,6 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         pub_data = self.run_job(tgt,
                                 fun,
@@ -453,6 +431,7 @@ class LocalClient(object):
                                 tgt_type,
                                 ret,
                                 jid=jid,
+                                listen=False,
                                 **kwargs)
         try:
             return pub_data['jid']
@@ -470,6 +449,7 @@ class LocalClient(object):
             sub=3,
             cli=False,
             progress=False,
+            full_return=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -478,21 +458,14 @@ class LocalClient(object):
         following exceptions.
 
         :param sub: The number of systems to execute on
+        :param cli: When this is set to True, a generator is returned,
+                    otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         minion_ret = self.cmd(tgt,
                               'sys.list_functions',
                               tgt_type=tgt_type,
@@ -516,6 +489,7 @@ class LocalClient(object):
                 ret=ret,
                 kwarg=kwarg,
                 progress=progress,
+                full_return=full_return,
                 **kwargs)
 
     def cmd_batch(
@@ -547,15 +521,6 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         import salt.cli.batch
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {'tgt': tgt,
@@ -705,15 +670,6 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -774,15 +730,6 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -861,15 +808,6 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -937,15 +875,6 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -994,15 +923,6 @@ class LocalClient(object):
         '''
         Execute a salt command and return
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -1045,15 +965,6 @@ class LocalClient(object):
 
         :returns: all of the information for the JID
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -1124,15 +1035,6 @@ class LocalClient(object):
 
         :returns: all of the information for the JID
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         if not isinstance(minions, set):
             if isinstance(minions, six.string_types):
                 minions = set([minions])
@@ -1148,7 +1050,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
-        missing = []
+        missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
@@ -1188,7 +1090,7 @@ class LocalClient(object):
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     if 'missing' in raw.get('data', {}):
-                        missing.extend(raw['data']['missing'])
+                        missing.update(raw['data']['missing'])
                     continue
                 if 'return' not in raw['data']:
                     continue
@@ -1330,6 +1232,12 @@ class LocalClient(object):
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
 
+        # Filter out any minions marked as missing for which we received
+        # returns (prevents false events sent due to higher-level masters not
+        # knowing about lower-level minions).
+        missing -= found
+
+        # Report on missing minions
         if missing:
             for minion in missing:
                 yield {minion: {'failed': True}}
@@ -1571,15 +1479,6 @@ class LocalClient(object):
         '''
         log.trace('func get_cli_event_returns()')
 
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -1766,15 +1665,6 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         # Make sure the publisher is running by checking the unix socket
         if (self.opts.get('ipc_mode', '') != 'tcp' and
                 not os.path.exists(os.path.join(self.opts['sock_dir'],
@@ -1882,15 +1772,6 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         # Make sure the publisher is running by checking the unix socket
         if (self.opts.get('ipc_mode', '') != 'tcp' and
                 not os.path.exists(os.path.join(self.opts['sock_dir'],

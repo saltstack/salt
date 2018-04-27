@@ -103,8 +103,9 @@ import time
 import salt.cache
 import salt.config as config
 import salt.loader
-import salt.utils
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.ext.six as six
 import salt.version
@@ -279,9 +280,11 @@ def get_conn(client_type):
     '''
     conn_kwargs = {}
 
-    conn_kwargs['subscription_id'] = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    conn_kwargs['subscription_id'] = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
 
     cloud_env = config.get_cloud_config_value(
@@ -533,10 +536,10 @@ def list_nodes_full(call=None):
                 image_ref['sku'],
                 image_ref['version'],
             ])
-        except TypeError:
+        except (TypeError, KeyError):
             try:
                 node['image'] = node['storage_profile']['os_disk']['image']['uri']
-            except TypeError:
+            except (TypeError, KeyError):
                 node['image'] = None
         try:
             netifaces = node['network_profile']['network_interfaces']
@@ -1003,7 +1006,7 @@ def request_instance(vm_):
     )
     if ssh_publickeyfile is not None:
         try:
-            with salt.utils.fopen(ssh_publickeyfile, 'r') as spkc_:
+            with salt.utils.files.fopen(ssh_publickeyfile, 'r') as spkc_:
                 ssh_publickeyfile_contents = spkc_.read()
         except Exception as exc:
             raise SaltCloudConfigError(
@@ -1020,10 +1023,12 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = config.get_cloud_config_value(
-        'ssh_password', vm_, __opts__, search_global=True,
-        default=config.get_cloud_config_value(
-            'win_password', vm_, __opts__, search_global=True
+    vm_password = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'ssh_password', vm_, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'win_password', vm_, __opts__, search_global=True
+            )
         )
     )
 
@@ -1219,10 +1224,30 @@ def request_instance(vm_):
 
     if userdata_file:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     if userdata and userdata_template:
+        userdata_sendkeys = config.get_cloud_config_value(
+            'userdata_sendkeys', vm_, __opts__, search_global=False, default=None
+        )
+        if userdata_sendkeys:
+            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+                config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    __opts__
+                )
+            )
+
+            key_id = vm_.get('name')
+            if 'append_domain' in vm_:
+                key_id = '.'.join([key_id, vm_['append_domain']])
+
+            salt.utils.cloud.accept_key(
+                __opts__['pki_dir'], vm_['pub_key'], key_id
+            )
+
         userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
     custom_extension = None

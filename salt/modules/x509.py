@@ -20,6 +20,7 @@ import tempfile
 import re
 import datetime
 import ast
+import sys
 
 # Import salt libs
 import salt.utils.files
@@ -130,6 +131,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
             value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
+
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_str(name)
+    value = salt.utils.stringutils.to_str(value)
 
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
@@ -316,9 +321,9 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_unicode(fp_.read())
+            return salt.utils.stringutils.to_str(fp_.read())
     else:
-        return input_
+        return salt.utils.stringutils.to_str(input_)
 
 
 def _parse_subject(subject):
@@ -493,7 +498,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return salt.utils.stringutils.to_bytes(ret, encoding='ascii')
 
 
 def get_pem_entries(glob_path):
@@ -678,12 +683,12 @@ def get_public_key(key, passphrase=None, asObj=False):
 
     if isinstance(key, M2Crypto.X509.X509):
         rsa = key.get_pubkey().get_rsa()
-        text = ''
+        text = b''
     else:
         text = _text_or_file(key)
         text = get_pem_entry(text)
 
-    if text.startswith('-----BEGIN PUBLIC KEY-----'):
+    if text.startswith(b'-----BEGIN PUBLIC KEY-----'):
         if not asObj:
             return text
         bio = M2Crypto.BIO.MemoryBuffer()
@@ -691,14 +696,14 @@ def get_public_key(key, passphrase=None, asObj=False):
         rsa = M2Crypto.RSA.load_pub_key_bio(bio)
 
     bio = M2Crypto.BIO.MemoryBuffer()
-    if text.startswith('-----BEGIN CERTIFICATE-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE-----'):
         cert = M2Crypto.X509.load_cert_string(text)
         rsa = cert.get_pubkey().get_rsa()
-    if text.startswith('-----BEGIN CERTIFICATE REQUEST-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE REQUEST-----'):
         csr = M2Crypto.X509.load_request_string(text)
         rsa = csr.get_pubkey().get_rsa()
-    if (text.startswith('-----BEGIN PRIVATE KEY-----') or
-            text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
+    if (text.startswith(b'-----BEGIN PRIVATE KEY-----') or
+            text.startswith(b'-----BEGIN RSA PRIVATE KEY-----')):
         rsa = M2Crypto.RSA.load_key_string(
             text, callback=_passphrase_callback(passphrase))
 
@@ -756,28 +761,27 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." \\
             path=/etc/pki/mycert.crt
     '''
-    old_umask = os.umask(0o77)
-    text = get_pem_entry(text, pem_type=pem_type)
-    _dhparams = ''
-    _private_key = ''
-    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-            not overwrite:
-        _filecontents = _text_or_file(path)
-        try:
-            _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-        except salt.exceptions.SaltInvocationError:
-            pass
-        try:
-            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-        except salt.exceptions.SaltInvocationError:
-            pass
-    with salt.utils.files.fopen(path, 'w') as _fp:
-        if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-            _fp.write(salt.utils.stringutils.to_str(_private_key))
-        _fp.write(text)
-        if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-            _fp.write(salt.utils.stringutils.to_str(_dhparams))
-    os.umask(old_umask)
+    with salt.utils.files.set_umask(0o077):
+        text = get_pem_entry(text, pem_type=pem_type)
+        _dhparams = ''
+        _private_key = ''
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
+                not overwrite:
+            _filecontents = _text_or_file(path)
+            try:
+                _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
+            except salt.exceptions.SaltInvocationError:
+                pass
+            try:
+                _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
+            except salt.exceptions.SaltInvocationError:
+                pass
+        with salt.utils.files.fopen(path, 'w') as _fp:
+            if pem_type and pem_type == 'CERTIFICATE' and _private_key:
+                _fp.write(salt.utils.stringutils.to_str(_private_key))
+            _fp.write(text)
+            if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
+                _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
 
 
@@ -848,7 +852,7 @@ def create_private_key(path=None,
             pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
-        return bio.read_all()
+        return salt.utils.stringutils.to_str(bio.read_all())
 
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
@@ -1429,7 +1433,14 @@ def create_certificate(
     if 'serial_number' not in kwargs:
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
-    cert.set_serial_number(int(kwargs['serial_number'].replace(':', ''), 16))
+    serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
+    # With Python3 we occasionally end up with an INT
+    # that is too large because Python3 no longer supports long INTs.
+    # If we're larger than the maxsize value
+    # then we adjust the serial number.
+    if serial_number > sys.maxsize:
+        serial_number = serial_number - sys.maxsize
+    cert.set_serial_number(serial_number)
 
     # Set validity dates
     # pylint: disable=no-member

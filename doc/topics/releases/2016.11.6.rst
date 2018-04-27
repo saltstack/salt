@@ -518,7 +518,7 @@ Changes:
 
   * ef8e3ef569 Update win_pki.py
 
-- **PR** `#41557`_: (*dmurphy18*) Add symbolic link for salt-proxy service similar to other serivce files
+- **PR** `#41557`_: (*dmurphy18*) Add symbolic link for salt-proxy service similar to other service files
   @ *2017-06-06T17:13:52Z*
 
   * 3335fcbc7d Merge pull request `#41557`_ from dmurphy18/fix-proxy-service
@@ -753,7 +753,7 @@ Changes:
 
   * 66ab1e5184 Re-adding neutron dependency check
 
-  * cce07eefc2 Updating Neutron module to suport KeystoneAuth
+  * cce07eefc2 Updating Neutron module to support KeystoneAuth
 
 - **PR** `#41409`_: (*garethgreenaway*) Fixes to ipc transport
   @ *2017-05-25T21:06:27Z*
@@ -926,7 +926,7 @@ Changes:
 
   - **ISSUE** `#41306`_: (*lomeroe*) win_lgpo does not properly pack group policy version number in gpt.ini
     | refs: `#41319`_ `#41307`_
-  - **PR** `#41307`_: (*lomeroe*) properly pack/unpack the verison numbers into a number
+  - **PR** `#41307`_: (*lomeroe*) properly pack/unpack the version numbers into a number
     | refs: `#41319`_
   * 140b0427e1 Merge pull request `#41319`_ from lomeroe/bp_41307
   * 4f0aa577a5 backport 41307 to 2016.11, properly pack version numbers into single number
