@@ -752,15 +752,12 @@ def grains(opts, force_refresh=False, proxy=None):
             # device.
             log.trace('Loading %s grain', key)
             parameters = list(funcs[key].__code__.co_varnames)
-            if funcs[key].__code__.co_argcount > 0:
-                kwargs = {}
-                if 'proxy' in parameters:
-                    kwargs['proxy'] = proxy
-                if 'grains' in parameters:
-                    kwargs['grains'] = grains_data
-                ret = funcs[key](**kwargs)
-            else:
-                ret = funcs[key]()
+            kwargs = {}
+            if 'proxy' in parameters:
+                kwargs['proxy'] = proxy
+            if 'grains' in parameters:
+                kwargs['grains'] = grains_data
+            ret = funcs[key](**kwargs)
         except Exception:
             if salt.utils.platform.is_proxy():
                 log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
