@@ -301,6 +301,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 if salt.utils.is_windows():
                     venv_path = 'c:\\test_env'
                     bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
+                    if six.PY2:
+                        bin_path = bin_path.encode('string-escape')
                 else:
                     venv_path = '/test_env'
                     bin_path = os.path.join(venv_path, 'bin', 'pip')
