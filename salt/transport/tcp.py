@@ -945,7 +945,7 @@ class SaltMessageClient(object):
                 break
             try:
                 kwargs = {}
-                if (self.source_ip or self.source_port):
+                if self.source_ip or self.source_port:
                     if tornado.version_info >= (4, 5):
                         ### source_ip and source_port are supported only in Tornado >= 4.5
                         # See http://www.tornadoweb.org/en/stable/releases/v4.5.0.html
