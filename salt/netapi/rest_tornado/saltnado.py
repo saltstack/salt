@@ -204,7 +204,7 @@ import tornado.gen
 from tornado.concurrent import Future
 # pylint: enable=import-error
 import salt.utils
-salt.utils.install_zmq()
+salt.utils.zeromq.install_zmq()
 
 # salt imports
 import salt.ext.six as six
