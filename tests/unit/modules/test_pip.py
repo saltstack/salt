@@ -10,6 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
+import salt.ext.six
 import salt.utils
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
@@ -301,7 +302,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 if salt.utils.is_windows():
                     venv_path = 'c:\\test_env'
                     bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
-                    if six.PY2:
+                    if salt.ext.six.PY2:
                         bin_path = bin_path.encode('string-escape')
                 else:
                     venv_path = '/test_env'
