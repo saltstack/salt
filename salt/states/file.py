@@ -2225,6 +2225,12 @@ def managed(name,
             'replace the file with, \'replace\' has been set to \'False\' to '
             'avoid reading the file unnecessarily.'.format(name)
         )
+    
+    if 'file_mode' in kwargs:
+        ret.setdefault('warnings', []).append(
+            'The \'file_mode\' argument will be ignored.  '
+            'Please use \'mode\' instead to set file permissions.'
+        )
 
     # Use this below to avoid multiple '\0' checks and save some CPU cycles
     if contents_pillar is not None:
