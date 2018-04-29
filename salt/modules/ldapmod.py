@@ -46,6 +46,7 @@ import logging
 import time
 
 # Import Salt libs
+import salt.utils.data
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
@@ -85,7 +86,7 @@ def _config(name, key=None, **kwargs):
         value = kwargs[name]
     else:
         value = __salt__['config.option']('ldap.{0}'.format(key))
-    return value
+    return salt.utils.data.decode(value, to_str=True)
 
 
 def _connect(**kwargs):

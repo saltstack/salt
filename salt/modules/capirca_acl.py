@@ -132,7 +132,8 @@ _TERM_FIELDS = {
     'flattened_addr': None,
     'flattened_saddr': None,
     'flattened_daddr': None,
-    'priority': None
+    'priority': None,
+    'ttl': None
 }
 
 # IP-type fields
