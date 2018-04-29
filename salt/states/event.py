@@ -13,6 +13,7 @@ import salt.utils.functools
 def send(name,
         data=None,
         preload=None,
+        show_changed=True,
         with_env=False,
         with_grains=False,
         with_pillar=False,
@@ -23,7 +24,11 @@ def send(name,
     .. versionadded:: 2014.7.0
 
     Accepts the same arguments as the :py:func:`event.send
-    <salt.modules.event.send>` execution module of the same name.
+    <salt.modules.event.send>` execution module of the same name, 
+    with the additional argument:
+
+    :param show_changed: state will show as changed with the data
+    argument as the change value. If false, shows as unchanged.
 
     Example:
 
@@ -39,7 +44,10 @@ def send(name,
         # ...snip bunch of states below
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    ret['changes'] = {'tag': name, 'data': data}
+    if show_changed:
+      ret['changes'] = {'tag': name, 'data': data}
+    else:
+      ret['changes'] = {}
 
     if __opts__['test']:
         ret['result'] = None
