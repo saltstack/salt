@@ -7,7 +7,6 @@ Utility functions for SMB connections
 
 from __future__ import absolute_import, print_function, unicode_literals
 import socket
-import io
 import uuid
 
 # Import python libs

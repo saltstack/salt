@@ -799,7 +799,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-class Client(PsExecClient):
+class Client(object):
     '''
     Wrap pypsexec.client.Client to fix some stability issues:
 
@@ -812,10 +812,22 @@ class Client(PsExecClient):
 
     def __init__(self, server, username=None, password=None, port=445,
                  encrypt=True, service_name=None):
-        super(Client, self).__init__(server, username, password, port, encrypt)
         self.service_name = service_name
-        self._exe_file = "%s.exe" % self.service_name
-        self._service = ScmrService(self.service_name, self.session)
+        self._exe_file = "{0}.exe".format(self.service_name)
+        self._client = PsExecClient(server, usernamem, password, prot, encrypt)
+        self._service = ScmrService(self.service_name, self._client.session)
+
+    def connect(self):
+        return self._client.connect()
+
+    def disconnect(self):
+        return self._client.disconnect()
+
+    def create_service(self):
+        return self._client.create_service()
+
+    def run_executabe(self, *args, **kwargs):
+        return self._client.run_executable(*args, **kwargs)
 
     def remove_service(self, wait_timeout=10, sleep_wait=1):
         '''
@@ -840,8 +852,8 @@ class Client(PsExecClient):
 
         # delete the PAExec executable
         smb_tree = TreeConnect(
-            self.session,
-            r"\\{0}\ADMIN$".format(self.connection.server_name)
+            self._client.session,
+            r"\\{0}\ADMIN$".format(self._client.connection.server_name)
         )
         log.info("Connecting to SMB Tree %s", smb_tree.share_name)
         smb_tree.connect()
@@ -850,7 +862,7 @@ class Client(PsExecClient):
         while True:
             try:
                 log.info("Creating open to PAExec file with delete on close flags")
-                self._delete_file(smb_tree, self._exe_file)
+                self._client._delete_file(smb_tree, self._exe_file)
             except SMBResponseException as exc:
                 log.debug("Exception deleting file %s %s", self._exe_file, repr(exc))
                 if time.time() - wait_start > wait_timeout:
@@ -876,7 +888,7 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
         host
     )
     cmd = 'winexe {0} {1} {2}'.format(creds, cmd, args)
-    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args) 
+    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args)
     return win_cmd(cmd, logging_command=logging_cmd)
 
 
@@ -895,10 +907,7 @@ def run_psexec_command(cmd, args, host, username, password, port=445):
         client.create_service()
         stdout, stderr, ret_code = client.run_executable(cmd, args)
     finally:
-        #try:
         client.remove_service()
-        #except Exception as exc:
-        #    log.exception("Exception removing service: %s", service_name)
         client.disconnect()
     return stdout, stderr, ret_code
 
