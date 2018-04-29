@@ -117,10 +117,7 @@ class TestSmb(TestCase):
     @classmethod
     def tearDownClass(cls):
         log.warn('teardown')
-        try:
-            os.kill(cls._pid, signal.SIGTERM)
-        except:
-            log.exception("Ignoring stuff")
+        os.kill(cls._pid, signal.SIGTERM)
 
     def test_write_file(self):
         '''
