@@ -46,7 +46,7 @@ try:
     )
     logging.getLogger('smbprotocol').setLevel(logging.WARNING)
     HAS_SMBPROTOCOL = True
-except:
+except ImportError:
     HAS_SMBPROTOCOL = False
 
 

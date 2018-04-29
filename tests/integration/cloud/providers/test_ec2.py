@@ -16,7 +16,6 @@ import salt.utils.files
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import expectedFailure
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests

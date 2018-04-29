@@ -839,9 +839,11 @@ class Client(PsExecClient):
             break
 
         # delete the PAExec executable
-        smb_tree = TreeConnect(self.session,
-                               r"\\%s\ADMIN$" % self.connection.server_name)
-        log.info("Connecting to SMB Tree %s" % smb_tree.share_name)
+        smb_tree = TreeConnect(
+            self.session,
+            r"\\{0}\ADMIN$".format(self.connection.server_name)
+        )
+        log.info("Connecting to SMB Tree %s", smb_tree.share_name)
         smb_tree.connect()
 
         wait_start = time.time()
@@ -856,7 +858,7 @@ class Client(PsExecClient):
                 time.sleep(sleep_wait)
                 continue
             break
-        log.info("Disconnecting from SMB Tree %s" % smb_tree.share_name)
+        log.info("Disconnecting from SMB Tree %s", smb_tree.share_name)
         smb_tree.disconnect()
 
 
@@ -874,6 +876,7 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
         host
     )
     cmd = 'winexe {0} {1} {2}'.format(creds, cmd, args)
+    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args) 
     return win_cmd(cmd, logging_command=logging_cmd)
 
 
