@@ -2,6 +2,7 @@
 '''
 Test utility methods that communicate with SMB shares.
 '''
+from __future__ import absolute_import
 import getpass
 import logging
 import os
