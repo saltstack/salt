@@ -221,7 +221,7 @@ def run(name,
         grain=None,
         key=None,
         overwrite=True,
-        check_db_exists=False,
+        check_db_exists=True,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database

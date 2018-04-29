@@ -46,6 +46,7 @@ provisioner:
     - .bundle
     - .kitchen
     - .kitchen.yml
+    - artifacts
     - Gemfile
     - Gemfile.lock
     - README.rst

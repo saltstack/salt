@@ -28,7 +28,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 from salt.ext import six
 
 try:
-    from M2Crypto import RSA, EVP
+    from M2Crypto import RSA, EVP, BIO
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False
@@ -206,7 +206,10 @@ def get_rsa_pub_key(path):
     '''
     log.debug('salt.crypt.get_rsa_pub_key: Loading public key')
     if HAS_M2:
-        key = RSA.load_pub_key(path)
+        with salt.utils.files.fopen(path) as f:
+            data = f.read().replace(b'RSA ', '')
+        bio = BIO.MemoryBuffer(data)
+        key = RSA.load_pub_key_bio(bio)
     else:
         with salt.utils.files.fopen(path) as f:
             key = RSA.importKey(f.read())
