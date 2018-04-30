@@ -9,14 +9,16 @@ import logging
 
 # Import Salt libs
 import salt.utils.data
-import salt.utils.data
+import salt.utils.stringutils
 from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase, skipIf, LOREM_IPSUM
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from salt.ext.six.moves import builtins  # pylint: disable=import-error,redefined-builtin
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 _b = lambda x: x.encode('utf-8')
+_s = lambda x: salt.utils.stringutils.to_str(x, normalize=True)
 # Some randomized data that will not decode
 BYTES = b'\x9c\xb1\xf7\xa3'
 # This is an example of a unicode string with й constructed using two separate
@@ -213,6 +215,9 @@ class DataTestCase(TestCase):
 
     def test_decode(self):
         '''
+        Companion to test_decode_to_str, they should both be kept up-to-date
+        with one another.
+
         NOTE: This uses the lambda "_b" defined above in the global scope,
         which encodes a string to a bytestring, assuming utf-8.
         '''
@@ -290,6 +295,97 @@ class DataTestCase(TestCase):
             salt.utils.data.decode,
             BYTES,
             keep=False)
+
+    def test_decode_to_str(self):
+        '''
+        Companion to test_decode, they should both be kept up-to-date with one
+        another.
+
+        NOTE: This uses the lambda "_s" defined above in the global scope,
+        which converts the string/bytestring to a str type.
+        '''
+        expected = [
+            _s('unicode_str'),
+            _s('питон'),
+            123,
+            456.789,
+            True,
+            False,
+            None,
+            _s('яйца'),
+            BYTES,
+            [123, 456.789, _s('спам'), True, False, None, _s('яйца'), BYTES],
+            (987, 654.321, _s('яйца'), _s('яйца'), None, (True, _s('яйца'), BYTES)),
+            {_s('str_key'): _s('str_val'),
+             None: True,
+             123: 456.789,
+             _s('яйца'): BYTES,
+             _s('subdict'): {
+                 _s('unicode_key'): _s('яйца'),
+                 _s('tuple'): (123, _s('hello'), _s('world'), True, _s('яйца'), BYTES),
+                 _s('list'): [456, _s('спам'), False, _s('яйца'), BYTES]}},
+            OrderedDict([(_s('foo'), _s('bar')), (123, 456), (_s('яйца'), BYTES)])
+        ]
+
+        ret = salt.utils.data.decode(
+            self.test_data,
+            keep=True,
+            normalize=True,
+            preserve_dict_class=True,
+            preserve_tuples=True,
+            to_str=True)
+        self.assertEqual(ret, expected)
+
+        if six.PY3:
+            # The binary data in the data structure should fail to decode, even
+            # using the fallback, and raise an exception.
+            self.assertRaises(
+                UnicodeDecodeError,
+                salt.utils.data.decode,
+                self.test_data,
+                keep=False,
+                normalize=True,
+                preserve_dict_class=True,
+                preserve_tuples=True,
+                to_str=True)
+
+        # Now munge the expected data so that we get what we would expect if we
+        # disable preservation of dict class and tuples
+        expected[10] = [987, 654.321, _s('яйца'), _s('яйца'), None, [True, _s('яйца'), BYTES]]
+        expected[11][_s('subdict')][_s('tuple')] = [123, _s('hello'), _s('world'), True, _s('яйца'), BYTES]
+        expected[12] = {_s('foo'): _s('bar'), 123: 456, _s('яйца'): BYTES}
+
+        ret = salt.utils.data.decode(
+            self.test_data,
+            keep=True,
+            normalize=True,
+            preserve_dict_class=False,
+            preserve_tuples=False,
+            to_str=True)
+        self.assertEqual(ret, expected)
+
+        # Now test single non-string, non-data-structure items, these should
+        # return the same value when passed to this function
+        for item in (123, 4.56, True, False, None):
+            log.debug('Testing decode of %s', item)
+            self.assertEqual(salt.utils.data.decode(item, to_str=True), item)
+
+        # Test single strings (not in a data structure)
+        self.assertEqual(salt.utils.data.decode('foo', to_str=True), _s('foo'))
+        self.assertEqual(salt.utils.data.decode(_b('bar'), to_str=True), _s('bar'))
+
+        # Test binary blob
+        self.assertEqual(
+            salt.utils.data.decode(BYTES, keep=True, to_str=True),
+            BYTES
+        )
+        if six.PY3:
+            self.assertRaises(
+                UnicodeDecodeError,
+                salt.utils.data.decode,
+                BYTES,
+                keep=False,
+                to_str=True)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_decode_fallback(self):

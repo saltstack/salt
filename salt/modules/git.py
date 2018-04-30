@@ -4632,7 +4632,7 @@ def status(cwd,
                       password=password,
                       ignore_retcode=ignore_retcode,
                       output_encoding=output_encoding)['stdout']
-    for line in output.split('\0'):
+    for line in output.split(str('\0')):
         try:
             state, filename = line.split(None, 1)
         except ValueError:

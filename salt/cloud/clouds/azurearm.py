@@ -1023,10 +1023,12 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = config.get_cloud_config_value(
-        'ssh_password', vm_, __opts__, search_global=True,
-        default=config.get_cloud_config_value(
-            'win_password', vm_, __opts__, search_global=True
+    vm_password = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'ssh_password', vm_, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'win_password', vm_, __opts__, search_global=True
+            )
         )
     )
 
