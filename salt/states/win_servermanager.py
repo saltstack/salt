@@ -111,7 +111,7 @@ def installed(name,
               - XPS-Viewer
               - SNMP-Service
             - exclude:
-              - Web-Service
+              - Web-Server
     '''
     if 'force' in kwargs:
         salt.utils.versions.warn_until(
