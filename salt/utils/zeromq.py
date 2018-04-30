@@ -34,7 +34,7 @@ if ZMQDefaultLoop is None:
         # Support for ZeroMQ 13.x
         if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
             zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-        if not tornado.version_info >= (5,):
+        if tornado.version_info < (5,):
             ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
     except ImportError:
         ZMQDefaultLoop = None
@@ -49,7 +49,7 @@ def install_zmq():
     :return:
     '''
     if zmq and ZMQ_VERSION_INFO[0] < 17:
-        if not tornado.version_info >= (5,):
+        if tornado.version_info < (5,):
             zmq.eventloop.ioloop.install()
 
 

@@ -20,7 +20,6 @@ import salt.master
 import salt.crypt
 import salt.daemons.masterapi
 import salt.payload
-import salt.utils.stringutils
 
 
 log = logging.getLogger(__name__)
