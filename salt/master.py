@@ -407,10 +407,10 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
                     interval = self.opts[interval_key]
                 except KeyError:
                     interval = DEFAULT_INTERVAL
-                    log.error(
-                        '%s key missing from master configuration. This is '
-                        'a bug, please report it. Falling back to default '
-                        'interval of %d seconds', interval_key, interval
+                    log.warning(
+                        '%s key missing from configuration. Falling back to '
+                        'default interval of %d seconds',
+                        interval_key, interval
                     )
                 self.buckets.setdefault(
                     interval, OrderedDict())[(backend, update_func)] = None
