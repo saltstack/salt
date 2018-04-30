@@ -479,10 +479,10 @@ Salt-Cloud major updates
 Dependency Deprecations
 =======================
 
-Salt-Cloud has been updated to use the ``pypsexec`` python library instead of the
+Salt-Cloud has been updated to use the ``pypsexec`` Python library instead of the
 ``winexe`` executable. Both ``winexe`` and ``pypsexec`` run remote commands
 against Windows OSes. Since ``winexe`` is not packaged for every system, it has
 been deprecated in favor of ``pypsexec``.
 
 Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
-This changes was made because ``impacket`` is not compatible with python 3.
+This changes was made because ``impacket`` is not compatible with Python 3.

@@ -814,7 +814,7 @@ class Client(object):
                  encrypt=True, service_name=None):
         self.service_name = service_name
         self._exe_file = "{0}.exe".format(self.service_name)
-        self._client = PsExecClient(server, usernamem, password, prot, encrypt)
+        self._client = PsExecClient(server, username, password, port, encrypt)
         self._service = ScmrService(self.service_name, self._client.session)
 
     def connect(self):
