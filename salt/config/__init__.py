@@ -2067,13 +2067,14 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     if salt.utils.validate.path.is_readable(path):
         try:
             opts = _read_conf_file(path)
+            opts['conf_file'] = path
         except salt.exceptions.SaltConfigurationError as error:
             log.error(error)
             if exit_on_config_errors:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         log.debug('Missing configuration file: {0}'.format(path))
-    opts['conf_file'] = path
+        opts['conf_file'] = path
 
     return opts
 
