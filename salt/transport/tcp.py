@@ -15,7 +15,6 @@ import os
 import weakref
 import time
 import traceback
-import errno
 
 # Import Salt Libs
 import salt.crypt
@@ -33,6 +32,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
+from salt.ext.six.moves import queue  # pylint: disable=import-error
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 
