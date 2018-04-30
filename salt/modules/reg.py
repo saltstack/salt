@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Manage the Windows registry
 
 -----
@@ -88,7 +88,7 @@ def __virtual__():
 
 
 def key_exists(hive, key, use_32bit_registry=False):
-    '''
+    r'''
     Check that the key is found in the registry. This refers to keys and not
     value/data pairs.
 
