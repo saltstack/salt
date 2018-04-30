@@ -44,7 +44,8 @@ def install_zmq():
     :return:
     '''
     if zmq and ZMQ_VERSION_INFO[0] < 17:
-        zmq.eventloop.ioloop.install()
+        if not tornado.version_info >= (5,):
+            zmq.eventloop.ioloop.install()
 
 
 def check_ipc_path_max_len(uri):
