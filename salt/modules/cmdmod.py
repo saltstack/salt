@@ -28,6 +28,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.powershell
 import salt.utils.timed_subprocess
+import salt.utils.win_dacl
 import salt.grains.extra
 import salt.ext.six as six
 from salt.utils import vt
@@ -2071,11 +2072,12 @@ def script(source,
             )
         kwargs.pop('__env__')
 
+    win_cwd = False
     if salt.utils.is_windows() and runas and cwd is None:
+        # Create a temp working directory
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
-        __salt__['win_dacl.add_ace'](
-            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
-            'FOLDER&SUBFOLDERS&FILES')
+        win_cwd = True
+        salt.utils.win_dacl.set_permissions(obj_name=cwd, principal=runas, permissions='full_control')
 
     path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
@@ -2089,10 +2091,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2101,10 +2103,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2134,10 +2136,10 @@ def script(source,
                bg=bg,
                password=password,
                **kwargs)
-    if salt.utils.is_windows() and runas:
+    _cleanup_tempfile(path)
+    # If a temp working directory was created (Windows), let's remove that
+    if win_cwd:
         _cleanup_tempfile(cwd)
-    else:
-        _cleanup_tempfile(path)
     return ret
 
 
