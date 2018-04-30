@@ -816,10 +816,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 pass
         # pylint: enable=no-self-argument
 
-        def fopen_side_effect(path, *args, **kwargs):  # pylint: disable=unused-argument
-            return MockFopen(path)
-
-        fopen = MagicMock(side_effect=fopen_side_effect)
+        fopen = MagicMock(side_effect=lambda x, *args, **kwargs: MockFopen(x))
         cache_file = MagicMock(side_effect=lambda x, *args, **kwargs: x)
 
         # Mocks for __utils__['files.is_text']
