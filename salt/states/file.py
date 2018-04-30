@@ -2225,7 +2225,7 @@ def managed(name,
             'replace the file with, \'replace\' has been set to \'False\' to '
             'avoid reading the file unnecessarily.'.format(name)
         )
-    
+
     if 'file_mode' in kwargs:
         ret.setdefault('warnings', []).append(
             'The \'file_mode\' argument will be ignored.  '
