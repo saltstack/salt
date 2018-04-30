@@ -44,6 +44,7 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function('status.saltmem')
         self.assertTrue(isinstance(ret, int))
 
+    @skipIf(salt.utils.is_darwin(), 'status.diskusage not currently supported on macosx')
     def test_status_diskusage(self):
         '''
         status.diskusage
