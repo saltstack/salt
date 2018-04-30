@@ -1767,7 +1767,10 @@ def installed(
                 # This is just some temporary code to warn the user about using
                 # virtual packages. Don't let an exception break the entire
                 # state.
-                pass
+                log.debug(
+                    'Failed to detect virtual packages after running '
+                    'pkg.install', exc_info=True
+                )
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
