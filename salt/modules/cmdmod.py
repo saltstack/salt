@@ -2077,7 +2077,9 @@ def script(source,
         # Create a temp working directory
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
         win_cwd = True
-        salt.utils.win_dacl.set_permissions(obj_name=cwd, principal=runas, permissions='full_control')
+        salt.utils.win_dacl.set_permissions(obj_name=cwd,
+                                            principal=runas,
+                                            permissions='full_control')
 
     path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
