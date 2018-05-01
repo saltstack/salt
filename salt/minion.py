@@ -31,6 +31,7 @@ else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
+from salt.utils.async import LOOP_CLASS
 
 # Import third party libs
 try:
@@ -40,12 +41,12 @@ try:
     # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
     HAS_ZMQ = True
 except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
     HAS_ZMQ = False
+
+import tornado
+TORNADO_50 = tornado.version_info >= (5,)
 
 HAS_RANGE = False
 try:
@@ -656,7 +657,7 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if self.opts['transport'] == 'zeromq' and HAS_ZMQ:
+            if self.opts['transport'] == 'zeromq' and HAS_ZMQ and not TORNADO_50:
                 io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
             else:
                 io_loop = LOOP_CLASS.current()
@@ -805,7 +806,7 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        if HAS_ZMQ:
+        if HAS_ZMQ and not TORNADO_50:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
@@ -954,7 +955,7 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            if HAS_ZMQ:
+            if HAS_ZMQ and not TORNADO_50:
                 zmq.eventloop.ioloop.install()
             self.io_loop = LOOP_CLASS.current()
         else:
@@ -1056,7 +1057,7 @@ class Minion(MinionBase):
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
-        future_exception = self._connect_master_future.exc_info()
+        future_exception = self._connect_master_future.exception()
         if future_exception:
             # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
@@ -2250,13 +2251,15 @@ class Minion(MinionBase):
                 if beacons and self.connected:
                     self._fire_master(events=beacons)
 
-            new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+            new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
+                    handle_beacons, loop_interval * 1000)
             if before_connect:
                 # Make sure there is a chance for one iteration to occur before connect
                 handle_beacons()
 
         if 'cleanup' not in self.periodic_callbacks:
-            new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+            new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(
+                    self._fallback_cleanups, loop_interval * 1000)
 
         # start all the other callbacks
         for periodic_cb in six.itervalues(new_periodic_callbacks):
@@ -2309,14 +2312,15 @@ class Minion(MinionBase):
             # TODO: actually listen to the return and change period
             def handle_schedule():
                 self.process_schedule(self, loop_interval)
-            new_periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
+            new_periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000)
 
             if before_connect:
                 # Make sure there is a chance for one iteration to occur before connect
                 handle_schedule()
 
         if 'cleanup' not in self.periodic_callbacks:
-            new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+            new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(
+                    self._fallback_cleanups, loop_interval * 1000)
 
         # start all the other callbacks
         for periodic_cb in six.itervalues(new_periodic_callbacks):
@@ -2372,7 +2376,7 @@ class Minion(MinionBase):
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
-            self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
+            self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000)
             self.periodic_callbacks['ping'].start()
 
         # add handler to subscriber
@@ -2632,7 +2636,7 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            if HAS_ZMQ:
+            if HAS_ZMQ and not TORNADO_50:
                 zmq.eventloop.ioloop.install()
             self.io_loop = LOOP_CLASS.current()
         else:
@@ -2816,7 +2820,7 @@ class SyndicManager(MinionBase):
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
                                                               self.opts['syndic_event_forward_timeout'] * 1000,
-                                                              io_loop=self.io_loop)
+                                                              )
         self.forward_events.start()
 
         # Make sure to gracefully handle SIGUSR1

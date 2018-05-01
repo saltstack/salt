@@ -760,6 +760,14 @@ def installed(name,
                 ret['comment'] = out['comment']
                 return ret
 
+        # No packages to install.
+        if not target_pkgs:
+            ret['result'] = True
+            aicomms = '\n'.join(already_installed_comments)
+            last_line = 'All specified packages are already installed' + (' and up-to-date' if upgrade else '')
+            ret['comment'] = aicomms + ('\n' if aicomms else '') + last_line
+            return ret
+
     # Construct the string that will get passed to the install call
     pkgs_str = ','.join([state_name for _, state_name in target_pkgs])
 
@@ -810,12 +818,7 @@ def installed(name,
         no_cache_dir=no_cache_dir
     )
 
-    # Check the retcode for success, but don't fail if using pip1 and the package is
-    # already present. Pip1 returns a retcode of 1 (instead of 0 for pip2) if you run
-    # "pip install" without any arguments. See issue #21845.
-    if pip_install_call and \
-            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout', '').startswith(
-                'You must give at least one requirement to install')):
+    if pip_install_call and pip_install_call.get('retcode', 1) == 0:
         ret['result'] = True
 
         if requirements or editable:
@@ -823,6 +826,8 @@ def installed(name,
             if requirements:
                 PIP_REQUIREMENTS_NOCHANGE = [
                     'Requirement already satisfied',
+                    'Requirement already up-to-date',
+                    'Requirement not upgraded',
                     'Collecting',
                     'Cloning',
                     'Cleaning up...',

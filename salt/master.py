@@ -36,12 +36,14 @@ try:
     # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
     HAS_ZMQ = True
 except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
     HAS_ZMQ = False
+
+import tornado
+TORNADO_50 = tornado.version_info >= (5,)
+
+from salt.utils.async import LOOP_CLASS
 
 import tornado.gen  # pylint: disable=F0401
 
@@ -856,7 +858,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        if HAS_ZMQ:
+        if HAS_ZMQ and not TORNADO_50:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
         self.io_loop.make_current()

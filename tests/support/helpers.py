@@ -21,6 +21,7 @@ import logging
 import os
 import signal
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -52,6 +53,31 @@ from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
 log = logging.getLogger(__name__)
+
+
+HAS_SYMLINKS = None
+
+
+def no_symlinks():
+    '''
+    Check if git is installed and has symlinks enabled in the configuration.
+    '''
+    global HAS_SYMLINKS
+    if HAS_SYMLINKS is not None:
+        return not HAS_SYMLINKS
+    output = ''
+    try:
+        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise
+    except subprocess.CalledProcessError:
+        # git returned non-zero status
+        pass
+    HAS_SYMLINKS = False
+    if output.strip() == 'true':
+        HAS_SYMLINKS = True
+    return not HAS_SYMLINKS
 
 
 def destructiveTest(caller):
