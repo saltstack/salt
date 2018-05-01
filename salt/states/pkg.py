@@ -534,7 +534,6 @@ def _find_install_targets(name=None,
                 'result': False,
                 'comment': exc.strerror}
 
-
     if salt.utils.is_windows() and kwargs.pop('refresh', False):
         # We already refreshed when we called pkg.list_pkgs
         was_refreshed = True
