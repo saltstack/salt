@@ -561,7 +561,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             try:
                 self.req_server.stop()
             except Exception as exc:
-                log.debug("TCPReqServerChannel close generated an exception: %s", str(exc))
+                log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
     def __del__(self):
         self.close()
@@ -886,7 +886,7 @@ class SaltMessageClient(object):
                 # This happens because the logic is always waiting to read
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exc_info()
+                self._read_until_future.exception()
                 if (not self._stream_return_future.done() and
                         self.io_loop != tornado.ioloop.IOLoop.current(
                             instance=False)):
@@ -1139,7 +1139,7 @@ class Subscriber(object):
                 # This happens because the logic is always waiting to read
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exc_info()
+                self._read_until_future.exception()
 
     def __del__(self):
         self.close()

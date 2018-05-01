@@ -10,6 +10,7 @@ integration.modules.test_config
 integration.modules.test_cp
 integration.modules.test_data
 integration.modules.test_disk
+integration.modules.test_firewall
 integration.modules.test_git
 integration.modules.test_grains
 integration.modules.test_groupadd
