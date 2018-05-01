@@ -44,13 +44,14 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function('status.saltmem')
         self.assertTrue(isinstance(ret, int))
 
-    @skipIf(salt.utils.is_darwin(), 'status.diskusage not currently supported on macosx')
     def test_status_diskusage(self):
         '''
         status.diskusage
         '''
         ret = self.run_function('status.diskusage')
-        if salt.utils.is_windows():
+        if salt.utils.is_darwin():
+            self.assertIn('not yet supported on this platform', ret)
+        elif salt.utils.is_windows():
             self.assertTrue(isinstance(ret['percent'], float))
         else:
             self.assertIn('total', str(ret))
