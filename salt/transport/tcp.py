@@ -15,7 +15,6 @@ import os
 import weakref
 import time
 import traceback
-import errno
 
 # Import Salt Libs
 import salt.crypt
@@ -33,6 +32,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
+from salt.ext.six.moves import queue  # pylint: disable=import-error
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 
@@ -567,6 +567,11 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     raise exc
             self._socket.close()
             self._socket = None
+        if hasattr(self.req_server, 'stop'):
+            try:
+                self.req_server.stop()
+            except Exception as exc:
+                log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
     def __del__(self):
         self.close()
@@ -753,15 +758,23 @@ if USE_LOAD_BALANCER:
             super(LoadBalancerWorker, self).__init__(
                 message_handler, *args, **kwargs)
             self.socket_queue = socket_queue
+            self._stop = threading.Event()
+            self.thread = threading.Thread(target=self.socket_queue_thread)
+            self.thread.start()
 
-            t = threading.Thread(target=self.socket_queue_thread)
-            t.start()
+        def stop(self):
+            self._stop.set()
+            self.thread.join()
 
         def socket_queue_thread(self):
             try:
                 while True:
-                    client_socket, address = self.socket_queue.get(True, None)
-
+                    try:
+                        client_socket, address = self.socket_queue.get(True, 1)
+                    except queue.Empty:
+                        if self._stop.is_set():
+                            break
+                        continue
                     # 'self.io_loop' initialized in super class
                     # 'tornado.tcpserver.TCPServer'.
                     # 'self._handle_connection' defined in same super class.

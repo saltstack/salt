@@ -917,13 +917,13 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'pip_|-another_non_changing_state_|-mock_|-installed': {
                 '__run_num__': 3,
                 'changes': False,
-                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
                 'result': True
             },
             'pip_|-non_changing_state_|-mock_|-installed': {
                 '__run_num__': 2,
                 'changes': False,
-                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
                 'result': True
             }
         }
