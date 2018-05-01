@@ -296,10 +296,13 @@ def _available_services():
         '/System/Library/LaunchDaemons',
     ]
 
-    for user in os.listdir('/Users/'):
-        agent_path = '/Users/{}/Library/LaunchAgents/'.format(user)
-        if os.path.isdir(agent_path):
-            launchd_paths.append(agent_path)
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents/'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
 
     _available_services = dict()
     for launch_dir in launchd_paths:

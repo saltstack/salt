@@ -80,7 +80,7 @@ def _get_service(name):
     :return: The service information for the service, otherwise an Error
     :rtype: dict
     '''
-    services = salt.utils.mac_utils.available_services()
+    services = __utils__['mac_utils.available_services']()
     name = name.lower()
 
     if name in services:
@@ -162,7 +162,7 @@ def _get_domain_target(name, service_target=False):
     # check if a LaunchAgent as we should treat these differently.
     if 'LaunchAgents' in path:
         # Get the console user so we can service in the correct session
-        uid = salt.utils.mac_utils.console_user()
+        uid = __utils__['mac_utils.console_user']()
         domain_target = 'gui/{}'.format(uid)
 
     # check to see if we need to make it a full service target.
@@ -238,7 +238,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    return salt.utils.mac_utils.launchctl(sub_cmd, *args, **kwargs)
+    return __utils__['mac_utils.launchctl'](sub_cmd, *args, **kwargs)
 
 
 def list_(name=None, runas=None):
@@ -577,7 +577,7 @@ def get_all(runas=None):
     enabled = get_enabled(runas=runas)
 
     # Get list of all services
-    available = list(salt.utils.mac_utils.available_services().keys())
+    available = list(__utils__['mac_utils.available_services']().keys())
 
     # Return composite list
     return sorted(set(enabled + available))
