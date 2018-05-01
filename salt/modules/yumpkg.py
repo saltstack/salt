@@ -88,18 +88,19 @@ def __virtual__():
     return (False, "Module yumpkg: no yum based system detected")
 
 
-def _strip_headers(output, *args):
-    if not args:
-        args_lc = ('installed packages',
-                   'available packages',
-                   'updated packages',
-                   'upgraded packages')
-    else:
-        args_lc = [x.lower() for x in args]
+def _strip_headers(output):
     ret = ''
-    for line in salt.utils.itertools.split(output, '\n'):
-        if line.lower() not in args_lc:
-            ret += line + '\n'
+    # Match package lines,
+    # a package line, must contains
+    # - a package name with a dot
+    package = r'[^\s]+\.[^\s]+\s+'
+    # - a version with a dot or a dash
+    version = r'[^\s]+(\.|\-)[^\s]+\s+'
+    # - a word with optional extra spaces at the end
+    repo = r'[^\s]+\s*'
+    for line in re.finditer(r'^' + package + version + repo + '$'
+            , output, re.MULTILINE):
+        ret += line.group() + '\n'
     return ret
 
 
