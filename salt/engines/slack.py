@@ -88,6 +88,13 @@ In addition, other groups are being loaded from pillars.
 
 :depends: slackclient
 
+
+.. note:: groups_pillar_name
+
+    In order to use this, the engine must be running as of a minion running on
+    the master, so that the ``Caller`` client can be used to retrieve that
+    minions pillar data, because the master process does not have pillars.
+
 '''
 
 # Import python libraries
@@ -237,10 +244,8 @@ class SlackClient(object):
         XXX: instead of using Caller, make the minion to use configurable so there could be some
              restrictions placed on what pillars can be used.
         '''
-        if pillar_name:
-            caller = salt.client.Caller()
-            pillar_groups = caller.cmd('pillar.get', pillar_name)
-            # pillar_groups = __salt__['pillar.get'](pillar_name, {})
+        if pillar_name and __opts__['__role'] == 'minion':
+            pillar_groups = __salt__['pillar.get'](pillar_name, {})
             log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
             log.debug('pillar groups is %s', pillar_groups)
             log.debug('pillar groups type is %s', type(pillar_groups))
