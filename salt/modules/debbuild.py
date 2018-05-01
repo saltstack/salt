@@ -584,8 +584,8 @@ def make_repo(repodir,
     retrc = 0
 
     if gnupghome and env is None:
-            env = {}
-            env['GNUPGHOME'] = gnupghome
+        env = {}
+        env['GNUPGHOME'] = gnupghome
 
     repoconf = os.path.join(repodir, 'conf')
     if not os.path.isdir(repoconf):
