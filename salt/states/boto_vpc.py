@@ -498,7 +498,7 @@ def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, 
 
 
 def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
-                   availability_zone=None, tags=None,
+                   availability_zone=None, auto_assign_public_ipv4=False, tags=None,
                    region=None, key=None,
                    keyid=None, profile=None,
                    route_table_id=None, route_table_name=None):
@@ -610,6 +610,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         r = __salt__['boto_vpc.create_subnet'](subnet_name=name,
                                                cidr_block=cidr_block,
                                                availability_zone=availability_zone,
+                                               auto_assign_public_ipv4=auto_assign_public_ipv4,
                                                vpc_name=vpc_name, vpc_id=vpc_id,
                                                tags=tags, region=region,
                                                key=key, keyid=keyid,
