@@ -184,9 +184,9 @@ def _check_pkg_version_format(pkg):
     return ret
 
 
-def _check_if_installed(prefix, state_pkg_name, version_spec,
-                        ignore_installed, force_reinstall,
-                        upgrade, user, cwd, bin_env, env_vars):
+def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
+                        force_reinstall, upgrade, user, cwd, bin_env, env_vars,
+                        **kwargs):
     # result: None means the command failed to run
     # result: True means the package is installed
     # result: False means the package is not installed
@@ -195,7 +195,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # Check if the requested package is already installed.
     pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
                                     user=user, cwd=cwd,
-                                    env_vars=env_vars)
+                                    env_vars=env_vars, **kwargs)
     prefix_realname = _find_key(prefix, pip_list)
 
     # If the package was already installed, check
@@ -723,7 +723,8 @@ def installed(name,
                 version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
-                                          upgrade, user, cwd, bin_env, env_vars)
+                                          upgrade, user, cwd, bin_env, env_vars,
+                                          **kwargs)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -814,7 +815,8 @@ def installed(name,
         env_vars=env_vars,
         use_vt=use_vt,
         trusted_host=trusted_host,
-        no_cache_dir=no_cache_dir
+        no_cache_dir=no_cache_dir,
+        **kwargs
     )
 
     if pip_install_call and pip_install_call.get('retcode', 1) == 0:
@@ -870,7 +872,8 @@ def installed(name,
                 if prefix:
                     pipsearch = __salt__['pip.list'](prefix, bin_env,
                                                      user=user, cwd=cwd,
-                                                     env_vars=env_vars)
+                                                     env_vars=env_vars,
+                                                     **kwargs)
 
                     # If we didn't find the package in the system after
                     # installing it report it

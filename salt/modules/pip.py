@@ -307,6 +307,13 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     treq = tempfile.mkdtemp()
 
                 __salt__['file.chown'](treq, user, None)
+                # In Windows, just being owner of a file isn't enough. You also
+                # need permissions
+                if salt.utils.is_windows():
+                    __utils__['win_dacl.set_permissions'](
+                        obj_name=treq,
+                        principal=user,
+                        permissions='read_execute')
 
                 current_directory = None
 
@@ -885,6 +892,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
+    if kwargs:
+        cmd_kwargs.update(kwargs)
+
     if env_vars:
         cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
 
@@ -1037,7 +1047,8 @@ def freeze(bin_env=None,
            user=None,
            cwd=None,
            use_vt=False,
-           env_vars=None):
+           env_vars=None,
+           **kwargs):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1086,6 +1097,8 @@ def freeze(bin_env=None,
         cmd.append('--all')
 
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
+    if kwargs:
+        cmd_kwargs.update(**kwargs)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     if env_vars:
@@ -1102,7 +1115,8 @@ def list_(prefix=None,
           bin_env=None,
           user=None,
           cwd=None,
-          env_vars=None):
+          env_vars=None,
+          **kwargs):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1131,7 +1145,11 @@ def list_(prefix=None,
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars):
+    for line in freeze(bin_env=bin_env,
+                       user=user,
+                       cwd=cwd,
+                       env_vars=env_vars,
+                       **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines

@@ -34,6 +34,7 @@ from tests.support.helpers import (
 # Import salt libs
 from tests.support.case import ModuleCase
 import salt.utils
+import salt.utils.win_dacl
 import salt.utils.win_functions
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
@@ -268,162 +269,103 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
-    @skipIf(salt.utils.is_windows(), "password required on Windows")
-    @with_system_user('issue-6912', on_existing='delete', delete=True)
+    @with_system_user('issue-6912', on_existing='delete', delete=True,
+                      password='PassWord1!')
     def test_issue_6912_wrong_owner(self, username):
-        venv_dir = os.path.join(
-            RUNTIME_VARS.TMP, '6912-wrong-owner'
-        )
-        # ----- Using runas ------------------------------------------------->
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username
-        )
-        if venv_create['retcode'] > 0:
-            self.skipTest(
-                'Failed to create testcase virtual environment: {0}'.format(
-                    venv_create
-                )
-            )
+        # Setup virtual environment directory to be used throughout the test
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, '6912-wrong-owner')
 
-        # Using the package name.
+        # The virtual environment needs to be in a location that is accessible
+        # by both the user running the test and the runas user
+        if salt.utils.is_windows():
+            venv_dir = os.path.normpath(
+                os.path.join(os.environ['SystemDrive'], '\\', 'ProgramData',
+                             'Temp', '6912-wrong-owner'))
+
+        # Create the virtual environment
+        venv_create = self.run_function(
+            'virtualenv.create', [venv_dir], user=username,
+            password='PassWord1!')
+        if venv_create['retcode'] > 0:
+            self.skipTest('Failed to create testcase virtual environment: {0}'
+                          ''.format(venv_create))
+
+        # pip install passing the package name in `name`
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', user=username, bin_env=venv_dir
-            )
+                'pip.installed', name='pep8', user=username, bin_env=venv_dir,
+                password='PassWord1!')
             self.assertSaltTrueReturn(ret)
+
             if HAS_PWD:
                 uid = pwd.getpwnam(username).pw_uid
-            else:
-                if salt.utils.is_windows():
-                    uid = salt.utils.win_functions.get_sid_from_name(
-                        salt.utils.win_functions.get_current_user()
-                    )
-
             for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
                               os.path.join(venv_dir, '*', '**', 'pep8*'),
                               os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
                 for path in glob.glob(globmatch):
-                    self.assertequal(uid, os.stat(path).st_uid)
+                    if HAS_PWD:
+                        self.assertEqual(uid, os.stat(path).st_uid)
+                    elif salt.utils.is_windows():
+                        self.assertEqual(
+                            salt.utils.win_dacl.get_owner(path), username)
 
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
-        # using a requirements file
+    @destructiveTest
+    @skip_if_not_root
+    @with_system_user('issue-6912', on_existing='delete', delete=True,
+                      password='PassWord1!')
+    def test_issue_6912_wrong_owner_requirements_file(self, username):
+        # Setup virtual environment directory to be used throughout the test
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, '6912-wrong-owner')
+
+        # The virtual environment needs to be in a location that is accessible
+        # by both the user running the test and the runas user
+        if salt.utils.is_windows():
+            venv_dir = os.path.normpath(
+                os.path.join(os.environ['SystemDrive'], '\\', 'ProgramData',
+                             'Temp', '6912-wrong-owner'))
+
+        # Create the virtual environment again as it should have been removed
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username
-        )
+            'virtualenv.create', [venv_dir], user=username,
+            password='PassWord1!')
         if venv_create['retcode'] > 0:
-            self.skiptest(
-                'failed to create testcase virtual environment: {0}'.format(
-                    ret
-                )
-            )
+            self.skiptest('failed to create testcase virtual environment: {0}'
+                          ''.format(venv_create))
+
+        # pip install using a requirements file
         req_filename = os.path.join(
-            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
-        )
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt')
         with salt.utils.fopen(req_filename, 'wb') as reqf:
             reqf.write(six.b('pep8'))
 
         try:
             ret = self.run_state(
                 'pip.installed', name='', user=username, bin_env=venv_dir,
-                requirements='salt://issue-6912-requirements.txt'
-            )
+                requirements='salt://issue-6912-requirements.txt',
+                password='PassWord1!')
             self.assertSaltTrueReturn(ret)
+
             if HAS_PWD:
                 uid = pwd.getpwnam(username).pw_uid
-            else:
-                if salt.utils.is_windows():
-                    uid = salt.utils.win_functions.get_sid_from_name(
-                        salt.utils.win_functions.get_current_user()
-                    )
             for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
                               os.path.join(venv_dir, '*', '**', 'pep8*'),
                               os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
                 for path in glob.glob(globmatch):
-                    self.assertEqual(uid, os.stat(path).st_uid)
+                    if HAS_PWD:
+                        self.assertEqual(uid, os.stat(path).st_uid)
+                    elif salt.utils.is_windows():
+                        self.assertEqual(
+                            salt.utils.win_dacl.get_owner(path), username)
 
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
-            os.unlink(req_filename)
-        # <---- Using runas --------------------------------------------------
-
-        # ----- Using user -------------------------------------------------->
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username
-        )
-        if venv_create['retcode'] > 0:
-            self.skipTest(
-                'Failed to create testcase virtual environment: {0}'.format(
-                    ret
-                )
-            )
-
-        # Using the package name
-        try:
-            ret = self.run_state(
-                'pip.installed', name='pep8', user=username, bin_env=venv_dir
-            )
-            self.assertSaltTrueReturn(ret)
-            if HAS_PWD:
-                uid = pwd.getpwnam(username).pw_uid
-            else:
-                if salt.utils.is_windows():
-                    uid = salt.utils.win_functions.get_sid_from_name(
-                        salt.utils.win_functions.get_current_user()
-                    )
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    self.assertEqual(uid, os.stat(path).st_uid)
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir, ignore_errors=True)
-
-        # Using a requirements file
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username
-        )
-        if venv_create['retcode'] > 0:
-            self.skipTest(
-                'Failed to create testcase virtual environment: {0}'.format(
-                    ret
-                )
-            )
-        req_filename = os.path.join(
-            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
-        )
-        with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
-
-        try:
-            ret = self.run_state(
-                'pip.installed', name='', user=username, bin_env=venv_dir,
-                requirements='salt://issue-6912-requirements.txt'
-            )
-            self.assertSaltTrueReturn(ret)
-            if HAS_PWD:
-                uid = pwd.getpwnam(username).pw_uid
-            else:
-                if salt.utils.is_windows():
-                    uid = salt.utils.win_functions.get_sid_from_name(
-                        salt.utils.win_functions.get_current_user()
-                    )
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    self.assertEqual(uid, os.stat(path).st_uid)
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir, ignore_errors=True)
-            os.unlink(req_filename)
-        # <---- Using user ---------------------------------------------------
+            if os._exists(req_filename):
+                os.unlink(req_filename)
 
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv

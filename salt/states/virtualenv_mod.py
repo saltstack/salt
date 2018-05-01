@@ -207,6 +207,7 @@ def managed(name,
                 prompt=prompt,
                 user=user,
                 use_vt=use_vt,
+                **kwargs
             )
         except CommandNotFoundError as err:
             ret['result'] = False
@@ -316,7 +317,8 @@ def managed(name,
             use_vt=use_vt,
             env_vars=env_vars,
             no_cache_dir=pip_no_cache_dir,
-            cache_dir=pip_cache_dir
+            cache_dir=pip_cache_dir,
+            **kwargs
         )
         ret['result'] &= pip_ret['retcode'] == 0
         if pip_ret['retcode'] > 0:
