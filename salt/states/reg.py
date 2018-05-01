@@ -111,7 +111,7 @@ def present(name,
             vdata=None,
             vtype='REG_SZ',
             use_32bit_registry=False):
-    '''
+    r'''
     Ensure a registry key or value is present.
 
     Args:
@@ -133,7 +133,7 @@ def present(name,
             parameter is not passed it will assume you want to set the
             ``(Default)`` value
 
-        vdata (str, int, list):
+        vdata (str, int, list, bytes):
             The value you'd like to set. If a value name (``vname``) is passed,
             this will be the data for that value name. If not, this will be the
             ``(Default)`` value for the key.
