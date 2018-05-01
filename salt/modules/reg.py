@@ -303,7 +303,7 @@ def set_value(hive,
             The value name. These are the individual name/data pairs under the
             key. If not passed, the key (Default) value will be set.
 
-        vdata (str, int, list):
+        vdata (str, int, list, bytes):
             The value you'd like to set. If a value name (vname) is passed, this
             will be the data for that value name. If not, this will be the
             (Default) value for the key.
