@@ -3370,6 +3370,8 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
+        nodegroups = self.opts.get('nodegroups', {})
+
         if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
             log.error('Compound target received that is neither string, list nor tuple')
             return False
@@ -3391,9 +3393,11 @@ class Matcher(object):
         if isinstance(tgt, six.string_types):
             words = tgt.split()
         else:
-            words = tgt
+            # we make a shallow copy in order to not affect the passed in arg
+            words = tgt[:]
 
-        for word in words:
+        while words:
+            word = words.pop(0)
             target_info = salt.utils.minions.parse_target(word)
 
             # Easy check first
@@ -3415,10 +3419,11 @@ class Matcher(object):
 
             elif target_info and target_info['engine']:
                 if 'N' == target_info['engine']:
-                    # Nodegroups should already be expanded/resolved to other engines
-                    log.error(
-                        'Detected nodegroup expansion failure of "%s"', word)
-                    return False
+                    # if we encounter a node group, just evaluate it in-place
+                    decomposed = salt.utils.minions.nodegroup_comp(target_info['pattern'], nodegroups)
+                    words = decomposed + words
+                    continue
+
                 engine = ref.get(target_info['engine'])
                 if not engine:
                     # If an unknown engine is called at any time, fail out
