@@ -248,6 +248,11 @@ subnet
 Optional. The subnet inside the virtual network that the VM will be spun up in.
 Default is ``default``.
 
+allocate_public_ip
+------------------
+Optional. Default is ``False``. If set to ``True``, a public IP will
+be created and assigned to the VM.
+
 load_balancer
 -------------
 Optional. The load-balancer for the VM's network interface to join. If

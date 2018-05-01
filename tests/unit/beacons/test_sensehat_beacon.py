@@ -59,6 +59,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = [{'sensors': {'humidity': '70%'}}]
 
         ret = sensehat.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{'tag': 'sensehat/humidity',
@@ -69,6 +70,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = [{'sensors': {'temperature': 20}}]
 
         ret = sensehat.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{'tag': 'sensehat/temperature',
@@ -79,6 +81,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = [{'sensors': {'temperature': [20, 29]}}]
 
         ret = sensehat.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{'tag': 'sensehat/temperature',
@@ -89,6 +92,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = [{'sensors': {'pressure': '1400'}}]
 
         ret = sensehat.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{'tag': 'sensehat/pressure',
@@ -99,6 +103,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = [{'sensors': {'pressure': '1600'}}]
 
         ret = sensehat.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [])

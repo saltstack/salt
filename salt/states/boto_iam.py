@@ -1324,7 +1324,7 @@ def account_policy(name=None, allow_users_to_change_password=None,
                                                            region, key, keyid, profile):
         return ret
     ret['comment'] = 'Account policy is not changed.'
-    ret['changes'] = None
+    ret['changes'] = {}
     ret['result'] = False
     return ret
 
