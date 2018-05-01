@@ -495,7 +495,7 @@ pkg
 Significate changes have been made to the :mod:`win_pkg <salt.modules.win_pkg>` execution module. Users should test this release against their existing package sls definition files. These changes are also in 2016.11.9 & 2017.7.3.
 
 - ``pkg.list_available`` no longer defaults to refreshing the winrepo meta database.
-- ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
+- ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior.
 - ``pkg.list_pkgs`` now returns multiple versions if software installed more than once.
 - ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found instead of '(value not set)' which matches the contents of the sls definitions.
 - ``pkg.remove()`` will wait upto 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
@@ -1220,10 +1220,11 @@ check the configuration for the correct format and only load if the validation p
         beacons:
           proxy_example:
             endpoint: beacon
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           proxy_example:
             - endpoint: beacon

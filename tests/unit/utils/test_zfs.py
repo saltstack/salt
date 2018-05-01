@@ -7,7 +7,7 @@ Tests for the zfs utils library
 :maturity:      new
 :platform:      illumos,freebsd,linux
 
-.. versionadded:: Fluorine
+.. versionadded:: 2018.3.1
 '''
 
 # Import Python libs
