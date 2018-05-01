@@ -53,6 +53,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -456,7 +457,7 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] == 'OpenBSD':
+        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
             swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
         else:
@@ -1934,7 +1935,7 @@ def fqdns():
         try:
             fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
         except socket.herror as err:
-            if err.errno == 1:
+            if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
@@ -2225,7 +2226,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read().strip()
+                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:

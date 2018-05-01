@@ -250,3 +250,49 @@ class TestBadCryptodomePubKey(TestCase):
         '''
         key = salt.crypt.get_rsa_pub_key(self.key_path)
         assert key.can_encrypt()
+
+
+class TestM2CryptoRegression47124(TestCase):
+
+    SIGNATURE = (
+        'w\xac\xfe18o\xeb\xfb\x14+\x9e\xd1\xb7\x7fe}\xec\xd6\xe1P\x9e\xab'
+        '\xb5\x07\xe0\xc1\xfd\xda#\x04Z\x8d\x7f\x0b\x1f}:~\xb2s\x860u\x02N'
+        '\xd4q"\xb7\x86*\x8f\x1f\xd0\x9d\x11\x92\xc5~\xa68\xac>\x12H\xc2%y,'
+        '\xe6\xceU\x1e\xa3?\x0c,\xf0u\xbb\xd0[g_\xdd\x8b\xb0\x95:Y\x18\xa5*'
+        '\x99\xfd\xf3K\x92\x92 ({\xd1\xff\xd9F\xc8\xd6K\x86e\xf9\xa8\xad\xb0z'
+        '\xe3\x9dD\xf5k\x8b_<\xe7\xe7\xec\xf3"\'\xd5\xd2M\xb4\xce\x1a\xe3$'
+        '\x9c\x81\xad\xf9\x11\xf6\xf5>)\xc7\xdd\x03&\xf7\x86@ks\xa6\x05\xc2'
+        '\xd0\xbd\x1a7\xfc\xde\xe6\xb0\xad!\x12#\xc86Y\xea\xc5\xe3\xe2\xb3'
+        '\xc9\xaf\xfa\x0c\xf2?\xbf\x93w\x18\x9e\x0b\xa2a\x10:M\x05\x89\xe2W.Q'
+        '\xe8;yGT\xb1\xf2\xc6A\xd2\xc4\xbeN\xb3\xcfS\xaf\x03f\xe2\xb4)\xe7\xf6'
+        '\xdbs\xd0Z}8\xa4\xd2\x1fW*\xe6\x1c"\x8b\xd0\x18w\xb9\x7f\x9e\x96\xa3'
+        '\xd9v\xf7\x833\x8e\x01'
+    )
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_verify_bytes(self):
+        message = salt.utils.stringutils.to_unicode('meh')
+        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
+            salt.crypt.verify_signature('/keydir/keyname.pub', message, self.SIGNATURE)
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_verify_unicode(self):
+        message = salt.utils.stringutils.to_bytes('meh')
+        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
+            salt.crypt.verify_signature('/keydir/keyname.pub', message, self.SIGNATURE)
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_sign_bytes(self):
+        message = salt.utils.stringutils.to_unicode('meh')
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        with patch('salt.crypt.get_rsa_key', return_value=key):
+            signature = salt.crypt.sign_message('/keydir/keyname.pem', message, passphrase='password')
+        self.assertEqual(signature, self.SIGNATURE)
+
+    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    def test_m2crypto_sign_unicode(self):
+        message = salt.utils.stringutils.to_bytes('meh')
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        with patch('salt.crypt.get_rsa_key', return_value=key):
+            signature = salt.crypt.sign_message('/keydir/keyname.pem', message, passphrase='password')
+        self.assertEqual(signature, self.SIGNATURE)
