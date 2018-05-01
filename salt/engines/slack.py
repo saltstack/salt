@@ -91,7 +91,7 @@ In addition, other groups are being loaded from pillars.
 
 .. note:: groups_pillar_name
 
-    In order to use this, the engine must be running as of a minion running on
+    In order to use this, the engine must be running as a minion running on
     the master, so that the ``Caller`` client can be used to retrieve that
     minions pillar data, because the master process does not have pillars.
 
