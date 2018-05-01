@@ -60,20 +60,20 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
-`keep_jobs` to the number of hours for the jobs to live in the tables.
-Setting it to `0` or leaving it unset will cause the data to stay in the tables.
+``keep_jobs`` to the number of hours for the jobs to live in the tables.
+Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
 
 Should you wish to archive jobs in a different table for later processing,
-set `archive_jobs` to True.  Salt will create 3 archive tables
+set ``archive_jobs`` to True.  Salt will create 3 archive tables
 
-- `jids_archive`
-- `salt_returns_archive`
-- `salt_events_archive`
+- ``jids_archive``
+- ``salt_returns_archive`
+- ``salt_events_archive`
 
-and move the contents of `jids`, `salt_returns`, and `salt_events` that are
-more than `keep_jobs` hours old to these tables.
+and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
+more than ``keep_jobs`` hours old to these tables.
 
-.. versionadded:: 2015.5.0
+.. versionadded:: Fluorine
 
 Use the following Pg database schema:
 
