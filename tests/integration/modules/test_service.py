@@ -87,6 +87,9 @@ class ServiceModuleTest(ModuleCase):
         '''
         test service.get_enabled and service.enable module
         '''
+        # disable service before test
+        self.assertTrue(self.run_function('service.disable', [self.service_name]))
+
         self.assertTrue(self.run_function('service.enable', [self.service_name]))
         self.assertIn(self.service_name, self.run_function('service.get_enabled'))
 
@@ -94,6 +97,9 @@ class ServiceModuleTest(ModuleCase):
         '''
         test service.get_disabled and service.disable module
         '''
+        # enable service before test
+        self.assertTrue(self.run_function('service.enable', [self.service_name]))
+
         self.assertTrue(self.run_function('service.disable', [self.service_name]))
         self.assertIn(self.service_name, self.run_function('service.get_disabled'))
 
