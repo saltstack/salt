@@ -351,7 +351,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
-            self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
+            self._socket.setsockopt(
+                zmq.SUBSCRIBE,
+                salt.utils.stringutils.to_bytes(self.hexid)
+            )
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
