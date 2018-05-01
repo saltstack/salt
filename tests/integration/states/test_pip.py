@@ -333,7 +333,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             'virtualenv.create', [venv_dir], user=username,
             password='PassWord1!')
         if venv_create['retcode'] > 0:
-            self.skiptest('failed to create testcase virtual environment: {0}'
+            self.skipTest('failed to create testcase virtual environment: {0}'
                           ''.format(venv_create))
 
         # pip install using a requirements file
