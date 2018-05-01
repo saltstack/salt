@@ -583,8 +583,7 @@ def make_repo(repodir,
 
     retrc = 0
 
-    if gnupghome:
-        if env is None:
+    if gnupghome and env is None:
             env = {}
             env['GNUPGHOME'] = gnupghome
 
@@ -610,7 +609,6 @@ def make_repo(repodir,
     # preset passphase and interaction with gpg-agent
     gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
     gpg_tty_info_file = '{0}/gpg-tty-info-salt'.format(gnupghome)
-#    gpg_tty_info_dict = {}
 
     # if using older than gnupg 2.1, then env file exists
     older_gnupg = __salt__['file.file_exists'](gpg_info_file)
@@ -686,8 +684,6 @@ def make_repo(repodir,
             for gpg_info_line in gpg_raw_info:
                 gpg_info_line = salt.utils.stringutils.to_unicode(gpg_info_line)
                 gpg_info = gpg_info_line.split('=')
-#                gpg_info_dict = {gpg_info[0]: gpg_info[1]}
-#                __salt__['environ.setenv'](gpg_info_dict)
                 env[gpg_info[0]] = gpg_info[1]
                 break
         else:
@@ -697,8 +693,6 @@ def make_repo(repodir,
             for gpg_tty_info_line in gpg_raw_info:
                 gpg_tty_info_line = salt.utils.stringutils.to_unicode(gpg_tty_info_line)
                 gpg_tty_info = gpg_tty_info_line.split('=')
-#                 gpg_tty_info_dict = {gpg_tty_info[0]: gpg_tty_info[1]}
-#                 __salt__['environ.setenv'](gpg_tty_info_dict)
                 env[gpg_tty_info[0]] = gpg_tty_info[1]
                 break
 
@@ -781,8 +775,6 @@ def make_repo(repodir,
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
                         codename,
                         abs_file)
-
-#               env=gpg_tty_info_dict,
 
                 try:
                     proc = salt.utils.vt.Terminal(
