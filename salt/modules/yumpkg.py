@@ -452,7 +452,8 @@ def latest_version(*names, **kwargs):
     out = __salt__['cmd.run_all'](cmd,
                                   output_loglevel='trace',
                                   ignore_retcode=True,
-                                  python_shell=False)
+                                  python_shell=False,
+                                  env={'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'})
     if out['retcode'] != 0:
         if out['stderr']:
             # Check first if this is just a matter of the packages being
@@ -865,7 +866,8 @@ def list_repo_pkgs(*args, **kwargs):
                 cmd_prefix + [pkg_src],
                 output_loglevel='trace',
                 ignore_retcode=True,
-                python_shell=False
+                python_shell=False,
+                env={'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'}
             )
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
@@ -882,7 +884,8 @@ def list_repo_pkgs(*args, **kwargs):
                 cmd_prefix + [pkg_src],
                 output_loglevel='trace',
                 ignore_retcode=True,
-                python_shell=False
+                python_shell=False,
+                env={'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'}
             )
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
@@ -898,7 +901,8 @@ def list_repo_pkgs(*args, **kwargs):
             out = __salt__['cmd.run_all'](cmd,
                                           output_loglevel='trace',
                                           ignore_retcode=True,
-                                          python_shell=False)
+                                          python_shell=False,
+                                          env={'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'})
             if out['retcode'] != 0 and 'Error:' in out['stdout']:
                 continue
             _parse_output(out['stdout'])
@@ -955,7 +959,8 @@ def list_upgrades(refresh=True, **kwargs):
     out = __salt__['cmd.run_all'](cmd,
                                   output_loglevel='trace',
                                   ignore_retcode=True,
-                                  python_shell=False)
+                                  python_shell=False,
+                                  env={'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'})
     if out['retcode'] != 0 and 'Error:' in out:
         return {}
 
