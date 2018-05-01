@@ -224,7 +224,7 @@ def sign_message(privkey_path, message, passphrase=None):
     log.debug('salt.crypt.sign_message: Signing message.')
     if HAS_M2:
         md = EVP.MessageDigest('sha1')
-        md.update(message)
+        md.update(salt.utils.stringutils.to_bytes(message))
         digest = md.final()
         return key.sign(digest)
     else:
@@ -242,7 +242,7 @@ def verify_signature(pubkey_path, message, signature):
     log.debug('salt.crypt.verify_signature: Verifying signature')
     if HAS_M2:
         md = EVP.MessageDigest('sha1')
-        md.update(message)
+        md.update(salt.utils.stringutils.to_bytes(message))
         digest = md.final()
         return pubkey.verify(digest, signature)
     else:
