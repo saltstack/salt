@@ -31,7 +31,7 @@ class ServiceModuleTest(ModuleCase):
             self.service_name = 'org.ntp.ntpd'
             if int(os_release.split('.')[1]) >= 13:
                 self.service_name = 'com.apple.AirPlayXPCHelper'
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             self.service_name = 'Spooler'
 
         self.pre_srv_status = self.run_function('service.status', [self.service_name])
@@ -101,7 +101,7 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function('service.disable', [self.service_name]))
         self.assertIn(self.service_name, self.run_function('service.get_disabled'))
 
-    @skipIf(not salt.utils.is_windows(), 'Windows Only Test')
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):
         '''
         test service.get_service_name
