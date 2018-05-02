@@ -13,6 +13,7 @@ import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
+import uuid
 
 # Import salt libs
 from salt.exceptions import (
@@ -1162,11 +1163,16 @@ class RemoteClient(Client):
             load['gzip'] = gzip
 
         fn_ = None
+        dest_tmp = None
         if dest:
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 if makedirs:
-                    os.makedirs(destdir)
+                    try:
+                        os.makedirs(destdir)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:  # ignore if it was there already
+                            raise
                 else:
                     return False
             # We need an open filehandle here, that's why we're not using a
@@ -1217,11 +1223,12 @@ class RemoteClient(Client):
                             saltenv,
                             cachedir=cachedir) as cache_dest:
                         dest = cache_dest
+                        dest_tmp = "{0}/{1}".format(os.path.dirname(dest), str(uuid.uuid4()))
                         # If a directory was formerly cached at this path, then
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
                             salt.utils.files.rm_rf(dest)
-                        fn_ = salt.utils.files.fopen(dest, 'wb+')
+                        fn_ = salt.utils.files.fopen(dest_tmp, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
@@ -1252,6 +1259,8 @@ class RemoteClient(Client):
 
         if fn_:
             fn_.close()
+            if dest_tmp:
+                os.rename(dest_tmp, dest)
             log.info(
                 'Fetching file from saltenv \'%s\', ** done ** \'%s\'',
                 saltenv, path
