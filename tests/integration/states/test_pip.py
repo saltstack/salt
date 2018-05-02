@@ -29,7 +29,8 @@ from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     with_system_user,
-    skip_if_not_root
+    skip_if_not_root,
+    with_tempdir
 )
 # Import salt libs
 from tests.support.case import ModuleCase
@@ -271,16 +272,18 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
-    def test_issue_6912_wrong_owner(self, username):
+    @with_tempdir()
+    def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, '6912-wrong-owner')
+        venv_dir = os.path.join(temp_dir, '6912-wrong-owner')
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
         if salt.utils.is_windows():
-            venv_dir = os.path.normpath(
-                os.path.join(os.environ['SystemDrive'], '\\', 'ProgramData',
-                             'Temp', '6912-wrong-owner'))
+            salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
+        else:
+            uid = self.run_function('file.user_to_uid', [username])
+            os.chown(temp_dir, uid, -1)
 
         # Create the virtual environment
         venv_create = self.run_function(
@@ -291,42 +294,39 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                           ''.format(venv_create))
 
         # pip install passing the package name in `name`
-        try:
-            ret = self.run_state(
-                'pip.installed', name='pep8', user=username, bin_env=venv_dir,
-                password='PassWord1!')
-            self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'pip.installed', name='pep8', user=username, bin_env=venv_dir,
+            no_cache_dir=True, password='PassWord1!')
+        self.assertSaltTrueReturn(ret)
 
-            if HAS_PWD:
-                uid = pwd.getpwnam(username).pw_uid
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    if HAS_PWD:
-                        self.assertEqual(uid, os.stat(path).st_uid)
-                    elif salt.utils.is_windows():
-                        self.assertEqual(
-                            salt.utils.win_dacl.get_owner(path), username)
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir, ignore_errors=True)
+        if HAS_PWD:
+            uid = pwd.getpwnam(username).pw_uid
+        for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                          os.path.join(venv_dir, '*', '**', 'pep8*'),
+                          os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+            for path in glob.glob(globmatch):
+                if HAS_PWD:
+                    self.assertEqual(uid, os.stat(path).st_uid)
+                elif salt.utils.is_windows():
+                    self.assertEqual(
+                        salt.utils.win_dacl.get_owner(path), username)
 
     @destructiveTest
     @skip_if_not_root
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
-    def test_issue_6912_wrong_owner_requirements_file(self, username):
+    @with_tempdir()
+    def test_issue_6912_wrong_owner_requirements_file(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, '6912-wrong-owner')
+        venv_dir = os.path.join(temp_dir, '6912-wrong-owner')
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
         if salt.utils.is_windows():
-            venv_dir = os.path.normpath(
-                os.path.join(os.environ['SystemDrive'], '\\', 'ProgramData',
-                             'Temp', '6912-wrong-owner'))
+            salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
+        else:
+            uid = self.run_function('file.user_to_uid', [username])
+            os.chown(temp_dir, uid, -1)
 
         # Create the virtual environment again as it should have been removed
         venv_create = self.run_function(
@@ -342,30 +342,23 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.fopen(req_filename, 'wb') as reqf:
             reqf.write(six.b('pep8'))
 
-        try:
-            ret = self.run_state(
-                'pip.installed', name='', user=username, bin_env=venv_dir,
-                requirements='salt://issue-6912-requirements.txt',
-                password='PassWord1!')
-            self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'pip.installed', name='', user=username, bin_env=venv_dir,
+            requirements='salt://issue-6912-requirements.txt',
+            no_cache_dir=True, password='PassWord1!')
+        self.assertSaltTrueReturn(ret)
 
-            if HAS_PWD:
-                uid = pwd.getpwnam(username).pw_uid
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    if HAS_PWD:
-                        self.assertEqual(uid, os.stat(path).st_uid)
-                    elif salt.utils.is_windows():
-                        self.assertEqual(
-                            salt.utils.win_dacl.get_owner(path), username)
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir, ignore_errors=True)
-            if os._exists(req_filename):
-                os.unlink(req_filename)
+        if HAS_PWD:
+            uid = pwd.getpwnam(username).pw_uid
+        for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
+                          os.path.join(venv_dir, '*', '**', 'pep8*'),
+                          os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
+            for path in glob.glob(globmatch):
+                if HAS_PWD:
+                    self.assertEqual(uid, os.stat(path).st_uid)
+                elif salt.utils.is_windows():
+                    self.assertEqual(
+                        salt.utils.win_dacl.get_owner(path), username)
 
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv
