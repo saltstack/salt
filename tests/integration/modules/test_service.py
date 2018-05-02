@@ -12,6 +12,7 @@ from tests.support.unit import skipIf
 import salt.utils.path
 import salt.utils.platform
 
+
 @destructiveTest
 class ServiceModuleTest(ModuleCase):
     '''
