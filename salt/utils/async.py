@@ -7,26 +7,9 @@ from __future__ import absolute_import
 
 import tornado.ioloop
 import tornado.concurrent
-# attempt to use zmq-- if we have it otherwise fallback to tornado loop
-try:
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
-
-import tornado
-TORNADO_50 = tornado.version_info >= (5,)
-
-if HAS_ZMQ and not TORNADO_50:
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-else:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
 
 import contextlib
+from salt.utils import zeromq
 
 
 @contextlib.contextmanager
@@ -60,7 +43,7 @@ class SyncWrapper(object):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = LOOP_CLASS()
+        self.io_loop = zeromq.ZMQDefaultLoop()
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
