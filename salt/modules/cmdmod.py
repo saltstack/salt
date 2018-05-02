@@ -507,6 +507,7 @@ def _run(cmd,
             env.setdefault('LC_TELEPHONE', 'C')
             env.setdefault('LC_MEASUREMENT', 'C')
             env.setdefault('LC_IDENTIFICATION', 'C')
+            env.setdefault('LANGUAGE', 'C')
         else:
             # On Windows set the codepage to US English.
             if python_shell:
