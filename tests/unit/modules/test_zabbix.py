@@ -23,7 +23,7 @@ from salt.exceptions import SaltException
 CONN_ARGS = {}
 CONN_ARGS['url'] = 'http://test.url'
 CONN_ARGS['auth'] = '1234'
-            
+
 GETID_QUERY_RESULT_OK = [{'internal': '0', 'flags': '0', 'groupid': '11', 'name': 'Databases'}]
 GETID_QUERY_RESULT_BAD = [{'internal': '0', 'flags': '0', 'groupid': '11', 'name': 'Databases'}, {'another': 'object'}]
 

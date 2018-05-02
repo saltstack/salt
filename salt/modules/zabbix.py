@@ -30,7 +30,6 @@ from __future__ import unicode_literals
 # Import python libs
 import logging
 import socket
-import json
 import os
 
 # Import salt libs
@@ -328,7 +327,7 @@ def substitute_params(input_object, extend_params=None, filter_key='name', **kwa
         return six.text_type(input_object)
 
 
-# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-return-statements,too-many-nested-blocks
 def compare_params(defined, existing, return_old_value=False):
     '''
     .. versionadded:: 2017.7
@@ -1070,8 +1069,8 @@ def host_create(host, groups, interfaces, **connection_args):
     .. code-block:: bash
 
         salt '*' zabbix.host_create technicalname 4
-        interfaces='{if_type: 1, main: 1, useip: 1, ip_: "192.168.3.1", dns: "", port: 10050}'
-        visible_name='Host Visible Name'
+        interfaces='{type: 1, main: 1, useip: 1, ip: "192.168.3.1", dns: "", port: 10050}'
+        visible_name='Host Visible Name' inventory_mode=0 inventory='{"alias": "something"}'
     '''
     conn_args = _login(**connection_args)
     ret = False
@@ -2350,7 +2349,7 @@ def configuration_import(config_file, rules=None, file_format='xml', **connectio
     '''
     .. versionadded:: 2017.7
 
-    Imports Zabbix configuration sepcified in file to Zabbix server.
+    Imports Zabbix configuration specified in file to Zabbix server.
 
     :param config_file: File with Zabbix config (local or remote)
     :param rules: Optional - Rules that have to be different from default (defaults are the same as in Zabbix web UI.)
