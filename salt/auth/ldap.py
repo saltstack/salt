@@ -8,6 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import itertools
 from salt.ext import six
 
 # Import salt libs
@@ -358,10 +359,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), salt.utils.stringutils.to_str(_config('groupattribute')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
+                for user in itertools.chain(result.get(_config('accountattributename'), [])
+                        , result.get(_config('groupattribute'), [])):
                     if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
