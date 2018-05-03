@@ -5,7 +5,7 @@ The networking module for NI Linux Real-Time distro
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -49,7 +49,7 @@ def __virtual__():
             if state == 'offline':
                 return False, 'Connmand is not running'
         except Exception as exc:
-            return False, str(exc)
+            return False, six.text_type(exc)
         return __virtualname__
     return False, 'The nilrt_ip module could not be loaded: unsupported OS family'
 
@@ -82,7 +82,7 @@ def _get_services():
     serviceList = []
     services = pyconnman.ConnManager().get_services()
     for path, params in services:
-        serviceList.append(str(path[len(SERVICE_PATH):]))
+        serviceList.append(six.text_type(path[len(SERVICE_PATH):]))
     return serviceList
 
 
@@ -147,16 +147,18 @@ def _get_service_info(service):
     '''
     service_info = pyconnman.ConnService(_add_path(service))
     data = {
-        'name': service,
+        'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
-        'connectionid': str(service_info.get_property('Ethernet')['Interface']),
-        'HWAddress': str(service_info.get_property('Ethernet')['Address'])
+        'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
+        'hwaddr': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
     if state == 'ready' or state == 'online':
         data['up'] = True
-        data['ipv4'] = {}
+        data['ipv4'] = {
+            'gateway': '0.0.0.0'
+        }
         ipv4 = 'IPv4'
         if service_info.get_property('IPv4')['Method'] == 'manual':
             ipv4 += '.Configuration'
@@ -170,21 +172,21 @@ def _get_service_info(service):
                         value = 'dhcp_linklocal'
                     elif value == 'manual':
                         value = 'static'
-                data['ipv4'][info.lower()] = str(value)
+                data['ipv4'][info.lower()] = six.text_type(value)
             except Exception as exc:
-                log.warning('Unable to get IPv4 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv4 %s for service %s\n', info, service)
 
         ipv6Info = service_info.get_property('IPv6')
         for info in ['Address', 'Prefix', 'Gateway']:
             try:
                 value = ipv6Info[info]
-                data['ipv6'][info.lower()] = [str(value)]
+                data['ipv6'][info.lower()] = [six.text_type(value)]
             except Exception as exc:
-                log.warning('Unable to get IPv6 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv6 %s for service %s\n', info, service)
 
         nameservers = []
         for x in service_info.get_property('Nameservers'):
-            nameservers.append(str(x))
+            nameservers.append(six.text_type(x))
         data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
@@ -205,14 +207,14 @@ def _dict_to_string(dictionary):
     for key, val in sorted(dictionary.items()):
         if isinstance(val, dict):
             for line in _dict_to_string(val):
-                ret += str(key) + '-' + line + '\n'
+                ret += six.text_type(key) + '-' + line + '\n'
         elif isinstance(val, list):
             stringList = ''
             for item in val:
-                stringList += str(item) + ' '
-            ret += str(key) + ': ' + stringList +'\n'
+                stringList += six.text_type(item) + ' '
+            ret += six.text_type(key) + ': ' + stringList +'\n'
         else:
-            ret += str(key) + ': ' + str(val) +'\n'
+            ret += six.text_type(key) + ': ' + six.text_type(val) +'\n'
     return ret.splitlines()
 
 

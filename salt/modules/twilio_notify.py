@@ -16,8 +16,11 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# import 3rd party libs
+from salt.ext import six
 
 HAS_LIBS = False
 try:
@@ -33,6 +36,7 @@ try:
     HAS_LIBS = True
 except ImportError:
     pass
+
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +87,7 @@ def send_sms(profile, body, to, from_):
         ret['_error']['code'] = exc.code
         ret['_error']['msg'] = exc.msg
         ret['_error']['status'] = exc.status
-        log.debug('Could not send sms. Error: {0}'.format(ret))
+        log.debug('Could not send sms. Error: %s', ret)
         return ret
     ret['message'] = {}
     ret['message']['sid'] = message.sid
@@ -92,7 +96,7 @@ def send_sms(profile, body, to, from_):
     ret['message']['status'] = message.status
     ret['message']['num_segments'] = message.num_segments
     ret['message']['body'] = message.body
-    ret['message']['date_sent'] = str(message.date_sent)
-    ret['message']['date_created'] = str(message.date_created)
+    ret['message']['date_sent'] = six.text_type(message.date_sent)
+    ret['message']['date_created'] = six.text_type(message.date_created)
     log.info(ret)
     return ret

@@ -19,12 +19,10 @@ from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.pillar as pillar
 
@@ -223,7 +221,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b(TEST_KEY))[0]
+                                      shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
@@ -245,7 +243,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+                                      shell=False).communicate(input=b'KILLAGENT')[0]
             log.debug('Result:\n%s', output)
         except OSError:
             log.debug('No need to kill: old gnupg doesn\'t start the agent.')

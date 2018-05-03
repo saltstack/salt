@@ -10,17 +10,23 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 import re
 import subprocess
 import sys
+import time
 
 # Import salt libs
+import salt.exceptions
+import salt.utils.args
 import salt.utils.files
 import salt.utils.path
+
+# Import 3rd partylibs
+from salt.ext import six
 
 HAS_PSUTIL = False
 try:
@@ -28,6 +34,51 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+LIST_DIRS = [
+    # We don't care about log files
+    '^/var/log/',
+    '^/var/local/log/',
+    # Or about files under temporary locations
+    '^/var/run/',
+    '^/var/local/run/',
+    # Or about files under /tmp
+    '^/tmp/',
+    # Or about files under /dev/shm
+    '^/dev/shm/',
+    # Or about files under /run
+    '^/run/',
+    # Or about files under /drm
+    '^/drm',
+    # Or about files under /var/tmp and /var/local/tmp
+    '^/var/tmp/',
+    '^/var/local/tmp/',
+    # Or /dev/zero
+    '^/dev/zero',
+    # Or /dev/pts (used by gpm)
+    '^/dev/pts/',
+    # Or /usr/lib/locale
+    '^/usr/lib/locale/',
+    # Skip files from the user's home directories
+    # many processes hold temporafy files there
+    '^/home/',
+    # Skip automatically generated files
+    '^.*icon-theme.cache',
+    # Skip font files
+    '^/var/cache/fontconfig/',
+    # Skip Nagios Spool
+    '^/var/lib/nagios3/spool/',
+    # Skip nagios spool files
+    '^/var/lib/nagios3/spool/checkresults/',
+    # Skip Postgresql files
+    '^/var/lib/postgresql/',
+    # Skip VDR lib files
+    '^/var/lib/vdr/',
+    # Skip Aio files found in MySQL servers
+    '^/[aio]',
+    # ignore files under /SYSV
+    '^/SYSV'
+]
 
 
 def __virtual__():
@@ -52,63 +103,9 @@ def _valid_deleted_file(path):
         ret = True
     if re.compile(r"\(path inode=[0-9]+\)$").search(path):
         ret = True
-    # We don't care about log files
-    if path.startswith('/var/log/') or path.startswith('/var/local/log/'):
-        ret = False
-    # Or about files under temporary locations
-    if path.startswith('/var/run/') or path.startswith('/var/local/run/'):
-        ret = False
-    # Or about files under /tmp
-    if path.startswith('/tmp/'):
-        ret = False
-    # Or about files under /dev/shm
-    if path.startswith('/dev/shm/'):
-        ret = False
-    # Or about files under /run
-    if path.startswith('/run/'):
-        ret = False
-    # Or about files under /drm
-    if path.startswith('/drm'):
-        ret = False
-    # Or about files under /var/tmp and /var/local/tmp
-    if path.startswith('/var/tmp/') or path.startswith('/var/local/tmp/'):
-        ret = False
-    # Or /dev/zero
-    if path.startswith('/dev/zero'):
-        ret = False
-    # Or /dev/pts (used by gpm)
-    if path.startswith('/dev/pts/'):
-        ret = False
-    # Or /usr/lib/locale
-    if path.startswith('/usr/lib/locale/'):
-        ret = False
-    # Skip files from the user's home directories
-    # many processes hold temporafy files there
-    if path.startswith('/home/'):
-        ret = False
-    # Skip automatically generated files
-    if path.endswith('icon-theme.cache'):
-        ret = False
-    # Skip font files
-    if path.startswith('/var/cache/fontconfig/'):
-        ret = False
-    # Skip Nagios Spool
-    if path.startswith('/var/lib/nagios3/spool/'):
-        ret = False
-    # Skip nagios spool files
-    if path.startswith('/var/lib/nagios3/spool/checkresults/'):
-        ret = False
-    # Skip Postgresql files
-    if path.startswith('/var/lib/postgresql/'):
-        ret = False
-    # Skip VDR lib files
-    if path.startswith('/var/lib/vdr/'):
-        ret = False
-    # Skip Aio files found in MySQL servers
-    if path.startswith('/[aio]'):
-        ret = False
-    # ignore files under /SYSV
-    if path.startswith('/SYSV'):
+
+    regex = re.compile("|".join(LIST_DIRS))
+    if regex.match(path):
         ret = False
     return ret
 
@@ -123,31 +120,36 @@ def _deleted_files():
     '''
     deleted_files = []
 
-    for proc in psutil.process_iter():
+    for proc in psutil.process_iter():  # pylint: disable=too-many-nested-blocks
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name'])
             try:
-                maps = salt.utils.files.fopen('/proc/{0}/maps'.format(pinfo['pid']))  # pylint: disable=resource-leakage
-                dirpath = '/proc/' + str(pinfo['pid']) + '/fd/'
-                listdir = os.listdir(dirpath)
+                with salt.utils.files.fopen('/proc/{0}/maps'.format(pinfo['pid'])) as maps:  # pylint: disable=resource-leakage
+                    dirpath = '/proc/' + six.text_type(pinfo['pid']) + '/fd/'
+                    listdir = os.listdir(dirpath)
+                    maplines = maps.readlines()
             except (OSError, IOError):
-                return False
+                yield False
 
             # /proc/PID/maps
-            maplines = maps.readlines()
-            maps.close()
             mapline = re.compile(r'^[\da-f]+-[\da-f]+ [r-][w-][x-][sp-] '
                                  r'[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$')
 
             for line in maplines:
+                line = salt.utils.stringutils.to_unicode(line)
                 matched = mapline.match(line)
-                if matched:
-                    path = matched.group(2)
-                    if path:
-                        if _valid_deleted_file(path):
-                            val = (pinfo['name'], pinfo['pid'], path[0:-10])
-                            if val not in deleted_files:
-                                deleted_files.append(val)
+                if not matched:
+                    continue
+                path = matched.group(2)
+                if not path:
+                    continue
+                valid = _valid_deleted_file(path)
+                if not valid:
+                    continue
+                val = (pinfo['name'], pinfo['pid'], path[0:-10])
+                if val not in deleted_files:
+                    deleted_files.append(val)
+                    yield val
 
             # /proc/PID/fd
             try:
@@ -164,17 +166,18 @@ def _deleted_files():
                                 filenames.append(os.path.join(root, name))
 
                     for filename in filenames:
-                        if _valid_deleted_file(filename):
-                            val = (pinfo['name'], pinfo['pid'], filename)
-                            if val not in deleted_files:
-                                deleted_files.append(val)
+                        valid = _valid_deleted_file(filename)
+                        if not valid:
+                            continue
+                        val = (pinfo['name'], pinfo['pid'], filename)
+                        if val not in deleted_files:
+                            deleted_files.append(val)
+                            yield val
             except OSError:
                 pass
 
         except psutil.NoSuchProcess:
             pass
-
-    return deleted_files
 
 
 def _format_output(kernel_restart, packages, verbose, restartable, nonrestartable, restartservicecommands,
@@ -209,7 +212,7 @@ def _format_output(kernel_restart, packages, verbose, restartable, nonrestartabl
             ret += "Found {0} processes using old versions of upgraded files.\n".format(len(packages))
             ret += "These are the packages:\n"
 
-        if len(restartable) > 0:
+        if restartable:
             ret += "Of these, {0} seem to contain systemd service definitions or init scripts " \
                    "which can be used to restart them:\n".format(len(restartable))
             for package in restartable:
@@ -217,15 +220,15 @@ def _format_output(kernel_restart, packages, verbose, restartable, nonrestartabl
                 for program in packages[package]['processes']:
                     ret += program + '\n'
 
-            if len(restartservicecommands) > 0:
+            if restartservicecommands:
                 ret += "\n\nThese are the systemd services:\n"
                 ret += '\n'.join(restartservicecommands)
 
-            if len(restartinitcommands) > 0:
+            if restartinitcommands:
                 ret += "\n\nThese are the initd scripts:\n"
                 ret += '\n'.join(restartinitcommands)
 
-        if len(nonrestartable) > 0:
+        if nonrestartable:
             ret += "\n\nThese processes {0} do not seem to have an associated init script " \
                    "to restart them:\n".format(len(nonrestartable))
             for package in nonrestartable:
@@ -311,7 +314,20 @@ def _kernel_versions_nilrt():
     return kernel_versions
 
 
-def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True):
+def _check_timeout(start_time, timeout):
+    '''
+    Name of the last installed kernel, for Red Hat based systems.
+
+    Returns:
+            List with name of last installed kernel as it is interpreted in output of `uname -a` command.
+    '''
+    timeout_milisec = timeout * 60000
+    if timeout_milisec < (int(round(time.time() * 1000)) - start_time):
+        raise salt.exceptions.TimeoutError('Timeout expired.')
+
+
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     '''
     Analyzes files openeded by running processes and seeks for packages which need to be restarted.
 
@@ -320,6 +336,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         blacklist: string or list of file paths to be ignored
         excludepid: string or list of process IDs to be ignored
         verbose: boolean, enables extensive output
+        timeout: int, timeout in minute
 
     Returns:
         True if no packages for restart found.
@@ -333,7 +350,11 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
 
         salt '*' restartcheck.restartcheck
     '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    start_time = int(round(time.time() * 1000))
     kernel_restart = True
+    verbose = kwargs.pop('verbose', True)
+    timeout = kwargs.pop('timeout', 5)
     if __grains__.get('os_family') == 'Debian':
         cmd_pkg_query = 'dpkg-query --listfiles '
         systemd_folder = '/lib/systemd/system/'
@@ -354,11 +375,14 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     # Check kernel versions
     kernel_current = __salt__['cmd.run']('uname -a')
     for kernel in kernel_versions:
+        _check_timeout(start_time, timeout)
         if kernel in kernel_current:
             kernel_restart = False
             break
 
     packages = {}
+    running_services = {}
+    restart_services = []
 
     if ignorelist:
         if not isinstance(ignorelist, list):
@@ -378,15 +402,19 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     else:
         excludepid = []
 
-    deleted_files = _deleted_files()
-
-    if not isinstance(deleted_files, list):
-        return {'result': False, 'comment': 'Could not get list of processes. '
-                                            '(Do you have root access?)'}
+    for service in __salt__['service.get_running']():
+        _check_timeout(start_time, timeout)
+        service_show = __salt__['service.show'](service)
+        if 'ExecMainPID' in service_show:
+            running_services[service] = int(service_show['ExecMainPID'])
 
     owners_cache = {}
+    for deleted_file in _deleted_files():
+        if deleted_file is False:
+            return {'result': False, 'comment': 'Could not get list of processes.'
+                                                ' (Do you have root access?)'}
 
-    for deleted_file in deleted_files:
+        _check_timeout(start_time, timeout)
         name, pid, path = deleted_file[0], deleted_file[1], deleted_file[2]
         if path in blacklist or pid in excludepid:
             continue
@@ -402,8 +430,14 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
             if not packagename:
                 packagename = name
             owners_cache[readlink] = packagename
+        for running_service in running_services:
+            _check_timeout(start_time, timeout)
+            if running_service not in restart_services and pid == running_services[running_service]:
+                if packagename and packagename not in ignorelist:
+                    restart_services.append(running_service)
+                    name = running_service
         if packagename and packagename not in ignorelist:
-            program = '\t' + str(pid) + ' ' + readlink + ' (file: ' + str(path) + ')'
+            program = '\t' + six.text_type(pid) + ' ' + readlink + ' (file: ' + six.text_type(path) + ')'
             if packagename not in packages:
                 packages[packagename] = {'initscripts': [], 'systemdservice': [], 'processes': [program],
                                          'process_name': name}
@@ -411,14 +445,16 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                 if program not in packages[packagename]['processes']:
                     packages[packagename]['processes'].append(program)
 
-    if len(packages) == 0 and not kernel_restart:
+    if not packages and not kernel_restart:
         return 'No packages seem to need to be restarted.'
 
     for package in packages:
+        _check_timeout(start_time, timeout)
         cmd = cmd_pkg_query + package
         paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
         while True:
+            _check_timeout(start_time, timeout)
             line = paths.stdout.readline()
             if not line:
                 break
@@ -436,6 +472,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                 sysfold_len = len(systemd_folder)
 
                 for line in servicefile.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
                     if line.find('Type=oneshot') > 0:
                         # scripts that does a single job and then exit
                         is_oneshot = True
@@ -450,7 +487,8 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
 
     # Alternatively, find init.d script or service that match the process name
     for package in packages:
-        if len(packages[package]['systemdservice']) == 0 and len(packages[package]['initscripts']) == 0:
+        _check_timeout(start_time, timeout)
+        if not packages[package]['systemdservice'] and not packages[package]['initscripts']:
             service = __salt__['service.available'](packages[package]['process_name'])
 
             if service:
@@ -465,14 +503,21 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     restartservicecommands = []
 
     for package in packages:
-        if len(packages[package]['initscripts']) > 0:
+        _check_timeout(start_time, timeout)
+        if packages[package]['initscripts']:
             restartable.append(package)
             restartinitcommands.extend(['service ' + s + ' restart' for s in packages[package]['initscripts']])
-        elif len(packages[package]['systemdservice']) > 0:
+        elif packages[package]['systemdservice']:
             restartable.append(package)
             restartservicecommands.extend(['systemctl restart ' + s for s in packages[package]['systemdservice']])
         else:
             nonrestartable.append(package)
+        if packages[package]['process_name'] in restart_services:
+            restart_services.remove(packages[package]['process_name'])
+
+    for restart_service in restart_services:
+        _check_timeout(start_time, timeout)
+        restartservicecommands.extend(['systemctl restart ' + restart_service])
 
     ret = _format_output(kernel_restart, packages, verbose, restartable, nonrestartable,
                          restartservicecommands, restartinitcommands)

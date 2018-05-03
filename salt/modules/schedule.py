@@ -7,8 +7,9 @@ Module for managing the Salt schedule on a minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy as pycopy
+import datetime
 import difflib
 import logging
 import os
@@ -57,7 +58,7 @@ SCHEDULE_CONF = [
         'after',
         'return_config',
         'return_kwargs',
-        'run_on_start'
+        'run_on_start',
         'skip_during_range',
         'run_after_skip_range',
 ]
@@ -957,21 +958,28 @@ def copy(name, target, **kwargs):
     return ret
 
 
-def postpone_job(name, current_time, new_time, **kwargs):
+def postpone_job(name,
+                 current_time,
+                 new_time,
+                 **kwargs):
     '''
     Postpone a job in the minion's schedule
 
-    Current time and new time should be specified as Unix timestamps
+    Current time and new time should be in date string format,
+    default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' schedule.postpone_job job current_time new_time
+
+        salt '*' schedule.postpone_job job current_time new_time time_fmt='%Y-%m-%dT%H:%M:%S'
     '''
 
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
     ret = {'comment': [],
            'result': True}
 
@@ -985,8 +993,14 @@ def postpone_job(name, current_time, new_time, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if not isinstance(current_time, six.integer_types):
-            ret['comment'] = 'Job current time must be an integer.'
+        try:
+            # Validate date string
+            datetime.datetime.strptime(current_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      new_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
             ret['result'] = False
             return ret
 
@@ -995,8 +1009,14 @@ def postpone_job(name, current_time, new_time, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if not isinstance(new_time, six.integer_types):
-            ret['comment'] = 'Job new time must be an integer.'
+        try:
+            # Validate date string
+            datetime.datetime.strptime(new_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      new_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
             ret['result'] = False
             return ret
 
@@ -1008,11 +1028,13 @@ def postpone_job(name, current_time, new_time, **kwargs):
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'func': 'postpone_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'postpone_job'}
         else:
@@ -1041,13 +1063,14 @@ def postpone_job(name, current_time, new_time, **kwargs):
     return ret
 
 
-def skip_job(name, time, **kwargs):
+def skip_job(name, current_time, **kwargs):
     '''
     Skip a job in the minion's schedule at specified time.
 
-    Time to skip should be specified as Unix timestamps
+    Time to skip should be specified as date string format,
+    default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1055,6 +1078,7 @@ def skip_job(name, time, **kwargs):
 
         salt '*' schedule.skip_job job time
     '''
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
 
     ret = {'comment': [],
            'result': True}
@@ -1063,9 +1087,20 @@ def skip_job(name, time, **kwargs):
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
 
-    if not time:
+    if not current_time:
         ret['comment'] = 'Job time is required.'
         ret['result'] = False
+    else:
+        # Validate date string
+        try:
+            datetime.datetime.strptime(current_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      current_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
+            ret['result'] = False
+            return ret
 
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be skipped in schedule.'.format(name)
@@ -1073,11 +1108,13 @@ def skip_job(name, time, **kwargs):
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
+                          'time_fmt': time_fmt,
                           'func': 'skip_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'skip_job'}
         else:
@@ -1110,7 +1147,7 @@ def show_next_fire_time(name, **kwargs):
     '''
     Show the next fire time for scheduled job
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1120,8 +1157,7 @@ def show_next_fire_time(name, **kwargs):
 
     '''
 
-    ret = {'comment': [],
-           'result': True}
+    ret = {'result': True}
 
     if not name:
         ret['comment'] = 'Job name is required.'
@@ -1139,7 +1175,10 @@ def show_next_fire_time(name, **kwargs):
         ret = {}
         ret['comment'] = 'Event module not available. Schedule show next fire time failed.'
         ret['result'] = True
-        log.debug(ret['comment'])
         return ret
 
-    return event_ret
+    if 'next_fire_time' in event_ret:
+        ret['next_fire_time'] = event_ret['next_fire_time']
+    else:
+        ret['comment'] = 'next fire time not available.'
+    return ret

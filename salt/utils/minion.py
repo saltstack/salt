@@ -15,9 +15,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 
-# Import 3rd-party libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 
@@ -143,7 +140,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.files.fopen(path, 'rb') as fp_:
-            if six.b('salt') in fp_.read():
+            if b'salt' in fp_.read():
                 return True
     except (OSError, IOError):
         return False

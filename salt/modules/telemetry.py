@@ -24,11 +24,12 @@ https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
 import salt.utils.json
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -137,7 +138,7 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
             get_url = _get_telemetry_base(profile) + "/alerts?deployment={0}".format(deployment_id)
             response = requests.get(get_url, headers=auth)
         except requests.exceptions.RequestException as e:
-            log.error(str(e))
+            log.error(six.text_type(e))
             return False
 
         http_result = {}
@@ -180,7 +181,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
     notification_channel_id = _retrieve_channel_id(notify_channel)
 
     if not notification_channel_id:
-        log.info("{0} channel does not exist, creating.".format(notify_channel))
+        log.info("%s channel does not exist, creating.", notify_channel)
 
         # create the notification channel and cache the id
         post_url = _get_telemetry_base(profile) + "/notification-channels"
@@ -191,8 +192,8 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
         }
         response = requests.post(post_url, data=salt.utils.json.dumps(data), headers=auth)
         if response.status_code == 200:
-            log.info("Successfully created EscalationPolicy {0} with EmailNotificationChannel {1}"
-                .format(data.get('name'), notify_channel))
+            log.info("Successfully created EscalationPolicy %s with EmailNotificationChannel %s",
+                     data.get('name'), notify_channel)
             notification_channel_id = response.json().get('_id')
             __context__["telemetry.channels"][notify_channel] = notification_channel_id
         else:
@@ -217,7 +218,7 @@ def get_alarms(deployment_id, profile="telemetry"):
     try:
         response = requests.get(_get_telemetry_base(profile) + "/alerts?deployment={0}".format(deployment_id), headers=auth)
     except requests.exceptions.RequestException as e:
-        log.error(str(e))
+        log.error(six.text_type(e))
         return False
 
     if response.status_code == 200:
@@ -267,7 +268,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         response = requests.post(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
         # TODO: May be we should retry?
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     if response.status_code >= 200 and response.status_code < 300:
         # update cache
@@ -277,10 +278,9 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         _update_cache(deployment_id, metric_name, response.json())
     else:
         log.error(
-            str('Failed to create alarm on metric: %s in deployment %s: payload: %s'),  # future lint: disable=blacklisted-function
-            salt.utils.stringutils.to_str(metric_name),
-            salt.utils.stringutils.to_str(deployment_id),
-            salt.utils.json.dumps(post_body)
+            'Failed to create alarm on metric: %s in '
+            'deployment %s: payload: %s',
+            metric_name, deployment_id, salt.utils.json.dumps(post_body)
         )
 
     return response.status_code >= 200 and response.status_code < 300, response.json()
@@ -321,7 +321,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         response = requests.put(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
         log.error('Update failed: %s', e)
-        return False, str(e)
+        return False, six.text_type(e)
 
     if response.status_code >= 200 and response.status_code < 300:
         # Also update cache
@@ -331,11 +331,11 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         log.info('Updated alarm on metric: %s in deployment: %s', metric_name, deployment_id)
         return True, response.json()
 
-    err_msg = str(  # future lint: disable=blacklisted-function
+    err_msg = six.text_type(  # future lint: disable=blacklisted-function
         'Failed to create alarm on metric: {0} in deployment: {1} '
         'payload: {2}').format(
-            salt.utils.stringutils.to_str(metric_name),
-            salt.utils.stringutils.to_str(deployment_id),
+            salt.utils.stringutils.to_unicode(metric_name),
+            salt.utils.stringutils.to_unicode(deployment_id),
             salt.utils.json.dumps(post_body)
         )
     log.error(err_msg)
@@ -371,11 +371,12 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
         try:
             response = requests.delete(delete_url, headers=auth)
             if metric_name:
-                log.debug("updating cache and delete {0} key from {1}".format(metric_name, deployment_id))
+                log.debug("updating cache and delete %s key from %s",
+                          metric_name, deployment_id)
                 _update_cache(deployment_id, metric_name, None)
 
         except requests.exceptions.RequestException as e:
-            log.error('Delete failed: {0}'.format(str(e)))
+            log.error('Delete failed: %s', e)
 
         if response.status_code != 200:
             failed_to_delete.append(id)

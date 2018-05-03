@@ -12,7 +12,7 @@ group :docker do
 end
 
 group :opennebula do
-  gem 'kitchen-opennebula', :git => 'https://github.com/gtmanfred/kitchen-opennebula.git'
+  gem 'kitchen-opennebula', '>=0.2.3'
   gem 'xmlrpc'
 end
 

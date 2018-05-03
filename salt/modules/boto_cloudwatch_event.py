@@ -48,8 +48,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import salt.utils.json
+
+# Import Salt libs
 import salt.utils.compat
+import salt.utils.json
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -74,9 +77,7 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch_event module cannot be loaded: boto libraries are unavailable.')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):

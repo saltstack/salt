@@ -20,6 +20,8 @@ import hmac
 import logging
 import salt.config
 import re
+import random
+from salt.ext import six
 
 # Import Salt libs
 import salt.utils.hashutils
@@ -88,9 +90,7 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-            role = result.text.encode(
-                result.encoding if result.encoding else 'utf-8'
-            )
+            role = result.text
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 
@@ -256,7 +256,7 @@ def sig4(method, endpoint, params, prov_dict,
     if token != '':
         new_headers['X-Amz-security-token'] = token
 
-    for header in sorted(new_headers.keys(), key=str.lower):
+    for header in sorted(new_headers.keys(), key=six.text_type.lower):
         lower_header = header.lower()
         a_canonical_headers.append('{0}:{1}'.format(lower_header, new_headers[header].strip()))
         a_signed_headers.append(lower_header)
@@ -441,8 +441,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
         )
         headers = {}
 
-    attempts = 5
-    while attempts > 0:
+    MAX_RETRIES = 6
+    attempts = 0
+    while attempts < MAX_RETRIES:
         log.debug('AWS Request: %s', requesturl)
         log.trace('AWS Request Parameters: %s', params_with_headers)
         try:
@@ -460,15 +461,23 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             # check to see if we should retry the query
             err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
-            if attempts > 0 and err_code and err_code in AWS_RETRY_CODES:
-                attempts -= 1
+            if attempts < MAX_RETRIES and err_code and err_code in AWS_RETRY_CODES:
+                attempts += 1
                 log.error(
                     'AWS Response Status Code and Error: [%s %s] %s; '
                     'Attempts remaining: %s',
                     exc.response.status_code, exc, data, attempts
                 )
-                # Wait a bit before continuing to prevent throttling
-                time.sleep(2)
+                # backoff an exponential amount of time to throttle requests
+                # during "API Rate Exceeded" failures as suggested by the AWS documentation here:
+                # https://docs.aws.amazon.com/AWSEC2/latest/APIReference/query-api-troubleshooting.html
+                # and also here:
+                # https://docs.aws.amazon.com/general/latest/gr/api-retries.html
+                # Failure to implement this approach results in a failure rate of >30% when using salt-cloud with
+                # "--parallel" when creating 50 or more instances with a fixed delay of 2 seconds.
+                # A failure rate of >10% is observed when using the salt-api with an asyncronous client
+                # specified (runner_async).
+                time.sleep(random.uniform(1, 2**attempts))
                 continue
 
             log.error(

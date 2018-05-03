@@ -491,6 +491,7 @@ def query(url,
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -532,6 +533,7 @@ def query(url,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
                 header_callback=header_callback,
+                connect_timeout=connect_timeout,
                 request_timeout=timeout,
                 proxy_host=proxy_host,
                 proxy_port=proxy_port,
@@ -566,8 +568,10 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result_text.decode('utf-8')
         ret['body'] = result_text
-        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
+        if 'Set-Cookie' in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
@@ -816,7 +820,7 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
@@ -897,12 +901,10 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie:
+        for item in list(cookie):
             if item in attribs:
                 continue
-            name = item
-            value = cookie[item]
-            del cookie[name]
+            value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
@@ -910,7 +912,7 @@ def parse_cookie_header(header):
 
         # Fill in missing required fields
         for req in reqd:
-            if req not in cookie.keys():
+            if req not in cookie:
                 cookie[req] = ''
         if cookie['version'] == '':
             cookie['version'] = 0

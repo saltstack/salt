@@ -6,7 +6,7 @@ Tests for datacenter related functions in salt.utils.vmware
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatacentersTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_datacenters'''
+    '''
+    Tests for salt.utils.vmware.get_datacenters
+    '''
 
     def setUp(self):
         patches = (
@@ -97,7 +99,9 @@ class GetDatacentersTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatacenterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_datacenter'''
+    '''
+    Tests for salt.utils.vmware.get_datacenter
+    '''
 
     def setUp(self):
         patches = (
@@ -136,7 +140,9 @@ class GetDatacenterTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDatacenterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.create_datacenter'''
+    '''
+    Tests for salt.utils.vmware.create_datacenter
+    '''
 
     def setUp(self):
         patches = (

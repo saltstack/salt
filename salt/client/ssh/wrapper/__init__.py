@@ -113,7 +113,7 @@ class FunctionWrapper(object):
                     self.opts,
                     argv,
                     mods=self.mods,
-                    wipe=True,
+                    disable_wipe=True,
                     fsclient=self.fsclient,
                     minion_opts=self.minion_opts,
                     **self.kwargs
@@ -125,7 +125,7 @@ class FunctionWrapper(object):
                         'stderr': stderr,
                         'retcode': retcode}
             try:
-                ret = salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+                ret = salt.utils.json.loads(stdout)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})

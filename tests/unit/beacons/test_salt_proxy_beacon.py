@@ -53,6 +53,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'proxies': {'p8000': ''}}]
 
             ret = salt_proxy.validate(config)
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
             ret = salt_proxy.beacon(config)
             self.assertEqual(ret, [{'p8000': 'Proxy p8000 is already running'}])
@@ -75,6 +76,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'proxies': {'p8000': ''}}]
 
             ret = salt_proxy.validate(config)
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
             ret = salt_proxy.beacon(config)
             self.assertEqual(ret, [{'p8000': 'Proxy p8000 was started'}])

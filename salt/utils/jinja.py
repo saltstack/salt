@@ -30,6 +30,7 @@ import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
@@ -66,9 +67,11 @@ class SaltCacheLoader(BaseLoader):
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
-        self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
+        self._file_client = None
+        # Instantiate the fileclient
+        self.file_client()
 
     def file_client(self):
         '''
@@ -396,7 +399,7 @@ def uuid_(val):
     return six.text_type(
         uuid.uuid5(
             GLOBAL_UUID,
-            salt.utils.data.encode(val)
+            salt.utils.stringutils.to_str(val)
         )
     )
 
@@ -485,6 +488,14 @@ def lst_avg(lst):
 
         2.5
     '''
+    salt.utils.versions.warn_until(
+        'Neon',
+        'This results of this function are currently being rounded.'
+        'Beginning in the Salt Neon release, results will no longer be '
+        'rounded and this warning will be removed.',
+        stacklevel=3
+    )
+
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
@@ -746,8 +757,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -849,6 +859,24 @@ class SerializerExtension(Extension, object):
             value = six.text_type(value)
         try:
             return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
+        except salt.utils.yaml.YAMLError as exc:
+            msg = 'Encountered error loading yaml: '
+            try:
+                # Reported line is off by one, add 1 to correct it
+                line = exc.problem_mark.line + 1
+                buf = exc.problem_mark.buffer
+                problem = exc.problem
+            except AttributeError:
+                # No context information available in the exception, fall back
+                # to the stringified version of the exception.
+                msg += six.text_type(exc)
+            else:
+                msg += '{0}\n'.format(problem)
+                msg += salt.utils.stringutils.get_context(
+                    buf,
+                    line,
+                    marker='    <======================')
+            raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
@@ -868,7 +896,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

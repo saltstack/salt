@@ -84,7 +84,7 @@ without extra parameters:
     salt-run nacl.enc 'asecretpass'
     salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
-.. code-block:: yam
+.. code-block:: yaml
 
     # a salt developers minion could have pillar data that includes a nacl public key
     nacl.config:
@@ -150,15 +150,20 @@ Optional small program to encrypt data without needing salt modules.
 
 '''
 
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import os
+
+# Import Salt libs
+from salt.ext import six
+import salt.syspaths
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.win_functions
 import salt.utils.win_dacl
-import salt.syspaths
-
 
 REQ_ERROR = None
 try:
@@ -181,9 +186,9 @@ def _get_config(**kwargs):
     config = {
         'box_type': 'sealedbox',
         'sk': None,
-        'sk_file': '/etc/salt/pki/master/nacl',
+        'sk_file': os.path.join(__opts__['pki_dir'], 'master', 'nacl'),
         'pk': None,
-        'pk_file': '/etc/salt/pki/master/nacl.pub',
+        'pk_file': os.path.join(__opts__['pki_dir'], 'master', 'nacl.pub'),
     }
     config_key = '{0}.config'.format(__virtualname__)
     try:
@@ -206,7 +211,7 @@ def _get_sk(**kwargs):
     sk_file = config['sk_file']
     if not key and sk_file:
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            key = str(keyf.read()).rstrip('\n')
+            key = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
     if key is None:
         raise Exception('no key or sk_file found')
     return base64.b64decode(key)
@@ -221,14 +226,14 @@ def _get_pk(**kwargs):
     pk_file = config['pk_file']
     if not pubkey and pk_file:
         with salt.utils.files.fopen(pk_file, 'rb') as keyf:
-            pubkey = str(keyf.read()).rstrip('\n')
+            pubkey = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
     if pubkey is None:
         raise Exception('no pubkey or pk_file found')
-    pubkey = str(pubkey)
+    pubkey = six.text_type(pubkey)
     return base64.b64decode(pubkey)
 
 
-def keygen(sk_file=None, pk_file=None):
+def keygen(sk_file=None, pk_file=None, **kwargs):
     '''
     Use libnacl to generate a keypair.
 
@@ -248,6 +253,14 @@ def keygen(sk_file=None, pk_file=None):
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.keygen
     '''
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        sk_file = kwargs['keyfile']
+
     if sk_file is None:
         kp = libnacl.public.SecretKey()
         return {'sk': base64.b64encode(kp.sk), 'pk': base64.b64encode(kp.pk)}
@@ -258,7 +271,7 @@ def keygen(sk_file=None, pk_file=None):
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
             kp = libnacl.public.SecretKey()
-            with salt.utils.files.fopen(sk_file, 'w') as keyf:
+            with salt.utils.files.fopen(sk_file, 'wb') as keyf:
                 keyf.write(base64.b64encode(kp.sk))
             if salt.utils.platform.is_windows():
                 cur_user = salt.utils.win_functions.get_current_user()
@@ -280,15 +293,15 @@ def keygen(sk_file=None, pk_file=None):
     if os.path.isfile(sk_file) and not os.path.isfile(pk_file):
         # generate pk using the sk
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            sk = str(keyf.read()).rstrip('\n')
+            sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
             sk = base64.b64decode(sk)
         kp = libnacl.public.SecretKey(sk)
-        with salt.utils.files.fopen(pk_file, 'w') as keyf:
+        with salt.utils.files.fopen(pk_file, 'wb') as keyf:
             keyf.write(base64.b64encode(kp.pk))
         return 'saved pk_file: {0}'.format(pk_file)
 
     kp = libnacl.public.SecretKey()
-    with salt.utils.files.fopen(sk_file, 'w') as keyf:
+    with salt.utils.files.fopen(sk_file, 'wb') as keyf:
         keyf.write(base64.b64encode(kp.sk))
     if salt.utils.platform.is_windows():
         cur_user = salt.utils.win_functions.get_current_user()
@@ -297,7 +310,7 @@ def keygen(sk_file=None, pk_file=None):
     else:
         # chmod 0600 file
         os.chmod(sk_file, 1536)
-    with salt.utils.files.fopen(pk_file, 'w') as keyf:
+    with salt.utils.files.fopen(pk_file, 'wb') as keyf:
         keyf.write(base64.b64encode(kp.pk))
     return 'saved sk_file:{0}  pk_file: {1}'.format(sk_file, pk_file)
 
@@ -308,6 +321,25 @@ def enc(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        kwargs['sk_file'] = kwargs['keyfile']
+
+    if 'key' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'key\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk\' argument instead.'
+        )
+        kwargs['sk'] = kwargs['key']
+
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'sealedbox':
         return sealedbox_encrypt(data, **kwargs)
@@ -338,13 +370,13 @@ def enc_file(name, out=None, **kwargs):
     except Exception as e:
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
-            data = f.read()
+            data = salt.utils.stringutils.to_unicode(f.read())
     d = enc(data, **kwargs)
     if out:
         if os.path.isfile(out):
             raise Exception('file:{0} already exist.'.format(out))
         with salt.utils.files.fopen(out, 'wb') as f:
-            f.write(d)
+            f.write(salt.utils.stringutils.to_bytes(d))
         return 'Wrote: {0}'.format(out)
     return d
 
@@ -355,6 +387,31 @@ def dec(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        kwargs['sk_file'] = kwargs['keyfile']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
+    if 'key' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'key\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk\' argument instead.'
+        )
+        kwargs['sk'] = kwargs['key']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'sealedbox':
         return sealedbox_decrypt(data, **kwargs)
@@ -385,13 +442,13 @@ def dec_file(name, out=None, **kwargs):
     except Exception as e:
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
-            data = f.read()
+            data = salt.utils.stringutils.to_unicode(f.read())
     d = dec(data, **kwargs)
     if out:
         if os.path.isfile(out):
             raise Exception('file:{0} already exist.'.format(out))
         with salt.utils.files.fopen(out, 'wb') as f:
-            f.write(d)
+            f.write(salt.utils.stringutils.to_bytes(d))
         return 'Wrote: {0}'.format(out)
     return d
 
@@ -409,6 +466,9 @@ def sealedbox_encrypt(data, **kwargs):
         salt-call --local nacl.sealedbox_encrypt datatoenc pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.sealedbox_encrypt datatoenc pk='vrwQF7cNiNAVQVAiS3bvcbJUnF0cN6fU9YTZD9mBfzQ='
     '''
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     pk = _get_pk(**kwargs)
     b = libnacl.sealed.SealedBox(pk)
     return base64.b64encode(b.encrypt(data))
@@ -428,6 +488,10 @@ def sealedbox_decrypt(data, **kwargs):
     '''
     if data is None:
         return None
+
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     sk = _get_sk(**kwargs)
     keypair = libnacl.public.SecretKey(sk)
     b = libnacl.sealed.SealedBox(keypair)
@@ -447,6 +511,9 @@ def secretbox_encrypt(data, **kwargs):
         salt-call --local nacl.secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
         salt-call --local nacl.secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
     '''
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     sk = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(sk)
     return base64.b64encode(b.encrypt(data))
@@ -467,6 +534,10 @@ def secretbox_decrypt(data, **kwargs):
     '''
     if data is None:
         return None
+
+    # ensure data is in bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     key = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(key=key)
     return b.decrypt(base64.b64decode(data))

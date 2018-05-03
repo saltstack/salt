@@ -103,8 +103,8 @@ RedHat Pygit2 Issues
 
 The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
 ``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
-pygit2_ and libgit2_ (which are from the EPEL repository and not managed
-directly by RedHat) need to be rebuilt against these updated dependencies.
+``pygit2`` and ``libgit2`` packages (which are from the EPEL repository) should
+be upgraded to the most recent versions, at least to ``0.24.2``.
 
 The below errors will show up in the master log if an incompatible
 ``python-pygit2`` package is installed:
@@ -123,30 +123,8 @@ package is installed:
 
     2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
 
-As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
-EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
-filed to get it rebuilt).
-
-In the meantime, you can work around this by downgrading ``http-parser``. To do
-this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
-the OS architecture you are using (x86_64, etc.). Then downgrade using the
-``rpm`` command. For example:
-
-.. code-block:: bash
-
-    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    Preparing...                          ################################# [100%]
-    Updating / installing...
-       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
-    Cleaning up / removing...
-       2:http-parser-2.7.1-3.el7          ################################# [100%]
-
-A restart of the salt-master daemon may be required to allow http(s)
-repositories to continue to be fetched.
-
-.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
-.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
+be required to allow http(s) repositories to continue to be fetched.
 
 
 GitPython
@@ -218,7 +196,7 @@ master:
          - gitfs
 
    .. note::
-       ``git`` also works here. Prior to the Oxygen release, *only* ``git``
+       ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
        would work.
 
 2. Specify one or more ``git://``, ``https://``, ``file://``, or ``ssh://``
@@ -336,9 +314,9 @@ configured gitfs remotes):
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_refspecs` (new in 2017.7.0)
-* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
-* :conf_master:`gitfs_ref_types` (new in Oxygen)
-* :conf_master:`gitfs_update_interval` (new in Oxygen)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
+* :conf_master:`gitfs_ref_types` (new in 2018.3.0)
+* :conf_master:`gitfs_update_interval` (new in 2018.3.0)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -392,7 +370,7 @@ tremendous amount of customization. Here's some example usage:
        ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
        available to per-remote configurations.
 
-    The ``all_saltenvs`` parameter is new in the Oxygen release.
+    The ``all_saltenvs`` parameter is new in the 2018.3.0 release.
 
 In the example configuration above, the following is true:
 
@@ -548,7 +526,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -575,7 +553,7 @@ single branch.
 Update Intervals
 ================
 
-Prior to the Oxygen release, GitFS would update its fileserver backends as part
+Prior to the 2018.3.0 release, GitFS would update its fileserver backends as part
 of a dedicated "maintenance" process, in which various routine maintenance
 tasks were performed. This tied the update interval to the
 :conf_master:`loop_interval` config option, and also forced all fileservers to

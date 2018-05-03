@@ -8,9 +8,6 @@ This is often useful if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I don't advise making your pillars public
 regardless if they are encrypted or not.
 
-When generating keys and encrypting passwords use --local when using salt-call for extra
-security. Also consider using just the salt runner nacl when encrypting pillar passwords.
-
 :configuration: The following configuration defaults can be
     define (pillar or config files) Avoid storing private keys in pillars! Ensure master does not have `pillar_opts=True`:
 
@@ -30,7 +27,7 @@ security. Also consider using just the salt runner nacl when encrypting pillar p
 
     .. code-block:: bash
 
-        salt-call nacl.enc sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
+        salt-run nacl.enc sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
 
 
 The nacl lib uses 32byte keys, these keys are base64 encoded to make your life more simple.
@@ -38,9 +35,9 @@ To generate your `sk_file` and `pk_file` use:
 
 .. code-block:: bash
 
-    salt-call --local nacl.keygen sk_file=/etc/salt/pki/master/nacl
+    salt-run nacl.keygen sk_file=/etc/salt/pki/master/nacl
     # or if you want to work without files.
-    salt-call --local nacl.keygen
+    salt-run nacl.keygen
     local:
         ----------
         pk:
@@ -59,14 +56,14 @@ Sealedbox only has one key that is for both encryption and decryption.
 
 .. code-block:: bash
 
-    salt-call --local nacl.enc asecretpass pk=/kfGX7PbWeu099702PBbKWLpG/9p06IQRswkdWHCDk0=
+    salt-run nacl.enc asecretpass pk=/kfGX7PbWeu099702PBbKWLpG/9p06IQRswkdWHCDk0=
     tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58=
 
 To decrypt the data:
 
 .. code-block:: bash
 
-    salt-call --local nacl.dec data='tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58=' \
+    salt-run nacl.dec data='tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58=' \
         sk='SVWut5SqNpuPeNzb1b9y6b2eXg2PLIog43GBzp48Sow='
 
 When the keys are defined in the master config you can use them from the nacl runner
@@ -84,7 +81,7 @@ without extra parameters:
     salt-run nacl.enc 'asecretpass'
     salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
-.. code-block:: yam
+.. code-block:: yaml
 
     # a salt developers minion could have pillar data that includes a nacl public key
     nacl.config:
@@ -94,7 +91,7 @@ The developer can then use a less-secure system to encrypt data.
 
 .. code-block:: bash
 
-    salt-call --local nacl.enc apassword
+    salt-run nacl.enc apassword
 
 
 Pillar files can include protected data that the salt master decrypts:
@@ -111,42 +108,7 @@ Larger files like certificates can be encrypted with:
 
 .. code-block:: bash
 
-    salt-call nacl.enc_file /tmp/cert.crt out=/tmp/cert.nacl
-    # or more advanced
-    cert=$(cat /tmp/cert.crt)
-    salt-call --out=newline_values_only nacl.enc_pub data="$cert" > /tmp/cert.nacl
-
-In pillars rended with jinja be sure to include `|json` so line breaks are encoded:
-
-.. code-block:: jinja
-
-    cert: "{{salt.nacl.dec('S2uogToXkgENz9...085KYt')|json}}"
-
-In states rendered with jinja it is also good pratice to include `|json`:
-
-.. code-block:: jinja
-
-    {{sls}} private key:
-        file.managed:
-            - name: /etc/ssl/private/cert.key
-            - mode: 700
-            - contents: "{{pillar['pillarexample']['cert_key']|json}}"
-
-
-Optional small program to encrypt data without needing salt modules.
-
-.. code-block:: python
-
-    #!/bin/python3
-    import sys, base64, libnacl.sealed
-    pk = base64.b64decode('YOURPUBKEY')
-    b = libnacl.sealed.SealedBox(pk)
-    data = sys.stdin.buffer.read()
-    print(base64.b64encode(b.encrypt(data)).decode())
-
-.. code-block:: bash
-
-    echo 'apassword' | nacl_enc.py
+    salt-run nacl.enc_file /tmp/cert.crt out=/tmp/cert.nacl
 
 '''
 
@@ -158,6 +120,8 @@ import os
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
 import salt.utils.win_functions
 import salt.utils.win_dacl
 import salt.syspaths
@@ -186,9 +150,9 @@ def _get_config(**kwargs):
     config = {
         'box_type': 'sealedbox',
         'sk': None,
-        'sk_file': '/etc/salt/pki/master/nacl',
+        'sk_file': os.path.join(__opts__['pki_dir'], 'nacl'),
         'pk': None,
-        'pk_file': '/etc/salt/pki/master/nacl.pub',
+        'pk_file': os.path.join(__opts__['pki_dir'], 'nacl.pub'),
     }
     config_key = '{0}.config'.format(__virtualname__)
     try:
@@ -233,7 +197,7 @@ def _get_pk(**kwargs):
     return base64.b64decode(pubkey)
 
 
-def keygen(sk_file=None, pk_file=None):
+def keygen(sk_file=None, pk_file=None, **kwargs):
     '''
     Use libnacl to generate a keypair.
 
@@ -248,11 +212,20 @@ def keygen(sk_file=None, pk_file=None):
 
     .. code-block:: bash
 
-        salt-call nacl.keygen
-        salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl
-        salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
-        salt-call --local nacl.keygen
+        salt-run nacl.keygen
+        salt-run nacl.keygen sk_file=/etc/salt/pki/master/nacl
+        salt-run nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
+        salt-run nacl.keygen
     '''
+
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        sk_file = kwargs['keyfile']
+
     if sk_file is None:
         kp = libnacl.public.SecretKey()
         return {'sk': base64.b64encode(kp.sk), 'pk': base64.b64encode(kp.pk)}
@@ -313,6 +286,26 @@ def enc(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
+
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        kwargs['sk_file'] = kwargs['keyfile']
+
+    if 'key' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'key\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk\' argument instead.'
+        )
+        kwargs['sk'] = kwargs['key']
+
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'sealedbox':
         return sealedbox_encrypt(data, **kwargs)
@@ -334,7 +327,6 @@ def enc_file(name, out=None, **kwargs):
     .. code-block:: bash
 
         salt-run nacl.enc_file name=/tmp/id_rsa
-        salt-call nacl.enc_file name=salt://crt/mycert out=/tmp/cert
         salt-run nacl.enc_file name=/tmp/id_rsa box_type=secretbox \
             sk_file=/etc/salt/pki/master/nacl.pub
     '''
@@ -360,6 +352,31 @@ def dec(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
+    if 'keyfile' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk_file\' argument instead.'
+        )
+        kwargs['sk_file'] = kwargs['keyfile']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
+    if 'key' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'key\' argument has been deprecated and will be removed in Salt '
+            '{version}. Please use \'sk\' argument instead.'
+        )
+        kwargs['sk'] = kwargs['key']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'sealedbox':
         return sealedbox_decrypt(data, **kwargs)
@@ -381,7 +398,6 @@ def dec_file(name, out=None, **kwargs):
     .. code-block:: bash
 
         salt-run nacl.dec_file name=/tmp/id_rsa.nacl
-        salt-call nacl.dec_file name=salt://crt/mycert.nacl out=/tmp/id_rsa
         salt-run nacl.dec_file name=/tmp/id_rsa.nacl box_type=secretbox \
             sk_file=/etc/salt/pki/master/nacl.pub
     '''
@@ -411,9 +427,10 @@ def sealedbox_encrypt(data, **kwargs):
     .. code-block:: bash
 
         salt-run nacl.sealedbox_encrypt datatoenc
-        salt-call --local nacl.sealedbox_encrypt datatoenc pk_file=/etc/salt/pki/master/nacl.pub
-        salt-call --local nacl.sealedbox_encrypt datatoenc pk='vrwQF7cNiNAVQVAiS3bvcbJUnF0cN6fU9YTZD9mBfzQ='
     '''
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     pk = _get_pk(**kwargs)
     b = libnacl.sealed.SealedBox(pk)
     return base64.b64encode(b.encrypt(data))
@@ -427,12 +444,16 @@ def sealedbox_decrypt(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.sealedbox_decrypt pEXHQM6cuaF7A=
-        salt-call --local nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
-        salt-call --local nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
+        salt-run nacl.sealedbox_decrypt pEXHQM6cuaF7A=
+        salt-run nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
+        salt-run nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
     '''
     if data is None:
         return None
+
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     sk = _get_sk(**kwargs)
     keypair = libnacl.public.SecretKey(sk)
     b = libnacl.sealed.SealedBox(keypair)
@@ -449,9 +470,12 @@ def secretbox_encrypt(data, **kwargs):
     .. code-block:: bash
 
         salt-run nacl.secretbox_encrypt datatoenc
-        salt-call --local nacl.secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
-        salt-call --local nacl.secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
+        salt-run nacl.secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
+        salt-run nacl.secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
     '''
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     sk = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(sk)
     return base64.b64encode(b.encrypt(data))
@@ -466,12 +490,16 @@ def secretbox_decrypt(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.secretbox_decrypt pEXHQM6cuaF7A=
-        salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
-        salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
+        salt-run nacl.secretbox_decrypt pEXHQM6cuaF7A=
+        salt-run nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
+        salt-run nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
     '''
     if data is None:
         return None
+
+    # ensure data is bytes
+    data = salt.utils.stringutils.to_bytes(data)
+
     key = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(key=key)
     return b.decrypt(base64.b64decode(data))

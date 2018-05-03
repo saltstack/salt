@@ -8,9 +8,9 @@ Module for managaging metadata in SmartOS Zones
 :maturity:      new
 :platform:      smartos
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs

@@ -9,6 +9,7 @@ import base64
 import hashlib
 import hmac
 import random
+import os
 
 # Import Salt libs
 from salt.ext import six
@@ -117,7 +118,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret
     Returns a boolean if the verification succeeded or failed.
     '''
-    if six.PY3:
+    if six.text_type:
         msg = salt.utils.stringutils.to_bytes(string)
         key = salt.utils.stringutils.to_bytes(shared_secret)
         challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
@@ -163,3 +164,39 @@ def get_hash(path, form='sha256', chunk_size=65536):
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
+
+
+class DigestCollector(object):
+    '''
+    Class to collect digest of the file tree.
+    '''
+
+    def __init__(self, form='sha256', buff=0x10000):
+        '''
+        Constructor of the class.
+        :param form:
+        '''
+        self.__digest = hasattr(hashlib, form) and getattr(hashlib, form)() or None
+        if self.__digest is None:
+            raise ValueError('Invalid hash type: {0}'.format(form))
+        self.__buff = buff
+
+    def add(self, path):
+        '''
+        Update digest with the file content by path.
+
+        :param path:
+        :return:
+        '''
+        with salt.utils.files.fopen(path, 'rb') as ifile:
+            for chunk in iter(lambda: ifile.read(self.__buff), b''):
+                self.__digest.update(chunk)
+
+    def digest(self):
+        '''
+        Get digest.
+
+        :return:
+        '''
+
+        return salt.utils.stringutils.to_str(self.__digest.hexdigest() + os.linesep)

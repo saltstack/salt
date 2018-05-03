@@ -60,8 +60,8 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
 import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -86,18 +86,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.1'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_s3_bucket module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.1'
+    )
 
 
 def __init__(opts):

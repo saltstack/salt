@@ -24,7 +24,7 @@ Module for managing Windows Users
     This currently only works with local user accounts, not domain accounts
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import time
 from datetime import datetime
@@ -168,10 +168,10 @@ def add(name,
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
         (number, context, message) = exc
-        log.error('Failed to create user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to create user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     update(name=name,
@@ -198,7 +198,8 @@ def update(name,
            unlock_account=None,
            password_never_expires=None,
            disallow_change_password=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Updates settings for the windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
 
@@ -251,9 +252,10 @@ def update(name,
 
     .. code-block:: bash
 
-        salt '*' user.update bob password=secret profile=C:\Users\Bob
+        salt '*' user.update bob password=secret profile=C:\\Users\\Bob
                  home=\\server\homeshare\bob homedrive=U:
     '''
+    # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
         name = _to_unicode(name)
         password = _to_unicode(password)
@@ -270,10 +272,10 @@ def update(name,
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
         (number, context, message) = exc
-        log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to update user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     # Check parameters to update
@@ -330,10 +332,10 @@ def update(name,
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
         (number, context, message) = exc
-        log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to update user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     return True
@@ -372,10 +374,10 @@ def delete(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        log.error('User not found: {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('User not found: %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     # Check if the user is logged in
@@ -384,9 +386,9 @@ def delete(name,
         sess_list = win32ts.WTSEnumerateSessions()
     except win32ts.error as exc:
         log.error('No logged in users found')
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
 
     # Is the user one that is logged in
     logged_in = False
@@ -403,13 +405,13 @@ def delete(name,
             try:
                 win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
             except win32ts.error as exc:
-                log.error('User not found: {0}'.format(name))
-                log.error('nbr: {0}'.format(exc.winerror))
-                log.error('ctx: {0}'.format(exc.funcname))
-                log.error('msg: {0}'.format(exc.strerror))
+                log.error('User not found: %s', name)
+                log.error('nbr: %s', exc.winerror)
+                log.error('ctx: %s', exc.funcname)
+                log.error('msg: %s', exc.strerror)
                 return False
         else:
-            log.error('User {0} is currently logged in.'.format(name))
+            log.error('User %s is currently logged in.', name)
             return False
 
     # Remove the User Profile directory
@@ -422,10 +424,10 @@ def delete(name,
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
-                log.error('Failed to remove profile for {0}'.format(name))
-                log.error('nbr: {0}'.format(exc.winerror))
-                log.error('ctx: {0}'.format(exc.funcname))
-                log.error('msg: {0}'.format(exc.strerror))
+                log.error('Failed to remove profile for %s', name)
+                log.error('nbr: %s', exc.winerror)
+                log.error('ctx: %s', exc.funcname)
+                log.error('msg: %s', exc.strerror)
                 return False
 
     # And finally remove the user account
@@ -433,10 +435,10 @@ def delete(name,
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
         (number, context, message) = exc
-        log.error('Failed to delete user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to delete user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     return True
@@ -1055,9 +1057,9 @@ def current(sam=False):
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
         log.error('Failed to get current user')
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         raise CommandExecutionError('Failed to get current user', info=exc)
 
     if not user_name:

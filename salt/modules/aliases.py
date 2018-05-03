@@ -34,7 +34,7 @@ def __get_aliases_filename():
     '''
     Return the path to the appropriate aliases file
     '''
-    return __salt__['config.option']('aliases.file')
+    return os.path.realpath(__salt__['config.option']('aliases.file'))
 
 
 def __parse_aliases():

@@ -2,7 +2,7 @@
 '''
 Manage a glusterfs pool
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -91,11 +91,15 @@ def _gluster_xml(cmd):
     if _gluster_ok(root):
         output = root.find('output')
         if output is not None:
-            log.info('Gluster call "{0}" succeeded: {1}'.format(cmd, root.find('output').text))
+            log.info('Gluster call "%s" succeeded: %s',
+                     cmd,
+                     root.find('output').text)
         else:
-            log.info('Gluster call "{0}" succeeded'.format(cmd))
+            log.info('Gluster call "%s" succeeded', cmd)
     else:
-        log.error('Failed gluster call: {0}: {1}'.format(cmd, root.find('opErrstr').text))
+        log.error('Failed gluster call: %s: %s',
+                  cmd,
+                  root.find('opErrstr').text)
 
     return root
 
@@ -131,7 +135,7 @@ def peer_status():
     The return value is a dictionary with peer UUIDs as keys and dicts of peer
     information as values. Hostnames are listed in one list. GlusterFS separates
     one of the hostnames but the only reason for this seems to be which hostname
-    happens to be used firts in peering.
+    happens to be used first in peering.
 
     CLI Example:
 
@@ -445,11 +449,11 @@ def start_volume(name, force=False):
 
     volinfo = info(name)
     if name not in volinfo:
-        log.error("Cannot start non-existing volume {0}".format(name))
+        log.error("Cannot start non-existing volume %s", name)
         return False
 
     if not force and volinfo[name]['status'] == '1':
-        log.info("Volume {0} already started".format(name))
+        log.info("Volume %s already started", name)
         return True
 
     return _gluster(cmd)
@@ -474,10 +478,10 @@ def stop_volume(name, force=False):
     '''
     volinfo = info()
     if name not in volinfo:
-        log.error('Cannot stop non-existing volume {0}'.format(name))
+        log.error('Cannot stop non-existing volume %s', name)
         return False
     if int(volinfo[name]['status']) != 1:
-        log.warning('Attempt to stop already stopped volume {0}'.format(name))
+        log.warning('Attempt to stop already stopped volume %s', name)
         return True
 
     cmd = 'volume stop {0}'.format(name)
@@ -499,7 +503,7 @@ def delete_volume(target, stop=True):
     '''
     volinfo = info()
     if target not in volinfo:
-        log.error('Cannot delete non-existing volume {0}'.format(target))
+        log.error('Cannot delete non-existing volume %s', target)
         return False
 
     # Stop volume if requested to and it is running
@@ -507,7 +511,7 @@ def delete_volume(target, stop=True):
 
     if not stop and running:
         # Fail if volume is running if stop is not requested
-        log.error('Volume {0} must be stopped before deletion'.format(target))
+        log.error('Volume %s must be stopped before deletion', target)
         return False
 
     if running:
@@ -531,7 +535,7 @@ def add_volume_bricks(name, bricks):
 
     volinfo = info()
     if name not in volinfo:
-        log.error('Volume {0} does not exist, cannot add bricks'.format(name))
+        log.error('Volume %s does not exist, cannot add bricks', name)
         return False
 
     new_bricks = []
@@ -546,7 +550,9 @@ def add_volume_bricks(name, bricks):
     for brick in bricks:
         if brick in volume_bricks:
             log.debug(
-                'Brick {0} already in volume {1}...excluding from command'.format(brick, name))
+                'Brick %s already in volume %s...excluding from command',
+                brick,
+                name)
         else:
             new_bricks.append(brick)
 

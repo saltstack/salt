@@ -50,8 +50,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import yaml  # pylint: disable=blacklisted-import
 
+# Import Salt libs
+from salt.ext import six
 import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -66,19 +69,17 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext import six
-
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch module cannot be loaded: boto libraries are unavailable.')
-    __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
-                                   module='ec2.cloudwatch',
-                                   pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
+                                       module='ec2.cloudwatch',
+                                       pack=__salt__)
+    return has_boto_reqs
 
 
 def get_alarm(name, region=None, key=None, keyid=None, profile=None):
@@ -168,9 +169,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
                 continue
             name = prefix + alarm["name"]
         del alarm["name"]
-        alarm_sls = []
-        alarm_sls.append({"name": name})
-        alarm_sls.append({"attributes": alarm})
+        alarm_sls = [{"name": name}, {"attributes": alarm}]
         results["manage alarm " + name] = {"boto_cloudwatch_alarm.present":
                                            alarm_sls}
     return _safe_dump(results)

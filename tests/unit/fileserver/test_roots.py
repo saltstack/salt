@@ -62,6 +62,14 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             cls.test_symlink_list_file_roots = {'base': [root_dir]}
         else:
             cls.test_symlink_list_file_roots = None
+        cls.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
+        with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
+            with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
+                for line in s_fp:
+                    d_fp.write(
+                        line.rstrip(b'\n').rstrip(b'\r') + os.linesep.encode('utf-8')
+                    )
 
     @classmethod
     def tearDownClass(cls):
@@ -73,6 +81,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
                 pass
+        salt.utils.files.rm_rf(cls.tmp_dir)
 
     def tearDown(self):
         del self.opts
@@ -92,10 +101,10 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
     def test_serve_file(self):
         with patch.dict(roots.__opts__, {'file_buffer_size': 262144}):
             load = {'saltenv': 'base',
-                    'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+                    'path': os.path.join(self.tmp_dir, 'testfile'),
                     'loc': 0
                     }
-            fnd = {'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+            fnd = {'path': os.path.join(self.tmp_dir, 'testfile'),
                    'rel': 'testfile'}
             ret = roots.serve_file(load, fnd)
 
@@ -144,10 +153,10 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
     def test_file_hash(self):
         load = {
                 'saltenv': 'base',
-                'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+                'path': os.path.join(self.tmp_dir, 'testfile'),
                 }
         fnd = {
-            'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+            'path': os.path.join(self.tmp_dir, 'testfile'),
             'rel': 'testfile'
         }
         ret = roots.file_hash(load, fnd)
@@ -187,9 +196,12 @@ class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_limit_traversal(self):
         '''
         1) Set up a deep directory structure
-        2) Enable the configuration option for 'limit_directory_traversal'
-        3) Ensure that we can find SLS files in a directory so long as there is an SLS file in a directory above.
-        4) Ensure that we cannot find an SLS file in a directory that does not have an SLS file in a directory above.
+        2) Enable the configuration option 'fileserver_limit_traversal'
+        3) Ensure that we can find SLS files in a directory so long as there is
+           an SLS file in a directory above.
+        4) Ensure that we cannot find an SLS file in a directory that does not
+           have an SLS file in a directory above.
+
         '''
         file_client_opts = self.get_temp_config('master')
         file_client_opts['fileserver_limit_traversal'] = True

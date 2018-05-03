@@ -34,7 +34,7 @@ Manage users with the pw command
 # someuser:*:1001:1001::0:0:SomeUser Name:/home/someuser:/bin/sh
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import copy
 import logging
 try:
@@ -106,7 +106,7 @@ def _update_gecos(name, key, value):
     Common code to change a user's GECOS information
     '''
     if not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False

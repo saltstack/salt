@@ -266,6 +266,7 @@ For example:
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import difflib
 import itertools
 import logging
@@ -282,6 +283,7 @@ from datetime import datetime   # python3 problem in the making?
 # Import salt libs
 import salt.loader
 import salt.payload
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
@@ -293,7 +295,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.locales import sdecode
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 if salt.utils.platform.is_windows():
@@ -312,6 +314,10 @@ log = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 __NOT_FOUND = object()
+
+__func_alias__ = {
+    'copy_': 'copy',
+}
 
 
 def _get_accumulator_filepath():
@@ -618,28 +624,34 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _find_keep_files(root, keep):
     '''
-    Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep) and part of exclude_pat
+    Compile a list of valid keep files (and directories).
     '''
-    removed = set()
     real_keep = set()
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
-                fn_ = os.path.dirname(fn_)
+                fn_ = os.path.abspath(os.path.dirname(fn_))
                 real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
                     break
+    return real_keep
+
+
+def _clean_dir(root, keep, exclude_pat):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep) and part of exclude_pat
+    '''
+    real_keep = _find_keep_files(root, keep)
+    removed = set()
 
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
@@ -1574,6 +1586,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_dir='',
             tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
@@ -1811,7 +1824,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -2038,6 +2051,22 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. code-block:: yaml
+
+            /etc/dhcp/dhcpd.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0755
+                - tmp_dir: '/etc/dhcp'
+                - contents: "# Managed by Salt"
+                - check_cmd: dhcpd -t -cf
+
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
         dependent on config file extension (e.g. the init-checkconf upstart
@@ -2100,7 +2129,7 @@ def managed(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2263,9 +2292,9 @@ def managed(name,
                 .format(contents_id)
             )
 
-        contents_are_binary = \
-            isinstance(use_contents, six.string_types) and '\0' in use_contents
-        if contents_are_binary:
+        if isinstance(use_contents, bytes) and b'\0' in use_contents:
+            contents = use_contents
+        elif isinstance(use_contents, six.string_types) and str('\0') in use_contents:
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
@@ -2454,7 +2483,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2804,7 +2833,7 @@ def directory(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -3623,7 +3652,9 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         This is only used when datetime is pulled from ``os.path.getmtime()``.
         Defaults to ``None`` which uses the timezone from the locale.
 
-    .. code-block: yaml
+    Usage example:
+
+    .. code-block:: yaml
 
         /var/backups/example_directory:
           file.retention_schedule:
@@ -3877,7 +3908,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     processing can be bypassed in order to pass an equal sign through to the
     remote shell command by manually specifying the kwarg:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
        update_config:
          file.line:
@@ -4141,11 +4172,20 @@ def blockreplace(
         append_if_not_found=False,
         prepend_if_not_found=False,
         backup='.bak',
-        show_changes=True):
+        show_changes=True,
+        append_newline=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 2017.7.5,2018.3.1
+        ``append_newline`` argument added. Additionally, to improve
+        idempotence, if the string represented by ``marker_end`` is found in
+        the middle of the line, the content preceding the marker will be
+        removed when the block is replaced. This allows one to remove
+        ``append_newline: False`` from the SLS and have the block properly
+        replaced if the end of the content block is immediately followed by the
+        ``marker_end`` (i.e. no newline before the marker).
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
@@ -4230,41 +4270,54 @@ def blockreplace(
         See the ``source_hash`` parameter description for :mod:`file.managed
         <salt.states.file.managed>` function for more details and examples.
 
-    template
-        The named templating engine will be used to render the downloaded file.
-        Defaults to ``jinja``. The following templates are supported:
+    template : jinja
+        Templating engine to be used to render the downloaded file. The
+        following engines are supported:
 
-        - :mod:`cheetah<salt.renderers.cheetah>`
-        - :mod:`genshi<salt.renderers.genshi>`
-        - :mod:`jinja<salt.renderers.jinja>`
-        - :mod:`mako<salt.renderers.mako>`
-        - :mod:`py<salt.renderers.py>`
-        - :mod:`wempy<salt.renderers.wempy>`
+        - :mod:`cheetah <salt.renderers.cheetah>`
+        - :mod:`genshi <salt.renderers.genshi>`
+        - :mod:`jinja <salt.renderers.jinja>`
+        - :mod:`mako <salt.renderers.mako>`
+        - :mod:`py <salt.renderers.py>`
+        - :mod:`wempy <salt.renderers.wempy>`
 
     context
-        Overrides default context variables passed to the template.
+        Overrides default context variables passed to the template
 
     defaults
-        Default context passed to the template.
+        Default context passed to the template
 
-    append_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be appended to the file. Default is ``False``
+    append_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be appended to the file.
 
-    prepend_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be prepended to the file. Default is ``False``
+    prepend_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be prepended to the file.
 
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``
-        return a boolean if any changes were made
+    show_changes : True
+        Controls how changes are presented. If ``True``, the ``Changes``
+        section of the state return will contain a unified diff of the changes
+        made. If False, then it will contain a boolean (``True`` if any changes
+        were made, otherwise ``False``).
+
+    append_newline
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is unspecified, then a newline will
+        only be added to the content block if it does not already end in a
+        newline.
+
+        .. versionadded:: 2017.7.5,2018.3.1
 
     Example of usage with an accumulator and with a variable:
 
@@ -4366,17 +4419,25 @@ def blockreplace(
         for index, item in enumerate(text):
             content += six.text_type(item)
 
-    changes = __salt__['file.blockreplace'](
-        name,
-        marker_start,
-        marker_end,
-        content=content,
-        append_if_not_found=append_if_not_found,
-        prepend_if_not_found=prepend_if_not_found,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes
-    )
+    try:
+        changes = __salt__['file.blockreplace'](
+            name,
+            marker_start,
+            marker_end,
+            content=content,
+            append_if_not_found=append_if_not_found,
+            prepend_if_not_found=prepend_if_not_found,
+            backup=backup,
+            dry_run=__opts__['test'],
+            show_changes=show_changes,
+            append_newline=append_newline)
+    except Exception as exc:
+        log.exception('Encountered error managing block')
+        ret['comment'] = (
+            'Encountered error managing block: {0}. '
+            'See the log for details.'.format(exc)
+        )
+        return ret
 
     if changes:
         ret['pchanges'] = {'diff': changes}
@@ -5099,122 +5160,426 @@ def prepend(name,
 
 def patch(name,
           source=None,
+          source_hash=None,
+          source_hash_name=None,
+          skip_verify=False,
+          template=None,
+          context=None,
+          defaults=None,
           options='',
-          dry_run_first=True,
+          reject_file=None,
+          strip=None,
+          saltenv=None,
           **kwargs):
     '''
-    Apply a patch to a file or directory.
+    Ensure that a patch has been applied to the specified file or directory
+
+    .. versionchanged:: Fluorine
+        The ``hash`` and ``dry_run_first`` options are now ignored, as the
+        logic which determines whether or not the patch has already been
+        applied no longer requires them. Additionally, this state now supports
+        patch files that modify more than one file. To use these sort of
+        patches, specify a directory (and, if necessary, the ``strip`` option)
+        instead of a file.
 
     .. note::
-
-        A suitable ``patch`` executable must be available on the minion when
-        using this state function.
+        A suitable ``patch`` executable must be available on the minion. Also,
+        keep in mind that the pre-check this state does to determine whether or
+        not changes need to be made will create a temp file and send all patch
+        output to that file. This means that, in the event that the patch would
+        not have applied cleanly, the comment included in the state results will
+        reference a temp file that will no longer exist once the state finishes
+        running.
 
     name
-        The file or directory to which the patch will be applied.
+        The file or directory to which the patch should be applied
 
     source
-        The source patch to download to the minion, this source file must be
-        hosted on the salt master server. If the file is located in the
-        directory named spam, and is called eggs, the source string is
-        salt://spam/eggs. A source is required.
+        The patch file to apply
 
-    hash
-        The hash of the patched file. If the hash of the target file matches
-        this value then the patch is assumed to have been applied. For versions
-        2016.11.4 and newer, the hash can be specified without an accompanying
-        hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``), but for earlier
-        releases it is necessary to also specify the hash type in the format
-        ``<hash_type>:<hash_value>`` (e.g.
-        ``md5:e138491e9d5b97023cea823fe17bac22``).
+        .. versionchanged:: Fluorine
+            The source can now be from any file source supported by Salt
+            (``salt://``, ``http://``, ``https://``, ``ftp://``, etc.).
+            Templating is also now supported.
+
+    source_hash
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`.
+
+        .. versionadded:: Fluorine
+
+    source_hash_name
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`
+
+        .. versionadded:: Fluorine
+
+    skip_verify
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`
+
+        .. versionadded:: Fluorine
+
+    template
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`
+
+        .. versionadded:: Fluorine
+
+    context
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`
+
+        .. versionadded:: Fluorine
+
+    defaults
+        Works the same way as in :py:func:`file.managed
+        <salt.states.file.managed>`
+
+        .. versionadded:: Fluorine
 
     options
-        Extra options to pass to patch.
+        Extra options to pass to patch. This should not be necessary in most
+        cases.
 
-    dry_run_first : ``True``
-        Run patch with ``--dry-run`` first to check if it will apply cleanly.
+        .. note::
+            For best results, short opts should be separate from one another.
+            The ``-N`` and ``-r``, and ``-o`` options are used internally by
+            this state and cannot be used here. Additionally, instead of using
+            ``-pN`` or ``--strip=N``, use the ``strip`` option documented
+            below.
+
+    reject_file
+        If specified, any rejected hunks will be written to this file. If not
+        specified, then they will be written to a temp file which will be
+        deleted when the state finishes running.
+
+        .. important::
+            The parent directory must exist. Also, this will overwrite the file
+            if it is already present.
+
+        .. versionadded:: Fluorine
+
+    strip
+        Number of directories to strip from paths in the patch file. For
+        example, using the below SLS would instruct Salt to use ``-p1`` when
+        applying the patch:
+
+        .. code-block:: yaml
+
+            /etc/myfile.conf:
+              file.patch:
+                - source: salt://myfile.patch
+                - strip: 1
+
+        .. versionadded:: Fluorine
+            In previous versions, ``-p1`` would need to be passed as part of
+            the ``options`` value.
 
     saltenv
         Specify the environment from which to retrieve the patch file indicated
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
 
+        .. note::
+            Ignored when the patch file is from a non-``salt://`` source.
+
     **Usage:**
 
     .. code-block:: yaml
 
-        # Equivalent to ``patch --forward /opt/file.txt file.patch``
-        /opt/file.txt:
+        # Equivalent to ``patch --forward /opt/myfile.txt myfile.patch``
+        /opt/myfile.txt:
           file.patch:
-            - source: salt://file.patch
-            - hash: e138491e9d5b97023cea823fe17bac22
-
-    .. note::
-        For minions running version 2016.11.3 or older, the hash in the example
-        above would need to be specified with the hash type (i.e.
-        ``md5:e138491e9d5b97023cea823fe17bac22``).
+            - source: salt://myfile.patch
     '''
-    hash_ = kwargs.pop('hash', None)
-
-    if 'env' in kwargs:
-        # "env" is not supported; Use "saltenv".
-        kwargs.pop('env')
-
-    name = os.path.expanduser(name)
-
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not salt.utils.path.which('patch'):
+        ret['comment'] = 'patch executable not found on minion'
+        return ret
+
+    # is_dir should be defined if we proceed past the if/else block below, but
+    # just in case, avoid a NameError.
+    is_dir = False
+
     if not name:
-        return _error(ret, 'Must provide name to file.patch')
-    check_res, check_msg = _check_file(name)
-    if not check_res:
-        return _error(ret, check_msg)
-    if not source:
-        return _error(ret, 'Source is required')
-    if hash_ is None:
-        return _error(ret, 'Hash is required')
+        ret['comment'] = 'A file/directory to be patched is required'
+        return ret
+    else:
+        try:
+            name = os.path.expanduser(name)
+        except Exception:
+            ret['comment'] = 'Invalid path \'{0}\''.format(name)
+            return ret
+        else:
+            if not os.path.isabs(name):
+                ret['comment'] = '{0} is not an absolute path'.format(name)
+                return ret
+            elif not os.path.exists(name):
+                ret['comment'] = '{0} does not exist'.format(name)
+                return ret
+            else:
+                is_dir = os.path.isdir(name)
+
+    for deprecated_arg in ('hash', 'dry_run_first'):
+        if deprecated_arg in kwargs:
+            ret.setdefault('warnings', []).append(
+                'The \'{0}\' argument is no longer used and has been '
+                'ignored.'.format(deprecated_arg)
+            )
+
+    if reject_file is not None:
+        try:
+            reject_file_parent = os.path.dirname(reject_file)
+        except Exception:
+            ret['comment'] = 'Invalid path \'{0}\' for reject_file'.format(
+                reject_file
+            )
+            return ret
+        else:
+            if not os.path.isabs(reject_file_parent):
+                ret['comment'] = '\'{0}\' is not an absolute path'.format(
+                    reject_file
+                )
+                return ret
+            elif not os.path.isdir(reject_file_parent):
+                ret['comment'] = (
+                    'Parent directory for reject_file \'{0}\' either does '
+                    'not exist, or is not a directory'.format(reject_file)
+                )
+                return ret
+
+    sanitized_options = []
+    options = salt.utils.args.shlex_split(options)
+    index = 0
+    max_index = len(options) - 1
+    # Not using enumerate here because we may need to consume more than one
+    # option if --strip is used.
+    blacklisted_options = []
+    while index <= max_index:
+        option = options[index]
+        if not isinstance(option, six.string_types):
+            option = six.text_type(option)
+
+        for item in ('-N', '--forward', '-r', '--reject-file', '-o', '--output'):
+            if option.startswith(item):
+                blacklisted = option
+                break
+        else:
+            blacklisted = None
+
+        if blacklisted is not None:
+            blacklisted_options.append(blacklisted)
+
+        if option.startswith('-p'):
+            try:
+                strip = int(option[2:])
+            except Exception:
+                ret['comment'] = (
+                    'Invalid format for \'-p\' CLI option. Consider using '
+                    'the \'strip\' option for this state.'
+                )
+                return ret
+        elif option.startswith('--strip'):
+            if '=' in option:
+                # Assume --strip=N
+                try:
+                    strip = int(option.rsplit('=', 1)[-1])
+                except Exception:
+                    ret['comment'] = (
+                        'Invalid format for \'-strip\' CLI option. Consider '
+                        'using the \'strip\' option for this state.'
+                    )
+                    return ret
+            else:
+                # Assume --strip N and grab the next option in the list
+                try:
+                    strip = int(options[index + 1])
+                except Exception:
+                    ret['comment'] = (
+                        'Invalid format for \'-strip\' CLI option. Consider '
+                        'using the \'strip\' option for this state.'
+                    )
+                    return ret
+                else:
+                    # We need to increment again because we grabbed the next
+                    # option in the list.
+                    index += 1
+        else:
+            sanitized_options.append(option)
+
+        # Increment the index
+        index += 1
+
+    if blacklisted_options:
+        ret['comment'] = (
+            'The following CLI options are not allowed: {0}'.format(
+                ', '.join(blacklisted_options)
+            )
+        )
+        return ret
+
+    options = sanitized_options
 
     try:
-        if hash_ and __salt__['file.check_hash'](name, hash_):
-            ret['result'] = True
-            ret['comment'] = 'Patch is already applied'
-            return ret
-    except (SaltInvocationError, ValueError) as exc:
-        ret['comment'] = exc.__str__()
-        return ret
-
-    # get cached file or copy it to cache
-    cached_source_path = __salt__['cp.cache_file'](source, __env__)
-    if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
-                          .format(source, __env__))
-        return ret
-
-    log.debug(
-        'State patch.applied cached source %s -> %s',
-        source, cached_source_path
-    )
-
-    if dry_run_first or __opts__['test']:
-        ret['changes'] = __salt__['file.patch'](
-            name, cached_source_path, options=options, dry_run=True
-        )
-        if __opts__['test']:
-            ret['comment'] = 'File {0} will be patched'.format(name)
-            ret['result'] = None
-            return ret
-        if ret['changes']['retcode'] != 0:
-            return ret
-
-    ret['changes'] = __salt__['file.patch'](
-        name, cached_source_path, options=options
-    )
-    ret['result'] = ret['changes']['retcode'] == 0
-    # No need to check for SaltInvocationError or ValueError this time, since
-    # these exceptions would have been caught above.
-    if ret['result'] and hash_ and not __salt__['file.check_hash'](name, hash_):
+        source_match = __salt__['file.source_list'](source,
+                                                    source_hash,
+                                                    __env__)[0]
+    except CommandExecutionError as exc:
         ret['result'] = False
-        ret['comment'] = 'Hash mismatch after patch was applied'
-    return ret
+        ret['comment'] = exc.strerror
+        return ret
+    else:
+        # Passing the saltenv to file.managed to pull down the patch file is
+        # not supported, because the saltenv is already being passed via the
+        # state compiler and this would result in two values for that argument
+        # (and a traceback). Therefore, we will add the saltenv to the source
+        # URL to ensure we pull the file from the correct environment.
+        if saltenv is not None:
+            source_match_url, source_match_saltenv = \
+                salt.utils.url.parse(source_match)
+            if source_match_url.startswith('salt://'):
+                if source_match_saltenv is not None \
+                        and source_match_saltenv != saltenv:
+                    ret.setdefault('warnings', []).append(
+                        'Ignoring \'saltenv\' option in favor of saltenv '
+                        'included in the source URL.'
+                    )
+                else:
+                    source_match += '?saltenv={0}'.format(saltenv)
+
+    cleanup = []
+
+    try:
+        patch_file = salt.utils.files.mkstemp()
+        cleanup.append(patch_file)
+
+        try:
+            orig_test = __opts__['test']
+            __opts__['test'] = False
+            sys.modules[__salt__['test.ping'].__module__].__opts__['test'] = False
+            result = managed(patch_file,
+                             source=source_match,
+                             source_hash=source_hash,
+                             source_hash_name=source_hash_name,
+                             skip_verify=skip_verify,
+                             template=template,
+                             context=context,
+                             defaults=defaults)
+        except Exception as exc:
+            msg = 'Failed to cache patch file {0}: {1}'.format(
+                salt.utils.url.redact_http_basic_auth(source_match),
+                exc
+            )
+            log.exception(msg)
+            ret['comment'] = msg
+            return ret
+        else:
+            log.debug('file.managed: %s', result)
+        finally:
+            __opts__['test'] = orig_test
+            sys.modules[__salt__['test.ping'].__module__].__opts__['test'] = orig_test
+
+        if not result['result']:
+            log.debug(
+                'failed to download %s',
+                salt.utils.url.redact_http_basic_auth(source_match)
+            )
+            return result
+
+        def _patch(patch_file, options=None, dry_run=False):
+            patch_opts = copy.copy(sanitized_options)
+            if options is not None:
+                patch_opts.extend(options)
+            return __salt__['file.patch'](
+                name,
+                patch_file,
+                options=patch_opts,
+                dry_run=dry_run)
+
+        if reject_file is not None:
+            patch_rejects = reject_file
+        else:
+            # No rejects file specified, create a temp file
+            patch_rejects = salt.utils.files.mkstemp()
+            cleanup.append(patch_rejects)
+
+        patch_output = salt.utils.files.mkstemp()
+        cleanup.append(patch_output)
+
+        # Older patch releases can only write patch output to regular files,
+        # meaning that /dev/null can't be relied on. Also, if we ever want this
+        # to work on Windows with patch.exe, /dev/null is a non-starter.
+        # Therefore, redirect all patch output to a temp file, which we will
+        # then remove.
+        patch_opts = ['-N', '-r', patch_rejects, '-o', patch_output]
+        if is_dir and strip is not None:
+            patch_opts.append('-p{0}'.format(strip))
+
+        pre_check = _patch(patch_file, patch_opts)
+        if pre_check['retcode'] != 0:
+            # Try to reverse-apply hunks from rejects file using a dry-run.
+            # If this returns a retcode of 0, we know that the patch was
+            # already applied. Rejects are written from the base of the
+            # directory, so the strip option doesn't apply here.
+            reverse_pass = _patch(patch_rejects, ['-R', '-f'], dry_run=True)
+            already_applied = reverse_pass['retcode'] == 0
+
+            if already_applied:
+                ret['comment'] = 'Patch was already applied'
+                ret['result'] = True
+                return ret
+            else:
+                ret['comment'] = (
+                    'Patch would not apply cleanly, no changes made. Results '
+                    'of dry-run are below.'
+                )
+                if reject_file is None:
+                    ret['comment'] += (
+                        ' Run state again using the reject_file option to '
+                        'save rejects to a persistent file.'
+                    )
+                opts = copy.copy(__opts__)
+                opts['color'] = False
+                ret['comment'] += '\n\n' + salt.output.out_format(
+                    pre_check,
+                    'nested',
+                    opts,
+                    nested_indent=14)
+                return ret
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The patch would be applied'
+            ret['changes'] = pre_check
+            return ret
+
+        # If we've made it here, the patch should apply cleanly
+        patch_opts = []
+        if is_dir and strip is not None:
+            patch_opts.append('-p{0}'.format(strip))
+        ret['changes'] = _patch(patch_file, patch_opts)
+
+        if ret['changes']['retcode'] == 0:
+            ret['comment'] = 'Patch successfully applied'
+            ret['result'] = True
+        else:
+            ret['comment'] = 'Failed to apply patch'
+
+        return ret
+
+    finally:
+        # Clean up any temp files
+        for path in cleanup:
+            try:
+                os.remove(path)
+            except OSError as exc:
+                if exc.errno != os.errno.ENOENT:
+                    log.error(
+                        'file.patch: Failed to remove temp file %s: %s',
+                        path, exc
+                    )
 
 
 def touch(name, atime=None, mtime=None, makedirs=False):
@@ -5289,21 +5654,25 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     return ret
 
 
-def copy(
-        name,
-        source,
-        force=False,
-        makedirs=False,
-        preserve=False,
-        user=None,
-        group=None,
-        mode=None,
-        subdir=False,
-        **kwargs):
+def copy_(name,
+          source,
+          force=False,
+          makedirs=False,
+          preserve=False,
+          user=None,
+          group=None,
+          mode=None,
+          subdir=False,
+          **kwargs):
     '''
-    If the source file exists on the system, copy it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the file defined by the ``source`` option exists on the minion, copy it
+    to the named path. The file will not be overwritten if it already exists,
+    unless the ``force`` option is set to ``True``.
+
+    .. note::
+        This state only copies files from one location on a minion to another
+        location on the same minion. For copying files from the master, use a
+        :py:func:`file.managed <salt.states.file.managed>` state.
 
     name
         The location of the file to copy to
@@ -5696,6 +6065,7 @@ def serialize(name,
               merge_if_exists=False,
               encoding=None,
               encoding_errors='strict',
+              serializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -5777,6 +6147,33 @@ def serialize(name,
 
         .. versionadded:: 2014.7.0
 
+    serializer_opts
+        Pass through options to serializer. For example:
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
+
+        The valid opts are the additional opts (i.e. not the data being
+        serialized) for the function used to serialize the data. Documentation
+        for the these functions can be found in the list below:
+
+        - For **yaml**: `yaml.dump()`_
+        - For **json**: `json.dumps()`_
+        - For **python**: `pprint.pformat()`_
+
+        .. _`yaml.dump()`: https://pyyaml.org/wiki/PyYAMLDocumentation
+        .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
+        .. _`pprint.pformat()`: https://docs.python.org/2/library/pprint.html#pprint.pformat
+
+        .. versionadded:: Fluorine
+
     For example, this state:
 
     .. code-block:: yaml
@@ -5814,14 +6211,20 @@ def serialize(name,
 
     name = os.path.expanduser(name)
 
-    default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
-                              'json.serialize': {'indent': 2,
-                                       'separators': (',', ': '),
-                                       'sort_keys': True}
-                              }
+    # Set some defaults
+    options = {
+        'yaml.serialize': {
+            'default_flow_style': False,
+        },
+        'json.serialize': {
+            'indent': 2,
+            'separators': (',', ': '),
+            'sort_keys': True,
+        }
+    }
     if encoding:
-        default_serializer_opts['yaml.serialize'].update({'allow_unicode': True})
-        default_serializer_opts['json.serialize'].update({'ensure_ascii': False})
+        options['yaml.serialize'].update({'allow_unicode': True})
+        options['json.serialize'].update({'ensure_ascii': False})
 
     ret = {'changes': {},
            'comment': '',
@@ -5869,6 +6272,11 @@ def serialize(name,
                 'result': False
                 }
 
+    if serializer_opts:
+        options.get(serializer_name, {}).update(
+            salt.utils.data.repack_dictlist(serializer_opts)
+        )
+
     if merge_if_exists:
         if os.path.isfile(name):
             if '{0}.deserialize'.format(formatter) not in __serializers__:
@@ -5879,7 +6287,7 @@ def serialize(name,
                         'result': False}
 
             with salt.utils.files.fopen(name, 'r') as fhr:
-                existing_data = __serializers__[deserializer_name](fhr)
+                existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
@@ -5888,7 +6296,7 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
+    contents = __serializers__[serializer_name](dataset, **options.get(serializer_name, {}))
 
     contents += '\n'
 
@@ -6626,7 +7034,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.

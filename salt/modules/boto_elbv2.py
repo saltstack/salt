@@ -48,10 +48,10 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import Salt libs
-
-# Import third party libs
 from salt.ext import six
+import salt.utils.versions
 
+# Import third-party libs
 try:
     # pylint: disable=unused-import
     import salt.utils.boto3
@@ -71,10 +71,10 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
-    __utils__['boto3.assign_funcs'](__name__, 'elbv2')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'elbv2')
+    return has_boto_reqs
 
 
 def create_target_group(name,

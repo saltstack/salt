@@ -11,7 +11,7 @@ and manage SQL Server Roles
     yolo:
       mssql_role.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

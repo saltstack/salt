@@ -14,7 +14,7 @@ Master config file.
       - gitfs
 
 .. note::
-    ``git`` also works here. Prior to the Oxygen release, *only* ``git``
+    ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
     would work.
 
 The Git fileserver backend supports both pygit2_ and GitPython_, to provide the

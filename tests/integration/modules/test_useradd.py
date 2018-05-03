@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import string
 import random
 
@@ -117,6 +117,31 @@ class UseraddModuleTestWindows(ModuleCase):
             random.choice(string.ascii_uppercase + string.digits)
             for x in range(size))
 
+    def setUp(self):
+        self.user_name = self.__random_string()
+        self.group_name = self.__random_string()
+
+    def tearDown(self):
+        self.run_function('user.delete', [self.user_name, True, True])
+        self.run_function('group.delete', [self.group_name])
+
+    def _add_user(self):
+        '''
+        helper class to add user
+        '''
+        if self.run_function('user.add', [self.user_name]) is False:
+            self.run_function('user.delete', [self.user_name, True, True])
+            self.skipTest('Failed to create user')
+
+    def _add_group(self):
+        '''
+        helper class to add group
+        '''
+        if self.run_function('group.add', [self.group_name]) is False:
+            # Skip because creating is not what we're testing here
+            self.run_function('group.delete', [self.group_name, True, True])
+            self.skipTest('Failed to create group')
+
     def test_add_user(self):
         '''
         Test adding a user
@@ -185,3 +210,84 @@ class UseraddModuleTestWindows(ModuleCase):
         finally:
             self.run_function('user.delete', [user_name, True, True])
             self.run_function('group.delete', [group_name])
+
+    def test_add_user_addgroup(self):
+        '''
+        Test adding a user to a group with groupadd
+        '''
+        self._add_group()
+        self._add_user()
+        self.run_function('user.addgroup', [self.user_name, self.group_name])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['groups'], [self.group_name])
+
+    def test_user_chhome(self):
+        '''
+        Test changing a users home dir
+        '''
+        self._add_user()
+        user_dir = r'c:\salt'
+        self.run_function('user.chhome', [self.user_name, user_dir])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['home'], user_dir)
+
+    def test_user_chprofile(self):
+        '''
+        Test changing a users profile
+        '''
+        self._add_user()
+        config = r'c:\salt\config'
+        self.run_function('user.chprofile', [self.user_name, config])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['profile'], config)
+
+    def test_user_chfullname(self):
+        '''
+        Test changing a users fullname
+        '''
+        self._add_user()
+        name = 'Salt Test'
+        self.run_function('user.chfullname', [self.user_name, name])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['fullname'], name)
+
+    def test_user_delete(self):
+        '''
+        Test deleting a user
+        '''
+        self._add_user()
+        self.assertTrue(self.run_function('user.info', [self.user_name])['active'])
+        self.run_function('user.delete', [self.user_name])
+        self.assertEqual({}, self.run_function('user.info', [self.user_name]))
+
+    def test_user_removegroup(self):
+        '''
+        Test removing a group
+        '''
+        self._add_user()
+        self._add_group()
+        self.run_function('user.addgroup', [self.user_name, self.group_name])
+        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        self.run_function('user.removegroup', [self.group_name])
+        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+
+    def test_user_rename(self):
+        '''
+        Test changing a users name
+        '''
+        self._add_user()
+        name = 'newuser'
+        self.run_function('user.rename', [self.user_name, name])
+        info = self.run_function('user.info', [name])
+        self.assertTrue(info['active'])
+
+        #delete new user
+        self.run_function('user.delete', [name, True, True])
+
+    def test_user_setpassword(self):
+        '''
+        Test setting a password
+        '''
+        self._add_user()
+        passwd = 'sup3rs3cr3T!'
+        self.assertTrue(self.run_function('user.setpassword', [self.user_name, passwd]))

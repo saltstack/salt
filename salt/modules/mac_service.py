@@ -3,19 +3,18 @@
 The service module for macOS
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 import re
-import plistlib
 
 # Import salt libs
-import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -53,73 +52,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _launchd_paths():
-    '''
-    Paths where launchd services can be found
-    '''
-    return [
-        '/Library/LaunchAgents',
-        '/Library/LaunchDaemons',
-        '/System/Library/LaunchAgents',
-        '/System/Library/LaunchDaemons',
-    ]
-
-
-@decorators.memoize
-def _available_services():
-    '''
-    Return a dictionary of all available services on the system
-    '''
-    available_services = dict()
-    for launch_dir in _launchd_paths():
-        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
-            for file_name in files:
-
-                # Must be a plist file
-                if not file_name.endswith('.plist'):
-                    continue
-
-                # Follow symbolic links of files in _launchd_paths
-                file_path = os.path.join(root, file_name)
-                true_path = os.path.realpath(file_path)
-
-                # ignore broken symlinks
-                if not os.path.exists(true_path):
-                    continue
-
-                try:
-                    # This assumes most of the plist files
-                    # will be already in XML format
-                    with salt.utils.files.fopen(file_path):
-                        plist = plistlib.readPlist(true_path)
-
-                except Exception:
-                    # If plistlib is unable to read the file we'll need to use
-                    # the system provided plutil program to do the conversion
-                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
-                        true_path)
-                    plist_xml = __salt__['cmd.run'](cmd, output_loglevel='quiet')
-                    if six.PY2:
-                        plist = plistlib.readPlistFromString(plist_xml)
-                    else:
-                        plist = plistlib.readPlistFromBytes(
-                            salt.utils.stringutils.to_bytes(plist_xml))
-
-                try:
-                    available_services[plist.Label.lower()] = {
-                        'file_name': file_name,
-                        'file_path': true_path,
-                        'plist': plist}
-                except AttributeError:
-                    # Handle malformed plist files
-                    available_services[os.path.basename(file_name).lower()] = {
-                        'file_name': file_name,
-                        'file_path': true_path,
-                        'plist': plist}
-
-    return available_services
-
-
 def _get_service(name):
     '''
     Get information about a service.  If the service is not found, raise an
@@ -130,7 +62,7 @@ def _get_service(name):
     :return: The service information for the service, otherwise an Error
     :rtype: dict
     '''
-    services = _available_services()
+    services = salt.utils.mac_utils.available_services()
     name = name.lower()
 
     if name in services:
@@ -148,6 +80,37 @@ def _get_service(name):
 
     # Could not find service
     raise CommandExecutionError('Service not found: {0}'.format(name))
+
+
+def _always_running_service(name):
+    '''
+    Check if the service should always be running based on the KeepAlive Key
+    in the service plist.
+
+    :param str name: Service label, file name, or full path
+
+    :return: True if the KeepAlive key is set to True, False if set to False or
+        not set in the plist at all.
+
+    :rtype: bool
+
+    .. versionadded:: Fluorine
+    '''
+
+    # get all the info from the launchctl service
+    service_info = show(name)
+
+    # get the value for the KeepAlive key in service plist
+    try:
+        keep_alive = service_info['plist']['KeepAlive']
+    except KeyError:
+        return False
+
+    # check if KeepAlive is True and not just set.
+    if keep_alive is True:
+        return True
+
+    return False
 
 
 def show(name):
@@ -195,26 +158,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    # Get return type
-    return_stdout = kwargs.pop('return_stdout', False)
-
-    # Construct command
-    cmd = ['launchctl', sub_cmd]
-    cmd.extend(args)
-
-    # Run command
-    kwargs['python_shell'] = False
-    ret = __salt__['cmd.run_all'](cmd, **kwargs)
-
-    # Raise an error or return successful result
-    if ret['retcode']:
-        out = 'Failed to {0} service:\n'.format(sub_cmd)
-        out += 'stdout: {0}\n'.format(ret['stdout'])
-        out += 'stderr: {0}\n'.format(ret['stderr'])
-        out += 'retcode: {0}\n'.format(ret['retcode'])
-        raise CommandExecutionError(out)
-    else:
-        return ret['stdout'] if return_stdout else True
+    return salt.utils.mac_utils.launchctl(sub_cmd, *args, **kwargs)
 
 
 def list_(name=None, runas=None):
@@ -403,7 +347,9 @@ def status(name, sig=None, runas=None):
 
     :param str runas: User to run launchctl commands
 
-    :return: The PID for the service if it is running, otherwise an empty string
+    :return: The PID for the service if it is running, or 'loaded' if the
+        service should not always have a PID, or otherwise an empty string
+
     :rtype: str
 
     CLI Example:
@@ -415,6 +361,12 @@ def status(name, sig=None, runas=None):
     # Find service with ps
     if sig:
         return __salt__['status.pid'](sig)
+
+    # mac services are a little different than other platforms as they may be
+    # set to run on intervals and may not always active with a PID. This will
+    # return a string 'loaded' if it shouldn't always be running and is enabled.
+    if not _always_running_service(name) and enabled(name):
+        return 'loaded'
 
     output = list_(runas=runas)
 
@@ -541,7 +493,7 @@ def get_all(runas=None):
     enabled = get_enabled(runas=runas)
 
     # Get list of all services
-    available = list(_available_services().keys())
+    available = list(salt.utils.mac_utils.available_services().keys())
 
     # Return composite list
     return sorted(set(enabled + available))

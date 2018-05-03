@@ -12,9 +12,11 @@ Dependencies
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import time
+
+import salt.utils.stringutils
 from salt.ext.six.moves import map
 
 # Import 3rd Party libs
@@ -178,8 +180,9 @@ def beacon(config):
             changes['ipv6'] = __grains__.get('ipv6', [])
 
     for item in _config['txt']:
+        changes_key = 'txt.' + salt.utils.stringutils.to_unicode(item)
         if _config['txt'][item].startswith('grains.'):
-            grain = _config['txt'][item][7:]
+            grain = _config['txt'][item][6:]
             grain_index = None
             square_bracket = grain.find('[')
             if square_bracket != -1 and grain[-1] == ']':
@@ -194,12 +197,12 @@ def beacon(config):
                     grain_value = ','.join(grain_value)
             txt[item] = _enforce_txt_record_maxlen(item, grain_value)
             if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
-                changes[str('txt.' + item)] = txt[item]
+                changes[changes_key] = txt[item]
         else:
             txt[item] = _enforce_txt_record_maxlen(item, _config['txt'][item])
 
         if not LAST_GRAINS:
-            changes[str('txt.' + item)] = txt[item]
+            changes[changes_key] = txt[item]
 
     if changes:
         if not LAST_GRAINS:
@@ -225,8 +228,8 @@ def beacon(config):
             GROUP.Commit()
         else:
             GROUP.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                                servicename, _config['servicetype'], '',
-                                avahi.dict_to_txt_array(txt))
+                                   servicename, _config['servicetype'], '',
+                                   avahi.dict_to_txt_array(txt))
 
         ret.append({'tag': 'result', 'changes': changes})
 

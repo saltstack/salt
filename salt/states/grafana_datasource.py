@@ -24,7 +24,7 @@ Manage Grafana v2.0 data sources
         - basic_auth_password: mypass
         - is_default: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import requests
 
@@ -100,7 +100,7 @@ def present(name,
         if ret['changes']['new'] or ret['changes']['old']:
             ret['comment'] = 'Data source {0} updated'.format(name)
         else:
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Data source {0} already up-to-date'.format(name)
     else:
         requests.post(

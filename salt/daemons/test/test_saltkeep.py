@@ -13,10 +13,11 @@ else:
 # pylint: enable=blacklisted-import
 
 import os
-import stat
-import time
-import tempfile
 import shutil
+import socket
+import stat
+import tempfile
+import time
 
 from ioflo.aid.odicting import odict
 from ioflo.aid.timing import StoreTimer
@@ -29,6 +30,7 @@ from raet.road import estating, stacking
 
 from salt.daemons import salting
 import salt.utils.kinds as kinds
+import salt.utils.stringutils
 
 
 def setUpModule():
@@ -232,20 +234,21 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                 os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
-        self.assertDictEqual(main.keep.loadLocalData(), {'name': mainData['name'],
-                                                         'uid': 1,
-                                                         'ha': ['127.0.0.1', 7530],
-                                                         'iha': None,
-                                                         'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
-                                                         'dyned': None,
-                                                         'sid': 0,
-                                                         'puid': 1,
-                                                         'aha': ['0.0.0.0', 7530],
-                                                         'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
-                                                         })
+        self.assertDictEqual(main.keep.loadLocalData(),
+                             {'name': mainData['name'],
+                              'uid': 1,
+                              'ha': ['127.0.0.1', 7530],
+                              'iha': None,
+                              'natted': None,
+                              'fqdn': socket.getfqdn('127.0.0.1'),
+                              'dyned': None,
+                              'sid': 0,
+                              'puid': 1,
+                              'aha': ['0.0.0.0', 7530],
+                              'role': mainData['role'],
+                              'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                              'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
+                              })
 
         data1 = self.createRoadData(role='remote1',
                                     kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
@@ -282,7 +285,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -290,8 +293,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 0,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      },
                 'remote2_minion':
                     {'name': data2['name'],
@@ -300,7 +303,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -308,8 +311,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data2['role'],
                      'acceptance': 0,
-                     'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data2['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data2['pubhex']),
                      }
             })
 
@@ -362,14 +365,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': otherData['role'],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                             })
 
         data3 = self.createRoadData(role='remote3',
@@ -405,7 +408,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data3['kind'],
@@ -413,8 +416,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data3['role'],
                     'acceptance': 0,
-                    'verhex': data3['verhex'],
-                    'pubhex': data3['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data3['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data3['pubhex']),
                 },
                 'remote4_minion':
                 {
@@ -424,7 +427,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data4['kind'],
@@ -432,8 +435,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data4['role'],
                     'acceptance': 0,
-                    'verhex': data4['verhex'],
-                    'pubhex': data4['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data4['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data4['pubhex']),
                 }
             })
 
@@ -477,14 +480,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         data1 = self.createRoadData(role='remote1',
@@ -520,7 +523,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -528,8 +531,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 1,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      },
                 'remote2_minion':
                     {'name': data2['name'],
@@ -538,7 +541,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -546,8 +549,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data2['role'],
                      'acceptance': 1,
-                     'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data2['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data2['pubhex']),
                      }
             })
 
@@ -600,14 +603,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': otherData['role'],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                             })
 
         data3 = self.createRoadData(role='remote3',
@@ -643,7 +646,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data3['kind'],
@@ -651,8 +654,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data3['role'],
                     'acceptance': 1,
-                    'verhex': data3['verhex'],
-                    'pubhex': data3['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data3['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data3['pubhex']),
                 },
                 'remote4_minion':
                 {
@@ -662,7 +665,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data4['kind'],
@@ -670,8 +673,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data4['role'],
                     'acceptance': 1,
-                    'verhex': data4['verhex'],
-                    'pubhex': data4['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data4['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data4['pubhex']),
                 }
             })
 
@@ -715,13 +718,13 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          'role': mainData['role'],
                                                          })
 
@@ -759,7 +762,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -767,8 +770,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 1,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      },
                 'remote2_minion':
                     {
@@ -778,7 +781,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -786,8 +789,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data2['role'],
                      'acceptance': 1,
-                     'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data2['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data2['pubhex']),
                      }
             })
 
@@ -840,14 +843,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': otherData['role'],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                             })
 
         data3 = self.createRoadData(role='remote3',
@@ -883,7 +886,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data3['kind'],
@@ -891,8 +894,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data3['role'],
                     'acceptance': 1,
-                    'verhex': data3['verhex'],
-                    'pubhex': data3['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data3['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data3['pubhex']),
                 },
                 'remote4_minion':
                 {
@@ -902,7 +905,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
-                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'fqdn': socket.getfqdn('127.0.0.1'),
                     'dyned': None,
                     'main': False,
                     'kind': data4['kind'],
@@ -910,8 +913,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                     'joined': None,
                     'role': data4['role'],
                     'acceptance': 1,
-                    'verhex': data4['verhex'],
-                    'pubhex': data4['pubhex'],
+                    'verhex': salt.utils.stringutils.to_str(data4['verhex']),
+                    'pubhex': salt.utils.stringutils.to_str(data4['pubhex']),
                 }
             })
 
@@ -955,14 +958,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         # add multiple remotes all with same role
@@ -1006,7 +1009,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -1014,8 +1017,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 0,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      },
                 'primary_caller':
                     {
@@ -1025,7 +1028,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -1033,8 +1036,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 0,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      }
             })
 
@@ -1104,14 +1107,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         # add multiple remotes all with same role
@@ -1149,7 +1152,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -1157,8 +1160,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 1,
-                     'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data2['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data2['pubhex']),
                      },
                 'primary_syndic':
                     {
@@ -1168,7 +1171,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -1176,8 +1179,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data2['role'],
                      'acceptance': 1,
-                     'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data2['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data2['pubhex']),
                      }
             })
 
@@ -1248,14 +1251,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         # add multiple remotes all with same role but different keys
@@ -1300,7 +1303,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data1['kind'],
@@ -1308,8 +1311,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data1['role'],
                      'acceptance': 1,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      },
                 'primary_syndic':
                     {
@@ -1319,7 +1322,7 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
-                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'fqdn': socket.getfqdn('127.0.0.1'),
                      'dyned': None,
                      'main': False,
                      'kind': data2['kind'],
@@ -1327,8 +1330,8 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                      'joined': None,
                      'role': data2['role'],
                      'acceptance': 1,
-                     'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex'],
+                     'verhex': salt.utils.stringutils.to_str(data1['verhex']),
+                     'pubhex': salt.utils.stringutils.to_str(data1['pubhex']),
                      }
             })
 
@@ -1399,14 +1402,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         opts = self.createOpts(role='other',
@@ -1441,14 +1444,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': otherData['role'],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                             })
 
         self.join(other, main)
@@ -1524,14 +1527,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         opts = self.createOpts(role='other',
@@ -1566,14 +1569,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': otherData['role'],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                             })
 
         self.join(other, main)
@@ -1645,14 +1648,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         opts = self.createOpts(role='other',
@@ -1687,13 +1690,13 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
-                                'sighex': otherData['sighex'],
-                                'prihex': otherData['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(otherData['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(otherData['prihex']),
                                 'role': otherData['role'],
                             })
 
@@ -1766,14 +1769,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                          'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         opts = self.createOpts(role='primary',
@@ -1808,14 +1811,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': other1Data['role'],
-                                'sighex': other1Data['sighex'],
-                                'prihex': other1Data['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(other1Data['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(other1Data['prihex']),
                             })
 
         self.join(other1, main)
@@ -1876,13 +1879,13 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7532],
-                                'sighex': other2Data['sighex'],
-                                'prihex': other2Data['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(other2Data['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(other2Data['prihex']),
                                 'role': other2Data['role'],
                             })
 
@@ -1936,14 +1939,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7532],
                                 'role': other2Data['role'],
-                                'sighex': other1Data['sighex'],
-                                'prihex': other1Data['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(other1Data['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(other1Data['prihex']),
                             })
 
         # should join since same role and keys
@@ -2021,14 +2024,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                                          'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
-                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'fqdn': socket.getfqdn('127.0.0.1'),
                                                          'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
                                                          'aha': ['0.0.0.0', 7530],
                                                           'role': mainData['role'],
-                                                         'sighex': mainData['sighex'],
-                                                         'prihex': mainData['prihex'],
+                                                         'sighex': salt.utils.stringutils.to_str(mainData['sighex']),
+                                                         'prihex': salt.utils.stringutils.to_str(mainData['prihex']),
                                                          })
 
         opts = self.createOpts(role='primary',
@@ -2063,14 +2066,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7531],
                                 'role': other1Data['role'],
-                                'sighex': other1Data['sighex'],
-                                'prihex': other1Data['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(other1Data['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(other1Data['prihex']),
                             })
 
         self.join(other1, main)
@@ -2130,14 +2133,14 @@ class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
                                 'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
-                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'fqdn': socket.getfqdn('127.0.0.1'),
                                 'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
                                 'aha': ['0.0.0.0', 7532],
                                 'role': other2Data['role'],
-                                'sighex': other2Data['sighex'],
-                                'prihex': other2Data['prihex'],
+                                'sighex': salt.utils.stringutils.to_str(other2Data['sighex']),
+                                'prihex': salt.utils.stringutils.to_str(other2Data['prihex']),
                             })
 
         # should join since open mode
@@ -2225,8 +2228,8 @@ if __name__ == '__main__' and __package__ is None:
 
     #console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll()  # run all unittests
+    runAll()  # run all unittests
 
-    runSome()  # only run some
+    #runSome()  # only run some
 
     #runOne('testBootstrapRoleAuto')

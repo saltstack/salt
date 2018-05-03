@@ -93,7 +93,7 @@ can be approximated with sqlite3's module functions and module.run:
 """
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 from salt.ext import six
@@ -181,7 +181,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -321,7 +321,7 @@ def row_present(name,
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -370,7 +370,7 @@ def table_absent(name, db):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:

@@ -33,26 +33,26 @@ In addition, other groups are being loaded from pillars.
             default:
               users:
                 - *
-            commands:
-              - test.ping
-              - cmd.run
-              - list_jobs
-              - list_commands
-            aliases:
-              list_jobs:
-                cmd: jobs.list_jobs
-              list_commands:
-                cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-            default_target:
-              target: saltmaster
-              tgt_type: glob
-            targets:
-              test.ping:
-                target: '*'
-                tgt_type: glob
-              cmd.run:
+              commands:
+                - test.ping
+                - cmd.run
+                - list_jobs
+                - list_commands
+              aliases:
+                list_jobs:
+                  cmd: jobs.list_jobs
+                list_commands:
+                  cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+              default_target:
                 target: saltmaster
-                tgt_type: list
+                tgt_type: glob
+              targets:
+                test.ping:
+                  target: '*'
+                  tgt_type: glob
+                cmd.run:
+                  target: saltmaster
+                  tgt_type: list
 
 :configuration: Example configuration using the 'default' group and a non-default group and a pillar that will be merged in
     If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
@@ -88,6 +88,13 @@ In addition, other groups are being loaded from pillars.
 
 :depends: slackclient
 
+
+.. note:: groups_pillar_name
+
+    In order to use this, the engine must be running as a minion running on
+    the master, so that the ``Caller`` client can be used to retrieve that
+    minions pillar data, because the master process does not have pillars.
+
 '''
 
 # Import python libraries
@@ -119,6 +126,8 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
+import salt.output.highstate
+import salt.output.yaml_out
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -218,7 +227,7 @@ class SlackClient(object):
                 ret_groups[name]['aliases'].update(config.get('aliases', {}))
                 ret_groups[name]['default_target'].update(config.get('default_target', {}))
                 ret_groups[name]['targets'].update(config.get('targets', {}))
-            except IndexError:
+            except (IndexError, AttributeError):
                 log.warn("Couldn't use group %s. Check that targets is a dict and not a list", name)
 
         log.debug('Got the groups: %s', ret_groups)
@@ -235,16 +244,14 @@ class SlackClient(object):
         XXX: instead of using Caller, make the minion to use configurable so there could be some
              restrictions placed on what pillars can be used.
         '''
-        caller = salt.client.Caller()
-        pillar_groups = caller.cmd('pillar.get', pillar_name)
-        # pillar_groups = __salt__['pillar.get'](pillar_name, {})
-        log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
-        log.debug('pillar groups is %s', pillar_groups)
-        log.debug('pillar groups type is %s', type(pillar_groups))
-        if pillar_groups:
-            return pillar_groups
+        if pillar_name and __opts__['__role'] == 'minion':
+            pillar_groups = __salt__['pillar.get'](pillar_name, {})
+            log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
+            log.debug('pillar groups is %s', pillar_groups)
+            log.debug('pillar groups type is %s', type(pillar_groups))
         else:
-            return {}
+            pillar_groups = {}
+        return pillar_groups
 
     def fire(self, tag, msg):
         '''
@@ -266,7 +273,7 @@ class SlackClient(object):
 
     def can_user_run(self, user, command, groups):
         '''
-        Break out the permissions into the folowing:
+        Break out the permissions into the following:
 
         Check whether a user is in any group, including whether a group has the '*' membership
 
@@ -281,7 +288,7 @@ class SlackClient(object):
 
         :rtype: tuple
         :returns: On a successful permitting match, returns 2-element tuple that contains
-            the name of the group that successfuly matched, and a dictionary containing
+            the name of the group that successfully matched, and a dictionary containing
             the configuration of the group so it can be referenced.
 
             On failure it returns an empty tuple
@@ -350,10 +357,18 @@ class SlackClient(object):
 
         # maybe there are aliases, so check on that
         if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
-            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]], '')
+            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]].get('cmd', ''), '')
+            # Include any additional elements from cmdline
+            use_cmdline.extend(cmdline[1:])
         else:
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
+
+        # Remove target and tgt_type from commandline
+        # that is sent along to Salt
+        use_cmdline = [item for item
+                       in use_cmdline
+                       if all(not item.startswith(x) for x in ('target', 'tgt_type'))]
 
         return (True, target, use_cmdline)
 
@@ -399,7 +414,7 @@ class SlackClient(object):
         When encountering an error (e.g. invalid message), yields {}, the caller can proceed to the next message
 
         When the websocket being read from has given up all its messages, yields {'done': True} to
-        indicate that the caller has read all of the relevent data for now, and should continue
+        indicate that the caller has read all of the relevant data for now, and should continue
         its own processing and check back for more data later.
 
         This relies on the caller sleeping between checks, otherwise this could flood
@@ -415,6 +430,11 @@ class SlackClient(object):
                               'so we look for user in '
                               'the original message.')
                     user_id = m_data['message']['user']
+                elif 'comment' in m_data and 'user' in m_data['comment']:
+                    log.debug('Comment was added, '
+                              'so we look for user in '
+                              'the comment.')
+                    user_id = m_data['comment']['user']
             else:
                 user_id = m_data.get('user')
             channel_id = m_data.get('channel')
@@ -559,24 +579,21 @@ class SlackClient(object):
 # emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
 # obviously pass in
 
-    def format_return_text(self, data, **kwargs):  # pylint: disable=unused-argument
+    def format_return_text(self, data, function, **kwargs):  # pylint: disable=unused-argument
         '''
         Print out YAML using the block mode
         '''
-        params = {}
-        if 'output_indent' not in __opts__:
-            # default indentation
-            params.update(default_flow_style=False)
-        elif __opts__['output_indent'] >= 0:
-            # custom indent
-            params.update(default_flow_style=False,
-                          indent=__opts__['output_indent'])
-        else:  # no indentation
-            params.update(default_flow_style=True,
-                          indent=0)
         try:
-            #return salt.utils.yaml.safe_dump(data, **params).replace("\n\n", "\n")
-            return salt.utils.json.dumps(data, sort_keys=True, indent=1)
+            # Format results from state runs with highstate output
+            if function.startswith('state'):
+                salt.output.highstate.__opts__ = __opts__
+                # Disable colors
+                salt.output.highstate.__opts__.update({"color": False})
+                return salt.output.highstate.output(data)
+            # Format results from everything else with yaml output
+            else:
+                salt.output.yaml_out.__opts__ = __opts__
+                return salt.output.yaml_out.output(data)
         # pylint: disable=broad-except
         except Exception as exc:
             import pprint
@@ -626,12 +643,16 @@ class SlackClient(object):
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
             if self.master_minion.returners['{}.get_jid'.format(source)](jid):
-                jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
+                job_result = runner.cmd('jobs.list_job', [jid])
+                jid_result = job_result.get('Result', {})
+                jid_function = job_result.get('Function', {})
                 # emulate lookup_jid's return, which is just minion:return
                 # pylint is tripping
                 # pylint: disable=missing-whitespace-after-comma
                 job_data = salt.utils.json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = salt.utils.yaml.safe_load(job_data)
+                results[jid] = {}
+                results[jid]['data'] = salt.utils.yaml.safe_load(job_data)
+                results[jid]['function'] = jid_function
 
         return results
 
@@ -678,13 +699,15 @@ class SlackClient(object):
             start_time = time.time()
             job_status = self.get_jobs_from_runner(outstanding.keys())  # dict of job_ids:results are returned
             log.trace('Getting %s jobs status took %s seconds', len(job_status), time.time() - start_time)
-            for jid, result in job_status.items():
+            for jid in job_status:
+                result = job_status[jid]['data']
+                function = job_status[jid]['function']
                 if result:
                     log.debug('ret to send back is %s', result)
                     # formatting function?
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job['channel'])
-                    return_text = self.format_return_text(result)
+                    return_text = self.format_return_text(result, function)
                     return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
                         this_job['user_name'], this_job['cmdline'], jid, this_job['target'])
                     channel.send_message(return_prefix)

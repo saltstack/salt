@@ -2,10 +2,11 @@
 '''
 Support for the Git SCM
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
+import glob
 import logging
 import os
 import re
@@ -13,11 +14,13 @@ import stat
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -64,6 +67,7 @@ def _config_getter(get_opt,
                    user=None,
                    password=None,
                    ignore_retcode=False,
+                   output_encoding=None,
                    **kwargs):
     '''
     Common code for config.get_* functions, builds and runs the git CLI command
@@ -85,13 +89,14 @@ def _config_getter(get_opt,
     if get_opt == '--get-regexp':
         if value_regex is not None \
                 and not isinstance(value_regex, six.string_types):
-            value_regex = str(value_regex)
+            value_regex = six.text_type(value_regex)
     else:
         # Ignore value_regex
         value_regex = None
 
     command = ['git', 'config']
-    command.extend(_which_git_config(global_, cwd, user, password))
+    command.extend(_which_git_config(global_, cwd, user, password,
+                                     output_encoding=output_encoding))
     command.append(get_opt)
     command.append(key)
     if value_regex is not None:
@@ -101,7 +106,8 @@ def _config_getter(get_opt,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    failhard=False)
+                    failhard=False,
+                    output_encoding=output_encoding)
 
 
 def _expand_path(cwd, user):
@@ -113,11 +119,11 @@ def _expand_path(cwd, user):
     except TypeError:
         # Users should never be numeric but if we don't account for this then
         # we're going to get a traceback if someone passes this invalid input.
-        to_expand = '~' + str(user) if user else '~'
+        to_expand = '~' + six.text_type(user) if user else '~'
     try:
         return os.path.join(os.path.expanduser(to_expand), cwd)
     except AttributeError:
-        return os.path.join(os.path.expanduser(to_expand), str(cwd))
+        return os.path.join(os.path.expanduser(to_expand), six.text_type(cwd))
 
 
 def _path_is_executable_others(path):
@@ -148,13 +154,14 @@ def _format_opts(opts):
             if isinstance(item, six.string_types):
                 new_opts.append(item)
             else:
-                new_opts.append(str(item))
+                new_opts.append(six.text_type(item))
         return new_opts
     else:
         if not isinstance(opts, six.string_types):
-            opts = [str(opts)]
+            opts = [six.text_type(opts)]
         else:
             opts = salt.utils.args.shlex_split(opts)
+    opts = salt.utils.data.decode(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -182,9 +189,31 @@ def _format_git_opts(opts):
     return _format_opts(opts)
 
 
+def _find_ssh_exe():
+    '''
+    Windows only: search for Git's bundled ssh.exe in known locations
+    '''
+    # Known locations for Git's ssh.exe in Windows
+    globmasks = [os.path.join(os.getenv('SystemDrive'), os.sep,
+                              'Program Files*', 'Git', 'usr', 'bin',
+                              'ssh.exe'),
+                 os.path.join(os.getenv('SystemDrive'), os.sep,
+                              'Program Files*', 'Git', 'bin',
+                              'ssh.exe')]
+    for globmask in globmasks:
+        ssh_exe = glob.glob(globmask)
+        if ssh_exe and os.path.isfile(ssh_exe[0]):
+            ret = ssh_exe[0]
+            break
+    else:
+        ret = None
+
+    return ret
+
+
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
-             saltenv='base', **kwargs):
+             saltenv='base', output_encoding=None, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -216,7 +245,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                                                       tmp_identity_file,
                                                       saltenv)
                 if not id_file:
-                    log.error('identity {0} does not exist.'.format(_id_file))
+                    log.error('identity %s does not exist.', _id_file)
                     __salt__['file.remove'](tmp_identity_file)
                     continue
                 else:
@@ -227,7 +256,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             else:
                 if not __salt__['file.file_exists'](id_file):
                     missing_keys.append(id_file)
-                    log.error('identity {0} does not exist.'.format(id_file))
+                    log.error('identity %s does not exist.', id_file)
                     continue
 
             env = {
@@ -242,18 +271,12 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             )
             tmp_ssh_wrapper = None
             if salt.utils.platform.is_windows():
-                for suffix in ('', ' (x86)'):
-                    ssh_exe = (
-                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
-                        .format(suffix)
-                    )
-                    if os.path.isfile(ssh_exe):
-                        env['GIT_SSH_EXE'] = ssh_exe
-                        break
-                else:
+                ssh_exe = _find_ssh_exe()
+                if ssh_exe is None:
                     raise CommandExecutionError(
                         'Failed to find ssh.exe, unable to use identity file'
                     )
+                env['GIT_SSH_EXE'] = ssh_exe
                 # Use the windows batch file instead of the bourne shell script
                 ssh_id_wrapper += '.bat'
                 env['GIT_SSH'] = ssh_id_wrapper
@@ -267,7 +290,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 env['GIT_SSH'] = tmp_ssh_wrapper
 
             if 'salt-call' not in _salt_cli \
-                    and __salt__['ssh.key_is_encrypted'](id_file):
+                    and __utils__['ssh.key_is_encrypted'](id_file):
                 errors.append(
                     'Identity file {0} is passphrase-protected and cannot be '
                     'used in a non-interactive command. Using salt-call from '
@@ -277,8 +300,8 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 continue
 
             log.info(
-                'Attempting git authentication using identity file {0}'
-                .format(id_file)
+                'Attempting git authentication using identity file %s',
+                id_file
             )
 
             try:
@@ -292,27 +315,36 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     log_callback=salt.utils.url.redact_http_basic_auth,
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=redirect_stderr,
+                    output_encoding=output_encoding,
                     **kwargs)
             finally:
-                # Cleanup the temporary ssh wrapper file
-                try:
-                    __salt__['file.remove'](tmp_ssh_wrapper)
-                    log.debug('Removed ssh wrapper file %s', tmp_ssh_wrapper)
-                except AttributeError:
-                    # No wrapper was used
-                    pass
-                except (SaltInvocationError, CommandExecutionError) as exc:
-                    log.warning('Failed to remove ssh wrapper file %s: %s', tmp_ssh_wrapper, exc)
+                if tmp_ssh_wrapper:
+                    # Cleanup the temporary ssh wrapper file
+                    try:
+                        __salt__['file.remove'](tmp_ssh_wrapper)
+                        log.debug('Removed ssh wrapper file %s', tmp_ssh_wrapper)
+                    except AttributeError:
+                        # No wrapper was used
+                        pass
+                    except (SaltInvocationError, CommandExecutionError) as exc:
+                        log.warning(
+                            'Failed to remove ssh wrapper file %s: %s',
+                            tmp_ssh_wrapper, exc
+                        )
 
-                # Cleanup the temporary identity file
-                try:
-                    __salt__['file.remove'](tmp_identity_file)
-                    log.debug('Removed identity file %s', tmp_identity_file)
-                except AttributeError:
-                    # No identify file was used
-                    pass
-                except (SaltInvocationError, CommandExecutionError) as exc:
-                    log.warning('Failed to remove identity file %s: %s', tmp_identity_file, exc)
+                if tmp_identity_file:
+                    # Cleanup the temporary identity file
+                    try:
+                        __salt__['file.remove'](tmp_identity_file)
+                        log.debug('Removed identity file %s', tmp_identity_file)
+                    except AttributeError:
+                        # No identify file was used
+                        pass
+                    except (SaltInvocationError, CommandExecutionError) as exc:
+                        log.warning(
+                            'Failed to remove identity file %s: %s',
+                            tmp_identity_file, exc
+                        )
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
@@ -350,6 +382,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             log_callback=salt.utils.url.redact_http_basic_auth,
             ignore_retcode=ignore_retcode,
             redirect_stderr=redirect_stderr,
+            output_encoding=output_encoding,
             **kwargs)
 
         if result['retcode'] == 0:
@@ -371,7 +404,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             return result
 
 
-def _get_toplevel(path, user=None, password=None):
+def _get_toplevel(path, user=None, password=None, output_encoding=None):
     '''
     Use git rev-parse to return the top level of a repo
     '''
@@ -379,10 +412,11 @@ def _get_toplevel(path, user=None, password=None):
         ['git', 'rev-parse', '--show-toplevel'],
         cwd=path,
         user=user,
-        password=password)['stdout']
+        password=password,
+        output_encoding=output_encoding)['stdout']
 
 
-def _git_config(cwd, user, password):
+def _git_config(cwd, user, password, output_encoding=None):
     '''
     Helper to retrieve git config options
     '''
@@ -392,7 +426,8 @@ def _git_config(cwd, user, password):
                             opts=['--git-dir'],
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
         if not os.path.isabs(git_dir):
             paths = (cwd, git_dir, 'config')
         else:
@@ -401,7 +436,7 @@ def _git_config(cwd, user, password):
     return __context__[contextkey]
 
 
-def _which_git_config(global_, cwd, user, password):
+def _which_git_config(global_, cwd, user, password, output_encoding=None):
     '''
     Based on whether global or local config is desired, return a list of CLI
     args to include in the git config command.
@@ -414,7 +449,8 @@ def _which_git_config(global_, cwd, user, password):
         return ['--local']
     else:
         # For earlier versions, need to specify the path to the git config file
-        return ['--file', _git_config(cwd, user, password)]
+        return ['--file', _git_config(cwd, user, password,
+                                      output_encoding=output_encoding)]
 
 
 def add(cwd,
@@ -423,7 +459,8 @@ def add(cwd,
         git_opts='',
         user=None,
         password=None,
-        ignore_retcode=False):
+        ignore_retcode=False,
+        output_encoding=None):
     '''
     .. versionchanged:: 2015.8.0
         The ``--verbose`` command line argument is now implied
@@ -470,8 +507,19 @@ def add(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-add(1)`: http://git-scm.com/docs/git-add
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-add(1)`: http://git-scm.com/docs/git-add
 
     CLI Examples:
 
@@ -481,8 +529,6 @@ def add(cwd,
         salt myminion git.add /path/to/repo foo/bar.py opts='--dry-run'
     '''
     cwd = _expand_path(cwd, user)
-    if not isinstance(filename, six.string_types):
-        filename = str(filename)
     command = ['git'] + _format_git_opts(git_opts)
     command.extend(['add', '--verbose'])
     command.extend(
@@ -493,7 +539,8 @@ def add(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def archive(cwd,
@@ -504,6 +551,7 @@ def archive(cwd,
             user=None,
             password=None,
             ignore_retcode=False,
+            output_encoding=None,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -595,8 +643,19 @@ def archive(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-archive(1)`: http://git-scm.com/docs/git-archive
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-archive(1)`: http://git-scm.com/docs/git-archive
 
     CLI Example:
 
@@ -617,25 +676,22 @@ def archive(cwd,
 
     command = ['git'] + _format_git_opts(git_opts)
     command.append('archive')
-    # If prefix was set to '' then we skip adding the --prefix option
+    # If prefix was set to '' then we skip adding the --prefix option, but if
+    # it was not passed (i.e. None) we use the cwd.
     if prefix != '':
-        if prefix:
-            if not isinstance(prefix, six.string_types):
-                prefix = str(prefix)
-        else:
-            prefix = os.path.basename(cwd) + '/'
+        if not prefix:
+            prefix = os.path.basename(cwd) + os.sep
         command.extend(['--prefix', prefix])
 
     if format_:
-        if not isinstance(format_, six.string_types):
-            format_ = str(format_)
         command.extend(['--format', format_])
     command.extend(['--output', output, rev])
     _git_run(command,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     # No output (unless --verbose is used, and we don't want all files listed
     # in the output in case there are thousands), so just return True. If there
     # was an error in the git command, it will have already raised an exception
@@ -649,7 +705,8 @@ def branch(cwd,
            git_opts='',
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-branch(1)`_
 
@@ -700,8 +757,19 @@ def branch(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-branch(1)`: http://git-scm.com/docs/git-branch
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-branch(1)`: http://git-scm.com/docs/git-branch
 
     CLI Examples:
 
@@ -726,7 +794,8 @@ def branch(cwd,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     return True
 
 
@@ -737,7 +806,8 @@ def checkout(cwd,
              git_opts='',
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Interface to `git-checkout(1)`_
 
@@ -788,8 +858,19 @@ def checkout(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-checkout(1)`: http://git-scm.com/docs/git-checkout
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-checkout(1)`: http://git-scm.com/docs/git-checkout
 
     CLI Examples:
 
@@ -818,8 +899,6 @@ def checkout(cwd,
                 '\'rev\' argument is required unless -b or -B in opts'
             )
     else:
-        if not isinstance(rev, six.string_types):
-            rev = str(rev)
         command.append(rev)
     # Checkout message goes to stderr
     return _git_run(command,
@@ -827,7 +906,8 @@ def checkout(cwd,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def clone(cwd,
@@ -841,7 +921,8 @@ def clone(cwd,
           https_user=None,
           https_pass=None,
           ignore_retcode=False,
-          saltenv='base'):
+          saltenv='base',
+          output_encoding=None):
     '''
     Interface to `git-clone(1)`_
 
@@ -931,6 +1012,18 @@ def clone(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-clone(1)`: http://git-scm.com/docs/git-clone
 
     CLI Example:
@@ -957,8 +1050,6 @@ def clone(cwd,
     command.extend(_format_opts(opts))
     command.extend(['--', url])
     if name is not None:
-        if not isinstance(name, six.string_types):
-            name = str(name)
         command.append(name)
         if not os.path.exists(cwd):
             os.makedirs(cwd)
@@ -978,7 +1069,8 @@ def clone(cwd,
              password=password,
              identity=identity,
              ignore_retcode=ignore_retcode,
-             saltenv=saltenv)
+             saltenv=saltenv,
+             output_encoding=output_encoding)
     return True
 
 
@@ -989,7 +1081,8 @@ def commit(cwd,
            user=None,
            password=None,
            filename=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-commit(1)`_
 
@@ -1048,8 +1141,19 @@ def commit(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-commit(1)`: http://git-scm.com/docs/git-commit
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-commit(1)`: http://git-scm.com/docs/git-commit
 
     CLI Examples:
 
@@ -1063,8 +1167,6 @@ def commit(cwd,
     command.extend(['commit', '-m', message])
     command.extend(_format_opts(opts))
     if filename:
-        if not isinstance(filename, six.string_types):
-            filename = str(filename)
         # Add the '--' to terminate CLI args, but only if it wasn't already
         # passed in opts string.
         command.extend(['--', filename])
@@ -1072,7 +1174,8 @@ def commit(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def config_get(key,
@@ -1080,6 +1183,7 @@ def config_get(key,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     Get the value of a key in the git configuration file
@@ -1124,6 +1228,17 @@ def config_get(key,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -1144,6 +1259,7 @@ def config_get(key,
                             user=user,
                             password=password,
                             ignore_retcode=ignore_retcode,
+                            output_encoding=output_encoding,
                             **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1166,6 +1282,7 @@ def config_get_regexp(key,
                       user=None,
                       password=None,
                       ignore_retcode=False,
+                      output_encoding=None,
                       **kwargs):
     r'''
     .. versionadded:: 2015.8.0
@@ -1210,6 +1327,17 @@ def config_get_regexp(key,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -1229,6 +1357,7 @@ def config_get_regexp(key,
                             user=user,
                             password=password,
                             ignore_retcode=ignore_retcode,
+                            output_encoding=output_encoding,
                             **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
@@ -1253,6 +1382,7 @@ def config_set(key,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -1310,7 +1440,19 @@ def config_set(key,
     global : False
         If ``True``, set a global variable
 
-    CLI Example:
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1336,22 +1478,19 @@ def config_set(key,
             'Only one of \'value\' and \'multivar\' is permitted'
         )
 
-    if value is not None:
-        if not isinstance(value, six.string_types):
-            value = str(value)
     if multivar is not None:
         if not isinstance(multivar, list):
             try:
                 multivar = multivar.split(',')
             except AttributeError:
-                multivar = str(multivar).split(',')
+                multivar = six.text_type(multivar).split(',')
         else:
             new_multivar = []
-            for item in multivar:
+            for item in salt.utils.data.decode(multivar):
                 if isinstance(item, six.string_types):
                     new_multivar.append(item)
                 else:
-                    new_multivar.append(str(item))
+                    new_multivar.append(six.text_type(item))
             multivar = new_multivar
 
     command_prefix = ['git', 'config']
@@ -1369,7 +1508,8 @@ def config_set(key,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     else:
         for idx, target in enumerate(multivar):
             command = copy.copy(command_prefix)
@@ -1382,12 +1522,14 @@ def config_set(key,
                      cwd=cwd,
                      user=user,
                      password=password,
-                     ignore_retcode=ignore_retcode)
+                     ignore_retcode=ignore_retcode,
+                     output_encoding=output_encoding)
     return config_get(key,
                       user=user,
                       password=password,
                       cwd=cwd,
                       ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding,
                       **{'all': True, 'global': global_})
 
 
@@ -1397,6 +1539,7 @@ def config_unset(key,
                  user=None,
                  password=None,
                  ignore_retcode=False,
+                 output_encoding=None,
                  **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -1436,6 +1579,17 @@ def config_unset(key,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -1463,21 +1617,19 @@ def config_unset(key,
         command.append('--unset-all')
     else:
         command.append('--unset')
-    command.extend(_which_git_config(global_, cwd, user, password))
+    command.extend(_which_git_config(global_, cwd, user, password,
+                                     output_encoding=output_encoding))
 
-    if not isinstance(key, six.string_types):
-        key = str(key)
     command.append(key)
     if value_regex is not None:
-        if not isinstance(value_regex, six.string_types):
-            value_regex = str(value_regex)
         command.append(value_regex)
     ret = _git_run(command,
                    cwd=cwd if cwd != 'global' else None,
                    user=user,
                    password=password,
                    ignore_retcode=ignore_retcode,
-                   failhard=False)
+                   failhard=False,
+                   output_encoding=output_encoding)
     retcode = ret['retcode']
     if retcode == 0:
         return True
@@ -1488,7 +1640,8 @@ def config_unset(key,
                       key,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode) is None:
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding) is None:
             raise CommandExecutionError(
                 'Key \'{0}\' does not exist'.format(key)
             )
@@ -1512,7 +1665,8 @@ def config_unset(key,
 def current_branch(cwd,
                    user=None,
                    password=None,
-                   ignore_retcode=False):
+                   ignore_retcode=False,
+                   output_encoding=None):
     '''
     Returns the current branch name of a local checkout. If HEAD is detached,
     return the SHA1 of the revision which is currently checked out.
@@ -1536,6 +1690,17 @@ def current_branch(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -1549,14 +1714,16 @@ def current_branch(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def describe(cwd,
              rev='HEAD',
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Returns the `git-describe(1)`_ string (or the SHA1 hash if there are no
     tags) for the given revision.
@@ -1583,8 +1750,19 @@ def describe(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-describe(1)`: http://git-scm.com/docs/git-describe
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-describe(1)`: http://git-scm.com/docs/git-describe
 
     CLI Examples:
 
@@ -1594,8 +1772,6 @@ def describe(cwd,
         salt myminion git.describe /path/to/repo develop
     '''
     cwd = _expand_path(cwd, user)
-    if not isinstance(rev, six.string_types):
-        rev = str(rev)
     command = ['git', 'describe']
     if _LooseVersion(version(versioninfo=False)) >= _LooseVersion('1.5.6'):
         command.append('--always')
@@ -1604,7 +1780,8 @@ def describe(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def diff(cwd,
@@ -1616,7 +1793,8 @@ def diff(cwd,
          password=None,
          no_index=False,
          cached=False,
-         paths=None):
+         paths=None,
+         output_encoding=None):
     '''
     .. versionadded:: 2015.8.12,2016.3.3,2016.11.0
 
@@ -1684,8 +1862,19 @@ def diff(cwd,
         File paths to pass to the ``git diff`` command. Can be passed as a
         comma-separated list or a Python list.
 
-    .. _`git-diff(1)`: http://git-scm.com/docs/git-diff
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-diff(1)`: http://git-scm.com/docs/git-diff
 
     CLI Example:
 
@@ -1719,7 +1908,7 @@ def diff(cwd,
         try:
             paths = paths.split(',')
         except AttributeError:
-            paths = str(paths).split(',')
+            paths = six.text_type(paths).split(',')
 
     ignore_retcode = False
     failhard = True
@@ -1763,7 +1952,66 @@ def diff(cwd,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=failhard,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
+def discard_local_changes(cwd,
+                          path='.',
+                          user=None,
+                          password=None,
+                          ignore_retcode=False,
+                          output_encoding=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
+
+    cwd
+        The path to the git checkout
+
+    path
+        path relative to cwd (defaults to ``.``)
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.discard_local_changes /path/to/repo
+        salt myminion git.discard_local_changes /path/to/repo path=foo
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git', 'checkout', '--', path]
+    # Checkout message goes to stderr
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def fetch(cwd,
@@ -1776,7 +2024,8 @@ def fetch(cwd,
           password=None,
           identity=None,
           ignore_retcode=False,
-          saltenv='base'):
+          saltenv='base',
+          output_encoding=None):
     '''
     .. versionchanged:: 2015.8.2
         Return data is now a dictionary containing information on branches and
@@ -1866,8 +2115,19 @@ def fetch(cwd,
 
         .. versionadded:: 2016.3.1
 
-    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
     CLI Example:
 
@@ -1885,22 +2145,15 @@ def fetch(cwd,
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
     if remote:
-        if not isinstance(remote, six.string_types):
-            remote = str(remote)
         command.append(remote)
     if refspecs is not None:
-        if isinstance(refspecs, (list, tuple)):
-            refspec_list = []
-            for item in refspecs:
-                if not isinstance(item, six.string_types):
-                    refspec_list.append(str(item))
-                else:
-                    refspec_list.append(item)
-        else:
-            if not isinstance(refspecs, six.string_types):
-                refspecs = str(refspecs)
-            refspec_list = refspecs.split(',')
-        command.extend(refspec_list)
+        if not isinstance(refspecs, (list, tuple)):
+            try:
+                refspecs = refspecs.split(',')
+            except AttributeError:
+                refspecs = six.text_type(refspecs).split(',')
+        refspecs = salt.utils.data.stringify(refspecs)
+        command.extend(refspecs)
     output = _git_run(command,
                       cwd=cwd,
                       user=user,
@@ -1908,7 +2161,8 @@ def fetch(cwd,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
                       redirect_stderr=True,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
 
     update_re = re.compile(
         r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
@@ -1946,7 +2200,8 @@ def init(cwd,
          git_opts='',
          user=None,
          password=None,
-         ignore_retcode=False):
+         ignore_retcode=False,
+         output_encoding=None):
     '''
     Interface to `git-init(1)`_
 
@@ -2008,6 +2263,18 @@ def init(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
 
@@ -2028,33 +2295,31 @@ def init(cwd,
     if bare:
         command.append('--bare')
     if template is not None:
-        if not isinstance(template, six.string_types):
-            template = str(template)
         command.append('--template={0}'.format(template))
     if separate_git_dir is not None:
-        if not isinstance(separate_git_dir, six.string_types):
-            separate_git_dir = str(separate_git_dir)
         command.append('--separate-git-dir={0}'.format(separate_git_dir))
     if shared is not None:
         if isinstance(shared, six.integer_types) \
                 and not isinstance(shared, bool):
-            shared = '0' + str(shared)
+            shared = '0' + six.text_type(shared)
         elif not isinstance(shared, six.string_types):
             # Using lower here because booleans would be capitalized when
             # converted to a string.
-            shared = str(shared).lower()
+            shared = six.text_type(shared).lower()
         command.append('--shared={0}'.format(shared))
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(command,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def is_worktree(cwd,
                 user=None,
-                password=None):
+                password=None,
+                output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2075,6 +2340,17 @@ def is_worktree(cwd,
 
       .. versionadded:: 2016.3.4
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -2084,13 +2360,15 @@ def is_worktree(cwd,
     '''
     cwd = _expand_path(cwd, user)
     try:
-        toplevel = _get_toplevel(cwd, user=user, password=password)
+        toplevel = _get_toplevel(cwd, user=user, password=password,
+                                 output_encoding=output_encoding)
     except CommandExecutionError:
         return False
     gitdir = os.path.join(toplevel, '.git')
     try:
         with salt.utils.files.fopen(gitdir, 'r') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 try:
                     label, path = line.split(None, 1)
                 except ValueError:
@@ -2114,7 +2392,8 @@ def list_branches(cwd,
                   remote=False,
                   user=None,
                   password=None,
-                  ignore_retcode=False):
+                  ignore_retcode=False,
+                  output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2149,6 +2428,17 @@ def list_branches(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -2164,13 +2454,15 @@ def list_branches(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout'].splitlines()
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout'].splitlines()
 
 
 def list_tags(cwd,
               user=None,
               password=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2195,6 +2487,17 @@ def list_tags(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -2209,13 +2512,15 @@ def list_tags(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout'].splitlines()
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout'].splitlines()
 
 
 def list_worktrees(cwd,
                    stale=False,
                    user=None,
                    password=None,
+                   output_encoding=None,
                    **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -2258,8 +2563,19 @@ def list_worktrees(cwd,
     .. note::
         Only one of ``all`` and ``stale`` can be set to ``True``.
 
-    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
 
     CLI Examples:
 
@@ -2282,14 +2598,16 @@ def list_worktrees(cwd,
             '\'all\' and \'stale\' cannot both be set to True'
         )
 
-    def _git_tag_points_at(cwd, rev, user=None, password=None):
+    def _git_tag_points_at(cwd, rev, user=None, password=None,
+                           output_encoding=None):
         '''
         Get any tags that point at a
         '''
         return _git_run(['git', 'tag', '--points-at', rev],
                         cwd=cwd,
                         user=user,
-                        password=password)['stdout'].splitlines()
+                        password=password,
+                        output_encoding=output_encoding)['stdout'].splitlines()
 
     def _desired(is_stale, all_, stale):
         '''
@@ -2312,10 +2630,10 @@ def list_worktrees(cwd,
         These should not be there, but may show up due to a bug in git 2.7.0.
         '''
         log.error(
-            'git.worktree: Duplicate worktree path {0}. This may be caused by '
+            'git.worktree: Duplicate worktree path %s. This may be caused by '
             'a known issue in git 2.7.0 (see '
-            'http://permalink.gmane.org/gmane.comp.version-control.git/283998)'
-            .format(path)
+            'http://permalink.gmane.org/gmane.comp.version-control.git/283998)',
+            path
         )
 
     tracked_data_points = ('worktree', 'HEAD', 'branch')
@@ -2326,7 +2644,8 @@ def list_worktrees(cwd,
         out = _git_run(['git', 'worktree', 'list', '--porcelain'],
                        cwd=cwd,
                        user=user,
-                       password=password)
+                       password=password,
+                       output_encoding=output_encoding)
         if out['retcode'] != 0:
             msg = 'Failed to list worktrees'
             if out['stderr']:
@@ -2337,9 +2656,7 @@ def list_worktrees(cwd,
             '''
             Log a warning
             '''
-            log.warning(
-                'git.worktree: Untracked line item \'{0}\''.format(line)
-            )
+            log.warning('git.worktree: Untracked line item \'%s\'', line)
 
         for individual_worktree in \
                 salt.utils.itertools.split(out['stdout'].strip(), '\n\n'):
@@ -2363,8 +2680,8 @@ def list_worktrees(cwd,
 
                 if worktree_data[type_]:
                     log.error(
-                        'git.worktree: Unexpected duplicate {0} entry '
-                        '\'{1}\', skipping'.format(type_, line)
+                        'git.worktree: Unexpected duplicate %s entry '
+                        '\'%s\', skipping', type_, line
                     )
                     continue
 
@@ -2375,8 +2692,8 @@ def list_worktrees(cwd,
             if missing:
                 log.error(
                     'git.worktree: Incomplete worktree data, missing the '
-                    'following information: {0}. Full data below:\n{1}'
-                    .format(', '.join(missing), individual_worktree)
+                    'following information: %s. Full data below:\n%s',
+                    ', '.join(missing), individual_worktree
                 )
                 continue
 
@@ -2398,7 +2715,8 @@ def list_worktrees(cwd,
                 tags_found = _git_tag_points_at(cwd,
                                                 wt_ptr['HEAD'],
                                                 user=user,
-                                                password=password)
+                                                password=password,
+                                                output_encoding=output_encoding)
                 if tags_found:
                     wt_ptr['tags'] = tags_found
             else:
@@ -2408,12 +2726,14 @@ def list_worktrees(cwd,
         return ret
 
     else:
-        toplevel = _get_toplevel(cwd, user=user, password=password)
+        toplevel = _get_toplevel(cwd, user=user, password=password,
+                                 output_encoding=output_encoding)
         try:
             worktree_root = rev_parse(cwd,
                                       opts=['--git-path', 'worktrees'],
                                       user=user,
-                                      password=password)
+                                      password=password,
+                                      output_encoding=output_encoding)
         except CommandExecutionError as exc:
             msg = 'Failed to find worktree location for ' + cwd
             log.error(msg, exc_info_on_loglevel=logging.DEBUG)
@@ -2422,8 +2742,7 @@ def list_worktrees(cwd,
             worktree_root = os.path.join(cwd, worktree_root)
         if not os.path.isdir(worktree_root):
             raise CommandExecutionError(
-                'Worktree admin directory {0} not present'
-                .format(worktree_root)
+                'Worktree admin directory {0} not present'.format(worktree_root)
             )
 
         def _read_file(path):
@@ -2433,7 +2752,7 @@ def list_worktrees(cwd,
             try:
                 with salt.utils.files.fopen(path, 'r') as fp_:
                     for line in fp_:
-                        ret = line.strip()
+                        ret = salt.utils.stringutils.to_unicode(line).strip()
                         # Ignore other lines, if they exist (which they
                         # shouldn't)
                         break
@@ -2452,11 +2771,11 @@ def list_worktrees(cwd,
 
             if not os.path.isabs(wt_loc):
                 log.error(
-                    'Non-absolute path found in {0}. If git 2.7.0 was '
+                    'Non-absolute path found in %s. If git 2.7.0 was '
                     'installed and then downgraded, this was likely caused '
                     'by a known issue in git 2.7.0. See '
                     'http://permalink.gmane.org/gmane.comp.version-control'
-                    '.git/283998 for more information.'.format(gitdir_file)
+                    '.git/283998 for more information.', gitdir_file
                 )
                 # Emulate what 'git worktree list' does under-the-hood, and
                 # that is using the toplevel directory. It will still give
@@ -2480,7 +2799,8 @@ def list_worktrees(cwd,
                 wt_head = rev_parse(cwd,
                                     rev=head_ref,
                                     user=user,
-                                    password=password)
+                                    password=password,
+                                    output_encoding=output_encoding)
                 wt_detached = False
             else:
                 wt_branch = None
@@ -2498,7 +2818,8 @@ def list_worktrees(cwd,
                 tags_found = _git_tag_points_at(cwd,
                                                 wt_head,
                                                 user=user,
-                                                password=password)
+                                                password=password,
+                                                output_encoding=output_encoding)
                 if tags_found:
                     wt_ptr['tags'] = tags_found
 
@@ -2516,6 +2837,7 @@ def ls_remote(cwd=None,
               https_user=None,
               https_pass=None,
               ignore_retcode=False,
+              output_encoding=None,
               saltenv='base'):
     '''
     Interface to `git-ls-remote(1)`_. Returns the upstream hash for a remote
@@ -2615,8 +2937,19 @@ def ls_remote(cwd=None,
 
         .. versionadded:: 2016.3.1
 
-    .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
 
     CLI Example:
 
@@ -2637,20 +2970,17 @@ def ls_remote(cwd=None,
     command = ['git'] + _format_git_opts(git_opts)
     command.append('ls-remote')
     command.extend(_format_opts(opts))
-    if not isinstance(remote, six.string_types):
-        remote = str(remote)
-    command.extend([remote])
+    command.append(remote)
     if ref:
-        if not isinstance(ref, six.string_types):
-            ref = str(ref)
-        command.extend([ref])
+        command.append(ref)
     output = _git_run(command,
                       cwd=cwd,
                       user=user,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
     ret = {}
     for line in output.splitlines():
         try:
@@ -2668,6 +2998,7 @@ def merge(cwd,
           user=None,
           password=None,
           ignore_retcode=False,
+          output_encoding=None,
           **kwargs):
     '''
     Interface to `git-merge(1)`_
@@ -2715,8 +3046,19 @@ def merge(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-merge(1)`: http://git-scm.com/docs/git-merge
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-merge(1)`: http://git-scm.com/docs/git-merge
 
     CLI Example:
 
@@ -2738,14 +3080,13 @@ def merge(cwd,
     command.append('merge')
     command.extend(_format_opts(opts))
     if rev:
-        if not isinstance(rev, six.string_types):
-            rev = str(rev)
         command.append(rev)
     return _git_run(command,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def merge_base(cwd,
@@ -2759,6 +3100,7 @@ def merge_base(cwd,
                user=None,
                password=None,
                ignore_retcode=False,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -2845,9 +3187,20 @@ def merge_base(cwd,
         if ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-merge-base(1)`: http://git-scm.com/docs/git-merge-base
     .. _here: http://git-scm.com/docs/git-merge-base#_discussion
-
 
     CLI Examples:
 
@@ -2875,7 +3228,7 @@ def merge_base(cwd,
     if refs is None:
         refs = []
     elif not isinstance(refs, (list, tuple)):
-        refs = [x.strip() for x in str(refs).split(',')]
+        refs = [x.strip() for x in six.text_type(refs).split(',')]
     mutually_exclusive_count = len(
         [x for x in (octopus, independent, is_ancestor, fork_point) if x]
     )
@@ -2897,8 +3250,6 @@ def merge_base(cwd,
             )
         elif not refs:
             refs = ['HEAD']
-        if not isinstance(fork_point, six.string_types):
-            fork_point = str(fork_point)
 
     if is_ancestor:
         if _LooseVersion(version(versioninfo=False)) < _LooseVersion('1.8.0'):
@@ -2912,13 +3263,15 @@ def merge_base(cwd,
                                      opts=['--verify'],
                                      user=user,
                                      password=password,
-                                     ignore_retcode=ignore_retcode)
+                                     ignore_retcode=ignore_retcode,
+                                     output_encoding=output_encoding)
             return merge_base(cwd,
                               refs=refs,
                               is_ancestor=False,
                               user=user,
                               password=password,
-                              ignore_retcode=ignore_retcode) == first_commit
+                              ignore_retcode=ignore_retcode,
+                              output_encoding=output_encoding) == first_commit
 
     command = ['git'] + _format_git_opts(git_opts)
     command.append('merge-base')
@@ -2933,17 +3286,14 @@ def merge_base(cwd,
         command.append('--independent')
     elif fork_point:
         command.extend(['--fork-point', fork_point])
-    for ref in refs:
-        if isinstance(ref, six.string_types):
-            command.append(ref)
-        else:
-            command.append(str(ref))
+    command.extend(refs)
     result = _git_run(command,
                       cwd=cwd,
                       user=user,
                       password=password,
                       ignore_retcode=ignore_retcode,
-                      failhard=False if is_ancestor else True)
+                      failhard=False if is_ancestor else True,
+                      output_encoding=output_encoding)
     if is_ancestor:
         return result['retcode'] == 0
     all_bases = result['stdout'].splitlines()
@@ -2958,7 +3308,8 @@ def merge_tree(cwd,
                base=None,
                user=None,
                password=None,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2993,8 +3344,19 @@ def merge_tree(cwd,
         if ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
-    .. _`git-merge-tree(1)`: http://git-scm.com/docs/git-merge-tree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-merge-tree(1)`: http://git-scm.com/docs/git-merge-tree
 
     CLI Examples:
 
@@ -3005,13 +3367,10 @@ def merge_tree(cwd,
     '''
     cwd = _expand_path(cwd, user)
     command = ['git', 'merge-tree']
-    if not isinstance(ref1, six.string_types):
-        ref1 = str(ref1)
-    if not isinstance(ref2, six.string_types):
-        ref2 = str(ref2)
     if base is None:
         try:
-            base = merge_base(cwd, refs=[ref1, ref2])
+            base = merge_base(cwd, refs=[ref1, ref2],
+                              output_encoding=output_encoding)
         except (SaltInvocationError, CommandExecutionError):
             raise CommandExecutionError(
                 'Unable to determine merge base for {0} and {1}'
@@ -3022,7 +3381,8 @@ def merge_tree(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def pull(cwd,
@@ -3032,7 +3392,8 @@ def pull(cwd,
          password=None,
          identity=None,
          ignore_retcode=False,
-         saltenv='base'):
+         saltenv='base',
+         output_encoding=None):
     '''
     Interface to `git-pull(1)`_
 
@@ -3101,6 +3462,18 @@ def pull(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-pull(1)`: http://git-scm.com/docs/git-pull
 
     CLI Example:
@@ -3119,7 +3492,8 @@ def pull(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def push(cwd,
@@ -3132,6 +3506,7 @@ def push(cwd,
          identity=None,
          ignore_retcode=False,
          saltenv='base',
+         output_encoding=None,
          **kwargs):
     '''
     Interface to `git-push(1)`_
@@ -3213,6 +3588,18 @@ def push(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-push(1)`: http://git-scm.com/docs/git-push
     .. _refspec: http://git-scm.com/book/en/v2/Git-Internals-The-Refspec
 
@@ -3235,10 +3622,6 @@ def push(cwd,
     command = ['git'] + _format_git_opts(git_opts)
     command.append('push')
     command.extend(_format_opts(opts))
-    if not isinstance(remote, six.string_types):
-        remote = str(remote)
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
     command.extend([remote, ref])
     return _git_run(command,
                     cwd=cwd,
@@ -3246,7 +3629,8 @@ def push(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rebase(cwd,
@@ -3255,7 +3639,8 @@ def rebase(cwd,
            git_opts='',
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     Interface to `git-rebase(1)`_
 
@@ -3299,6 +3684,18 @@ def rebase(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
 
 
@@ -3318,13 +3715,14 @@ def rebase(cwd,
     command.append('rebase')
     command.extend(opts)
     if not isinstance(rev, six.string_types):
-        rev = str(rev)
+        rev = six.text_type(rev)
     command.extend(salt.utils.args.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def remote_get(cwd,
@@ -3332,7 +3730,8 @@ def remote_get(cwd,
                user=None,
                password=None,
                redact_auth=True,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     Get the fetch and push URL for a specific remote
 
@@ -3370,6 +3769,17 @@ def remote_get(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -3383,7 +3793,8 @@ def remote_get(cwd,
                           user=user,
                           password=password,
                           redact_auth=redact_auth,
-                          ignore_retcode=ignore_retcode)
+                          ignore_retcode=ignore_retcode,
+                          output_encoding=output_encoding)
     if remote not in all_remotes:
         raise CommandExecutionError(
             'Remote \'{0}\' not present in git checkout located at {1}'
@@ -3401,6 +3812,7 @@ def remote_refs(url,
                 https_user=None,
                 https_pass=None,
                 ignore_retcode=False,
+                output_encoding=None,
                 saltenv='base'):
     '''
     .. versionadded:: 2015.8.0
@@ -3464,6 +3876,18 @@ def remote_refs(url,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -3487,7 +3911,8 @@ def remote_refs(url,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      saltenv=saltenv)['stdout']
+                      saltenv=saltenv,
+                      output_encoding=output_encoding)['stdout']
     ret = {}
     for line in salt.utils.itertools.split(output, '\n'):
         try:
@@ -3508,7 +3933,8 @@ def remote_set(cwd,
                push_url=None,
                push_https_user=None,
                push_https_pass=None,
-               ignore_retcode=False):
+               ignore_retcode=False,
+               output_encoding=None):
     '''
     cwd
         The path to the git checkout
@@ -3562,6 +3988,17 @@ def remote_set(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -3572,17 +4009,19 @@ def remote_set(cwd,
         salt myminion git.remote_set /path/to/repo https://github.com/user/repo.git remote=upstream push_url=git@github.com:user/repo.git
     '''
     # Check if remote exists
-    if remote in remotes(cwd, user=user, password=password):
+    if remote in remotes(cwd, user=user, password=password,
+                         output_encoding=output_encoding):
         log.debug(
-            'Remote \'{0}\' already exists in git checkout located at {1}, '
-            'removing so it can be re-added'.format(remote, cwd)
+            'Remote \'%s\' already exists in git checkout located at %s, '
+            'removing so it can be re-added', remote, cwd
         )
         command = ['git', 'remote', 'rm', remote]
         _git_run(command,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     # Add remote
     try:
         url = salt.utils.url.add_http_basic_auth(url,
@@ -3591,44 +4030,44 @@ def remote_set(cwd,
                                                  https_only=True)
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
-    if not isinstance(remote, six.string_types):
-        remote = str(remote)
-    if not isinstance(url, six.string_types):
-        url = str(url)
     command = ['git', 'remote', 'add', remote, url]
     _git_run(command,
              cwd=cwd,
              user=user,
              password=password,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             output_encoding=output_encoding)
     if push_url:
         if not isinstance(push_url, six.string_types):
-            push_url = str(push_url)
+            push_url = six.text_type(push_url)
         try:
             push_url = salt.utils.url.add_http_basic_auth(push_url,
                                                           push_https_user,
                                                           push_https_pass,
                                                           https_only=True)
         except ValueError as exc:
-            raise SaltInvocationError(exc.__str__())
+            raise SaltInvocationError(six.text_type(exc))
         command = ['git', 'remote', 'set-url', '--push', remote, push_url]
         _git_run(command,
                  cwd=cwd,
                  user=user,
                  password=password,
-                 ignore_retcode=ignore_retcode)
+                 ignore_retcode=ignore_retcode,
+                 output_encoding=output_encoding)
     return remote_get(cwd=cwd,
                       remote=remote,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)
 
 
 def remotes(cwd,
             user=None,
             password=None,
             redact_auth=True,
-            ignore_retcode=False):
+            ignore_retcode=False,
+            output_encoding=None):
     '''
     Get fetch and push URLs for each remote in a git checkout
 
@@ -3664,6 +4103,17 @@ def remotes(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -3678,7 +4128,8 @@ def remotes(cwd,
                       cwd=cwd,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)['stdout']
     for remote_line in salt.utils.itertools.split(output, '\n'):
         try:
             remote, remote_info = remote_line.split(None, 1)
@@ -3692,8 +4143,8 @@ def remotes(cwd,
         action = action.lstrip('(').rstrip(')').lower()
         if action not in ('fetch', 'push'):
             log.warning(
-                'Unknown action \'{0}\' for remote \'{1}\' in git checkout '
-                'located in {2}'.format(action, remote, cwd)
+                'Unknown action \'%s\' for remote \'%s\' in git checkout '
+                'located in %s', action, remote, cwd
             )
             continue
         if redact_auth:
@@ -3707,7 +4158,8 @@ def reset(cwd,
           git_opts='',
           user=None,
           password=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          output_encoding=None):
     '''
     Interface to `git-reset(1)`_, returns the stdout from the git command
 
@@ -3748,8 +4200,19 @@ def reset(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-reset(1)`: http://git-scm.com/docs/git-reset
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-reset(1)`: http://git-scm.com/docs/git-reset
 
     CLI Examples:
 
@@ -3768,7 +4231,8 @@ def reset(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rev_parse(cwd,
@@ -3777,7 +4241,8 @@ def rev_parse(cwd,
               git_opts='',
               user=None,
               password=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3821,10 +4286,21 @@ def rev_parse(cwd,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-rev-parse(1)`: http://git-scm.com/docs/git-rev-parse
     .. _`SPECIFYING REVISIONS`: http://git-scm.com/docs/git-rev-parse#_specifying_revisions
     .. _`Options for Files`: http://git-scm.com/docs/git-rev-parse#_options_for_files
-
 
     CLI Examples:
 
@@ -3846,14 +4322,13 @@ def rev_parse(cwd,
     command.append('rev-parse')
     command.extend(_format_opts(opts))
     if rev is not None:
-        if not isinstance(rev, six.string_types):
-            rev = str(rev)
         command.append(rev)
     return _git_run(command,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def revision(cwd,
@@ -3861,7 +4336,8 @@ def revision(cwd,
              short=False,
              user=None,
              password=None,
-             ignore_retcode=False):
+             ignore_retcode=False,
+             output_encoding=None):
     '''
     Returns the SHA1 hash of a given identifier (hash, branch, tag, HEAD, etc.)
 
@@ -3890,6 +4366,18 @@ def revision(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -3897,8 +4385,6 @@ def revision(cwd,
         salt myminion git.revision /path/to/repo mybranch
     '''
     cwd = _expand_path(cwd, user)
-    if not isinstance(rev, six.string_types):
-        rev = str(rev)
     command = ['git', 'rev-parse']
     if short:
         command.append('--short')
@@ -3907,7 +4393,8 @@ def revision(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def rm_(cwd,
@@ -3916,7 +4403,8 @@ def rm_(cwd,
         git_opts='',
         user=None,
         password=None,
-        ignore_retcode=False):
+        ignore_retcode=False,
+        output_encoding=None):
     '''
     Interface to `git-rm(1)`_
 
@@ -3964,8 +4452,19 @@ def rm_(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-rm(1)`: http://git-scm.com/docs/git-rm
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-rm(1)`: http://git-scm.com/docs/git-rm
 
     CLI Examples:
 
@@ -3984,7 +4483,8 @@ def rm_(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def stash(cwd,
@@ -3993,7 +4493,8 @@ def stash(cwd,
           git_opts='',
           user=None,
           password=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          output_encoding=None):
     '''
     Interface to `git-stash(1)`_, returns the stdout from the git command
 
@@ -4033,8 +4534,19 @@ def stash(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-stash(1)`: http://git-scm.com/docs/git-stash
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-stash(1)`: http://git-scm.com/docs/git-stash
 
     CLI Examples:
 
@@ -4046,10 +4558,6 @@ def stash(cwd,
         salt myminion git.stash /path/to/repo list
     '''
     cwd = _expand_path(cwd, user)
-    if not isinstance(action, six.string_types):
-        # No numeric actions but this will prevent a traceback when the git
-        # command is run.
-        action = str(action)
     command = ['git'] + _format_git_opts(git_opts)
     command.extend(['stash', action])
     command.extend(_format_opts(opts))
@@ -4057,13 +4565,15 @@ def stash(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def status(cwd,
            user=None,
            password=None,
-           ignore_retcode=False):
+           ignore_retcode=False,
+           output_encoding=None):
     '''
     .. versionchanged:: 2015.8.0
         Return data has changed from a list of lists to a dictionary
@@ -4089,6 +4599,17 @@ def status(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -4109,8 +4630,9 @@ def status(cwd,
                       cwd=cwd,
                       user=user,
                       password=password,
-                      ignore_retcode=ignore_retcode)['stdout']
-    for line in output.split('\0'):
+                      ignore_retcode=ignore_retcode,
+                      output_encoding=output_encoding)['stdout']
+    for line in output.split(str('\0')):
         try:
             state, filename = line.split(None, 1)
         except ValueError:
@@ -4128,6 +4650,7 @@ def submodule(cwd,
               identity=None,
               ignore_retcode=False,
               saltenv='base',
+              output_encoding=None,
               **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -4219,6 +4742,18 @@ def submodule(cwd,
 
         .. versionadded:: 2016.3.1
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-submodule(1)`: http://git-scm.com/docs/git-submodule
 
     CLI Example:
@@ -4251,8 +4786,6 @@ def submodule(cwd,
             '\'command\' to \'init\', or include \'--init\' in the \'opts\' '
             'argument and set \'command\' to \'update\'.'
         )
-    if not isinstance(command, six.string_types):
-        command = str(command)
     cmd = ['git'] + _format_git_opts(git_opts)
     cmd.extend(['submodule', command])
     cmd.extend(_format_opts(opts))
@@ -4262,7 +4795,8 @@ def submodule(cwd,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
-                    saltenv=saltenv)['stdout']
+                    saltenv=saltenv,
+                    output_encoding=output_encoding)['stdout']
 
 
 def symbolic_ref(cwd,
@@ -4272,7 +4806,8 @@ def symbolic_ref(cwd,
                  git_opts='',
                  user=None,
                  password=None,
-                 ignore_retcode=False):
+                 ignore_retcode=False,
+                 output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4322,8 +4857,19 @@ def symbolic_ref(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-symbolic-ref(1)`: http://git-scm.com/docs/git-symbolic-ref
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-symbolic-ref(1)`: http://git-scm.com/docs/git-symbolic-ref
 
     CLI Examples:
 
@@ -4353,7 +4899,8 @@ def symbolic_ref(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
 def version(versioninfo=False):
@@ -4365,7 +4912,6 @@ def version(versioninfo=False):
     versioninfo : False
         If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
         0]``)
-
 
     CLI Example:
 
@@ -4380,8 +4926,8 @@ def version(versioninfo=False):
             version_ = _git_run(['git', '--version'])['stdout']
         except CommandExecutionError as exc:
             log.error(
-                'Failed to obtain the git version (error follows):\n{0}'
-                .format(exc)
+                'Failed to obtain the git version (error follows):\n%s',
+                exc
             )
             version_ = 'unknown'
         try:
@@ -4417,6 +4963,7 @@ def worktree_add(cwd,
                  user=None,
                  password=None,
                  ignore_retcode=False,
+                 output_encoding=None,
                  **kwargs):
     '''
     .. versionadded:: 2015.8.0
@@ -4493,8 +5040,19 @@ def worktree_add(cwd,
 
         .. versionadded:: 2015.8.0
 
-    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
 
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
+    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
 
     CLI Examples:
 
@@ -4531,12 +5089,8 @@ def worktree_add(cwd,
         if force:
             command.append('--force')
     command.extend(_format_opts(opts))
-    if not isinstance(worktree_path, six.string_types):
-        worktree_path = str(worktree_path)
     command.append(worktree_path)
     if ref:
-        if not isinstance(ref, six.string_types):
-            ref = str(ref)
         command.append(ref)
     # Checkout message goes to stderr
     return _git_run(command,
@@ -4544,7 +5098,8 @@ def worktree_add(cwd,
                     user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
-                    redirect_stderr=True)['stdout']
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
 
 
 def worktree_prune(cwd,
@@ -4555,7 +5110,8 @@ def worktree_prune(cwd,
                    git_opts='',
                    user=None,
                    password=None,
-                   ignore_retcode=False):
+                   ignore_retcode=False,
+                   output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4618,9 +5174,20 @@ def worktree_prune(cwd,
 
         .. versionadded:: 2015.8.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
     .. _`git-config(1)`: http://git-scm.com/docs/git-config/2.5.1
-
 
     CLI Examples:
 
@@ -4639,18 +5206,17 @@ def worktree_prune(cwd,
     if verbose:
         command.append('--verbose')
     if expire:
-        if not isinstance(expire, six.string_types):
-            expire = str(expire)
         command.extend(['--expire', expire])
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
                     user=user,
                     password=password,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    output_encoding=output_encoding)['stdout']
 
 
-def worktree_rm(cwd, user=None):
+def worktree_rm(cwd, user=None, output_encoding=None):
     '''
     .. versionadded:: 2015.8.0
 
@@ -4675,6 +5241,17 @@ def worktree_rm(cwd, user=None):
         running. Setting this option will change the home directory from which
         path expansion is performed.
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     CLI Examples:
 
@@ -4686,7 +5263,7 @@ def worktree_rm(cwd, user=None):
     cwd = _expand_path(cwd, user)
     if not os.path.exists(cwd):
         raise CommandExecutionError(cwd + ' does not exist')
-    elif not is_worktree(cwd):
+    elif not is_worktree(cwd, output_encoding=output_encoding):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
         salt.utils.files.rm_rf(cwd)

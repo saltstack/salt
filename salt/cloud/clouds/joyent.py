@@ -58,9 +58,14 @@ import base64
 import pprint
 import inspect
 import datetime
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
+
+try:
+    from M2Crypto import EVP
+    HAS_M2 = True
+except ImportError:
+    from Crypto.Hash import SHA256
+    from Crypto.Signature import PKCS1_v1_5
+    HAS_M2 = False
 
 # Import salt libs
 from salt.ext import six
@@ -1059,12 +1064,18 @@ def query(action=None,
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
-    with salt.utils.files.fopen(ssh_keyfile, 'r') as kh_:
-        rsa_key = RSA.importKey(kh_.read())
-    rsa_ = PKCS1_v1_5.new(rsa_key)
-    hash_ = SHA256.new()
-    hash_.update(timestamp.encode(__salt_system_encoding__))
-    signed = base64.b64encode(rsa_.sign(hash_))
+    rsa_key = salt.crypt.get_rsa_key(ssh_keyfile, None)
+    if HAS_M2:
+        md = EVP.MessageDigest('sha256')
+        md.update(timestamp.encode(__salt_system_encoding__))
+        digest = md.final()
+        signed = rsa_key.sign(digest, algo='sha256')
+    else:
+        rsa_ = PKCS1_v1_5.new(rsa_key)
+        hash_ = SHA256.new()
+        hash_.update(timestamp.encode(__salt_system_encoding__))
+        signed = rsa_.sign(hash_)
+    signed = base64.b64encode(signed)
     user_arr = user.split('/')
     if len(user_arr) == 1:
         keyid = '/{0}/keys/{1}'.format(user_arr[0], ssh_keyname)

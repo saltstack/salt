@@ -3,7 +3,7 @@
     :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
@@ -743,24 +743,6 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = 'Execution failed due to "Test exception"'
             ret['out'] = False
             self.assertEqual(junos.cli('show version'), ret)
-
-    def test_cli_write_output(self):
-        with patch('salt.utils.files.fopen') as mock_fopen, \
-                patch('jnpr.junos.device.Device.cli') as mock_cli:
-            mock_cli.return_vale = 'cli text output'
-            args = {'__pub_user': 'root',
-                    '__pub_arg': [{'dest': 'copy/output/here'}],
-                    'dest': 'copy/output/here',
-                    '__pub_fun': 'junos.cli',
-                    '__pub_jid': '20170221182531323467',
-                    '__pub_tgt': 'mac_min',
-                    '__pub_tgt_type': 'glob',
-                    '__pub_ret': ''}
-            ret = dict()
-            ret['message'] = 'cli text output'
-            ret['out'] = True
-            junos.cli('show version', **args)
-            mock_fopen.assert_called_with('copy/output/here', 'w')
 
     def test_shutdown_without_args(self):
         ret = dict()

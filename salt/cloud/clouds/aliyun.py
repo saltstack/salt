@@ -823,7 +823,7 @@ def query(params=None):
 
     content = request.text
 
-    result = salt.utils.json.loads(content, object_hook=salt.utils.data.encode_dict)
+    result = salt.utils.json.loads(content)
     if 'Code' in result:
         raise SaltCloudSystemExit(
             pprint.pformat(result.get('Message', {}))

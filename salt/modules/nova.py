@@ -58,7 +58,7 @@ Module for handling OpenStack Nova calls
     against system certificates, a path to a bundle or CA certs to check against, or
     None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging

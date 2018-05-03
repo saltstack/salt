@@ -44,7 +44,8 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'eauth',
     'fun',
     'kwarg',
-    'match'
+    'match',
+    'print_event'
 ])
 
 
@@ -389,7 +390,7 @@ class LoadAuth(object):
 
     def check_authentication(self, load, auth_type, key=None, show_username=False):
         '''
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         Go through various checks to see if the token/eauth/user can be authenticated.
 

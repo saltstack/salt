@@ -4,7 +4,7 @@ Manage cygwin packages.
 
 Module file to accompany the cyg state.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -18,6 +18,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -312,7 +313,7 @@ def list_(package='', cyg_arch='x86_64'):
     stdout = _cygcheck(args, cyg_arch=cyg_arch)
     lines = []
     if isinstance(stdout, six.string_types):
-        lines = str(stdout).splitlines()
+        lines = salt.utils.stringutils.to_unicode(stdout).splitlines()
     for line in lines:
         match = re.match(r'^([^ ]+) *([^ ]+)', line)
         if match:

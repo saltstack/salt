@@ -5,6 +5,7 @@ Raet Ioflo Behavior Unittests
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from salt.ext.six.moves import map
+import importlib
 # pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -20,6 +21,7 @@ from ioflo.test import testing
 from raet.lane.stacking import LaneStack
 from raet.stacking import Stack
 
+import salt.utils.stringutils
 from salt.utils.event import tagify
 
 
@@ -39,6 +41,9 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         '''
         Call super if override so House Framer and Frame are setup correctly
         '''
+        behaviors = ['salt.daemons.flo', 'salt.daemons.test.plan']
+        for behavior in behaviors:
+            mod = importlib.import_module(behavior)
         super(PresenterTestCase, self).setUp()
 
     def tearDown(self):
@@ -86,14 +91,15 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'presence_req': '.salt.presence.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'alloweds': '.salt.var.presence.alloweds',
-                              'aliveds': '.salt.var.presence.aliveds',
-                              'reapeds': '.salt.var.presence.reapeds',
-                              'availables': '.salt.var.presence.availables'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'alloweds': salt.utils.stringutils.to_str('.salt.var.presence.alloweds'),
+                 'aliveds': salt.utils.stringutils.to_str('.salt.var.presence.aliveds'),
+                 'reapeds': salt.utils.stringutils.to_str('.salt.var.presence.reapeds'),
+                 'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'presence_req'))

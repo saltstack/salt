@@ -6,7 +6,7 @@ This module allows you to manage extended attributes on files or directories
 
     salt '*' xattr.list /path/to/file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python Libs
 import logging

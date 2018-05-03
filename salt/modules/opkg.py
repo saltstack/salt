@@ -149,7 +149,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
         If True, raise an error with a list of the package databases that
         encountered errors.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1348,5 +1348,5 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret

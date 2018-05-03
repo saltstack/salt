@@ -551,7 +551,7 @@ Default: ``0``
 
 Memcache is an additional cache layer that keeps a limited amount of data
 fetched from the minion data cache for a limited period of time in memory that
-makes cache operations faster. It doesn't make much sence for the ``localfs``
+makes cache operations faster. It doesn't make much sense for the ``localfs``
 cache driver but helps for more complex drivers like ``consul``.
 
 This option sets the memcache items expiration time. By default is set to ``0``
@@ -1044,6 +1044,40 @@ cache events are fired when a minion requests a minion data cache refresh.
 
     minion_data_cache_events: True
 
+.. conf_master:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_master:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration
@@ -1364,7 +1398,7 @@ comparison, then by globbing, then by full-string regex matching.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     For security reasons the file must be readonly except for it's owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
@@ -1389,7 +1423,7 @@ membership in the :conf_master:`autosign_file` and the
 ``autosign_grains_dir``
 -----------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``not defined``
 
@@ -1404,7 +1438,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion.
 
 Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
-documentation for more infomation.
+documentation for more information.
 
 .. code-block:: yaml
 
@@ -1886,7 +1920,7 @@ Set additional directories to search for runner modules.
 ``utils_dirs``
 ---------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``[]``
 
@@ -2066,13 +2100,13 @@ are enabled and available!
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The renderer to use on the minions to render the state data.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_master:: userdata_template
 
@@ -2096,7 +2130,7 @@ the cloud profile or master config file, no templating will be performed.
 ``jinja_env``
 -------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{}``
 
@@ -2132,7 +2166,7 @@ The default options are:
 ``jinja_sls_env``
 -----------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{}``
 
@@ -2178,7 +2212,7 @@ This allows the following more convenient syntax to be used:
     # (this comment remains in the rendered template)
     ## ensure all the formula services are running
     % for service in formula_services:
-    enable_service_{{ serivce }}:
+    enable_service_{{ service }}:
       service.running:
         name: {{ service }}
     % endfor
@@ -2202,7 +2236,7 @@ be used if you had not set the line_statement and line_comment options:
 ``jinja_trim_blocks``
 ---------------------
 
-.. deprecated:: Oxygen
+.. deprecated:: 2018.3.0
     Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
@@ -2222,7 +2256,7 @@ to the Jinja environment init variable ``trim_blocks``.
 ``jinja_lstrip_blocks``
 -----------------------
 
-.. deprecated:: Oxygen
+.. deprecated:: 2018.3.0
     Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
@@ -2470,8 +2504,9 @@ on a large number of minions.
 
 .. note::
     Rather than altering this configuration parameter, it may be advisable to
-    use the :mod:`fileserver.clear_list_cache
-    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+    use the :mod:`fileserver.clear_file_list_cache
+    <salt.runners.fileserver.clear_file_list_cache>` runner to clear these
+    caches.
 
 .. code-block:: yaml
 
@@ -2631,7 +2666,7 @@ Example:
 ``roots_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -2818,7 +2853,7 @@ gitfs remotes.
 ``gitfs_disable_saltenv_mapping``
 *********************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -2841,7 +2876,7 @@ parameters <gitfs-per-saltenv-config>`.
 ``gitfs_ref_types``
 *******************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``['branch', 'tag', 'sha']``
 
@@ -2873,7 +2908,7 @@ are mapped as saltenvs:
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``gitfs_env_whitelist`` to ``gitfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -2896,7 +2931,7 @@ information can be found in the :ref:`GitFS Walkthrough
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``gitfs_env_blacklist`` to ``gitfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -2948,7 +2983,7 @@ they were created by a different master.
 ``gitfs_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3263,7 +3298,7 @@ bookmark should be used as the ``base`` environment.
 **************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``hgfs_env_whitelist`` to ``hgfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -3293,7 +3328,7 @@ blacklist will be exposed as fileserver environments.
 **************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``hgfs_env_blacklist`` to ``hgfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -3322,7 +3357,7 @@ blacklist will be exposed as fileserver environments.
 ``hgfs_update_interval``
 ************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3490,7 +3525,7 @@ also be configured on a per-remote basis, see :conf_master:`here
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``svnfs_env_whitelist`` to ``svnfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -3520,7 +3555,7 @@ will be exposed as fileserver environments.
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``svnfs_env_blacklist`` to ``svnfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -3549,7 +3584,7 @@ will be exposed as fileserver environments.
 ``svnfs_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3655,7 +3690,7 @@ exposed.
 ``minionfs_update_interval``
 ****************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3684,7 +3719,7 @@ examples.
 ``azurefs_update_interval``
 ***************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3706,7 +3741,7 @@ See the :mod:`s3fs documentation <salt.fileserver.s3fs>` for usage examples.
 ``s3fs_update_interval``
 ************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -4465,6 +4500,11 @@ strategy between different sources. It accepts 5 values:
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. note::
+    In order for yamlex based features such as ``!aggregate`` to work as expected
+    across documents using the default ``smart`` merge strategy, the :conf_master:`renderer`
+    config option must be set to ``jinja|yamlex`` or similar.
+
 .. conf_master:: pillar_merge_lists
 
 ``pillar_merge_lists``
@@ -4479,6 +4519,25 @@ Recursively merge lists by aggregating them instead of replacing them.
 .. code-block:: yaml
 
     pillar_merge_lists: False
+
+.. conf_master:: pillar_includes_override_sls
+
+``pillar_includes_override_sls``
+********************************
+
+.. versionadded:: 2017.7.6,2018.3.1
+
+Default: ``False``
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+Set this option to ``True`` to return to the old behavior.
+
+.. code-block:: yaml
+
+    pillar_includes_override_sls: True
 
 .. _pillar-cache-opts:
 
@@ -5304,11 +5363,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 

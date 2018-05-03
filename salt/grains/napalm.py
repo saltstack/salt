@@ -326,7 +326,7 @@ def host(proxy=None):
 
     .. note::
 
-        The diference betwen ``host`` and ``hostname`` is that
+        The diference between ``host`` and ``hostname`` is that
         ``host`` provides the physical location - either domain name or IP address,
         while ``hostname`` provides the hostname as configured on the device.
         They are not necessarily the same.
@@ -413,10 +413,10 @@ def host_dns(proxy=None):
                 'AAAA': []
             }
         }
-        dns_a = salt.utils.dns.query(device_host_value, 'A')
+        dns_a = salt.utils.dns.lookup(device_host_value, 'A')
         if dns_a:
             host_dns_ret['host_dns']['A'] = dns_a
-        dns_aaaa = salt.utils.dns.query(device_host_value, 'AAAA')
+        dns_aaaa = salt.utils.dns.lookup(device_host_value, 'AAAA')
         if dns_aaaa:
             host_dns_ret['host_dns']['AAAA'] = dns_aaaa
         return host_dns_ret

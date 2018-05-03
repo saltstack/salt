@@ -22,7 +22,7 @@ Module to provide MS SQL Server compatibility to salt.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from json import JSONEncoder, loads
 
 import salt.ext.six as six
@@ -67,7 +67,7 @@ def _get_connection(**kwargs):
 class _MssqlEncoder(JSONEncoder):
     # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
     def default(self, o):  # pylint: disable=E0202
-        return str(o)
+        return six.text_type(o)
 
 
 def tsql_query(query, **kwargs):
@@ -85,9 +85,9 @@ def tsql_query(query, **kwargs):
         cur.execute(query)
         # Making sure the result is JSON serializable
         return loads(_MssqlEncoder().encode({'resultset': cur.fetchall()}))['resultset']
-    except Exception as e:
+    except Exception as err:
         # Trying to look like the output of cur.fetchall()
-        return (('Could not run the query', ), (str(e), ))
+        return (('Could not run the query', ), (six.text_type(err), ))
 
 
 def version(**kwargs):
@@ -105,7 +105,7 @@ def version(**kwargs):
 
 def db_list(**kwargs):
     '''
-    Return the databse list created on a MS SQL server.
+    Return the database list created on a MS SQL server.
 
     CLI Example:
 

@@ -3,7 +3,7 @@
     :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.states.host as host
@@ -22,14 +22,14 @@ from tests.support.mock import (
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class HostTestCase(TestCase, LoaderModuleMockMixin):
     '''
-        Validate the host state
+    Validate the host state
     '''
     def setup_loader_modules(self):
         return {host: {}}
 
     def test_present(self):
         '''
-            Test to ensures that the named host is present with the given ip
+        Test to ensures that the named host is present with the given ip
         '''
         ret = {'changes': {},
                'comment': 'Host salt (127.0.0.1) already present',
@@ -41,7 +41,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_absent(self):
         '''
-            Test to ensure that the named host is absent
+        Test to ensure that the named host is absent
         '''
         ret = {'changes': {},
                'comment': 'Host salt (127.0.0.1) already absent',

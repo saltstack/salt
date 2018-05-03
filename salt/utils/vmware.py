@@ -74,7 +74,7 @@ You should see output related to the ESXi host's syslog configuration.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import atexit
 import errno
 import logging
@@ -202,7 +202,7 @@ def _get_service_instance(host, username, password, protocol,
             try:
                 token = get_gssapi_token(principal, host, domain)
             except Exception as exc:
-                raise salt.exceptions.VMwareConnectionError(str(exc))
+                raise salt.exceptions.VMwareConnectionError(six.text_type(exc))
         else:
             err_msg = 'Login mechanism \'{0}\' was specified but the' \
                       ' mandatory parameters are missing'.format(mechanism)
@@ -211,8 +211,8 @@ def _get_service_instance(host, username, password, protocol,
         raise salt.exceptions.CommandExecutionError(
             'Unsupported mechanism: \'{0}\''.format(mechanism))
     try:
-        log.trace('Connecting using the \'{0}\' mechanism, with username '
-                  '\'{1}\''.format(mechanism, username))
+        log.trace('Connecting using the \'%s\' mechanism, with username \'%s\'',
+                  mechanism, username)
         service_instance = SmartConnect(
             host=host,
             user=username,
@@ -223,7 +223,7 @@ def _get_service_instance(host, username, password, protocol,
             mechanism=mechanism)
     except TypeError as exc:
         if 'unexpected keyword argument' in exc.message:
-            log.error('Initial connect to the VMware endpoint failed with {0}'.format(exc.message))
+            log.error('Initial connect to the VMware endpoint failed with %s', exc.message)
             log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
             log.error('We recommend updating to that version or later.')
             raise
@@ -235,7 +235,7 @@ def _get_service_instance(host, username, password, protocol,
         try:
             if (isinstance(exc, vim.fault.HostConnectFault) and
                 '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
-               '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
+               '[SSL: CERTIFICATE_VERIFY_FAILED]' in six.text_type(exc):
 
                 import ssl
                 service_instance = SmartConnect(
@@ -252,7 +252,7 @@ def _get_service_instance(host, username, password, protocol,
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 raise salt.exceptions.VMwareConnectionError(err_msg)
         except Exception as exc:
-            if 'certificate verify failed' in str(exc):
+            if 'certificate verify failed' in six.text_type(exc):
                 import ssl
                 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
                 context.verify_mode = ssl.CERT_NONE
@@ -269,7 +269,7 @@ def _get_service_instance(host, username, password, protocol,
                     )
                 except Exception as exc:
                     log.exception(exc)
-                    err_msg = exc.msg if hasattr(exc, 'msg') else str(exc)
+                    err_msg = exc.msg if hasattr(exc, 'msg') else six.text_type(exc)
                     raise salt.exceptions.VMwareConnectionError(
                         'Could not connect to host \'{0}\': '
                         '{1}'.format(host, err_msg))
@@ -362,7 +362,7 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     service_instance = GetSi()
     if service_instance:
         stub = GetStub()
-        if salt.utils.platform.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
+        if salt.utils.platform.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, six.text_type(port)])):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
             # invalidate the service instance to avoid a potential memory leak
@@ -467,8 +467,7 @@ def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
     '''
     if not name:
         name = mo_ref.name
-    log.trace('[{0}] Retrieving service instance from managed object'
-              ''.format(name))
+    log.trace('[%s] Retrieving service instance from managed object', name)
     si = vim.ServiceInstance('ServiceInstance')
     si._stub = mo_ref._stub
     return si
@@ -518,7 +517,7 @@ def is_connection_to_a_vcenter(service_instance):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.trace('api_type = {0}'.format(api_type))
+    log.trace('api_type = %s', api_type)
     if api_type == 'VirtualCenter':
         return True
     elif api_type == 'HostAgent':
@@ -638,7 +637,7 @@ def get_gssapi_token(principal, host, domain):
         raise ImportError('The gssapi library is not imported.')
 
     service = '{0}/{1}@{2}'.format(principal, host, domain)
-    log.debug('Retrieving gsspi token for service {0}'.format(service))
+    log.debug('Retrieving gsspi token for service %s', service)
     service_name = gssapi.Name(service, gssapi.C_NT_USER_NAME)
     ctx = gssapi.InitContext(service_name)
     in_token = None
@@ -903,7 +902,7 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name], container_ref=container_ref)
 
     for obj in object_list:
-        obj_id = str(obj.get('object', '')).strip('\'"')
+        obj_id = six.text_type(obj.get('object', '')).strip('\'"')
         if obj[property_name] == property_value or property_value == obj_id:
             return obj['object']
 
@@ -960,7 +959,7 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
             properties[prop.name] = prop.val
         properties['object'] = obj.obj
         object_list.append(properties)
-    log.trace('Retrieved {0} objects'.format(len(object_list)))
+    log.trace('Retrieved %s objects', len(object_list))
     return object_list
 
 
@@ -976,7 +975,7 @@ def get_properties_of_managed_object(mo_ref, properties):
         List of properties of the managed object to retrieve.
     '''
     service_instance = get_service_instance_from_managed_object(mo_ref)
-    log.trace('Retrieving name of {0}'''.format(type(mo_ref).__name__))
+    log.trace('Retrieving name of %s', type(mo_ref).__name__)
     try:
         items = get_mors_with_properties(service_instance,
                                          type(mo_ref),
@@ -986,8 +985,8 @@ def get_properties_of_managed_object(mo_ref, properties):
         mo_name = items[0]['name']
     except vmodl.query.InvalidProperty:
         mo_name = '<unnamed>'
-    log.trace('Retrieving properties \'{0}\' of {1} \'{2}\''
-              ''.format(properties, type(mo_ref).__name__, mo_name))
+    log.trace('Retrieving properties \'%s\' of %s \'%s\'',
+              properties, type(mo_ref).__name__, mo_name)
     items = get_mors_with_properties(service_instance,
                                      type(mo_ref),
                                      container_ref=mo_ref,
@@ -1064,11 +1063,12 @@ def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
         Return all DVSs in the datacenter. Default is False.
     '''
     dc_name = get_managed_object_name(dc_ref)
-    log.trace('Retrieving DVSs in datacenter \'{0}\', dvs_names=\'{1}\', '
-              'get_all_dvss={2}'.format(dc_name,
-                                        ','.join(dvs_names) if dvs_names
-                                        else None,
-                                        get_all_dvss))
+    log.trace(
+        'Retrieving DVSs in datacenter \'%s\', dvs_names=\'%s\', get_all_dvss=%s',
+        dc_name,
+        ','.join(dvs_names) if dvs_names else None,
+        get_all_dvss
+    )
     properties = ['name']
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
         path='networkFolder',
@@ -1094,8 +1094,7 @@ def get_network_folder(dc_ref):
     Retrieves the network folder of a datacenter
     '''
     dc_name = get_managed_object_name(dc_ref)
-    log.trace('Retrieving network folder in datacenter '
-              '\'{0}\''.format(dc_name))
+    log.trace('Retrieving network folder in datacenter \'%s\'', dc_name)
     service_instance = get_service_instance_from_managed_object(dc_ref)
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
         path='networkFolder',
@@ -1129,8 +1128,7 @@ def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
         Default is None.
     '''
     dc_name = get_managed_object_name(dc_ref)
-    log.trace('Creating DVS \'{0}\' in datacenter '
-              '\'{1}\''.format(dvs_name, dc_name))
+    log.trace('Creating DVS \'%s\' in datacenter \'%s\'', dvs_name, dc_name)
     if not dvs_create_spec:
         dvs_create_spec = vim.DVSCreateSpec()
     if not dvs_create_spec.configSpec:
@@ -1150,7 +1148,7 @@ def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, str(task.__class__))
+    wait_for_task(task, dvs_name, six.text_type(task.__class__))
 
 
 def update_dvs(dvs_ref, dvs_config_spec):
@@ -1165,7 +1163,7 @@ def update_dvs(dvs_ref, dvs_config_spec):
         the DVS.
     '''
     dvs_name = get_managed_object_name(dvs_ref)
-    log.trace('Updating dvs \'{0}\''.format(dvs_name))
+    log.trace('Updating dvs \'%s\'', dvs_name)
     try:
         task = dvs_ref.ReconfigureDvs_Task(dvs_config_spec)
     except vim.fault.NoPermission as exc:
@@ -1179,7 +1177,7 @@ def update_dvs(dvs_ref, dvs_config_spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, str(task.__class__))
+    wait_for_task(task, dvs_name, six.text_type(task.__class__))
 
 
 def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
@@ -1193,8 +1191,8 @@ def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
         Flag specifying whether NIOC is enabled.
     '''
     dvs_name = get_managed_object_name(dvs_ref)
-    log.trace('Setting network resource management enable to {0} on '
-              'dvs \'{1}\''.format(enabled, dvs_name))
+    log.trace('Setting network resource management enable to %s on '
+              'dvs \'%s\'', enabled, dvs_name)
     try:
         dvs_ref.EnableNetworkResourceManagement(enable=enabled)
     except vim.fault.NoPermission as exc:
@@ -1231,11 +1229,12 @@ def get_dvportgroups(parent_ref, portgroup_names=None,
             'Parent has to be either a datacenter, '
             'or a distributed virtual switch')
     parent_name = get_managed_object_name(parent_ref)
-    log.trace('Retrieving portgroup in {0} \'{1}\', portgroups_names=\'{2}\', '
-              'get_all_portgroups={3}'.format(
-                  type(parent_ref).__name__, parent_name,
-                  ','.join(portgroup_names) if portgroup_names else None,
-                  get_all_portgroups))
+    log.trace('Retrieving portgroup in %s \'%s\', portgroups_names=\'%s\', '
+              'get_all_portgroups=%s',
+              type(parent_ref).__name__,
+              parent_name,
+              ','.join(portgroup_names) if portgroup_names else None,
+              get_all_portgroups)
     properties = ['name']
     if isinstance(parent_ref, vim.Datacenter):
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -1273,7 +1272,7 @@ def get_uplink_dvportgroup(dvs_ref):
         The dvs reference
     '''
     dvs_name = get_managed_object_name(dvs_ref)
-    log.trace('Retrieving uplink portgroup of dvs \'{0}\''.format(dvs_name))
+    log.trace('Retrieving uplink portgroup of dvs \'%s\'', dvs_name)
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
         path='portgroup',
         skip=False,
@@ -1305,9 +1304,8 @@ def create_dvportgroup(dvs_ref, spec):
         Portgroup spec (vim.DVPortgroupConfigSpec)
     '''
     dvs_name = get_managed_object_name(dvs_ref)
-    log.trace('Adding portgroup {0} to dvs '
-              '\'{1}\''.format(spec.name, dvs_name))
-    log.trace('spec = {}'.format(spec))
+    log.trace('Adding portgroup %s to dvs \'%s\'', spec.name, dvs_name)
+    log.trace('spec = %s', spec)
     try:
         task = dvs_ref.CreateDVPortgroup_Task(spec)
     except vim.fault.NoPermission as exc:
@@ -1321,7 +1319,7 @@ def create_dvportgroup(dvs_ref, spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, str(task.__class__))
+    wait_for_task(task, dvs_name, six.text_type(task.__class__))
 
 
 def update_dvportgroup(portgroup_ref, spec):
@@ -1335,7 +1333,7 @@ def update_dvportgroup(portgroup_ref, spec):
         Portgroup spec (vim.DVPortgroupConfigSpec)
     '''
     pg_name = get_managed_object_name(portgroup_ref)
-    log.trace('Updating portgrouo {0}'.format(pg_name))
+    log.trace('Updating portgrouo %s', pg_name)
     try:
         task = portgroup_ref.ReconfigureDVPortgroup_Task(spec)
     except vim.fault.NoPermission as exc:
@@ -1349,7 +1347,7 @@ def update_dvportgroup(portgroup_ref, spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, pg_name, str(task.__class__))
+    wait_for_task(task, pg_name, six.text_type(task.__class__))
 
 
 def remove_dvportgroup(portgroup_ref):
@@ -1360,7 +1358,7 @@ def remove_dvportgroup(portgroup_ref):
         The portgroup reference
     '''
     pg_name = get_managed_object_name(portgroup_ref)
-    log.trace('Removing portgrouo {0}'.format(pg_name))
+    log.trace('Removing portgroup %s', pg_name)
     try:
         task = portgroup_ref.Destroy_Task()
     except vim.fault.NoPermission as exc:
@@ -1374,7 +1372,7 @@ def remove_dvportgroup(portgroup_ref):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, pg_name, str(task.__class__))
+    wait_for_task(task, pg_name, six.text_type(task.__class__))
 
 
 def get_networks(parent_ref, network_names=None, get_all_networks=False):
@@ -1397,11 +1395,12 @@ def get_networks(parent_ref, network_names=None, get_all_networks=False):
         raise salt.exceptions.ArgumentValueError(
             'Parent has to be a datacenter.')
     parent_name = get_managed_object_name(parent_ref)
-    log.trace('Retrieving network from {0} \'{1}\', network_names=\'{2}\', '
-              'get_all_networks={3}'.format(
-                  type(parent_ref).__name__, parent_name,
-                  ','.join(network_names) if network_names else None,
-                  get_all_networks))
+    log.trace('Retrieving network from %s \'%s\', network_names=\'%s\', '
+              'get_all_networks=%s',
+              type(parent_ref).__name__,
+              parent_name,
+              ','.join(network_names) if network_names else None,
+              get_all_networks)
     properties = ['name']
     service_instance = get_service_instance_from_managed_object(parent_ref)
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -1553,7 +1552,7 @@ def add_license(service_instance, key, description, license_manager=None):
     label = vim.KeyValue()
     label.key = 'VpxClientLicenseLabel'
     label.value = description
-    log.debug('Adding license \'{}\''.format(description))
+    log.debug('Adding license \'%s\'', description)
     try:
         license = license_manager.AddLicense(key, [label])
     except vim.fault.NoPermission as exc:
@@ -1623,7 +1622,7 @@ def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
     else:
         entity_id = entity_ref._moId
 
-    log.trace('Retrieving licenses assigned to \'{0}\''.format(entity_name))
+    log.trace('Retrieving licenses assigned to \'%s\'', entity_name)
     try:
         assignments = \
                 license_assignment_manager.QueryAssignedLicenses(entity_id)
@@ -1647,9 +1646,8 @@ def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
 
     if check_name:
         if entity_name != assignments[0].entityDisplayName:
-            log.trace('Getting license info for wrong vcenter: '
-                      '{0} != {1}'.format(entity_name,
-                                          assignments[0].entityDisplayName))
+            log.trace('Getting license info for wrong vcenter: %s != %s',
+                      entity_name, assignments[0].entityDisplayName)
             raise salt.exceptions.VMwareObjectRetrievalError(
                 'Got license assignment info for a different vcenter')
 
@@ -1709,7 +1707,7 @@ def assign_license(service_instance, license_key, license_name,
         # e.g. vsan cluster or host
         entity_id = entity_ref._moId
 
-    log.trace('Assigning license to \'{0}\''.format(entity_name))
+    log.trace('Assigning license to \'%s\'', entity_name)
     try:
         license = license_assignment_manager.UpdateAssignedLicense(
             entity_id,
@@ -1793,7 +1791,7 @@ def create_datacenter(service_instance, datacenter_name):
         The datacenter name
     '''
     root_folder = get_root_folder(service_instance)
-    log.trace('Creating datacenter \'{0}\''.format(datacenter_name))
+    log.trace('Creating datacenter \'%s\'', datacenter_name)
     try:
         dc_obj = root_folder.CreateDatacenter(datacenter_name)
     except vim.fault.NoPermission as exc:
@@ -1821,8 +1819,8 @@ def get_cluster(dc_ref, cluster):
         The cluster to be retrieved
     '''
     dc_name = get_managed_object_name(dc_ref)
-    log.trace('Retrieving cluster \'{0}\' from datacenter \'{1}\''
-              ''.format(cluster, dc_name))
+    log.trace('Retrieving cluster \'%s\' from datacenter \'%s\'',
+              cluster, dc_name)
     si = get_service_instance_from_managed_object(dc_ref, name=dc_name)
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
         path='hostFolder',
@@ -1861,8 +1859,8 @@ def create_cluster(dc_ref, cluster_name, cluster_spec):
         Defaults to None.
     '''
     dc_name = get_managed_object_name(dc_ref)
-    log.trace('Creating cluster \'{0}\' in datacenter \'{1}\''
-              ''.format(cluster_name, dc_name))
+    log.trace('Creating cluster \'%s\' in datacenter \'%s\'',
+              cluster_name, dc_name)
     try:
         dc_ref.hostFolder.CreateClusterEx(cluster_name, cluster_spec)
     except vim.fault.NoPermission as exc:
@@ -1890,7 +1888,7 @@ def update_cluster(cluster_ref, cluster_spec):
         Defaults to None.
     '''
     cluster_name = get_managed_object_name(cluster_ref)
-    log.trace('Updating cluster \'{0}\''.format(cluster_name))
+    log.trace('Updating cluster \'%s\'', cluster_name)
     try:
         task = cluster_ref.ReconfigureComputeResource_Task(cluster_spec,
                                                            modify=True)
@@ -2012,12 +2010,11 @@ def get_datastores(service_instance, reference, datastore_names=None,
     '''
     obj_name = get_managed_object_name(reference)
     if get_all_datastores:
-        log.trace('Retrieving all datastores visible to '
-                  '\'{0}\''.format(obj_name))
+        log.trace('Retrieving all datastores visible to \'%s\'', obj_name)
     else:
-        log.trace('Retrieving datastores visible to \'{0}\': names = ({1}); '
-                  'backing disk ids = ({2})'.format(obj_name, datastore_names,
-                                                    backing_disk_ids))
+        log.trace('Retrieving datastores visible to \'%s\': names = (%s); '
+                  'backing disk ids = (%s)',
+                  obj_name, datastore_names, backing_disk_ids)
         if backing_disk_ids and not isinstance(reference, vim.HostSystem):
 
             raise salt.exceptions.ArgumentValueError(
@@ -2025,8 +2022,8 @@ def get_datastores(service_instance, reference, datastore_names=None,
                 'is set'.format(reference.__class__.__name__))
     if (not get_all_datastores) and backing_disk_ids:
         # At this point we know the reference is a vim.HostSystem
-        log.trace('Filtering datastores with backing disk ids: {}'
-                  ''.format(backing_disk_ids))
+        log.trace('Filtering datastores with backing disk ids: %s',
+                  backing_disk_ids)
         storage_system = get_storage_system(service_instance, reference,
                                             obj_name)
         props = salt.utils.vmware.get_properties_of_managed_object(
@@ -2041,12 +2038,10 @@ def get_datastores(service_instance, reference, datastore_names=None,
                 # Skip volume if it doesn't contain an extent with a
                 # canonical name of interest
                 continue
-            log.trace('Found datastore \'{0}\' for disk id(s) \'{1}\''
-                      ''.format(vol.name,
-                                [e.diskName for e in vol.extent]))
+            log.trace('Found datastore \'%s\' for disk id(s) \'%s\'',
+                      vol.name, [e.diskName for e in vol.extent])
             disk_datastores.append(vol.name)
-        log.trace('Datastore found for disk filter: {}'
-                  ''.format(disk_datastores))
+        log.trace('Datastore found for disk filter: %s', disk_datastores)
         if datastore_names:
             datastore_names.extend(disk_datastores)
         else:
@@ -2054,10 +2049,10 @@ def get_datastores(service_instance, reference, datastore_names=None,
 
     if (not get_all_datastores) and (not datastore_names):
         log.trace('No datastore to be filtered after retrieving the datastores '
-                  'backed by the disk id(s) \'{0}\''.format(backing_disk_ids))
+                  'backed by the disk id(s) \'%s\'', backing_disk_ids)
         return []
 
-    log.trace('datastore_names = {0}'.format(datastore_names))
+    log.trace('datastore_names = %s', datastore_names)
 
     # Use the default traversal spec
     if isinstance(reference, vim.HostSystem):
@@ -2111,10 +2106,10 @@ def get_datastores(service_instance, reference, datastore_names=None,
                                      property_list=['name'],
                                      container_ref=reference,
                                      traversal_spec=traversal_spec)
-    log.trace('Retrieved {0} datastores'.format(len(items)))
+    log.trace('Retrieved %s datastores', len(items))
     items = [i for i in items if get_all_datastores or i['name'] in
              datastore_names]
-    log.trace('Filtered datastores: {0}'.format([i['name'] for i in items]))
+    log.trace('Filtered datastores: %s', [i['name'] for i in items])
     return [i['object'] for i in items]
 
 
@@ -2129,8 +2124,7 @@ def rename_datastore(datastore_ref, new_datastore_name):
         New datastore name
     '''
     ds_name = get_managed_object_name(datastore_ref)
-    log.trace('Renaming datastore \'{0}\' to '
-              '\'{1}\''.format(ds_name, new_datastore_name))
+    log.trace("Renaming datastore '%s' to '%s'", ds_name, new_datastore_name)
     try:
         datastore_ref.RenameDatastore(new_datastore_name)
     except vim.fault.NoPermission as exc:
@@ -2167,7 +2161,7 @@ def get_storage_system(service_instance, host_ref, hostname=None):
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Host\'s \'{0}\' storage system was not retrieved'
             ''.format(hostname))
-    log.trace('[{0}] Retrieved storage system'.format(hostname))
+    log.trace('[%s] Retrieved storage system', hostname)
     return objs[0]['object']
 
 
@@ -2191,7 +2185,7 @@ def _get_partition_info(storage_system, device_path):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.trace('partition_info = {0}'.format(partition_infos[0]))
+    log.trace('partition_info = %s', partition_infos[0])
     return partition_infos[0]
 
 
@@ -2237,8 +2231,7 @@ def _get_new_computed_partition_spec(hostname, storage_system, device_path,
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.trace('computed partition info = {0}'
-              ''.format(computed_partition_info))
+    log.trace('computed partition info = {0}', computed_partition_info)
     log.trace('Retrieving new partition number')
     partition_numbers = [p.partition for p in
                          computed_partition_info.layout.partition
@@ -2254,7 +2247,7 @@ def _get_new_computed_partition_spec(hostname, storage_system, device_path,
         raise salt.exceptions.VMwareNotFoundError(
             'New partition was not found in computed partitions of device '
             '\'{0}\''.format(partition_info.deviceName))
-    log.trace('new partition number = {0}'.format(partition_numbers[0]))
+    log.trace('new partition number = %s', partition_numbers[0])
     return (partition_numbers[0], computed_partition_info.spec)
 
 
@@ -2278,9 +2271,8 @@ def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
     # TODO Support variable sized partitions
     hostname = get_managed_object_name(host_ref)
     disk_id = disk_ref.canonicalName
-    log.debug('Creating datastore \'{0}\' on host \'{1}\', scsi disk \'{2}\', '
-              'vmfs v{3}'.format(datastore_name, hostname, disk_id,
-                                vmfs_major_version))
+    log.debug('Creating datastore \'%s\' on host \'%s\', scsi disk \'%s\', '
+              'vmfs v%s', datastore_name, hostname, disk_id, vmfs_major_version)
     if not storage_system:
         si = get_service_instance_from_managed_object(host_ref, name=hostname)
         storage_system = get_storage_system(si, host_ref, hostname)
@@ -2288,7 +2280,7 @@ def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
     target_disk = disk_ref
     partition_info = _get_partition_info(storage_system,
                                          target_disk.devicePath)
-    log.trace('partition_info = {0}'.format(partition_info))
+    log.trace('partition_info = %s', partition_info)
     new_partition_number, partition_spec = _get_new_computed_partition_spec(
         hostname, storage_system, target_disk.devicePath, partition_info)
     spec = vim.VmfsDatastoreCreateSpec(
@@ -2314,8 +2306,7 @@ def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.debug('Created datastore \'{0}\' on host '
-              '\'{1}\''.format(datastore_name, hostname))
+    log.debug('Created datastore \'%s\' on host \'%s\'', datastore_name, hostname)
     return ds_ref
 
 
@@ -2346,7 +2337,7 @@ def get_host_datastore_system(host_ref, hostname=None):
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Host\'s \'{0}\' datastore system was not retrieved'
             ''.format(hostname))
-    log.trace('[{0}] Retrieved datastore system'.format(hostname))
+    log.trace('[%s] Retrieved datastore system', hostname)
     return objs[0]['object']
 
 
@@ -2363,7 +2354,7 @@ def remove_datastore(service_instance, datastore_ref):
     ds_props = get_properties_of_managed_object(
         datastore_ref, ['host', 'info', 'name'])
     ds_name = ds_props['name']
-    log.debug('Removing datastore \'{}\''.format(ds_name))
+    log.debug('Removing datastore \'%s\'', ds_name)
     ds_info = ds_props['info']
     ds_hosts = ds_props.get('host')
     if not ds_hosts:
@@ -2386,7 +2377,7 @@ def remove_datastore(service_instance, datastore_ref):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.trace('[{0}] Removed datastore \'{1}\''.format(hostname, ds_name))
+    log.trace('[%s] Removed datastore \'%s\'', hostname, ds_name)
 
 
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
@@ -2434,7 +2425,7 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
                                      vim.HostSystem,
                                      container_ref=start_point,
                                      property_list=properties)
-    log.trace('Retrieved hosts: {0}'.format(h['name'] for h in hosts))
+    log.trace('Retrieved hosts: %s', [h['name'] for h in hosts])
     filtered_hosts = []
     for h in hosts:
         # Complex conditions checking if a host should be added to the
@@ -2515,8 +2506,8 @@ def _get_scsi_address_to_lun_key_map(service_instance,
         # The first one is the actual scsi address
         lun_key_by_scsi_addr.update({p.name.split(',')[0]: l.lun
                                      for p in l.path})
-    log.trace('Scsi address to lun id map on host \'{0}\': '
-              '{1}'.format(hostname, lun_key_by_scsi_addr))
+    log.trace('Scsi address to lun id map on host \'%s\': %s',
+              hostname, lun_key_by_scsi_addr)
     return lun_key_by_scsi_addr
 
 
@@ -2563,10 +2554,10 @@ def get_all_luns(host_ref, storage_system=None, hostname=None):
 
     scsi_luns = device_info.scsiLun
     if scsi_luns:
-        log.trace('Retrieved scsi luns in host \'{0}\': {1}'
-                  ''.format(hostname, [l.canonicalName for l in scsi_luns]))
+        log.trace('Retrieved scsi luns in host \'%s\': %s',
+                  hostname, [l.canonicalName for l in scsi_luns])
         return scsi_luns
-    log.trace('Retrieved no scsi_luns in host \'{0}\''.format(hostname))
+    log.trace('Retrieved no scsi_luns in host \'%s\'', hostname)
     return []
 
 
@@ -2623,11 +2614,10 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
     '''
     hostname = get_managed_object_name(host_ref)
     if get_all_disks:
-        log.trace('Retrieving all disks in host \'{0}\''.format(hostname))
+        log.trace('Retrieving all disks in host \'%s\'', hostname)
     else:
-        log.trace('Retrieving disks in host \'{0}\': ids = ({1}); scsi '
-                  'addresses = ({2})'.format(hostname, disk_ids,
-                                            scsi_addresses))
+        log.trace('Retrieving disks in host \'%s\': ids = (%s); scsi '
+                  'addresses = (%s)', hostname, disk_ids, scsi_addresses)
         if not (disk_ids or scsi_addresses):
             return []
     si = get_service_instance_from_managed_object(host_ref, name=hostname)
@@ -2641,7 +2631,7 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
         disk_keys = [key for scsi_addr, key
                      in six.iteritems(lun_key_by_scsi_addr)
                      if scsi_addr in scsi_addresses]
-        log.trace('disk_keys based on scsi_addresses = {0}'.format(disk_keys))
+        log.trace('disk_keys based on scsi_addresses = %s', disk_keys)
 
     scsi_luns = get_all_luns(host_ref, storage_system)
     scsi_disks = [disk for disk in scsi_luns
@@ -2651,8 +2641,8 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
                       (disk_ids and (disk.canonicalName in disk_ids)) or
                       # Filter by disk keys from scsi addresses
                       (disk.key in disk_keys))]
-    log.trace('Retrieved disks in host \'{0}\': {1}'
-              ''.format(hostname, [d.canonicalName for d in scsi_disks]))
+    log.trace('Retrieved disks in host \'%s\': %s',
+              hostname, [d.canonicalName for d in scsi_disks])
     return scsi_disks
 
 
@@ -2680,10 +2670,13 @@ def get_disk_partition_info(host_ref, disk_id, storage_system=None):
     if not props.get('storageDeviceInfo.scsiLun'):
         raise salt.exceptions.VMwareObjectRetrievalError(
             'No devices were retrieved in host \'{0}\''.format(hostname))
-    log.trace('[{0}] Retrieved {1} devices: {2}'.format(
-        hostname, len(props['storageDeviceInfo.scsiLun']),
+    log.trace(
+        '[%s] Retrieved %s devices: %s',
+        hostname,
+        len(props['storageDeviceInfo.scsiLun']),
         ', '.join([l.canonicalName
-                   for l in props['storageDeviceInfo.scsiLun']])))
+                   for l in props['storageDeviceInfo.scsiLun']])
+    )
     disks = [l for l in props['storageDeviceInfo.scsiLun']
              if isinstance(l, vim.HostScsiDisk) and
              l.canonicalName == disk_id]
@@ -2691,10 +2684,10 @@ def get_disk_partition_info(host_ref, disk_id, storage_system=None):
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Disk \'{0}\' was not found in host \'{1}\''
             ''.format(disk_id, hostname))
-    log.trace('[{0}] device_path = {1}'.format(hostname, disks[0].devicePath))
+    log.trace('[%s] device_path = %s', hostname, disks[0].devicePath)
     partition_info = _get_partition_info(storage_system, disks[0].devicePath)
-    log.trace('[{0}] Retrieved {1} partition(s) on disk \'{2}\''
-              ''.format(hostname, len(partition_info.spec.partition), disk_id))
+    log.trace('[%s] Retrieved %s partition(s) on disk \'%s\'',
+              hostname, len(partition_info.spec.partition), disk_id)
     return partition_info
 
 
@@ -2739,10 +2732,13 @@ def erase_disk_partitions(service_instance, host_ref, disk_id,
     if not results:
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Host\'s \'{0}\' devices were not retrieved'.format(hostname))
-    log.trace('[{0}] Retrieved {1} devices: {2}'.format(
-        hostname, len(results[0].get('storageDeviceInfo.scsiLun', [])),
+    log.trace(
+        '[%s] Retrieved %s devices: %s',
+        hostname,
+        len(results[0].get('storageDeviceInfo.scsiLun', [])),
         ', '.join([l.canonicalName for l in
-                   results[0].get('storageDeviceInfo.scsiLun', [])])))
+                   results[0].get('storageDeviceInfo.scsiLun', [])])
+    )
     disks = [l for l in results[0].get('storageDeviceInfo.scsiLun', [])
              if isinstance(l, vim.HostScsiDisk) and
              l.canonicalName == disk_id]
@@ -2750,7 +2746,7 @@ def erase_disk_partitions(service_instance, host_ref, disk_id,
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Disk \'{0}\' was not found in host \'{1}\''
             ''.format(disk_id, hostname))
-    log.trace('[{0}] device_path = {1}'.format(hostname, disks[0].devicePath))
+    log.trace('[%s] device_path = %s', hostname, disks[0].devicePath)
     # Erase the partitions by setting an empty partition spec
     try:
         storage_system.UpdateDiskPartitions(disks[0].devicePath,
@@ -2766,8 +2762,7 @@ def erase_disk_partitions(service_instance, host_ref, disk_id,
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    log.trace('[{0}] Erased partitions on disk \'{1}\''
-              ''.format(hostname, disk_id))
+    log.trace('[%s] Erased partitions on disk \'%s\'', hostname, disk_id)
 
 
 def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
@@ -2791,11 +2786,10 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
     '''
     hostname = get_managed_object_name(host_ref)
     if get_all_disk_groups:
-        log.trace('Retrieving all disk groups on host \'{0}\''
-                  ''.format(hostname))
+        log.trace('Retrieving all disk groups on host \'%s\'', hostname)
     else:
-        log.trace('Retrieving disk groups from host \'{0}\', with cache disk '
-                  'ids : ({1})'.format(hostname, cache_disk_ids))
+        log.trace('Retrieving disk groups from host \'%s\', with cache disk '
+                  'ids : (%s)', hostname, cache_disk_ids)
         if not cache_disk_ids:
             return []
     try:
@@ -2824,9 +2818,10 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
     disk_groups = [dm for dm in vsan_disk_mappings if
                    (get_all_disk_groups or
                     (dm.ssd.canonicalName in cache_disk_ids))]
-    log.trace('Retrieved disk groups on host \'{0}\', with cache disk ids : '
-              '{1}'.format(hostname,
-                           [d.ssd.canonicalName for d in disk_groups]))
+    log.trace(
+        'Retrieved disk groups on host \'%s\', with cache disk ids : %s',
+        hostname, [d.ssd.canonicalName for d in disk_groups]
+    )
     return disk_groups
 
 
@@ -2846,8 +2841,8 @@ def _check_disks_in_diskgroup(disk_group, cache_disk_id, capacity_disk_ids):
             'Incorrect capacity disks; got ids: \'{0}\'; expected ids: \'{1}\''
             ''.format(sorted([d.canonicalName for d in disk_group.nonSsd]),
                       sorted(capacity_disk_ids)))
-    log.trace('Checked disks in diskgroup with cache disk id \'{0}\''
-              ''.format(cache_disk_id))
+    log.trace('Checked disks in diskgroup with cache disk id \'%s\'',
+              cache_disk_id)
     return True
 
 
@@ -2868,7 +2863,7 @@ def get_host_cache(host_ref, host_cache_manager=None):
     '''
     hostname = get_managed_object_name(host_ref)
     service_instance = get_service_instance_from_managed_object(host_ref)
-    log.trace('Retrieving the host cache on host \'{0}\''.format(hostname))
+    log.trace('Retrieving the host cache on host \'%s\'', hostname)
     if not host_cache_manager:
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
             path='configManager.cacheConfigurationManager',
@@ -2880,14 +2875,14 @@ def get_host_cache(host_ref, host_cache_manager=None):
                                            container_ref=host_ref,
                                            traversal_spec=traversal_spec)
         if not results or not results[0].get('cacheConfigurationInfo'):
-            log.trace('Host \'{0}\' has no host cache'.format(hostname))
+            log.trace('Host \'%s\' has no host cache', hostname)
             return None
         return results[0]['cacheConfigurationInfo'][0]
     else:
         results = get_properties_of_managed_object(host_cache_manager,
                                                    ['cacheConfigurationInfo'])
         if not results:
-            log.trace('Host \'{0}\' has no host cache'.format(hostname))
+            log.trace('Host \'%s\' has no host cache', hostname)
             return None
         return results['cacheConfigurationInfo'][0]
 
@@ -2922,14 +2917,13 @@ def configure_host_cache(host_ref, datastore_ref, swap_size_MiB,
             raise salt.exceptions.VMwareObjectRetrievalError(
                 'Host \'{0}\' has no host cache'.format(hostname))
         host_cache_manager = props['configManager.cacheConfigurationManager']
-    log.trace('Configuring the host cache on host \'{0}\', datastore \'{1}\', '
-              'swap size={2} MiB'.format(hostname, datastore_ref.name,
-                                         swap_size_MiB))
+    log.trace('Configuring the host cache on host \'%s\', datastore \'%s\', '
+              'swap size=%s MiB', hostname, datastore_ref.name, swap_size_MiB)
 
     spec = vim.HostCacheConfigurationSpec(
         datastore=datastore_ref,
         swapSize=swap_size_MiB)
-    log.trace('host_cache_spec={0}'.format(spec))
+    log.trace('host_cache_spec=%s', spec)
     try:
         task = host_cache_manager.ConfigureHostCache_Task(spec)
     except vim.fault.NoPermission as exc:
@@ -2944,7 +2938,7 @@ def configure_host_cache(host_ref, datastore_ref, swap_size_MiB,
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     wait_for_task(task, hostname, 'HostCacheConfigurationTask')
-    log.trace('Configured host cache on host \'{0}\''.format(hostname))
+    log.trace('Configured host cache on host \'%s\'', hostname)
     return True
 
 
@@ -3099,8 +3093,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
     '''
     time_counter = 0
     start_time = time.time()
-    log.trace('task = {0}, task_type = {1}'.format(task,
-                                                   task.__class__.__name__))
+    log.trace('task = %s, task_type = %s', task, task.__class__.__name__)
     try:
         task_info = task.info
     except vim.fault.NoPermission as exc:
@@ -3417,7 +3410,7 @@ def power_cycle_vm(virtual_machine, action='on'):
         wait_for_task(task, get_managed_object_name(virtual_machine), task_name)
     except salt.exceptions.VMwareFileNotFoundError as exc:
         raise salt.exceptions.VMwarePowerOnError('An error occurred during power '
-                                      'operation, a file was not found: {0}'.format(str(exc)))
+                                      'operation, a file was not found: {0}'.format(exc))
     return virtual_machine
 
 
@@ -3512,7 +3505,7 @@ def register_vm(datacenter, name, vmx_path, resourcepool_object, host_object=Non
     except salt.exceptions.VMwareFileNotFoundError as exc:
         raise salt.exceptions.VMwareVmRegisterError(
             'An error occurred during registration operation, the '
-            'configuration file was not found: {0}'.format(str(exc)))
+            'configuration file was not found: {0}'.format(exc))
     return vm_ref
 
 
@@ -3527,7 +3520,7 @@ def update_vm(vm_ref, vm_config_spec):
         Virtual machine config spec object to update
     '''
     vm_name = get_managed_object_name(vm_ref)
-    log.trace('Updating vm \'{0}\''.format(vm_name))
+    log.trace('Updating vm \'%s\'', vm_name)
     try:
         task = vm_ref.ReconfigVM_Task(vm_config_spec)
     except vim.fault.NoPermission as exc:
@@ -3553,7 +3546,7 @@ def delete_vm(vm_ref):
         Managed object reference of a virtual machine object
     '''
     vm_name = get_managed_object_name(vm_ref)
-    log.trace('Destroying vm \'{0}\''.format(vm_name))
+    log.trace('Destroying vm \'%s\'', vm_name)
     try:
         task = vm_ref.Destroy_Task()
     except vim.fault.NoPermission as exc:
@@ -3578,7 +3571,7 @@ def unregister_vm(vm_ref):
         Managed object reference of a virtual machine object
     '''
     vm_name = get_managed_object_name(vm_ref)
-    log.trace('Destroying vm \'{0}\''.format(vm_name))
+    log.trace('Destroying vm \'%s\'', vm_name)
     try:
         vm_ref.UnregisterVM()
     except vim.fault.NoPermission as exc:

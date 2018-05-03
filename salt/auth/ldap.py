@@ -12,6 +12,8 @@ from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.stringutils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 # Import third party libs
@@ -39,6 +41,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
+               'auth.ldap.freeipa': False,
                'auth.ldap.minion_stripdomains': [],
                }
 
@@ -276,19 +279,24 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    #If bind credentials are configured, use them instead of user's
+    if not HAS_LDAP:
+        log.error('LDAP authentication requires python-ldap module')
+        return False
+
+    # If bind credentials are configured, use them instead of user's
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
         bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
     else:
-        bind = _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                        _config('anonymous', mandatory=False))
+        bind = _bind(username, password,
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
 
     if bind:
         log.debug('LDAP authentication successful')
-        return True
-    else:
-        log.error('LDAP _bind authentication FAILED')
-        return False
+        return bind
+
+    log.error('LDAP _bind authentication FAILED')
+    return False
 
 
 def groups(username, **kwargs):
@@ -307,9 +315,7 @@ def groups(username, **kwargs):
 
     '''
     group_list = []
-
-    # Perform un-authenticated bind to determine group membership
-    bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    bind = auth(username, kwargs.get('password', None))
 
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
@@ -321,7 +327,7 @@ def groups(username, **kwargs):
                                                                             _config('persontype'))
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
-                                                get_user_dn_search, ['distinguishedName'])
+                                                get_user_dn_search, [str('distinguishedName')])  # future lint: disable=blacklisted-function
             except Exception as e:
                 log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
@@ -336,13 +342,13 @@ def groups(username, **kwargs):
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
-                                               [_config('accountattributename'), 'cn'])
+                                               [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
             except Exception as e:
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
             for _, entry in search_results:
                 if 'cn' in entry:
-                    group_list.append(entry['cn'][0])
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
             log.debug('User %s is a member of groups: %s', username, group_list)
 
         elif _config('freeipa'):
@@ -352,11 +358,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
                 for user in result[_config('accountattributename')]:
-                    if username == user.split(',')[0].split('=')[-1]:
+                    if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
             log.debug('User %s is a member of groups: %s', username, group_list)
@@ -374,14 +380,16 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn', _config('groupattribute')])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')),
+                                            str('cn'),  # future lint: disable=blacklisted-function
+                                            salt.utils.stringutils.to_str(_config('groupattribute'))])
             for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+                if username in salt.utils.data.decode(entry[_config('accountattributename')]):
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
             for user, entry in search_results:
-                if username == user.split(',')[0].split('=')[-1]:
-                    for group in entry[_config('groupattribute')]:
-                        group_list.append(group.split(',')[0].split('=')[-1])
+                if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
+                    for group in salt.utils.data.decode(entry[_config('groupattribute')]):
+                        group_list.append(salt.utils.stringutils.to_unicode(group).split(',')[0].split('=')[-1])
             log.debug('User %s is a member of groups: %s', username, group_list)
 
             # Only test user auth on first call for job.
@@ -435,7 +443,7 @@ def __expand_ldap_entries(entries, opts=None):
                     search_results = bind.search_s(search_base,
                                                    ldap.SCOPE_SUBTREE,
                                                    search_string,
-                                                   ['cn'])
+                                                   [str('cn')])  # future lint: disable=blacklisted-function
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]['cn'][0].lower()

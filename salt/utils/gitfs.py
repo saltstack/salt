@@ -7,7 +7,6 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import contextlib
-import distutils
 import errno
 import fnmatch
 import glob
@@ -56,6 +55,9 @@ VALID_REF_TYPES = _DEFAULT_MASTER_OPTS['gitfs_ref_types']
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
+# Params which are global only and cannot be overridden for a single remote.
+GLOBAL_ONLY = ()
+
 SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
@@ -90,9 +92,9 @@ log = logging.getLogger(__name__)
 try:
     import git
     import gitdb
-    HAS_GITPYTHON = True
+    GITPYTHON_VERSION = _LooseVersion(git.__version__)
 except ImportError:
-    HAS_GITPYTHON = False
+    GITPYTHON_VERSION = None
 
 try:
     # Squelch warning on cent7 due to them upgrading cffi
@@ -100,7 +102,31 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         import pygit2
-    HAS_PYGIT2 = True
+    PYGIT2_VERSION = _LooseVersion(pygit2.__version__)
+    LIBGIT2_VERSION = _LooseVersion(pygit2.LIBGIT2_VERSION)
+
+    # Work around upstream bug where bytestrings were being decoded using the
+    # default encoding (which is usually ascii on Python 2). This was fixed
+    # on 2 Feb 2018, so releases prior to 0.26.3 will need a workaround.
+    if PYGIT2_VERSION <= _LooseVersion('0.26.3'):
+        try:
+            import pygit2.ffi
+            import pygit2.remote
+        except ImportError:
+            # If we couldn't import these, then we're using an old enough
+            # version where ffi isn't in use and this workaround would be
+            # useless.
+            pass
+        else:
+            def __maybe_string(ptr):
+                if not ptr:
+                    return None
+                return pygit2.ffi.string(ptr).decode('utf-8')
+
+            pygit2.remote.maybe_string = __maybe_string
+
+    # Older pygit2 releases did not raise a specific exception class, this
+    # try/except makes Salt's exception catching work on any supported release.
     try:
         GitError = pygit2.errors.GitError
     except AttributeError:
@@ -111,16 +137,17 @@ except Exception as exc:
     # to rebuild itself against the newer cffi). Therefore, we simply will
     # catch a generic exception, and log the exception if it is anything other
     # than an ImportError.
-    HAS_PYGIT2 = False
+    PYGIT2_VERSION = None
+    LIBGIT2_VERSION = None
     if not isinstance(exc, ImportError):
         log.exception('Failed to import pygit2')
 
 # pylint: enable=import-error
 
 # Minimum versions for backend providers
-GITPYTHON_MINVER = '0.3'
-PYGIT2_MINVER = '0.20.3'
-LIBGIT2_MINVER = '0.20.0'
+GITPYTHON_MINVER = _LooseVersion('0.3')
+PYGIT2_MINVER = _LooseVersion('0.20.3')
+LIBGIT2_MINVER = _LooseVersion('0.20.0')
 
 
 def enforce_types(key, val):
@@ -333,7 +360,7 @@ class GitProvider(object):
                         salt.utils.url.strip_proto(saltenv_ptr['mountpoint'])
 
         for key, val in six.iteritems(self.conf):
-            if key not in PER_SALTENV_PARAMS:
+            if key not in PER_SALTENV_PARAMS and not hasattr(self, key):
                 setattr(self, key, val)
 
         for key in PER_SALTENV_PARAMS:
@@ -446,7 +473,7 @@ class GitProvider(object):
         use_tags = 'tag' in self.ref_types
 
         ret = set()
-        for ref in refs:
+        for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
             rtype, rname = ref.split('/', 1)
@@ -465,7 +492,7 @@ class GitProvider(object):
     @classmethod
     def add_conf_overlay(cls, name):
         '''
-        Programatically determine config value based on the desired saltenv
+        Programmatically determine config value based on the desired saltenv
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \
@@ -746,7 +773,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'wb'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, six.b(six.text_type(os.getpid())))
+                os.write(fh_, salt.utils.stringutils.to_bytes(six.text_type(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:
@@ -949,13 +976,13 @@ class GitProvider(object):
         '''
         Resolve dynamically-set branch
         '''
-        if self.branch == '__env__':
+        if self.role == 'git_pillar' and self.branch == '__env__':
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
-            return self.opts['{0}_base'.format(self.role)] \
+            return self.base \
                 if target == 'base' \
-                else target
+                else six.text_type(target)
         return self.branch
 
     def get_tree(self, tgt_env):
@@ -997,7 +1024,7 @@ class GitProvider(object):
             try:
                 self.branch, self.url = self.id.split(None, 1)
             except ValueError:
-                self.branch = self.opts['{0}_branch'.format(self.role)]
+                self.branch = self.conf['branch']
                 self.url = self.id
         else:
             self.url = self.id
@@ -1658,7 +1685,7 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
-        # pygit2 0.23.2 brought
+        # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs['callbacks'] = self.remotecallbacks
         else:
@@ -1841,10 +1868,7 @@ class Pygit2(GitProvider):
         '''
         Assign attributes for pygit2 callbacks
         '''
-        # pygit2 radically changed fetching in 0.23.2
-        pygit2_version = pygit2.__version__
-        if distutils.version.LooseVersion(pygit2_version) >= \
-                distutils.version.LooseVersion('0.23.2'):
+        if PYGIT2_VERSION >= _LooseVersion('0.23.2'):
             self.remotecallbacks = pygit2.RemoteCallbacks(
                 credentials=self.credentials)
             if not self.ssl_verify:
@@ -1859,7 +1883,7 @@ class Pygit2(GitProvider):
                     'pygit2 does not support disabling the SSL certificate '
                     'check in versions prior to 0.23.2 (installed: {0}). '
                     'Fetches for self-signed certificates will fail.'.format(
-                        pygit2_version
+                        PYGIT2_VERSION
                     )
                 )
 
@@ -2005,15 +2029,15 @@ class GitBase(object):
     Base class for gitfs/git_pillar
     '''
     def __init__(self, opts, remotes=None, per_remote_overrides=(),
-                 per_remote_only=PER_REMOTE_ONLY, git_providers=None,
-                 cache_root=None, init_remotes=True):
+                 per_remote_only=PER_REMOTE_ONLY, global_only=GLOBAL_ONLY,
+                 git_providers=None, cache_root=None, init_remotes=True):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
         really designed right now for winrepo, as its repos need to be checked
         out into the winrepo locations and not within the cachedir.
 
-        As of the Oxygen release cycle, the classes used to interface with
+        As of the 2018.3 release cycle, the classes used to interface with
         Pygit2 and GitPython can be overridden by passing the git_providers
         argument when spawning a class instance. This allows for one to write
         classes which inherit from salt.utils.gitfs.Pygit2 or
@@ -2064,10 +2088,12 @@ class GitBase(object):
             self.init_remotes(
                 remotes if remotes is not None else [],
                 per_remote_overrides,
-                per_remote_only)
+                per_remote_only,
+                global_only)
 
     def init_remotes(self, remotes, per_remote_overrides=(),
-                     per_remote_only=PER_REMOTE_ONLY):
+                     per_remote_only=PER_REMOTE_ONLY,
+                     global_only=GLOBAL_ONLY):
         '''
         Initialize remotes
         '''
@@ -2100,7 +2126,9 @@ class GitBase(object):
             failhard(self.role)
 
         per_remote_defaults = {}
-        for param in override_params:
+        global_values = set(override_params)
+        global_values.update(set(global_only))
+        for param in global_values:
             key = '{0}_{1}'.format(self.role, param)
             if key not in self.opts:
                 log.critical(
@@ -2136,6 +2164,9 @@ class GitBase(object):
                 for saltenv, saltenv_conf in six.iteritems(repo_obj.saltenv):
                     if 'ref' in saltenv_conf:
                         ref = saltenv_conf['ref']
+                        repo_obj.saltenv_revmap.setdefault(
+                            ref, []).append(saltenv)
+
                         if saltenv == 'base':
                             # Remove redundant 'ref' config for base saltenv
                             repo_obj.saltenv[saltenv].pop('ref')
@@ -2150,9 +2181,6 @@ class GitBase(object):
                                 )
                                 # Rewrite 'base' config param
                                 repo_obj.base = ref
-                        else:
-                            repo_obj.saltenv_revmap.setdefault(
-                                ref, []).append(saltenv)
 
                 # Build list of all envs defined by ref mappings in the
                 # per-remote 'saltenv' param. We won't add any matching envs
@@ -2325,7 +2353,7 @@ class GitBase(object):
 
     def update(self, remotes=None):
         '''
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             The remotes argument was added. This being a list of remote URLs,
             it will only update matching remotes. This actually matches on
             repo.id
@@ -2435,10 +2463,10 @@ class GitBase(object):
         Check if GitPython is available and at a compatible version (>= 0.3.0)
         '''
         def _recommend():
-            if HAS_PYGIT2 and 'pygit2' in self.git_providers:
+            if PYGIT2_VERSION and 'pygit2' in self.git_providers:
                 log.error(_RECOMMEND_PYGIT2, self.role, self.role)
 
-        if not HAS_GITPYTHON:
+        if not GITPYTHON_VERSION:
             if not quiet:
                 log.error(
                     '%s is configured but could not be loaded, is GitPython '
@@ -2449,18 +2477,14 @@ class GitBase(object):
         elif 'gitpython' not in self.git_providers:
             return False
 
-        # pylint: disable=no-member
-        gitver = _LooseVersion(git.__version__)
-        minver = _LooseVersion(GITPYTHON_MINVER)
-        # pylint: enable=no-member
         errors = []
-        if gitver < minver:
+        if GITPYTHON_VERSION < GITPYTHON_MINVER:
             errors.append(
                 '{0} is configured, but the GitPython version is earlier than '
                 '{1}. Version {2} detected.'.format(
                     self.role,
                     GITPYTHON_MINVER,
-                    git.__version__
+                    GITPYTHON_VERSION
                 )
             )
         if not salt.utils.path.which('git'):
@@ -2486,10 +2510,10 @@ class GitBase(object):
         Pygit2 must be at least 0.20.3 and libgit2 must be at least 0.20.0.
         '''
         def _recommend():
-            if HAS_GITPYTHON and 'gitpython' in self.git_providers:
+            if GITPYTHON_VERSION and 'gitpython' in self.git_providers:
                 log.error(_RECOMMEND_GITPYTHON, self.role, self.role)
 
-        if not HAS_PYGIT2:
+        if not PYGIT2_VERSION:
             if not quiet:
                 log.error(
                     '%s is configured but could not be loaded, are pygit2 '
@@ -2500,31 +2524,23 @@ class GitBase(object):
         elif 'pygit2' not in self.git_providers:
             return False
 
-        # pylint: disable=no-member
-        pygit2ver = _LooseVersion(pygit2.__version__)
-        pygit2_minver = _LooseVersion(PYGIT2_MINVER)
-
-        libgit2ver = _LooseVersion(pygit2.LIBGIT2_VERSION)
-        libgit2_minver = _LooseVersion(LIBGIT2_MINVER)
-        # pylint: enable=no-member
-
         errors = []
-        if pygit2ver < pygit2_minver:
+        if PYGIT2_VERSION < PYGIT2_MINVER:
             errors.append(
                 '{0} is configured, but the pygit2 version is earlier than '
                 '{1}. Version {2} detected.'.format(
                     self.role,
                     PYGIT2_MINVER,
-                    pygit2.__version__
+                    PYGIT2_VERSION
                 )
             )
-        if libgit2ver < libgit2_minver:
+        if LIBGIT2_VERSION < LIBGIT2_MINVER:
             errors.append(
                 '{0} is configured, but the libgit2 version is earlier than '
                 '{1}. Version {2} detected.'.format(
                     self.role,
                     LIBGIT2_MINVER,
-                    pygit2.LIBGIT2_VERSION
+                    LIBGIT2_VERSION
                 )
             )
         if not salt.utils.path.which('git'):
@@ -2749,15 +2765,20 @@ class GitFS(GitBase):
                 return fnd
 
             salt.fileserver.wait_lock(lk_fn, dest)
-            if os.path.isfile(blobshadest) and os.path.isfile(dest):
+            try:
                 with salt.utils.files.fopen(blobshadest, 'r') as fp_:
                     sha = salt.utils.stringutils.to_unicode(fp_.read())
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
                         return _add_file_stat(fnd, blob_mode)
+            except IOError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise exc
+
             with salt.utils.files.fopen(lk_fn, 'w'):
                 pass
+
             for filename in glob.glob(hashes_glob):
                 try:
                     os.remove(filename)
@@ -2829,17 +2850,24 @@ class GitFS(GitBase):
                                         load['saltenv'],
                                         '{0}.hash.{1}'.format(relpath,
                                                               self.opts['hash_type']))
-        if not os.path.isfile(hashdest):
-            if not os.path.exists(os.path.dirname(hashdest)):
-                os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
-            with salt.utils.files.fopen(hashdest, 'w+') as fp_:
-                fp_.write(ret['hsum'])
-            return ret
-        else:
+        try:
             with salt.utils.files.fopen(hashdest, 'rb') as fp_:
                 ret['hsum'] = fp_.read()
             return ret
+        except IOError as exc:
+            if exc.errno != errno.ENOENT:
+                raise exc
+
+        try:
+            os.makedirs(os.path.dirname(hashdest))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise exc
+
+        ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
+        with salt.utils.files.fopen(hashdest, 'w+') as fp_:
+            fp_.write(ret['hsum'])
+        return ret
 
     def _file_lists(self, load, form):
         '''
@@ -2946,8 +2974,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_base'.format(self.role)]
-                    env = 'base' if repo.branch == base_branch else repo.branch
+                    env = 'base' if repo.branch == repo.base else repo.branch
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -3074,6 +3101,9 @@ class WinRepo(GitBase):
     Functionality specific to the winrepo runner
     '''
     role = 'winrepo'
+    # Need to define this in case we try to reference it before checking
+    # out the repos.
+    winrepo_dirs = {}
 
     def checkout(self):
         '''

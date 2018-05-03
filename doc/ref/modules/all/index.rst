@@ -189,7 +189,7 @@ execution modules
     iwtools
     jboss7
     jboss7_cli
-    jenkins
+    jenkinsmod
     junos
     k8s
     kapacitor
@@ -277,6 +277,7 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -315,6 +316,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip
@@ -332,6 +334,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group
@@ -446,6 +449,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil

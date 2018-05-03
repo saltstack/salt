@@ -2,7 +2,7 @@
 '''
 Manage ruby gems.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re
@@ -293,7 +293,7 @@ def list_upgrades(ruby=None,
         if match:
             name, version = match.groups()
         else:
-            log.error('Can\'t parse line \'{0}\''.format(line))
+            log.error('Can\'t parse line \'%s\'', line)
             continue
         ret[name] = version
     return ret

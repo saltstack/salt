@@ -78,7 +78,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-                'opts': '.salt.opts',
+                'opts': salt.utils.stringutils.to_str('.salt.opts'),
             }
 
     def action(self):
@@ -119,9 +119,10 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
     go next if .salt.road.manor.cluster.clustered
 
     '''
-    Ioinits = odict(inode=".salt.road.manor.",
-                    clustered=odict(ipath='cluster.clustered', ival=False),
-                    opts='.salt.opts',)
+    Ioinits = odict(inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+                    clustered=odict(ipath=salt.utils.stringutils.to_str('cluster.clustered'),
+                                    ival=False),
+                    opts=salt.utils.stringutils.to_str('.salt.opts'),)
 
     def action(self, **kwa):
         '''
@@ -134,7 +135,7 @@ class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
     '''
     Set up the process manager object
     '''
-    Ioinits = {'proc_mgr': '.salt.usr.proc_mgr'}
+    Ioinits = {'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')}
 
     def action(self):
         '''
@@ -154,9 +155,9 @@ class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        ushers='ushers',
-        opts='.salt.opts')
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        ushers=salt.utils.stringutils.to_str('ushers'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self):
         '''
@@ -183,9 +184,9 @@ class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        ushers='ushers',
-        opts='.salt.opts')
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        ushers=salt.utils.stringutils.to_str('ushers'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self):
         '''
@@ -210,10 +211,10 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode='.salt.road.manor.',
-        masters={'ipath': 'cluster.masters', 'ival': odict()},
-        stack='stack',
-        opts='.salt.opts',)
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        masters={'ipath': salt.utils.stringutils.to_str('cluster.masters'), 'ival': odict()},
+        stack=salt.utils.stringutils.to_str('stack'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'),)
 
     def action(self, **kwa):
         '''
@@ -234,14 +235,14 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'inode': 'salt.road.manor.',
-            'stack': 'stack',
-            'opts': '.salt.opts',
-            'txmsgs': {'ipath': 'txmsgs',
+            'inode': salt.utils.stringutils.to_str('salt.road.manor.'),
+            'stack': salt.utils.stringutils.to_str('stack'),
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'txmsgs': {'ipath': salt.utils.stringutils.to_str('txmsgs'),
                        'ival': deque()},
-            'rxmsgs': {'ipath': 'rxmsgs',
+            'rxmsgs': {'ipath': salt.utils.stringutils.to_str('rxmsgs'),
                        'ival': deque()},
-            'local': {'ipath': 'local',
+            'local': {'ipath': salt.utils.stringutils.to_str('local'),
                       'ival': {'main': False,
                                'mutable': False,
                                'uid': None,
@@ -336,8 +337,8 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack', )
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'), )
 
     def action(self, **kwa):
         '''
@@ -360,10 +361,10 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-                    inode=".salt.road.manor.",
-                    stack='stack',
-                    ushers='ushers',
-                    opts='.salt.opts')
+                    inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+                    stack=salt.utils.stringutils.to_str('stack'),
+                    ushers=salt.utils.stringutils.to_str('ushers'),
+                    opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self, **kwa):
         '''
@@ -420,13 +421,14 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -451,13 +453,14 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -484,8 +487,8 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack', )
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'), )
 
     def action(self, **kwa):
         '''
@@ -509,13 +512,14 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -538,19 +542,19 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        alloweds={'ipath': '.salt.var.presence.alloweds',
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        alloweds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.alloweds'),
                   'ival': odict()},
-        aliveds={'ipath': '.salt.var.presence.aliveds',
+        aliveds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.aliveds'),
                  'ival': odict()},
-        reapeds={'ipath': '.salt.var.presence.reapeds',
+        reapeds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.reapeds'),
                          'ival': odict()},
-        availables={'ipath': '.salt.var.presence.availables',
+        availables={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.availables'),
                     'ival': set()},
-        changeds={'ipath': '.salt.var.presence.changeds',
+        changeds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.changeds'),
                   'ival': odict(plus=set(), minus=set())},
-        event='.salt.event.events',)
+        event=salt.utils.stringutils.to_str('.salt.event.events'),)
 
     def _fire_events(self):
         stack = self.stack.value
@@ -616,8 +620,8 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        rxmsgs=odict(ipath=salt.utils.stringutils.to_str('rxmsgs'), ival=deque()),)
 
     def action(self, **kwa):
         '''
@@ -637,14 +641,14 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     do salt load modules at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'grains': '.salt.grains',
-               'utils': '.salt.loader.utils',
-               'modules': '.salt.loader.modules',
-               'grain_time': '.salt.var.grain_time',
-               'module_refresh': '.salt.var.module_refresh',
-               'returners': '.salt.loader.returners',
-               'module_executors': '.salt.loader.executors'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'utils': salt.utils.stringutils.to_str('.salt.loader.utils'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'grain_time': salt.utils.stringutils.to_str('.salt.var.grain_time'),
+               'module_refresh': salt.utils.stringutils.to_str('.salt.var.module_refresh'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners'),
+               'module_executors': salt.utils.stringutils.to_str('.salt.loader.executors')}
 
     def _prepare(self):
         self._load_modules()
@@ -703,13 +707,14 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
 
     do salt load pillar
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'pillar': '.salt.pillar',
-               'grains': '.salt.grains',
-               'modules': '.salt.loader.modules',
-               'pillar_refresh': '.salt.var.pillar_refresh',
-               'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name', }
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'pillar': salt.utils.stringutils.to_str('.salt.pillar'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'pillar_refresh': salt.utils.stringutils.to_str('.salt.var.pillar_refresh'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_estate_name': salt.utils.stringutils.to_str('.salt.track.master_estate_name')
+               }
 
     def action(self):
         '''
@@ -762,11 +767,11 @@ class SaltSchedule(ioflo.base.deeding.Deed):
     do salt schedule
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'grains': '.salt.grains',
-               'utils': '.salt.loader.utils',
-               'modules': '.salt.loader.modules',
-               'returners': '.salt.loader.returners'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'utils': salt.utils.stringutils.to_str('.salt.loader.utils'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners')}
 
     def _prepare(self):
         '''
@@ -796,21 +801,21 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
     do salt raet manor lane setup at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'event_yards': '.salt.event.yards',
-               'local_cmd': '.salt.var.local_cmd',
-               'remote_cmd': '.salt.var.remote_cmd',
-               'publish': '.salt.var.publish',
-               'fun': '.salt.var.fun',
-               'worker_verify': '.salt.var.worker_verify',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
-               'presence_req': '.salt.presence.event_req',
-               'stats_req': '.salt.stats.event_req',
-               'workers': '.salt.track.workers',
-               'inode': '.salt.lane.manor.',
-               'stack': 'stack',
-               'local': {'ipath': 'local',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'event_yards': salt.utils.stringutils.to_str('.salt.event.yards'),
+               'local_cmd': salt.utils.stringutils.to_str('.salt.var.local_cmd'),
+               'remote_cmd': salt.utils.stringutils.to_str('.salt.var.remote_cmd'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+               'workers': salt.utils.stringutils.to_str('.salt.track.workers'),
+               'inode': salt.utils.stringutils.to_str('.salt.lane.manor.'),
+               'stack': salt.utils.stringutils.to_str('stack'),
+               'local': {'ipath': salt.utils.stringutils.to_str('local'),
                           'ival': {'lanename': 'master',
                                    'bufcnt': 100}},
             }
@@ -882,7 +887,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
 
     '''
     Ioinits = odict(
-        inode=".salt.lane.manor",
+        inode='.salt.lane.manor',
         stack='stack',)
 
     def action(self, **kwa):
@@ -902,7 +907,7 @@ class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -921,7 +926,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -942,7 +947,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -961,7 +966,7 @@ class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
                }
 
     def action(self):
@@ -982,7 +987,7 @@ class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
                }
 
     def action(self):
@@ -999,22 +1004,23 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
     This is a base class
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'local_cmd': '.salt.var.local_cmd',
-               'remote_cmd': '.salt.var.remote_cmd',
-               'publish': '.salt.var.publish',
-               'fun': '.salt.var.fun',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',  # deque
-               'presence_req': '.salt.presence.event_req',  # deque
-               'stats_req': '.salt.stats.event_req',  # deque
-               'availables': '.salt.var.presence.availables',  # set()
-               'workers': '.salt.track.workers',
-               'worker_verify': '.salt.var.worker_verify',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name',
-               'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'local_cmd': salt.utils.stringutils.to_str('.salt.var.local_cmd'),
+               'remote_cmd': salt.utils.stringutils.to_str('.salt.var.remote_cmd'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),  # deque
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),  # deque
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),  # deque
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),  # set()
+               'workers': salt.utils.stringutils.to_str('.salt.track.workers'),
+               'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_estate_name': salt.utils.stringutils.to_str('.salt.track.master_estate_name'),
+               # requeuing when not yet routable
+               'laters': {'ipath': salt.utils.stringutils.to_str('.salt.lane.manor.laters'),
                           'ival': deque()}}
 
     def _process_road_rxmsg(self, msg, sender):
@@ -1398,15 +1404,15 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
     do salt raet eventer
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'event_yards': '.salt.event.yards',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
-               'module_refresh': '.salt.var.module_refresh',
-               'pillar_refresh': '.salt.var.pillar_refresh',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
-               'availables': '.salt.var.presence.availables', }
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'event_yards': salt.utils.stringutils.to_str('.salt.event.yards'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),
+               'module_refresh': salt.utils.stringutils.to_str('.salt.var.module_refresh'),
+               'pillar_refresh': salt.utils.stringutils.to_str('.salt.var.pillar_refresh'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'), }
 
     def _register_event_yard(self, msg):
         '''
@@ -1487,13 +1493,13 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     do salt raet presenter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'presence_req': '.salt.presence.event_req',
-               'lane_stack': '.salt.lane.manor.stack',
-               'alloweds': '.salt.var.presence.alloweds',  # odict
-               'aliveds': '.salt.var.presence.aliveds',  # odict
-               'reapeds': '.salt.var.presence.reapeds',  # odict
-               'availables': '.salt.var.presence.availables',  # set
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'alloweds': salt.utils.stringutils.to_str('.salt.var.presence.alloweds'),  # odict
+               'aliveds': salt.utils.stringutils.to_str('.salt.var.presence.aliveds'),  # odict
+               'reapeds': salt.utils.stringutils.to_str('.salt.var.presence.reapeds'),  # odict
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),  # set
               }
 
     def _send_presence(self, msg):
@@ -1562,10 +1568,10 @@ class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
     do salt raet state eventer
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'stats_req': '.salt.stats.event_req',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
     }
 
     def _send_stats(self, msg):
@@ -1648,10 +1654,10 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
     do salt raet publisher
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.var.publish',
-               'stack': '.salt.road.manor.stack',
-               'availables': '.salt.var.presence.availables',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),
             }
 
     def _publish(self, pub_msg):
@@ -1689,8 +1695,8 @@ class SaltRaetSetupEngines(ioflo.base.deeding.Deed):
     '''
     Start the engines!
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'proc_mgr': '.salt.usr.proc_mgr'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')}
 
     def action(self):
         '''
@@ -1703,9 +1709,9 @@ class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
     '''
     Create the Beacon subsystem
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'beacon': '.salt.beacon',
-               'modules': '.salt.loader.modules'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'beacon': salt.utils.stringutils.to_str('.salt.beacon'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules')}
 
     def action(self):
         '''
@@ -1720,11 +1726,11 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
     '''
     Run the beacons
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'modules': '.salt.loader.modules',
-               'master_events': '.salt.var.master_events',
-               'event': '.salt.event.events',
-               'beacon': '.salt.beacon'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'master_events': salt.utils.stringutils.to_str('.salt.var.master_events'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'beacon': salt.utils.stringutils.to_str('.salt.beacon')}
 
     def action(self):
         '''
@@ -1747,9 +1753,9 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
     Take the events off the master event que and send them to the master to
     be fired
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'road_stack': '.salt.road.manor.stack',
-               'master_events': '.salt.var.master_events'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_events': salt.utils.stringutils.to_str('.salt.var.master_events')}
 
     def _prepare(self):
         self.master_events.value = deque()
@@ -1775,9 +1781,9 @@ class SaltRaetSetupMatcher(ioflo.base.deeding.Deed):
     '''
     Make the matcher object
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'modules': '.salt.loader.modules',
-               'matcher': '.salt.matcher'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'matcher': salt.utils.stringutils.to_str('.salt.matcher')}
 
     def action(self):
         self.matcher.value = salt.minion.Matcher(

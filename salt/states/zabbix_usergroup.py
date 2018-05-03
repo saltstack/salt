@@ -6,6 +6,12 @@ Management of Zabbix user groups.
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -83,7 +89,7 @@ def present(name, **kwargs):
                     # Make sure right values are strings so we can compare them with the current user group rights
                     for right in kwargs['rights']:
                         for key in right:
-                            right[key] = str(right[key])
+                            right[key] = six.text_type(right[key])
                     if sorted(kwargs['rights']) != sorted(usergroup['rights']):
                         update_rights = True
                 else:
@@ -165,13 +171,13 @@ def present(name, **kwargs):
             ret['changes'] = changes_usergroup_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_usergroup_notcreated + str(usergroup_create['error'])
+            ret['comment'] = comment_usergroup_notcreated + six.text_type(usergroup_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -242,6 +248,6 @@ def absent(name, **kwargs):
             ret['changes'] = changes_usergroup_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_usergroup_notdeleted + str(usergroup_delete['error'])
+            ret['comment'] = comment_usergroup_notdeleted + six.text_type(usergroup_delete['error'])
 
     return ret

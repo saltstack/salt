@@ -13,9 +13,9 @@ Module to interact with Junos devices.
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 
 '''
-from __future__ import absolute_import
 
-# Import python libraries
+# Import Python libraries
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -27,6 +27,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.files
 import salt.utils.json
+import salt.utils.stringutils
 from salt.ext import six
 
 # Juniper interface libraries
@@ -95,7 +96,7 @@ def facts_refresh():
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
-        log.error('Grains could not be updated due to "{0}"'.format(exception))
+        log.error('Grains could not be updated due to "%s"', exception)
     return ret
 
 
@@ -143,7 +144,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
           The rpc to be executed. (default = None)
       Optional
         * dest:
-          Destination file where the rpc ouput is stored. (default = None)
+          Destination file where the rpc output is stored. (default = None)
           Note that the file will be stored on the proxy minion. To push the
           files to the master use the salt's following execution module:
           :py:func:`cp.push <salt.modules.cp.push>`
@@ -183,7 +184,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = str(op.pop('timeout', conn.timeout))
+    op['dev_timeout'] = six.text_type(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -238,7 +239,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         else:
             write_response = etree.tostring(reply)
         with salt.utils.files.fopen(dest, 'w') as fp:
-            fp.write(write_response)
+            fp.write(salt.utils.stringutils.to_str(write_response))
     return ret
 
 
@@ -464,7 +465,7 @@ def rollback(id=0, **kwargs):
         diff = conn.cu.diff()
         if diff is not None:
             with salt.utils.files.fopen(op['diffs_file'], 'w') as fp:
-                fp.write(diff)
+                fp.write(salt.utils.stringutils.to_str(diff))
         else:
             log.info(
                 'No diff between current configuration and \
@@ -576,9 +577,9 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-    op['count'] = str(op.pop('count', 5))
+    op['count'] = six.text_type(op.pop('count', 5))
     if 'ttl' in op:
-        op['ttl'] = str(op['ttl'])
+        op['ttl'] = six.text_type(op['ttl'])
 
     ret['out'] = True
     try:
@@ -592,7 +593,7 @@ def ping(dest_ip=None, **kwargs):
 def cli(command=None, format='text', **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
-    (default is text) The ouput can also be stored in a file.
+    (default is text) The output can also be stored in a file.
 
     Usage:
 
@@ -659,7 +660,7 @@ def cli(command=None, format='text', **kwargs):
 
     if 'dest' in op and op['dest'] is not None:
         with salt.utils.files.fopen(op['dest'], 'w') as fp:
-            fp.write(result)
+            fp.write(salt.utils.stringutils.to_str(result))
 
     ret['out'] = True
     return ret
@@ -933,7 +934,7 @@ def install_config(path=None, **kwargs):
         try:
             if write_diff and config_diff is not None:
                 with salt.utils.files.fopen(write_diff, 'w') as fp:
-                    fp.write(config_diff)
+                    fp.write(salt.utils.stringutils.to_str(config_diff))
         except Exception as exception:
             ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
                 exception)

@@ -7,7 +7,7 @@ Beacon to fire events at specific log messages.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import salt libs
@@ -104,7 +104,7 @@ def beacon(config):
         fp_.seek(loc)
 
         txt = fp_.read()
-        log.info('txt {}'.format(txt))
+        log.info('txt %s', txt)
 
         d = {}
         for tag in _config.get('tags', {}):

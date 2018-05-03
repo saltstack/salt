@@ -57,7 +57,20 @@ class RAETEvent(object):
         self.ryn = 'manor'  # remote yard name
         self.connected = False
         self.cpub = False
+        self.__load_cache_regex()
         self.__prep_stack(listen)
+
+    @classmethod
+    def __load_cache_regex(cls):
+        '''
+        Initialize the regular expression cache and put it in the
+        class namespace. The regex search strings will be prepend with '^'
+        '''
+        # This is in the class namespace, to minimize cache memory
+        # usage and maximize cache hits
+        # The prepend='^' is to reduce differences in behavior between
+        # the default 'startswith' and the optional 'regex' match_type
+        cls.cache_regex = salt.utils.cache.CacheRegex(prepend='^')
 
     def __prep_stack(self, listen):
         '''
@@ -119,14 +132,14 @@ class RAETEvent(object):
                                    dirpath=self.sock_dir))
         return stack
 
-    def subscribe(self, tag=None):
+    def subscribe(self, tag=None, match_type=None):
         '''
         Included for compat with zeromq events, not required
         '''
         if not self.connected:
             self.connect_pub()
 
-    def unsubscribe(self, tag=None):
+    def unsubscribe(self, tag=None, match_type=None):
         '''
         Included for compat with zeromq events, not required
         '''
@@ -179,7 +192,7 @@ class RAETEvent(object):
                 if 'tag' not in msg and 'data' not in msg:
                     # Invalid event, how did this get here?
                     continue
-                if not msg['tag'].startswith(tag):
+                if not msg['tag'].startswith(tag) and self.cache_regex.get(tag).search(msg['tag']) is None:
                     # Not what we are looking for, throw it away
                     continue
                 if full:

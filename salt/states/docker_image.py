@@ -77,7 +77,7 @@ def present(name,
             pillar=None,
             **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The ``tag`` argument has been added. It is now required unless pulling
         from a registry.
 
@@ -101,7 +101,7 @@ def present(name,
         Tag name for the image. Required when using ``build``, ``load``, or
         ``sls`` to create the image, but optional if pulling from a repository.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     build
         Path to directory on the Minion containing a Dockerfile
@@ -124,7 +124,7 @@ def present(name,
         will be applied to it.
 
         .. versionadded:: 2016.11.0
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     load
@@ -139,7 +139,7 @@ def present(name,
                 - load: salt://path/to/image.tar
                 - tag: mytag
 
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     force : False
@@ -173,7 +173,7 @@ def present(name,
                 - saltenv: base
 
         .. versionadded: 2017.7.0
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     base
@@ -187,7 +187,7 @@ def present(name,
         `mods` parameter.
 
         .. versionadded:: 2017.7.0
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Now uses the effective saltenv if not explicitly passed. In earlier
             versions, ``base`` was assumed as a default.
 
@@ -198,7 +198,7 @@ def present(name,
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -207,7 +207,7 @@ def present(name,
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     '''
     ret = {'name': name,
            'changes': {},

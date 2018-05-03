@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import logging
 import os
 import signal
 import subprocess
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -19,6 +20,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.states.file
 from salt.ext.six.moves import range
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +132,7 @@ class SystemModuleTest(ModuleCase):
                             diff = abs(hwTime - swTime)
 
                             self.assertTrue(diff <= 2.0,
-                                msg=("hwclock difference too big: " + str(timeCompStr)))
+                                msg=("hwclock difference too big: " + six.text_type(timeCompStr)))
                             break
             except CompareTimeout:
                 p.terminate()
@@ -317,12 +319,34 @@ class SystemModuleTest(ModuleCase):
     @skip_if_not_root
     def test_set_computer_desc(self):
         '''
-        Test setting the system hostname
+        Test setting the computer description
         '''
         self._save_machine_info()
         desc = "test"
         ret = self.run_function('system.set_computer_desc', [desc])
         computer_desc = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertIn(desc, computer_desc)
+
+    @destructiveTest
+    @skip_if_not_root
+    def test_set_computer_desc_multiline(self):
+        '''
+        Test setting the computer description with a multiline string with tabs
+        and double-quotes.
+        '''
+        self._save_machine_info()
+        desc = textwrap.dedent('''\
+            'First Line
+            \tSecond Line: 'single-quoted string'
+            \t\tThird Line: "double-quoted string with unicode: питон"''')
+        ret = self.run_function('system.set_computer_desc', [desc])
+        # self.run_function returns the serialized return, we need to convert
+        # back to unicode to compare to desc. in the assertIn below.
+        computer_desc = salt.utils.stringutils.to_unicode(
+            self.run_function('system.get_computer_desc')
+        )
 
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
@@ -335,3 +359,65 @@ class SystemModuleTest(ModuleCase):
         if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
             self.assertTrue(self.run_function('system._has_settable_hwclock'))
             self.assertTrue(self._hwclock_has_compare())
+
+
+@skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on windows')
+class WinSystemModuleTest(ModuleCase):
+    '''
+    Validate the date/time functions in the win_system module
+    '''
+    def test_get_computer_name(self):
+        '''
+        Test getting the computer name
+        '''
+        ret = self.run_function('system.get_computer_name')
+
+        self.assertTrue(isinstance(ret, str))
+        import socket
+        name = socket.gethostname()
+        self.assertEqual(name, ret)
+
+    @destructiveTest
+    def test_set_computer_desc(self):
+        '''
+        Test setting the computer description
+        '''
+        desc = 'test description'
+        set_desc = self.run_function('system.set_computer_desc', [desc])
+        self.assertTrue(set_desc)
+
+        get_desc = self.run_function('system.get_computer_desc')
+        self.assertEqual(set_desc['Computer Description'], get_desc)
+
+    def test_get_system_time(self):
+        '''
+        Test getting the system time
+        '''
+        ret = self.run_function('system.get_system_time')
+        now = datetime.datetime.now()
+        self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
+
+    @destructiveTest
+    def test_set_system_time(self):
+        '''
+        Test setting the system time
+        '''
+        test_time = '10:55'
+        set_time = self.run_function('system.set_system_time', [test_time + ' AM'])
+        get_time = self.run_function('system.get_system_time').rsplit(':', 1)[0]
+        self.assertEqual(get_time, test_time)
+
+    def test_get_system_date(self):
+        '''
+        Test getting system date
+        '''
+        ret = self.run_function('system.get_system_date')
+        date = datetime.datetime.now().date().strftime("%m/%d/%Y")
+        self.assertEqual(date, ret)
+
+    @destructiveTest
+    def test_set_system_date(self):
+        '''
+        Test setting system date
+        '''
+        self.assertTrue(self.run_function('system.set_system_date', ['3/25/2018']))

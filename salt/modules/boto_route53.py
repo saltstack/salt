@@ -55,13 +55,12 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 import salt.utils.odict as odict
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_BOTO_VERSION = '2.35.0'
 try:
     #pylint: disable=unused-import
     import boto
@@ -69,9 +68,6 @@ try:
     import boto.route53.healthcheck
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
-    # create_zone params were changed in boto 2.35+
-    if _LooseVersion(boto.__version__) < _LooseVersion(REQUIRED_BOTO_VERSION):
-        raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -82,11 +78,11 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        msg = ('A boto library with version at least {0} was not '
-               'found').format(REQUIRED_BOTO_VERSION)
-        return (False, msg)
-    return True
+    # create_zone params were changed in boto 2.35+
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.35.0',
+        check_boto3=False
+    )
 
 
 def __init__(opts):
@@ -347,7 +343,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
     '''
     Create a Route53 healthcheck
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     ip_addr
 

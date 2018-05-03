@@ -2,7 +2,7 @@
 '''
 VirtualBox Guest Additions installer
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import contextlib
@@ -12,6 +12,9 @@ import logging
 import os
 import re
 import tempfile
+
+# Import Salt libs
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -84,7 +87,7 @@ def _return_mount_error(f):
         try:
             return f(*args, **kwargs)
         except OSError as e:
-            return str(e)
+            return six.text_type(e)
     return wrapper
 
 
@@ -126,7 +129,7 @@ def _additions_install_linux(mount_point, **kwargs):
     elif guest_os == 'fedora':
         _additions_install_fedora(**kwargs)
     else:
-        log.warning("{0} is not fully supported yet.".format(guest_os))
+        log.warning("%s is not fully supported yet.", guest_os)
     installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
     if installer_ret['retcode'] in (0, 1):

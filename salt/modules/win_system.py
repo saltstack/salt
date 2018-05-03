@@ -12,7 +12,7 @@ Module for managing windows systems.
 
 Support for reboot, shutdown, etc
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import ctypes
@@ -306,9 +306,9 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     except pywintypes.error as exc:
         (number, context, message) = exc
         log.error('Failed to shutdown the system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -349,9 +349,9 @@ def shutdown_abort():
     except pywintypes.error as exc:
         (number, context, message) = exc
         log.error('Failed to abort system shutdown')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -488,9 +488,9 @@ def set_computer_desc(desc=None):
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to update system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     return {'Computer Description': get_computer_desc()}
@@ -774,7 +774,8 @@ def unjoin_domain(username=None,
                   workgroup='WORKGROUP',
                   disable=False,
                   restart=False):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Unjoin a computer from an Active Directory Domain. Requires a restart.
 
     Args:
@@ -782,7 +783,7 @@ def unjoin_domain(username=None,
         username (str):
             Username of an account which is authorized to manage computer
             accounts on the domain. Needs to be a fully qualified name like
-            ``user@domain.tld`` or ``domain.tld\user``. If the domain is not
+            ``user@domain.tld`` or ``domain.tld\\user``. If the domain is not
             specified, the passed domain will be used. If the computer account
             doesn't need to be disabled after the computer is unjoined, this can
             be ``None``.
@@ -821,6 +822,7 @@ def unjoin_domain(username=None,
                          password='unjoinpassword' disable=True \\
                          restart=True
     '''
+    # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
         username = _to_unicode(username)
         password = _to_unicode(password)
@@ -866,11 +868,11 @@ def unjoin_domain(username=None,
             return ret
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error('Failed to join the computer to {0}'.format(workgroup))
+            log.error('Failed to join the computer to %s', workgroup)
             return False
     else:
         log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
+        log.error('Failed to unjoin computer from %s', status['Domain'])
         return False
 
 
@@ -1019,9 +1021,9 @@ def set_system_date_time(years=None,
     except win32api.error as exc:
         (number, context, message) = exc
         log.error('Failed to get local time')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     # Check for passed values. If not passed, use current values
@@ -1286,7 +1288,7 @@ def get_pending_servermanager():
     key = r'SOFTWARE\Microsoft\ServerManager'
 
     # There are situations where it's possible to have '(value not set)' as
-    # the value data, and since an actual reboot wont be pending in that
+    # the value data, and since an actual reboot won't be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
     reg_ret = __salt__['reg.read_value']('HKLM', key, vname)

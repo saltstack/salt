@@ -59,7 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -70,6 +70,7 @@ import salt.utils.platform
 import salt.utils.validate.net
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -248,8 +249,8 @@ def managed(name,
         'comment': 'Interface \'{0}\' is up to date.'.format(name)
     }
 
-    dns_proto = str(dns_proto).lower()
-    ip_proto = str(ip_proto).lower()
+    dns_proto = six.text_type(dns_proto).lower()
+    ip_proto = six.text_type(ip_proto).lower()
 
     errors = []
     if dns_proto not in __VALID_PROTO:
@@ -266,8 +267,13 @@ def managed(name,
         ret['comment'] = ' '.join(errors)
         return ret
 
+    try:
+        currently_enabled = __salt__['ip.is_enabled'](name)
+    except CommandExecutionError:
+        currently_enabled = False
+
     if not enabled:
-        if __salt__['ip.is_enabled'](name):
+        if currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be disabled'
@@ -281,18 +287,13 @@ def managed(name,
             ret['comment'] += ' (already disabled)'
         return ret
     else:
-        try:
-            currently_enabled = __salt__['ip.is_disabled'](name)
-        except CommandExecutionError:
-            currently_enabled = False
         if not currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be enabled'
                                   .format(name))
             else:
-                result = __salt__['ip.enable'](name)
-                if not result:
+                if not __salt__['ip.enable'](name):
                     ret['result'] = False
                     ret['comment'] = ('Failed to enable interface \'{0}\' to '
                                       'make changes'.format(name))
