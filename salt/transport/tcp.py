@@ -8,6 +8,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import logging
 import msgpack
 import socket
@@ -70,7 +71,6 @@ else:
 if USE_LOAD_BALANCER:
     import threading
     import multiprocessing
-    import errno
     import tornado.util
     from salt.utils.process import SignalHandlingMultiprocessingProcess
 
