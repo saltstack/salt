@@ -10,7 +10,6 @@ import logging
 # Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-import salt.utils.platform
 from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase, skipIf, LOREM_IPSUM
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
@@ -21,9 +20,7 @@ log = logging.getLogger(__name__)
 _b = lambda x: x.encode('utf-8')
 _s = lambda x: salt.utils.stringutils.to_str(x, normalize=True)
 # Some randomized data that will not decode
-BYTES = b'\x9c\xb1\xf7\xa3'
-if salt.utils.platform.is_windows():
-    BYTES = b'1\x814\x10'
+BYTES = b'1\x814\x10'
 
 # This is an example of a unicode string with й constructed using two separate
 # code points. Do not modify it.
