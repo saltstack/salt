@@ -26,6 +26,15 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
+
+    def setUp(self):
+        self.oldhome = os.environ.pop('HOME', None)
+
+    def tearDown(self):
+        if self.oldhome:
+            os.environ['HOME'] = self.oldhome
+        delattr(self, 'oldhome')
+
     @destructiveTest
     @skip_if_not_root
     def test_issue_1959_virtualenv_runas(self):
