@@ -1,0 +1,10 @@
+<service>
+  <id>salt-minion</id>
+  <name>salt-minion</name>
+  <description>Salt Minion from saltstack.com</description>
+  <executable>%BASE%\bin\python.exe</executable>
+  <arguments>-E -s &quot;%BASE%\bin\Scripts\salt-minion&quot; -c &quot;%BASE%\conf&quot; -l quiet</arguments>
+  <stoptimeout>24sec</stoptimeout>
+  <onfailure action="restart" />
+  <workingdirectory>%BASE%</workingdirectory>
+</service>

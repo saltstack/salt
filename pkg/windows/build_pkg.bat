@@ -73,6 +73,7 @@ Set "BinDir=%CurDir%\buildenv\bin"
 Set "CnfDir=%CurDir%\buildenv\conf"
 Set "InsDir=%CurDir%\installer"
 Set "PreDir=%CurDir%\prereqs"
+Set "SrvConfDir=%CurDir%\winsw"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
@@ -107,27 +108,27 @@ xcopy /E /Q "%PyDir%" "%BinDir%\"
 :: Copy the default master and minion configs to buildenv\conf
 @echo Copying configs to buildenv\conf...
 @echo ----------------------------------------------------------------------
-@echo xcopy /E /Q "%SrcDir%\conf\master" "%CnfDir%\"
+@echo xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
-@echo xcopy /E /Q "%SrcDir%\conf\minion" "%CnfDir%\"
+@echo xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
-@echo Copying NSSM to buildenv
+@echo Copying WinSW to buildenv
 @echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
 If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
-:: Set the location of the ssm to download
-Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
-Set Url32="https://repo.saltstack.com/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
+:: Set the location of the winSW to download
+Set "Url=https://github.com/kohsuke/winsw/releases/download/winsw-v2.1.2/WinSW.NET4.exe"
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url%" -file "%BldDir%\salt-minion.exe"
 
-:: Check for 64 bit by finding the Program Files (x86) directory
-If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%BinDir%\ssm.exe"
-) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%BinDir%\ssm.exe"
-)
+@echo xcopy /Q /Y "%SrvConfDir%\salt-minion.xml" "%CnfDir%\"
+xcopy /Q /Y "%SrvConfDir%\salt-minion.xml" "%BldDir%\"
+
+@echo xcopy /Q /Y "%SrvConfDir%\salt-minion.exe.config" "%CnfDir%\"
+xcopy /Q /Y "%SrvConfDir%\salt-minion.exe.config" "%BldDir%\"
+
 @echo.
 
 @echo Copying VCRedist to Prerequisites
