@@ -94,17 +94,15 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         comment_line = '# this is a comment\n'
 
         # Write out the authorized key to a temporary file
-        if salt.utils.platform.is_windows():
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-        else:
-            temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
-
-        # Add comment
-        temp_file.write(comment_line)
-        # Add empty line for #41335
-        temp_file.write(empty_line)
-        temp_file.write('{0} {1} {2} {3}'.format(options, enc, key, email))
+        temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
         temp_file.close()
+
+        with salt.utils.files.fopen(temp_file.name, 'w') as _fh:
+            # Add comment
+            _fh.write(comment_line)
+            # Add empty line for #41335
+            _fh.write(empty_line)
+            _fh.write('{0} {1} {2} {3}'.format(options, enc, key, email))
 
         with patch.dict(ssh.__salt__, {'user.info': MagicMock(return_value={})}):
             with patch('salt.modules.ssh._get_config_file', MagicMock(return_value=temp_file.name)):
