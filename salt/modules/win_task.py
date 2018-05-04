@@ -1382,14 +1382,16 @@ def info(name, location='\\'):
             trigger['end_date'] = end_date
             trigger['end_time'] = end_time
         trigger['enabled'] = triggerObj.Enabled
-        if triggerObj.RandomDelay:
-            trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
-        else:
-            trigger['random_delay'] = False
-        if triggerObj.Delay:
-            trigger['delay'] = _reverse_lookup(duration, triggerObj.Delay)
-        else:
-            trigger['delay'] = False
+        if hasattr(triggerObj, 'RandomDelay'):
+            if triggerObj.RandomDelay:
+                trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
+            else:
+                trigger['random_delay'] = False
+        if hasattr(triggerObj, 'Delay'):
+            if triggerObj.Delay:
+                trigger['delay'] = _reverse_lookup(duration, triggerObj.Delay)
+            else:
+                trigger['delay'] = False
         triggers.append(trigger)
 
     properties['settings'] = settings
