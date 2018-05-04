@@ -339,6 +339,38 @@ def _manage_component(component, parent_id, defined, existing, template_id=None,
                 __salt__['zabbix.run_query'](c_def['qtype'] + '.update', diff_params['new'], **kwargs)
 
 
+def is_present(name, **kwargs):
+    '''
+    Check if Zabbix Template already exists.
+
+    :param name: Zabbix Template name
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    .. code-block:: yaml
+
+        does_zabbix-template-exist:
+            zabbix_template.is_present:
+                - name: Template OS Linux
+    '''
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+
+    try:
+        object_id = __salt__['zabbix.get_object_id_by_params']('template', {'filter': {'name': name}}, **kwargs)
+    except SaltException:
+        object_id = False
+
+    if not object_id:
+        ret['result'] = False
+        ret['comment'] = 'Zabbix Template "{0}" does not exist.'.format(name)
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Zabbix Template "{0}" exists.'.format(name)
+
+    return ret
+
+
 # pylint: disable=too-many-statements,too-many-locals
 def present(name, params, static_host_list=True, **kwargs):
     '''
