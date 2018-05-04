@@ -38,11 +38,14 @@ Function DownloadFileWithProgress {
             -SourceIdentifier WebClient.DownloadProgressChanged `
             -Action { $Global:DPCEventArgs = $EventArgs }
         }
-}
+    }
+
     process {
         if ( $Global:NEED_PROCESS_AND_END ) {
             Write-Verbose " ++++++ actually DOWNLOADING ++++++ $localFile +++++++"
             Write-Progress -Activity 'Downloading file' -Status $url
+            # Support downloads from all TLS flavors
+            [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
             $client.DownloadFileAsync($url, $localFile)
 
             while (!($Global:downloadComplete)) {
