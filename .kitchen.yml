@@ -1,5 +1,5 @@
 ---
-<% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
+<% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
 <% version = '2017.7.4' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
