@@ -16,7 +16,6 @@ import salt.utils.files
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import expectedFailure
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
@@ -95,11 +94,13 @@ class EC2Test(ShellCase):
         id_ = config[profile_str][PROVIDER_NAME]['id']
         key = config[profile_str][PROVIDER_NAME]['key']
         key_name = config[profile_str][PROVIDER_NAME]['keyname']
-        sec_group = config[profile_str][PROVIDER_NAME]['securitygroup']
         private_key = config[profile_str][PROVIDER_NAME]['private_key']
         location = config[profile_str][PROVIDER_NAME]['location']
+        group_or_subnet = config[profile_str][PROVIDER_NAME].get('securitygroup', '')
+        if not group_or_subnet:
+            group_or_subnet = config[profile_str][PROVIDER_NAME].get('subnetid', '')
 
-        conf_items = [id_, key, key_name, sec_group, private_key, location]
+        conf_items = [id_, key, key_name, private_key, location, group_or_subnet]
         missing_conf_item = []
 
         for item in conf_items:
@@ -211,13 +212,12 @@ class EC2Test(ShellCase):
         '''
         self._test_instance('ec2-test')
 
-    @expectedFailure
-    def test_win2012r2_winexe(self):
+    def test_win2012r2_psexec(self):
         '''
         Tests creating and deleting a Windows 2012r2instance on EC2 using
-        winexe (classic)
+        psexec (classic)
         '''
-        # TODO: winexe calls hang and the test fails by timing out. The same
+        # TODO: psexec calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
         self.override_profile_config(
             'ec2-win2012r2-test',
@@ -227,7 +227,7 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=800)
 
     def test_win2012r2_winrm(self):
         '''
@@ -245,8 +245,7 @@ class EC2Test(ShellCase):
         )
         self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
 
-    @expectedFailure
-    def test_win2016_winexe(self):
+    def test_win2016_psexec(self):
         '''
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
         (classic)
@@ -261,7 +260,7 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=800)
 
     def test_win2016_winrm(self):
         '''
