@@ -2372,7 +2372,7 @@ def wait_for_instance(
                     vm_['win_password'] = win_passwd
                     break
 
-        # SMB used whether winexe or winrm
+        # SMB used whether psexec or winrm
         if not salt.utils.cloud.wait_for_port(ip_address,
                                               port=445,
                                               timeout=ssh_connect_timeout):
@@ -2380,10 +2380,10 @@ def wait_for_instance(
                 'Failed to connect to remote windows host'
             )
 
-        # If not using winrm keep same winexe behavior
+        # If not using winrm keep same psexec behavior
         if not use_winrm:
 
-            log.debug('Trying to authenticate via SMB using winexe')
+            log.debug('Trying to authenticate via SMB using psexec')
 
             if not salt.utils.cloud.validate_windows_cred(ip_address,
                                                           username,
