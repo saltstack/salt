@@ -36,6 +36,8 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
+import psutil
+import salt.utils
 import salt.ext.six as six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -65,6 +67,26 @@ SCRIPT_TEMPLATES = {
 }
 
 log = logging.getLogger(__name__)
+
+
+def kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None,
+                    on_terminate=None):
+    '''
+    Kill a process tree (including grandchildren) with signal "sig" and return
+    a (gone, still_alive) tuple.  "on_terminate", if specified, is a callabck
+    function which is called as soon as a child terminates.
+    '''
+    if pid == os.getpid():
+        raise RuntimeError("I refuse to kill myself")
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    if include_parent:
+        children.append(parent)
+    for p in children:
+        p.send_signal(sig)
+    gone, alive = psutil.wait_procs(children, timeout=timeout,
+                                    callback=on_terminate)
+    return (gone, alive)
 
 
 class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -276,9 +298,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
         process = subprocess.Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
@@ -292,13 +311,23 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # Kill the process group since sending the term signal
                         # would only terminate the shell, not the command
                         # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                        if salt.utils.is_windows():
+                            _, alive = kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                         term_sent = True
                         continue
 
                     try:
                         # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.is_windows():
+                            _, alive = kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
                             # If errno is not "no such process", raise
