@@ -225,7 +225,7 @@ def _switch(name,                   # pylint: disable=C0103
     if os.path.exists(config):
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
-                line = salt.utils.stringutils.to_unicode(line).rstrip('\n')
+                line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('{0}='.format(rcvar)):
                     nlines.append(line)
                     continue
