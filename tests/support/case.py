@@ -30,13 +30,14 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import (
+    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
+)
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import psutil
 import salt.utils
 import salt.ext.six as six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
@@ -67,26 +68,6 @@ SCRIPT_TEMPLATES = {
 }
 
 log = logging.getLogger(__name__)
-
-
-def kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None,
-                    on_terminate=None):
-    '''
-    Kill a process tree (including grandchildren) with signal "sig" and return
-    a (gone, still_alive) tuple.  "on_terminate", if specified, is a callabck
-    function which is called as soon as a child terminates.
-    '''
-    if pid == os.getpid():
-        raise RuntimeError("I refuse to kill myself")
-    parent = psutil.Process(pid)
-    children = parent.children(recursive=True)
-    if include_parent:
-        children.append(parent)
-    for p in children:
-        p.send_signal(sig)
-    gone, alive = psutil.wait_procs(children, timeout=timeout,
-                                    callback=on_terminate)
-    return (gone, alive)
 
 
 class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -312,7 +293,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # would only terminate the shell, not the command
                         # executed in the shell
                         if salt.utils.is_windows():
-                            _, alive = kill_process_tree(process.pid)
+                            _, alive = win32_kill_process_tree(process.pid)
                             if alive:
                                 log.error("Child processes still alive: %s", alive)
                         else:
@@ -323,7 +304,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     try:
                         # As a last resort, kill the process group
                         if salt.utils.is_windows():
-                            _, alive = kill_process_tree(process.pid)
+                            _, alive = win32_kill_process_tree(process.pid)
                             if alive:
                                 log.error("Child processes still alive: %s", alive)
                         else:
