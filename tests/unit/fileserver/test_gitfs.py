@@ -31,6 +31,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.paths import TMP, FILES
+from tests.support.helpers import this_user
 
 # Import salt libs
 import salt.utils.gitfs
@@ -207,11 +208,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         if 'USERNAME' not in os.environ:
             try:
                 import salt.utils
-                if salt.utils.is_windows():
-                    import salt.utils.win_functions
-                    os.environ['USERNAME'] = salt.utils.win_functions.get_current_user()
-                else:
-                    os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
+                os.environ['USERNAME'] = this_user()
             except AttributeError:
                 log.error('Unable to get effective username, falling back to '
                           '\'root\'.')
