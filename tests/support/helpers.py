@@ -34,6 +34,7 @@ import types
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import salt.ext.six as six
+import salt.utils
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
@@ -52,6 +53,10 @@ except ImportError:
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
+if salt.utils.is_windows():
+    import win32api
+else:
+    import pwd
 
 # Import Salt libs
 import salt.utils
@@ -1552,3 +1557,11 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     gone, alive = psutil.wait_procs(children, timeout=timeout,
                                     callback=on_terminate)
     return (gone, alive)
+
+def this_user():
+    if salt.utils.is_windows():
+        full_username = win32api.GetUserNameEx(win32api.NameSamCompatible)
+        if '\\' in full_username:
+            return full_username.split('\\', 1)[1]
+        return full_username
+    return pwd.getpwuid(os.getuid())[0]
