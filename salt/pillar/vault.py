@@ -25,6 +25,13 @@ the ext_pillar section in the Salt master configuration.
 Each key needs to have all the key-value pairs with the names you
 require. Avoid naming every key 'password' as you they will collide:
 
+If you want to nest results under a nesting_key name use the following format:
+
+    ext_pillar:
+      - vault:
+          conf: path=secret/salt
+          nesting_key: vault_key_name
+
 .. code-block:: bash
 
     $ vault write secret/salt auth=my_password master=127.0.0.1
@@ -46,6 +53,72 @@ Multiple Vault sources may also be used:
       - vault: path=secret/salt
       - vault: path=secret/root
       - vault: path=secret/minions/{minion}/pass
+
+You can also use nesting here as well.  Identical nesting keys will get merged.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - vault:
+           conf: path=secret/salt
+           nesting_key: keyname1
+      - vault:
+           conf: path=secret/root
+           nesting_key: keyname1
+      - vault:
+           conf: path=secret/minions/{minion}/pass
+           nesting_key: keyname2
+
+The difference between the return with and without the nesting key is shown below.
+This example takes the key value pairs returned from vault as follows:
+
+path=secret/salt
+
+Key             Value
+---             -----
+salt-passwd     badpasswd1
+
+path=secret/root
+
+Key             Value
+---             -----
+root-passwd     rootbadpasswd1
+
+path=secret/minions/{minion}/pass
+
+Key             Value
+---             -----
+minion-passwd   minionbadpasswd1
+
+
+.. code-block:: yaml
+
+    #Nesting Key not defined
+
+    local:
+        ----------
+        salt-passwd:
+            badpasswd1
+        root-passwd:
+            rootbadpasswd1
+        minion-passwd:
+            minionbadpasswd1
+
+    #Nesting Key defined
+
+    local:
+        ----------
+        keyname1:
+            ----------
+                salt-passwd:
+                    badpasswd1
+                root-passwd:
+                    rootbadpasswd1
+        keyname2:
+            ----------
+                minion-passwd:
+                    minionbadpasswd1
+
 '''
 
 # Import Python libs
@@ -68,7 +141,8 @@ def __virtual__():
 
 def ext_pillar(minion_id,  # pylint: disable=W0613
                pillar,  # pylint: disable=W0613
-               conf):
+               conf,
+               nesting_key=None):
     '''
     Get pillar data from Vault for the configuration ``conf``.
     '''
@@ -93,4 +167,6 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     except KeyError:
         log.error('No such path in Vault: %s', path)
 
+    if nesting_key:
+        vault_pillar = {nesting_key: vault_pillar}
     return vault_pillar
