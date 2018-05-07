@@ -56,7 +56,7 @@ def inet_pton(address_family, ip_string):
     addr_size = ctypes.c_int(ctypes.sizeof(addr))
 
     if WSAStringToAddressA(
-            ip_string,
+            ip_string.encode('ascii'),
             address_family,
             None,
             ctypes.byref(addr),

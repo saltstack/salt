@@ -4979,7 +4979,7 @@ def get_diff(file1,
         )
 
     args = []
-    for idx, filename in enumerate(files):
+    for filename in files:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5008,7 +5008,8 @@ def get_diff(file1,
                         *salt.utils.data.decode(args)
                     )
                 )
-    return ret
+        return ret
+    return ''
 
 
 def manage_file(name,

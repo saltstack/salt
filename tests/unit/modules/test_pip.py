@@ -10,6 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
@@ -138,11 +139,12 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             expected = ['pip', 'install', '--use-mirrors']
             for item in mirrors:
                 expected.extend(['--mirrors', item])
+            expected.append('pep8')
 
             # Passing mirrors as a list
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                pip.install(mirrors=mirrors)
+                pip.install(pkgs=['pep8'], mirrors=mirrors)
                 mock.assert_called_once_with(
                     expected,
                     saltenv='base',
@@ -154,7 +156,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             # Passing mirrors as a comma separated list
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                pip.install(mirrors=','.join(mirrors))
+                pip.install(pkgs=['pep8'], mirrors=','.join(mirrors))
                 mock.assert_called_once_with(
                     expected,
                     saltenv='base',
@@ -166,9 +168,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             # As single string (just use the first element from mirrors)
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                pip.install(mirrors=mirrors[0])
+                pip.install(pkgs=['pep8'], mirrors=mirrors[0])
                 mock.assert_called_once_with(
-                    ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0]],
+                    ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0], 'pep8'],
                     saltenv='base',
                     runas=None,
                     use_vt=False,
@@ -299,6 +301,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 if salt.utils.platform.is_windows():
                     venv_path = 'c:\\test_env'
                     bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
+                    if six.PY2:
+                        bin_path = bin_path.encode('string-escape')
                 else:
                     venv_path = '/test_env'
                     bin_path = os.path.join(venv_path, 'bin', 'pip')

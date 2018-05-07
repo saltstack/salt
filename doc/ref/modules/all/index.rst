@@ -147,6 +147,7 @@ execution modules
     git
     github
     glance
+    glanceng
     glusterfs
     gnomedesktop
     gpg
@@ -188,7 +189,7 @@ execution modules
     iwtools
     jboss7
     jboss7_cli
-    jenkins
+    jenkinsmod
     junos
     k8s
     kapacitor
@@ -198,6 +199,7 @@ execution modules
     key
     keyboard
     keystone
+    keystoneng
     kmod
     kubernetes
     launchctl
@@ -282,6 +284,7 @@ execution modules
     netscaler
     network
     neutron
+    neutronng
     nfs3
     nftables
     nginx

@@ -202,14 +202,12 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
-from zmq.eventloop import ioloop
-from salt.ext import six
 # pylint: enable=import-error
-
-# instantiate the zmq IOLoop (specialized poller)
-ioloop.install()
+import salt.utils
+salt.utils.zeromq.install_zmq()
 
 # salt imports
+import salt.ext.six as six
 import salt.netapi
 import salt.utils.args
 import salt.utils.event
@@ -302,7 +300,7 @@ class EventListener(object):
 
         self.event.set_event_handler(self._handle_event_socket_recv)
 
-    def clean_timeout_futures(self, request):
+    def clean_by_request(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
         '''
@@ -439,6 +437,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
                 'runner_async': None,  # empty, since we use the same client as `runner`
                 }
 
+        if not hasattr(self, 'ckminions'):
+            self.ckminions = salt.utils.minions.CkMinions(self.application.opts)
+
     @property
     def token(self):
         '''
@@ -494,7 +495,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         timeout a session
         '''
         # TODO: set a header or something??? so we know it was a timeout
-        self.application.event_listener.clean_timeout_futures(self)
+        self.application.event_listener.clean_by_request(self)
 
     def on_finish(self):
         '''
@@ -933,7 +934,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts)
 
         # Subscribe returns from minions before firing a job
-        future_minion_map = self.subscribe_minion_returns(chunk['jid'], chunk['tgt'])
+        minions = set(self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')))
+        future_minion_map = self.subscribe_minion_returns(chunk['jid'], minions)
 
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
@@ -949,9 +951,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     pass
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
-        syndic_min_wait = None
+        # wait syndic a while to avoid missing published events
         if self.application.opts['order_masters']:
-            syndic_min_wait = tornado.gen.sleep(self.application.opts['syndic_wait'])
+            yield tornado.gen.sleep(self.application.opts['syndic_wait'])
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
         is_finished = Future()
@@ -960,10 +962,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                                       chunk['tgt'],
                                                       f_call['kwargs']['tgt_type'],
                                                       is_finished)
-
-        # if we have a min_wait, do that
-        if syndic_min_wait is not None:
-            yield syndic_min_wait
 
         minion_returns_future = self.sanitize_minion_returns(future_minion_map, pub_data['minions'], is_finished)
 
@@ -977,8 +975,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             tag = tagify([jid, 'ret', minion], 'job')
             minion_future = self.application.event_listener.get_event(self,
                                                                       tag=tag,
-                                                                      matcher=EventListener.exact_matcher,
-                                                                      timeout=self.application.opts['timeout'])
+                                                                      matcher=EventListener.exact_matcher)
             future_minion_map[minion_future] = minion
         return future_minion_map
 
@@ -1002,7 +999,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         chunk_ret = {}
         while True:
-            f = yield Any(future_minion_map.keys() + [is_finished])
+            f = yield Any(list(future_minion_map.keys()) + [is_finished])
             try:
                 # When finished entire routine, cleanup other futures and return result
                 if f is is_finished:
@@ -1044,8 +1041,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
-                                                                  timeout=self.application.opts['gather_job_timeout'],
-                                                                  )
+                                                                  timeout=self.application.opts['gather_job_timeout'])
                 f = yield Any([event, is_finished])
                 # When finished entire routine, cleanup other futures and return result
                 if f is is_finished:

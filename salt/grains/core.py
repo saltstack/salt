@@ -449,7 +449,7 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] == 'OpenBSD':
+        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
             swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
         else:
@@ -762,13 +762,6 @@ def _virtual(osdata):
             elif 'virtio' in model:
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
-            break
-        elif command == 'virt-what':
-            # if 'virt-what' returns nothing, it's either an undetected platform
-            # so we default just as virt-what to 'physical', otherwise use the
-            # platform detected/returned by virt-what
-            if output:
-                grains['virtual'] = output.lower()
             break
         elif command == 'prtdiag':
             model = output.lower().split("\n")[0]

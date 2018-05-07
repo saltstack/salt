@@ -154,6 +154,16 @@ def __virtual__():
     return 'pkg.install' in __salt__
 
 
+def _warn_virtual(virtual):
+    return [
+        'The following package(s) are "virtual package" names: {0}. These '
+        'will no longer be supported as of the Fluorine release. Please '
+        'update your SLS file(s) to use the actual package name.'.format(
+            ', '.join(virtual)
+        )
+    ]
+
+
 def _get_comparison_spec(pkgver):
     '''
     Return a tuple containing the comparison operator and the version. If no
@@ -521,9 +531,14 @@ def _find_install_targets(name=None,
         was_refreshed = True
         refresh = False
 
+    def _get_virtual(desired):
+        return [x for x in desired if cur_pkgs.get(x, []) == ['1']]
+
+    virtual_pkgs = []
+
     if any((pkgs, sources)):
         if pkgs:
-            desired = _repack_pkgs(pkgs)
+            desired = _repack_pkgs(pkgs, normalize=normalize)
         elif sources:
             desired = __salt__['pkg_resource.pack_sources'](
                 sources,
@@ -538,6 +553,8 @@ def _find_install_targets(name=None,
                     'comment': 'Invalidly formatted \'{0}\' parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
+
+        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.platform.is_windows():
@@ -558,6 +575,7 @@ def _find_install_targets(name=None,
         else:
             desired = {name: version}
 
+        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
@@ -574,22 +592,28 @@ def _find_install_targets(name=None,
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed and is the correct version
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Version {0} of package \'{1}\' is already '
-                                   'installed'.format(version, name)}
+                ret = {'name': name,
+                       'changes': {},
+                       'result': True,
+                       'comment': 'Version {0} of package \'{1}\' is already '
+                                  'installed'.format(version, name)}
+                if virtual_pkgs:
+                    ret['warnings'] = _warn_virtual(virtual_pkgs)
+                return ret
 
             # if cver is not an empty string, the package is already installed
             elif cver and version is None \
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Package {0} is already '
-                                   'installed'.format(name)}
+                ret = {'name': name,
+                       'changes': {},
+                       'result': True,
+                       'comment': 'Package {0} is already '
+                                  'installed'.format(name)}
+                if virtual_pkgs:
+                    ret['warnings'] = _warn_virtual(virtual_pkgs)
+                return ret
 
     version_spec = False
     if not sources:
@@ -627,10 +651,13 @@ def _find_install_targets(name=None,
                     if comments:
                         if len(comments) > 1:
                             comments.append('')
-                        return {'name': name,
-                                'changes': {},
-                                'result': False,
-                                'comment': '. '.join(comments).rstrip()}
+                        ret = {'name': name,
+                               'changes': {},
+                               'result': False,
+                               'comment': '. '.join(comments).rstrip()}
+                        if virtual_pkgs:
+                            ret['warnings'] = _warn_virtual(virtual_pkgs)
+                        return ret
 
     # Resolve the latest package version for any packages with "latest" in the
     # package version
@@ -765,10 +792,13 @@ def _find_install_targets(name=None,
         problems.append(failed_verify)
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': ' '.join(problems)}
+        if virtual_pkgs:
+            ret['warnings'] = _warn_virtual(virtual_pkgs)
+        return ret
 
     if not any((targets, to_unpurge, to_reinstall)):
         # All specified packages are installed
@@ -783,6 +813,8 @@ def _find_install_targets(name=None,
                'comment': msg}
         if warnings:
             ret.setdefault('warnings', []).extend(warnings)
+        if virtual_pkgs:
+            ret.setdefault('warnings', []).extend(_warn_virtual(virtual_pkgs))
         return ret
 
     return (desired, targets, to_unpurge, to_reinstall, altered_files,
@@ -1758,6 +1790,25 @@ def installed(
                         if x not in targets
                         and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
+
+        # Check for virtual packages in list of desired packages
+        if not sources:
+            try:
+                virtual_pkgs = []
+                for pkgname in [next(iter(x)) for x in pkgs] if pkgs else [name]:
+                    cver = new_pkgs.get(pkgname, [])
+                    if '1' in cver:
+                        virtual_pkgs.append(pkgname)
+                if virtual_pkgs:
+                    warnings.extend(_warn_virtual(virtual_pkgs))
+            except Exception:
+                # This is just some temporary code to warn the user about using
+                # virtual packages. Don't let an exception break the entire
+                # state.
+                log.debug(
+                    'Failed to detect virtual packages after running '
+                    'pkg.install', exc_info=True
+                )
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].

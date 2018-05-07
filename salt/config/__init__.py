@@ -3883,6 +3883,10 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides:
         opts.update(overrides)
 
+    opts['__cli'] = salt.utils.stringutils.to_unicode(
+        os.path.basename(sys.argv[0])
+    )
+
     if 'environment' in opts:
         if opts['saltenv'] is not None:
             log.warning(
