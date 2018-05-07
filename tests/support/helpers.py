@@ -1046,32 +1046,6 @@ class WithTempdir(object):
 with_tempdir = WithTempdir
 
 
-class WithTempdir(object):
-    def __init__(self, **kwargs):
-        self.create = kwargs.pop('create', True)
-        if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
-        self.kwargs = kwargs
-
-    def __call__(self, func):
-        self.func = func
-        return functools.wraps(func)(
-            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
-        )
-
-    def wrap(self, testcase, *args, **kwargs):
-        tempdir = tempfile.mkdtemp(**self.kwargs)
-        if not self.create:
-            os.rmdir(tempdir)
-        try:
-            return self.func(testcase, tempdir, *args, **kwargs)
-        finally:
-            shutil.rmtree(tempdir, ignore_errors=True)
-
-
-with_tempdir = WithTempdir
-
-
 def requires_system_grains(func):
     '''
     Function decorator which loads and passes the system's grains to the test
