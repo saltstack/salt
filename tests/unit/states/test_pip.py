@@ -17,7 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
-import salt.utils
+import salt.utils.versions
 
 # Import 3rd-party libs
 try:
@@ -50,7 +50,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
                                                  'pip.list': pip_list}):
                 with patch.dict(pip_state.__opts__, {'test': True}):
-                    if salt.utils.compare_versions(ver1=pip_version,
+                    if salt.utils.versions.compare(ver1=pip_version,
                                                    oper='<',
                                                    ver2='10.0'):
                         ret = pip_state.installed('pep8=1.3.2')

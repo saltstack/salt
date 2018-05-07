@@ -300,7 +300,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.isdir.return_value = True
             mock_path.join = join
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 venv_path = 'C:\\test_env'
                 bin_path = os.path.join(venv_path, 'python.exe')
             else:

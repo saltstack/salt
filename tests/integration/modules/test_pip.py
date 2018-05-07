@@ -23,6 +23,7 @@ from tests.support.helpers import skip_if_not_root
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
@@ -76,7 +77,7 @@ class PipModuleTest(ModuleCase):
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
         py_dir = 'python{0}.{1}'.format(*sys.version_info[:2])
         site_dir = os.path.join(self.venv_dir, 'lib', py_dir, 'site-packages')
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pip_bin = os.path.join(self.venv_dir, 'Scripts', 'pip.exe')
             site_dir = os.path.join(self.venv_dir, 'lib', 'site-packages')
         if not os.path.isfile(pip_bin):

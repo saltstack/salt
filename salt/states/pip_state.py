@@ -585,7 +585,7 @@ def installed(name,
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
     if 'no_chown' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Flourine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')

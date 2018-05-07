@@ -81,6 +81,7 @@ import logging
 import os
 import pkg_resources
 import re
+import shutil
 import sys
 import tempfile
 
@@ -137,7 +138,7 @@ def _get_pip_bin(bin_env):
         logger.debug('pip: Using pip from currently-running Python')
         return [os.path.normpath(sys.executable), '-m', 'pip']
 
-    python_bin = 'python.exe' if salt.utils.is_windows() else 'python'
+    python_bin = 'python.exe' if salt.utils.platform.is_windows() else 'python'
 
     def _search_paths(*basedirs):
         ret = []
@@ -314,7 +315,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 __salt__['file.chown'](treq, user, None)
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     __utils__['win_dacl.set_permissions'](
                         obj_name=treq,
                         principal=user,
@@ -628,7 +629,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     '''
     if 'no_chown' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Flourine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')
@@ -1252,7 +1253,7 @@ def list_upgrades(bin_env=None,
 
     pip_version = version(bin_env)
     # Pip started supporting the ability to output json starting with 9.0.0
-    if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='9.0.0'):
+    if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='9.0.0'):
         cmd.extend(['--format', 'json'])
 
     # If pip >= 9.0 use --format=json
@@ -1274,14 +1275,14 @@ def list_upgrades(bin_env=None,
     packages = {}
     # Pip started supporting the ability to output json starting with 9.0.0
     # Older versions will have to parse stdout
-    if salt.utils.compare_versions(ver1=pip_version, oper='<', ver2='9.0.0'):
+    if salt.utils.versions.compare(ver1=pip_version, oper='<', ver2='9.0.0'):
         # Pip versions < 8.0.0 had a different output format
         # Sample data:
         # pip (Current: 7.1.2 Latest: 10.0.1 [wheel])
         # psutil (Current: 5.2.2 Latest: 5.4.5 [wheel])
         # pyasn1 (Current: 0.2.3 Latest: 0.4.2 [wheel])
         # pycparser (Current: 2.17 Latest: 2.18 [sdist])
-        if salt.utils.compare_versions(ver1=pip_version, oper='<', ver2='8.0.0'):
+        if salt.utils.versions.compare(ver1=pip_version, oper='<', ver2='8.0.0'):
             logger.debug('pip module: Old output format')
             pat = re.compile(r'(\S*)\s+\(.*Latest:\s+(.*)\)')
 
@@ -1427,7 +1428,7 @@ def upgrade(bin_env=None,
     errors = False
     for pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd):
         if pkg == 'salt':
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 continue
         result = __salt__['cmd.run_all'](cmd + [pkg], **cmd_kwargs)
         if result['retcode'] != 0:

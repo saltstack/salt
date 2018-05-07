@@ -37,6 +37,7 @@ from tests.support.unit import skipIf
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
@@ -127,7 +128,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
     @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
-    @skipIf(salt.utils.is_windows(), "Carbon does not install in Windows")
+    @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
         # First, check to see if this is running on CentOS 5 or MacOS.
@@ -194,7 +195,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         pep8_bin = os.path.join(venv_dir, 'bin', 'pep8')
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pep8_bin = os.path.join(venv_dir, 'Scripts', 'pep8.exe')
 
         try:
@@ -220,7 +221,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             pip_bin = os.path.join(venv_dir, 'bin', 'pip')
             py_dir = 'python{0}.{1}'.format(*sys.version_info[:2])
             site_dir = os.path.join(venv_dir, 'lib', py_dir, 'site-packages')
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 pip_bin = os.path.join(venv_dir, 'Scripts', 'pip.exe')
                 site_dir = os.path.join(venv_dir, 'lib', 'site-packages')
             if not os.path.isfile(pip_bin):
@@ -282,7 +283,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
         else:
             uid = self.run_function('file.user_to_uid', [username])
@@ -310,7 +311,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
                     self.assertEqual(uid, os.stat(path).st_uid)
-                elif salt.utils.is_windows():
+                elif salt.utils.platform.is_windows():
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
@@ -325,7 +326,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
         else:
             uid = self.run_function('file.user_to_uid', [username])
@@ -360,7 +361,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
                     self.assertEqual(uid, os.stat(path).st_uid)
-                elif salt.utils.is_windows():
+                elif salt.utils.platform.is_windows():
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
@@ -490,7 +491,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
         false_cmd = '/bin/false'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             false_cmd = 'exit 1 >nul'
         try:
             ret = self.run_state(
@@ -503,7 +504,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
     @skipIf(sys.version_info[:2] >= (3, 6), 'Old version of virtualenv too old for python3.6')
-    @skipIf(salt.utils.is_windows(), "Carbon does not install in Windows")
+    @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
     def test_46127_pip_env_vars(self):
         '''
         Test that checks if env_vars passed to pip.installed are also passed
