@@ -19,8 +19,10 @@ integration.modules.test_mine
 integration.modules.test_network
 integration.modules.test_ntp
 integration.modules.test_pillar
+integration.modules.test_pip
 integration.modules.test_pkg
 integration.modules.test_publish
+integration.modules.test_service
 integration.modules.test_state
 integration.modules.test_status
 integration.modules.test_sysmod
@@ -35,6 +37,7 @@ integration.runners.test_jobs
 integration.runners.test_salt
 integration.sdb.test_env
 integration.states.test_host
+integration.states.test_pip
 integration.states.test_renderers
 integration.utils.testprogram
 integration.wheel.test_client

@@ -30,23 +30,10 @@ if six.PY3:
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+
 # pylint: enable=no-name-in-module,redefined-builtin
-from salt.utils.async import LOOP_CLASS
-
-# Import third party libs
-try:
-    import zmq
-    # TODO: cleanup
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
-
 import tornado
-TORNADO_50 = tornado.version_info >= (5,)
 
 HAS_RANGE = False
 try:
@@ -620,7 +607,7 @@ class MinionBase(object):
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
                         for trans in ('zeromq', 'tcp'):
-                            if trans == 'zeromq' and not HAS_ZMQ:
+                            if trans == 'zeromq' and not zmq:
                                 continue
                             self.opts['transport'] = trans
                             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
@@ -657,10 +644,8 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if self.opts['transport'] == 'zeromq' and HAS_ZMQ and not TORNADO_50:
-                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-            else:
-                io_loop = LOOP_CLASS.current()
+            install_zmq()
+            io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
@@ -806,9 +791,8 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        if HAS_ZMQ and not TORNADO_50:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS.current()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
 
@@ -955,23 +939,14 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            if HAS_ZMQ and not TORNADO_50:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ:
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]  # pylint: disable=no-member
-                )
-            if zmq_version_info < (3, 2):
+        if zmq:
+            if ZMQ_VERSION_INFO < (3, 2):
                 log.warning(
                     'You have a version of ZMQ less than ZMQ 3.2! There are '
                     'known connection keep-alive issues with ZMQ < 3.2 which '
@@ -2636,9 +2611,8 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            if HAS_ZMQ and not TORNADO_50:
-                zmq.eventloop.ioloop.install()
-            self.io_loop = LOOP_CLASS.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 

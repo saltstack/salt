@@ -1,5 +1,5 @@
 ---
-<% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
+<% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
 <% version = '2017.7.4' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
@@ -92,12 +92,9 @@ platforms:
         - yum install -y upstart
     provisioner:
       salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
-  - name: ubuntu-rolling
+  - name: ubuntu-18.04
     driver_config:
-      image: ubuntu:rolling
       run_command: /lib/systemd/systemd
-    provisioner:
-      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
   - name: ubuntu-16.04
     driver_config:
       run_command: /lib/systemd/systemd

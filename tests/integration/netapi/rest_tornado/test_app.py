@@ -18,13 +18,9 @@ from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
-try:
-    import zmq
-    from zmq.eventloop.ioloop import ZMQIOLoop
-    HAS_ZMQ_IOLOOP = True
-except ImportError:
-    HAS_ZMQ_IOLOOP = False
+from salt.ext import six
+from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
+HAS_ZMQ_IOLOOP = bool(zmq)
 
 
 def json_loads(data):
@@ -53,6 +49,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application = self.build_tornado_app(urls)
 
         application.event_listener = saltnado.EventListener({}, self.opts)
+        self.application = application
         return application
 
     def test_root(self):
@@ -89,8 +86,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.code, 302)
         self.assertEqual(response.headers['Location'], '/login')
 
-    # Local client tests
-    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -108,7 +103,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = json_loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_no_tgt(self):
         '''
@@ -129,8 +125,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
-    # local client request body test
-    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request(self):
         '''
         Test a basic API of /
@@ -148,7 +142,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = json_loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_invalid_request(self):
         '''
@@ -262,6 +257,28 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
+
+    def test_simple_local_post_only_dictionary_request_with_order_masters(self):
+        '''
+        Test a basic API of /
+        '''
+        low = {'client': 'local',
+                'tgt': '*',
+                'fun': 'test.ping',
+              }
+        response = self.fetch('/',
+                              method='POST',
+                              body=salt.utils.json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=30,
+                              request_timeout=30,
+                              )
+        response_obj = salt.utils.json.loads(response.body)
+
+        self.application.opts['order_masters'] = []
+        self.application.opts['syndic_wait'] = 5
+        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
     def test_simple_local_runner_post(self):
