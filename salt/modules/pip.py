@@ -1258,8 +1258,7 @@ def list_upgrades(bin_env=None,
 
     # If pip >= 9.0 use --format=json
     min_version = '9.0'
-    cur_version = version(pip_bin)
-    if salt.utils.versions.compare(ver1=cur_version,
+    if salt.utils.versions.compare(ver1=pip_version,
                                    oper='>=',
                                    ver2=min_version):
         cmd.append('--format=json')
