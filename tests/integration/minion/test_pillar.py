@@ -188,6 +188,7 @@ GPG_PILLAR_DECRYPTED = {
     },
 }
 
+
 class BasePillarTest(ModuleCase):
     '''
     Tests for pillar decryption
@@ -402,4 +403,3 @@ class DecryptGPGPillarTest(ModuleCase):
             'not a valid decryption renderer. Valid choices are: foo, bar'
         ]
         self.assertEqual(ret, expected)
-

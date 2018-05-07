@@ -101,7 +101,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertFalse(minion_in_returns('sub_minion', data))
 
 
-
     def test_nodegroup(self):
         '''
         test salt nodegroup matcher
