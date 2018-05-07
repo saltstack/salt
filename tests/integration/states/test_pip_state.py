@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.states.pip
+    tests.integration.states.pip_state
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
