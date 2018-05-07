@@ -3421,7 +3421,8 @@ class Matcher(object):
                 if 'N' == target_info['engine']:
                     # if we encounter a node group, just evaluate it in-place
                     decomposed = salt.utils.minions.nodegroup_comp(target_info['pattern'], nodegroups)
-                    words = decomposed + words
+                    if decomposed:
+                        words = decomposed + words
                     continue
 
                 engine = ref.get(target_info['engine'])
