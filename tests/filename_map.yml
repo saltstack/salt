@@ -1,2 +1,81 @@
+salt/modules/(apk|aptpkg|ebuild|dpkg|freebsdpkg|mac_brew|mac_ports|openbsdpkg|opkg|pacman|pkgin|pkgng|pkg_resource|rpm|solarisips|solarispkg|win_pkg|xbpspkg|yumpkg|zypper)\.py:
+  - unit.states.test_pkg
+  - integration.modules.test_pkg
+  - integration.states.test_pkg
+  - integration.states.test_pkgrepo
+
+salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
+  - unit.states.test_user
+  - integration.states.test_user
+
+salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
+  - unit.states.test_group
+
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl|mac_service|netbsdservice|openbsdrcctl|openbsdservice|rh_service|runit|service|smf|systemd|upstart|win_service)\.py:
+  - unit.states.test_service
+  - integration.states.test_service
+
+salt/modules/(freebsd_sysctl|linux_sysctl|mac_sysctl|netbsd_sysctl|openbsd_sysctl)\.py:
+  - unit.states.test_sysctl
+  - integration.modules.test_sysctl
+
+salt/modules/*apache.py:
+  - unit.states.test_apache
+  - unit.states.test_apache_conf
+  - unit.states.test_apache_module
+  - unit.states.test_apache_site
+
+salt/modules/augeas_cfg.py:
+  - unit.states.test_augeas
+
+salt/modules/cp.py:
+  - unit.modules.test_file
+  - unit.states.test_file
+  - integration.modules.test_file
+  - integration.states.test_file
+
+salt/modules/dockermod.py:
+  - unit.states.test_docker_image
+  - unit.states.test_docker_volume
+  - unit.utils.test_docker
+  - integration.states.test_docker_container
+  - integration.states.test_docker_network
+
+salt/modules/influx08.py:
+  - unit.states.test_influxdb08_database
+  - unit.states.test_influxdb08_user
+
+salt/modules/mysql.py:
+  - unit.states.test_mysql_user
+  - unit.states.test_mysql_query
+  - unit.states.test_mysql_grants
+
+salt/modules/openvswitch.py:
+  - unit.states.test_openvswitch_port
+
+salt/modules/*postgres.py:
+  - unit.states.test_postgres
+  - unit.states.test_postgres_cluster
+  - unit.states.test_postgres_database
+  - unit.states.test_postgres_extension
+  - unit.states.test_postgres_group
+  - unit.states.test_postgres_initdb
+  - unit.states.test_postgres_language
+  - unit.states.test_postgres_privileges
+  - unit.states.test_postgres_schema
+  - unit.states.test_postgres_user
+
+salt/modules/rabbitmq.py:
+  - unit.states.test_rabbitmq_cluster
+  - unit.states.test_rabbitmq_plugin
+  - unit.states.test_rabbitmq_policy
+  - unit.states.test_rabbitmq_vhost
+  - integration.states.test_rabbitmq_user
+  - integration.states.test_rabbitmq_vhost
+
+salt/modules/ssh.py:
+  - unit.states.test_ssh_auth
+  - unit.states.test_ssh_known_hosts
+
 salt/utils/docker/*:
   - unit.utils.test_docker
