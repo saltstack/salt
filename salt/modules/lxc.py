@@ -2077,7 +2077,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if version() >= _LooseVersion('2.0'):
+    if _LooseVersion(version()) >= _LooseVersion('2.0'):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = 'lxc-copy'
         cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)
