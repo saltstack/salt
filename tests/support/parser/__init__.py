@@ -40,6 +40,14 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.yaml
+
+try:
+    # 2018.3 and later
+    from salt.utils.stringutils import expr_match as _expr_match
+except ImportError:
+    # 2017.7 and earlier
+    from salt.utils import expr_match as _expr_match
+
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -384,24 +392,55 @@ class SaltTestingParser(optparse.OptionParser):
 
         # First, try a path match
         for path in files:
-            match = re.match(r'^(salt/|tests/(?:integration|unit)/)(.+\.py)$', path)
+            match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
             if match:
+                comps = match.group(3).split('/')
+
+                # Find matches for a source file
                 if match.group(1) == 'salt/':
-                    comps = match.group(2).split('/')
                     if comps[-1] == '__init__.py':
                         comps.pop(-1)
                         comps[-1] = 'test_' + comps[-1]
                     else:
                         comps[-1] = 'test_{0}'.format(comps[-1][:-3])
-                    mod_relname = '.'.join(comps)
-                    candidates = ('.'.join(('unit', mod_relname)),
-                                  '.'.join(('integration', mod_relname)))
+
+                    candidates = []
+
+                    def _add(comps):
+                        mod_relname = '.'.join(comps)
+                        candidates.extend(
+                            ['.'.join(('unit', mod_relname)),
+                             '.'.join(('integration', mod_relname))]
+                        )
+
+                    # Direct name matches
+                    _add(comps)
+
+                    # State matches for execution modules of the same name
+                    # (e.g. unit.states.test_archive if
+                    # unit.modules.test_archive is being run)
+                    if comps[-2] == 'modules':
+                        comps[-2] = 'states'
+                        _add(comps)
+
+                    # Add any candidates for which test modules exist
                     ret.update([x for x in candidates if x in self._test_mods])
 
+                # Make sure to run a test module if it's been modified
+                elif match.group(1).startswith('tests/'):
+                    comps.insert(0, match.group(2))
+                    if fnmatch.fnmatch(comps[-1], 'test_*.py'):
+                        comps[-1] = comps[-1][:-3]
+                        test_name = '.'.join(comps)
+                        if test_name in self._test_mods:
+                            ret.add(test_name)
+
         # Next, try the filename_map
-        for path_glob in filename_map:
-            if fnmatch.filter(files, path_glob):
-                ret.update(filename_map[path_glob])
+        for path_expr in filename_map:
+            for filename in files:
+                if _expr_match(filename, path_expr):
+                    ret.update(filename_map[path_expr])
+                    break
 
         return ret
 
