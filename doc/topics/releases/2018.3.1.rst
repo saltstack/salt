@@ -1,0 +1,14 @@
+===========================
+Salt 2018.3.1 Release Notes
+===========================
+
+Version 2018.3.1 is a bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
+
+Changes to Slack Engine pillars
+-------------------------------
+
+When using ``groups_pillar_name`` for the slack engine, the engine should be
+used as part of a salt-minion process running on the master.  This will allow
+the minion to have pillars assigned to it, and will still allow the engine to
+create a LocalClient connection to the master ipc sockets to control
+environments.

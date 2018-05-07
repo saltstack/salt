@@ -59,6 +59,22 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
     alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
+Should you wish the returner data to be cleaned out every so often, set
+``keep_jobs`` to the number of hours for the jobs to live in the tables.
+Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
+
+Should you wish to archive jobs in a different table for later processing,
+set ``archive_jobs`` to True.  Salt will create 3 archive tables
+
+- ``jids_archive``
+- ``salt_returns_archive`
+- ``salt_events_archive`
+
+and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
+more than ``keep_jobs`` hours old to these tables.
+
+.. versionadded:: Fluorine
+
 Use the following Pg database schema:
 
 .. code-block:: sql
@@ -417,3 +433,126 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
+
+
+def _purge_jobs(timestamp):
+    '''
+    Purge records from the returner tables.
+    :param job_age_in_seconds:  Purge jobs older than this
+    :return:
+    '''
+    with _get_serv() as cursor:
+        try:
+            sql = 'delete from jids where jid in (select distinct jid from salt_returns where alter_time < %s)'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'delete from salt_returns where alter_time < %s'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'delete from salt_events where alter_time < %s'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+    return True
+
+
+def _archive_jobs(timestamp):
+    '''
+    Copy rows to a set of backup tables, then purge rows.
+    :param timestamp: Archive rows older than this timestamp
+    :return:
+    '''
+    source_tables = ['jids',
+                     'salt_returns',
+                     'salt_events']
+
+    with _get_serv() as cursor:
+        target_tables = {}
+        for table_name in source_tables:
+            try:
+                tmp_table_name = table_name + '_archive'
+                sql = 'create table IF NOT exists {0} (LIKE {1})'.format(tmp_table_name, table_name)
+                cursor.execute(sql)
+                cursor.execute('COMMIT')
+                target_tables[table_name] = tmp_table_name
+            except psycopg2.DatabaseError as err:
+                error = err.args
+                sys.stderr.write(six.text_type(error))
+                cursor.execute("ROLLBACK")
+                raise err
+
+        try:
+            sql = 'insert into {0} select * from {1} where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+        except Exception as e:
+            log.error(e)
+            raise
+
+        try:
+            sql = 'insert into {0} select * from {1} where alter_time < %s'.format(target_tables['salt_returns'], 'salt_returns')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'insert into {0} select * from {1} where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+    return _purge_jobs(timestamp)
+
+
+def clean_old_jobs():
+    '''
+    Called in the master's event loop every loop_interval.  Archives and/or
+    deletes the events and job details from the database.
+    :return:
+    '''
+    if __opts__.get('keep_jobs', False) and int(__opts__.get('keep_jobs', 0)) > 0:
+        try:
+            with _get_serv() as cur:
+                sql = "select (NOW() -  interval '{0}' hour) as stamp;".format(__opts__['keep_jobs'])
+                cur.execute(sql)
+                rows = cur.fetchall()
+                stamp = rows[0][0]
+
+            if __opts__.get('archive_jobs', False):
+                _archive_jobs(stamp)
+            else:
+                _purge_jobs(stamp)
+        except Exception as e:
+            log.error(e)

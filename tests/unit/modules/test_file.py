@@ -773,6 +773,107 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
+    def test_get_diff(self):
+
+        text1 = textwrap.dedent('''\
+            foo
+            bar
+            baz
+            спам
+            ''')
+        text2 = textwrap.dedent('''\
+            foo
+            bar
+            baz
+            яйца
+            ''')
+        # The below two variables are 8 bytes of data pulled from /dev/urandom
+        binary1 = b'\xd4\xb2\xa6W\xc6\x8e\xf5\x0f'
+        binary2 = b',\x13\x04\xa5\xb0\x12\xdf%'
+
+        # pylint: disable=no-self-argument
+        class MockFopen(object):
+            '''
+            Provides a fake filehandle object that has just enough to run
+            readlines() as file.get_diff does. Any significant changes to
+            file.get_diff may require this class to be modified.
+            '''
+            def __init__(mockself, path, *args, **kwargs):  # pylint: disable=unused-argument
+                mockself.path = path
+
+            def readlines(mockself):  # pylint: disable=unused-argument
+                return {
+                    'text1': text1.encode('utf8'),
+                    'text2': text2.encode('utf8'),
+                    'binary1': binary1,
+                    'binary2': binary2,
+                }[mockself.path].splitlines(True)
+
+            def __enter__(mockself):
+                return mockself
+
+            def __exit__(mockself, *args):  # pylint: disable=unused-argument
+                pass
+        # pylint: enable=no-self-argument
+
+        fopen = MagicMock(side_effect=lambda x, *args, **kwargs: MockFopen(x))
+        cache_file = MagicMock(side_effect=lambda x, *args, **kwargs: x)
+
+        # Mocks for __utils__['files.is_text']
+        mock_text_text = MagicMock(side_effect=[True, True])
+        mock_bin_bin = MagicMock(side_effect=[False, False])
+        mock_text_bin = MagicMock(side_effect=[True, False])
+        mock_bin_text = MagicMock(side_effect=[False, True])
+
+        with patch.dict(filemod.__salt__, {'cp.cache_file': cache_file}), \
+                patch.object(salt.utils.files, 'fopen', fopen):
+
+            # Test diffing two text files
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_text_text}):
+
+                # Identical files
+                ret = filemod.get_diff('text1', 'text1')
+                self.assertEqual(ret, '')
+
+                # Non-identical files
+                ret = filemod.get_diff('text1', 'text2')
+                self.assertEqual(
+                    ret,
+                    textwrap.dedent('''\
+                        --- text1
+                        +++ text2
+                        @@ -1,4 +1,4 @@
+                         foo
+                         bar
+                         baz
+                        -спам
+                        +яйца
+                        ''')
+                )
+
+            # Test diffing two binary files
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_bin}):
+
+                # Identical files
+                ret = filemod.get_diff('binary1', 'binary1')
+                self.assertEqual(ret, '')
+
+                # Non-identical files
+                ret = filemod.get_diff('binary1', 'binary2')
+                self.assertEqual(ret, 'Replace binary file')
+
+            # Test diffing a text file with a binary file
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_text_bin}):
+
+                ret = filemod.get_diff('text1', 'binary1')
+                self.assertEqual(ret, 'Replace text file with binary file')
+
+            # Test diffing a binary file with a text file
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_text}):
+
+                ret = filemod.get_diff('binary1', 'text1')
+                self.assertEqual(ret, 'Replace binary file with text file')
+
 
 @skipIf(pytest is None, 'PyTest required for this set of tests')
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):

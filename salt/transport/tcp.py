@@ -15,7 +15,6 @@ import os
 import weakref
 import time
 import traceback
-import errno
 
 # Import Salt Libs
 import salt.crypt
@@ -33,6 +32,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
+from salt.ext.six.moves import queue  # pylint: disable=import-error
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 
@@ -571,6 +571,11 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     raise exc
             self._socket.close()
             self._socket = None
+        if hasattr(self.req_server, 'stop'):
+            try:
+                self.req_server.stop()
+            except Exception as exc:
+                log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
     def __del__(self):
         self.close()
@@ -757,15 +762,23 @@ if USE_LOAD_BALANCER:
             super(LoadBalancerWorker, self).__init__(
                 message_handler, *args, **kwargs)
             self.socket_queue = socket_queue
+            self._stop = threading.Event()
+            self.thread = threading.Thread(target=self.socket_queue_thread)
+            self.thread.start()
 
-            t = threading.Thread(target=self.socket_queue_thread)
-            t.start()
+        def stop(self):
+            self._stop.set()
+            self.thread.join()
 
         def socket_queue_thread(self):
             try:
                 while True:
-                    client_socket, address = self.socket_queue.get(True, None)
-
+                    try:
+                        client_socket, address = self.socket_queue.get(True, 1)
+                    except queue.Empty:
+                        if self._stop.is_set():
+                            break
+                        continue
                     # 'self.io_loop' initialized in super class
                     # 'tornado.tcpserver.TCPServer'.
                     # 'self._handle_connection' defined in same super class.
@@ -779,10 +792,9 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
     '''
     Override _create_stream() in TCPClient to enable keep alive support.
     '''
-    def __init__(self, opts, resolver=None, io_loop=None):
+    def __init__(self, opts, resolver=None):
         self.opts = opts
-        super(TCPClientKeepAlive, self).__init__(
-            resolver=resolver, io_loop=io_loop)
+        super(TCPClientKeepAlive, self).__init__(resolver=resolver)
 
     def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument
         '''
@@ -798,7 +810,6 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(
             sock,
-            io_loop=self.io_loop,
             max_buffer_size=max_buffer_size)
         return stream.connect(addr)
 
@@ -860,8 +871,8 @@ class SaltMessageClient(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        self._tcp_client = TCPClientKeepAlive(
-            opts, io_loop=self.io_loop, resolver=resolver)
+        with salt.utils.async.current_ioloop(self.io_loop):
+            self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
 
         self._mid = 1
         self._max_messages = int((1 << 31) - 2)  # number of IDs before we wrap
@@ -950,18 +961,17 @@ class SaltMessageClient(object):
             if self._closing:
                 break
             try:
-                if (self.source_ip or self.source_port) and tornado.version_info >= (4, 5):
-                    ### source_ip and source_port are supported only in Tornado >= 4.5
-                    # See http://www.tornadoweb.org/en/stable/releases/v4.5.0.html
-                    # Otherwise will just ignore these args
-                    self._stream = yield self._tcp_client.connect(self.host,
-                                                                  self.port,
-                                                                  ssl_options=self.opts.get('ssl'),
-                                                                  source_ip=self.source_ip,
-                                                                  source_port=self.source_port)
-                else:
-                    if self.source_ip or self.source_port:
+                kwargs = {}
+                if self.source_ip or self.source_port:
+                    if tornado.version_info >= (4, 5):
+                        ### source_ip and source_port are supported only in Tornado >= 4.5
+                        # See http://www.tornadoweb.org/en/stable/releases/v4.5.0.html
+                        # Otherwise will just ignore these args
+                        kwargs = {'source_ip': self.source_ip,
+                                  'source_port': self.source_port}
+                    else:
                         log.warning('If you need a certain source IP/port, consider upgrading Tornado >= 4.5')
+                with salt.utils.async.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(self.host,
                                                                   self.port,
                                                                   ssl_options=self.opts.get('ssl'))
@@ -1167,7 +1177,8 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     TCP publisher
     '''
     def __init__(self, opts, io_loop=None):
-        super(PubServer, self).__init__(io_loop=io_loop, ssl_options=opts.get('ssl'))
+        super(PubServer, self).__init__(ssl_options=opts.get('ssl'))
+        self.io_loop = io_loop
         self.opts = opts
         self._closing = False
         self.clients = set()
