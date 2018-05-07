@@ -372,7 +372,7 @@ class WinSystemModuleTest(ModuleCase):
         '''
         ret = self.run_function('system.get_computer_name')
 
-        self.assertTrue(isinstance(ret, str))
+        self.assertTrue(isinstance(ret, six.text_type))
         import socket
         name = socket.gethostname()
         self.assertEqual(name, ret)

@@ -8,6 +8,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import logging
 import msgpack
 import socket
@@ -70,7 +71,6 @@ else:
 if USE_LOAD_BALANCER:
     import threading
     import multiprocessing
-    import errno
     import tornado.util
     from salt.utils.process import SignalHandlingMultiprocessingProcess
 
@@ -899,7 +899,7 @@ class SaltMessageClient(object):
                 # This happens because the logic is always waiting to read
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exc_info()
+                self._read_until_future.exception()
                 if (not self._stream_return_future.done() and
                         self.io_loop != tornado.ioloop.IOLoop.current(
                             instance=False)):
@@ -1162,7 +1162,7 @@ class Subscriber(object):
                 # This happens because the logic is always waiting to read
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exc_info()
+                self._read_until_future.exception()
 
     def __del__(self):
         self.close()
