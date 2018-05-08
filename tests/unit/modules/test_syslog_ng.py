@@ -14,6 +14,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
+import salt.utils.platform
 import salt.modules.syslog_ng as syslog_ng
 
 _VERSION = "3.6.0alpha0"
@@ -204,6 +205,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             };
             '''), b)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_version(self):
         cmd_ret = {'retcode': 0, 'stdout': VERSION_OUTPUT}
         expected_output = {'retcode': 0, 'stdout': _VERSION}
@@ -231,6 +233,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_stats(self):
         cmd_ret = {'retcode': 0, 'stdout': STATS_OUTPUT}
         cmd_args = ['syslog-ng-ctl', 'stats']
@@ -257,6 +260,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_modules(self):
         cmd_ret = {'retcode': 0, 'stdout': VERSION_OUTPUT}
         expected_output = {'retcode': 0, 'stdout': _MODULES}
@@ -284,6 +288,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_config_test(self):
         cmd_ret = {'retcode': 0, 'stderr': '', 'stdout': 'Foo'}
         cmd_args = ['syslog-ng', '--syntax-only']
@@ -310,6 +315,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_config_test_cfgfile(self):
         cfgfile = '/path/to/syslog-ng.conf'
         cmd_ret = {'retcode': 1, 'stderr': 'Syntax error...', 'stdout': ''}
