@@ -677,6 +677,58 @@ def show_namespace(name, **kwargs):
         _cleanup(**cfg)
 
 
+def set_container_image(image, deployment,
+                         container,
+                         namespace="default",
+                         **kwargs):
+    '''
+    Set the image of a container in the kubernetes deployment defined
+    by the specified name.
+
+    CLI Examples::
+
+        salt '*' kubernetes.set_deployment_image nginx:latest nginx-deployment nginx-container namespace=prod
+
+    '''
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.ExtensionsV1beta1Api()
+        patch = {
+            "spec":{
+                "template":{
+                    "spec":{
+                        "containers":[
+                            {
+                                "name":container,
+                                "image":image
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+        api_response = api_instance.patch_namespaced_deployment(
+            name=deployment,
+            namespace=namespace,
+            body=patch)
+
+        return api_response.to_dict()
+
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'ExtensionsV1beta1Api->patch_namespaced_deployment: '
+                '{0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
+
+
 def show_secret(name, namespace='default', decode=False, **kwargs):
     '''
     Return the kubernetes secret defined by name and namespace.
