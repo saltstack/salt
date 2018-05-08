@@ -554,3 +554,9 @@ class VMwareVmCreationError(VMwareSaltError):
     '''
     Used when a configuration parameter is incorrect
     '''
+
+
+class MissingSmb(SaltException):
+    '''
+    Raised when no smb library is found.
+    '''
