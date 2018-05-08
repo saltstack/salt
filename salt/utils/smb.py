@@ -315,7 +315,7 @@ def _put_file_impacket(local_path, path, share='C$', conn=None, host=None, usern
     if hasattr(local_path, 'read'):
         conn.putFile(share, path, local_path)
         return
-    with salt.utils.fopen(local_path, 'rb') as fh_:
+    with salt.utils.files.fopen(local_path, 'rb') as fh_:
         conn.putFile(share, path, fh_.read)
 
 
