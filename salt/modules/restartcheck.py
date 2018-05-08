@@ -547,10 +547,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
             service = __salt__['service.available'](packages[package]['process_name'])
 
             if service:
-                packages[package]['systemdservice'].append(packages[package]['process_name'])
-            else:
                 if os.path.exists('/etc/init.d/' + packages[package]['process_name']):
                     packages[package]['initscripts'].append(packages[package]['process_name'])
+                else:
+                    packages[package]['systemdservice'].append(packages[package]['process_name'])
 
     restartable = []
     nonrestartable = []
