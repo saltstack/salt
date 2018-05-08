@@ -23,22 +23,78 @@ Support for Zabbix
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 # Import python libs
 import logging
 import socket
+import os
 
 # Import salt libs
-from salt.ext import six
-import salt.utils.http
-import salt.utils.json
-import salt.utils.path
-from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
+try:
+    import salt.utils
+    from salt.ext import six
+    from salt.utils.versions import LooseVersion as _LooseVersion
+    # pylint: disable=import-error,no-name-in-module,unused-import
+    from salt.ext.six.moves.urllib.error import HTTPError, URLError
+    from salt.exceptions import SaltException
+    IMPORTS_OK = True
+except ImportError:
+    IMPORTS_OK = False
 
 log = logging.getLogger(__name__)
 
 INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
+
+ZABBIX_TOP_LEVEL_OBJECTS = ('hostgroup', 'template', 'host', 'maintenance', 'action', 'drule', 'service', 'proxy',
+                            'screen', 'usergroup', 'mediatype', 'script', 'valuemap')
+
+# Zabbix object and its ID name mapping
+ZABBIX_ID_MAPPER = {
+    'action': 'actionid',
+    'alert': 'alertid',
+    'application': 'applicationid',
+    'dhost': 'dhostid',
+    'dservice': 'dserviceid',
+    'dcheck': 'dcheckid',
+    'drule': 'druleid',
+    'event': 'eventid',
+    'graph': 'graphid',
+    'graphitem': 'gitemid',
+    'graphprototype': 'graphid',
+    'history': 'itemid',
+    'host': 'hostid',
+    'hostgroup': 'groupid',
+    'hostinterface': 'interfaceid',
+    'hostprototype': 'hostid',
+    'iconmap': 'iconmapid',
+    'image': 'imageid',
+    'item': 'itemid',
+    'itemprototype': 'itemid',
+    'service': 'serviceid',
+    'discoveryrule': 'itemid',
+    'maintenance': 'maintenanceid',
+    'map': 'sysmapid',
+    'usermedia': 'mediaid',
+    'mediatype': 'mediatypeid',
+    'proxy': 'proxyid',
+    'screen': 'screenid',
+    'screenitem': 'screenitemid',
+    'script': 'scriptid',
+    'template': 'templateid',
+    'templatescreen': 'screenid',
+    'templatescreenitem': 'screenitemid',
+    'trend': 'itemid',
+    'trigger': 'triggerid',
+    'triggerprototype': 'triggerid',
+    'user': 'userid',
+    'usergroup': 'usrgrpid',
+    'usermacro': 'globalmacroid',
+    'valuemap': 'valuemapid',
+    'httptest': 'httptestid'
+}
 
 # Define the module's virtual name
 __virtualname__ = 'zabbix'
@@ -46,11 +102,11 @@ __virtualname__ = 'zabbix'
 
 def __virtual__():
     '''
-    Only load the module if Zabbix server is installed
+    Only load the module if all modules are imported correctly.
     '''
-    if salt.utils.path.which('zabbix_server'):
+    if IMPORTS_OK:
         return __virtualname__
-    return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
+    return False, 'Importing modules failed.'
 
 
 def _frontend_url():
@@ -86,7 +142,9 @@ def _query(method, params, url, auth=None):
     :param url: url of zabbix api
     :param auth: auth token for zabbix api (only for methods with required authentication)
 
-    :return: Response from API with desired data in JSON format.
+    :return: Response from API with desired data in JSON format. In case of error returns more specific description.
+
+    .. versionchanged:: 2017.7
     '''
 
     unauthenticated_methods = ['user.login', 'apiinfo.version', ]
@@ -99,17 +157,28 @@ def _query(method, params, url, auth=None):
 
     data = salt.utils.json.dumps(data)
 
+    log.info('_QUERY input:\nurl: %s\ndata: %s', six.text_type(url), six.text_type(data))
+
     try:
         result = salt.utils.http.query(url,
                                        method='POST',
                                        data=data,
                                        header_dict=header_dict,
                                        decode_type='json',
-                                       decode=True,)
+                                       decode=True,
+                                       status=True,
+                                       headers=True)
+        log.info('_QUERY result: %s', six.text_type(result))
+        if 'error' in result:
+            raise SaltException('Zabbix API: Status: {0} ({1})'.format(result['status'], result['error']))
         ret = result.get('dict', {})
+        if 'error' in ret:
+            raise SaltException('Zabbix API: {} ({})'.format(ret['error']['message'], ret['error']['data']))
         return ret
-    except (URLError, socket.gaierror):
-        return {}
+    except ValueError as err:
+        raise SaltException('URL or HTTP headers are probably not correct! ({})'.format(err))
+    except socket.error as err:
+        raise SaltException('Check hostname in URL! ({})'.format(err))
 
 
 def _login(**kwargs):
@@ -171,8 +240,8 @@ def _login(**kwargs):
             return connargs
         else:
             raise KeyError
-    except KeyError:
-        return False
+    except KeyError as err:
+        raise SaltException('URL is probably not correct! ({})'.format(err))
 
 
 def _params_extend(params, _ignore_name=False, **kwargs):
@@ -206,6 +275,160 @@ def _params_extend(params, _ignore_name=False, **kwargs):
             params['name'] = params.pop('visible_name')
 
     return params
+
+
+def get_zabbix_id_mapper():
+    '''
+    .. versionadded:: 2017.7
+
+    Make ZABBIX_ID_MAPPER constant available to state modules.
+
+    :return: ZABBIX_ID_MAPPER
+    '''
+    return ZABBIX_ID_MAPPER
+
+
+def substitute_params(input_object, extend_params=None, filter_key='name', **kwargs):
+    '''
+    .. versionadded:: 2017.7
+
+    Go through Zabbix object params specification and if needed get given object ID from Zabbix API and put it back
+    as a value. Definition of the object is done via dict with keys "query_object" and "query_name".
+
+    :param input_object: Zabbix object type specified in state file
+    :param extend_params: Specify query with params
+    :param filter_key: Custom filtering key (default: name)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Params structure with values converted to string for further comparison purposes
+    '''
+    if extend_params is None:
+        extend_params = {}
+    if isinstance(input_object, list):
+        return [substitute_params(oitem, extend_params, filter_key, **kwargs) for oitem in input_object]
+    elif isinstance(input_object, dict):
+        if 'query_object' in input_object:
+            query_params = {}
+            if input_object['query_object'] not in ZABBIX_TOP_LEVEL_OBJECTS:
+                query_params.update(extend_params)
+            try:
+                query_params.update({'filter': {filter_key: input_object['query_name']}})
+                return get_object_id_by_params(input_object['query_object'], query_params, **kwargs)
+            except KeyError:
+                raise SaltException('Qyerying object ID requested '
+                                    'but object name not provided: {0}'.format(input_object))
+        else:
+            return {key: substitute_params(val, extend_params, filter_key, **kwargs)
+                    for key, val in input_object.items()}
+    else:
+        # Zabbix response is always str, return everything in str as well
+        return six.text_type(input_object)
+
+
+# pylint: disable=too-many-return-statements,too-many-nested-blocks
+def compare_params(defined, existing, return_old_value=False):
+    '''
+    .. versionadded:: 2017.7
+
+    Compares Zabbix object definition against existing Zabbix object.
+
+    :param defined: Zabbix object definition taken from sls file.
+    :param existing: Existing Zabbix object taken from result of an API call.
+    :param return_old_value: Default False. If True, returns dict("old"=old_val, "new"=new_val) for rollback purpose.
+    :return: Params that are different from existing object. Result extended by object ID can be passed directly to
+    Zabbix API update method.
+    '''
+    # Comparison of data types
+    if not isinstance(defined, type(existing)):
+        raise SaltException('Zabbix object comparison failed (data type mismatch). Expecting {0}, got {1}. '
+                            'Existing value: "{2}", defined value: "{3}").'.format(type(existing),
+                                                                                   type(defined),
+                                                                                   existing,
+                                                                                   defined))
+
+    # Comparison of values
+    if not salt.utils.is_iter(defined):
+        if six.text_type(defined) != six.text_type(existing) and return_old_value:
+            return {'new': six.text_type(defined), 'old': six.text_type(existing)}
+        elif six.text_type(defined) != six.text_type(existing) and not return_old_value:
+            return six.text_type(defined)
+
+    # Comparison of lists of values or lists of dicts
+    if isinstance(defined, list):
+        if len(defined) != len(existing):
+            log.info('Different list length!')
+            return {'new': defined, 'old': existing} if return_old_value else defined
+        else:
+            difflist = []
+            for ditem in defined:
+                d_in_e = []
+                for eitem in existing:
+                    comp = compare_params(ditem, eitem, return_old_value)
+                    if return_old_value:
+                        d_in_e.append(comp['new'])
+                    else:
+                        d_in_e.append(comp)
+                if all(d_in_e):
+                    difflist.append(ditem)
+            # If there is any difference in a list then whole defined list must be returned and provided for update
+            if any(difflist) and return_old_value:
+                return {'new': defined, 'old': existing}
+            elif any(difflist) and not return_old_value:
+                return defined
+
+    # Comparison of dicts
+    if isinstance(defined, dict):
+        try:
+            # defined must be a subset of existing to be compared
+            if set(defined) <= set(existing):
+                intersection = set(defined) & set(existing)
+                diffdict = {'new': {}, 'old': {}} if return_old_value else {}
+                for i in intersection:
+                    comp = compare_params(defined[i], existing[i], return_old_value)
+                    if return_old_value:
+                        if comp or (not comp and isinstance(comp, list)):
+                            diffdict['new'].update({i: defined[i]})
+                            diffdict['old'].update({i: existing[i]})
+                    else:
+                        if comp or (not comp and isinstance(comp, list)):
+                            diffdict.update({i: defined[i]})
+                return diffdict
+
+            return {'new': defined, 'old': existing} if return_old_value else defined
+
+        except TypeError:
+            raise SaltException('Zabbix object comparison failed (data type mismatch). Expecting {0}, got {1}. '
+                                'Existing value: "{2}", defined value: "{3}").'.format(type(existing),
+                                                                                       type(defined),
+                                                                                       existing,
+                                                                                       defined))
+
+
+def get_object_id_by_params(obj, params=None, **connection_args):
+    '''
+    .. versionadded:: 2017.7
+
+    Get ID of single Zabbix object specified by its name.
+
+    :param obj: Zabbix object type
+    :param params: Parameters by which object is uniquely identified
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: object ID
+    '''
+    if params is None:
+        params = {}
+    res = run_query(obj + '.get', params, **connection_args)
+    if res and len(res) == 1:
+        return six.text_type(res[0][ZABBIX_ID_MAPPER[obj]])
+    else:
+        raise SaltException('Zabbix API: Object does not exist or bad Zabbix user permissions or other unexpected '
+                            'result. Called method {0} with params {1}. '
+                            'Result: {2}'.format(obj + '.get', params, res))
 
 
 def apiinfo_version(**connection_args):
@@ -1466,7 +1689,7 @@ def hostinterface_get(hostids, **connection_args):
         return ret
 
 
-def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None, **connection_args):
+def hostinterface_create(hostid, ip_, dns='', main=1, if_type=1, useip=1, port=None, **connection_args):
     '''
     Create new host interface
     NOTE: This function accepts all standard host group interface: keyword argument names differ depending
@@ -1475,11 +1698,11 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
     .. versionadded:: 2016.3.0
 
     :param hostid: ID of the host the interface belongs to
-    :param ip: IP address used by the interface
+    :param ip_: IP address used by the interface
     :param dns: DNS name used by the interface
     :param main: whether the interface is used as default on the host (0 - not default, 1 - default)
     :param port: port number used by the interface
-    :param type: Interface type (1 - agent; 2 - SNMP; 3 - IPMI; 4 - JMX)
+    :param if_type: Interface type (1 - agent; 2 - SNMP; 3 - IPMI; 4 - JMX)
     :param useip: Whether the connection should be made via IP (0 - connect using host DNS name; 1 - connect using
     host IP address for this host interface)
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -1497,12 +1720,18 @@ def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None,
     ret = False
 
     if not port:
-        port = INTERFACE_DEFAULT_PORTS[type]
+        port = INTERFACE_DEFAULT_PORTS[if_type]
 
     try:
         if conn_args:
             method = 'hostinterface.create'
-            params = {"hostid": hostid, "ip": ip, "dns": dns, "main": main, "port": port, "type": type, "useip": useip}
+            params = {"hostid": hostid,
+                      "ip": ip_,
+                      "dns": dns,
+                      "main": main,
+                      "port": port,
+                      "type": if_type,
+                      "useip": useip}
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['interfaceids']
@@ -1565,7 +1794,7 @@ def hostinterface_update(interfaceid, **connection_args):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' zabbix.hostinterface_update 6 ip=0.0.0.2
+        salt '*' zabbix.hostinterface_update 6 ip_=0.0.0.2
     '''
     conn_args = _login(**connection_args)
     ret = False
@@ -1879,8 +2108,9 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix
-                version,nsee: https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
+                all optional mediatype.get parameters: keyword argument names depends on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
 
     Returns:
         Array with mediatype details, False if no mediatype found or on failure.
@@ -2039,8 +2269,9 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix
-                version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
+                all optional template.get parameters: keyword argument names depends on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
 
     Returns:
         Array with convenient template details, False if no template found or on failure.
@@ -2085,8 +2316,9 @@ def run_query(method, params, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix
-                version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/
+                all optional template.get parameters: keyword argument names depends on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.4/manual/api/reference/
 
     Returns:
         Response from Zabbix API
@@ -2100,10 +2332,86 @@ def run_query(method, params, **connection_args):
     ret = False
     try:
         if conn_args:
+            method = method
+            params = params
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            if isinstance(ret['result'], bool):
+                return ret['result']
             return ret['result'] if len(ret['result']) > 0 else False
         else:
             raise KeyError
     except KeyError:
         return ret
+
+
+def configuration_import(config_file, rules=None, file_format='xml', **connection_args):
+    '''
+    .. versionadded:: 2017.7
+
+    Imports Zabbix configuration specified in file to Zabbix server.
+
+    :param config_file: File with Zabbix config (local or remote)
+    :param rules: Optional - Rules that have to be different from default (defaults are the same as in Zabbix web UI.)
+    :param file_format: Config file format (default: xml)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.configuration_import salt://zabbix/config/zabbix_templates.xml \
+        "{'screens': {'createMissing': True, 'updateExisting': True}}"
+    '''
+    if rules is None:
+        rules = {}
+    default_rules = {'applications': {'createMissing': True, 'updateExisting': False, 'deleteMissing': False},
+                     'discoveryRules': {'createMissing': True, 'updateExisting': True, 'deleteMissing': False},
+                     'graphs': {'createMissing': True, 'updateExisting': True, 'deleteMissing': False},
+                     'groups': {'createMissing': True},
+                     'hosts': {'createMissing': False, 'updateExisting': False},
+                     'images': {'createMissing': False, 'updateExisting': False},
+                     'items': {'createMissing': True, 'updateExisting': True, 'deleteMissing': False},
+                     'maps': {'createMissing': False, 'updateExisting': False},
+                     'screens': {'createMissing': False, 'updateExisting': False},
+                     'templateLinkage': {'createMissing': True},
+                     'templates': {'createMissing': True, 'updateExisting': True},
+                     'templateScreens': {'createMissing': True, 'updateExisting': True, 'deleteMissing': False},
+                     'triggers': {'createMissing': True, 'updateExisting': True, 'deleteMissing': False},
+                     'valueMaps': {'createMissing': True, 'updateExisting': False}}
+    new_rules = dict(default_rules)
+
+    if rules:
+        for rule in rules:
+            if rule in new_rules:
+                new_rules[rule].update(rules[rule])
+            else:
+                new_rules[rule] = rules[rule]
+    if 'salt://' in config_file:
+        tmpfile = salt.utils.mkstemp()
+        cfile = __salt__['cp.get_file'](config_file, tmpfile)
+        if not cfile or os.path.getsize(cfile) == 0:
+            return {'name': config_file, 'result': False, 'message': 'Failed to fetch config file.'}
+    else:
+        cfile = config_file
+        if not os.path.isfile(cfile):
+            return {'name': config_file, 'result': False, 'message': 'Invalid file path.'}
+
+    with salt.utils.fopen(cfile, mode='r') as fp_:
+        xml = fp_.read()
+
+    if 'salt://' in config_file:
+        salt.utils.safe_rm(cfile)
+
+    params = {'format': file_format,
+              'rules': new_rules,
+              'source': xml}
+    log.info('CONFIGURATION IMPORT: rules: %s', six.text_type(params['rules']))
+    try:
+        run_query('configuration.import', params, **connection_args)
+        return {'name': config_file, 'result': True, 'message': 'Zabbix API "configuration.import" method '
+                                                                'called successfully.'}
+    except SaltException as exc:
+        return {'name': config_file, 'result': False, 'message': six.text_type(exc)}
