@@ -896,12 +896,11 @@ class ZfsUtilsTestCase(TestCase):
         Test zfs.is_supported method
         '''
         for value in [False, True]:
-            with patch.object(zfs, '_zpool_cmd', MagicMock(return_value=value)):
-                with patch('salt.utils.path.which',
-                           MagicMock(return_value=value)):
-                    with patch('salt.utils.platform.is_linux',
-                                      MagicMock(return_value=value)):
-                        self.assertEqual(value, zfs.is_supported())
+            with patch('salt.utils.path.which',
+                       MagicMock(return_value=value)):
+                with patch('salt.utils.platform.is_linux',
+                                  MagicMock(return_value=value)):
+                    self.assertEqual(value, zfs.is_supported())
 
     def test_property_data_zpool(self):
         '''
