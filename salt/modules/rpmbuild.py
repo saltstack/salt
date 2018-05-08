@@ -68,18 +68,18 @@ def __virtual__():
         return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
 
 
-def _create_rpmmacros():
+def _create_rpmmacros(runas='root'):
     '''
     Create the .rpmmacros file in user's home directory
     '''
     home = os.path.expanduser('~')
     rpmbuilddir = os.path.join(home, 'rpmbuild')
     if not os.path.isdir(rpmbuilddir):
-        os.makedirs(rpmbuilddir)
+        __salt__['file.makedirs_perms'](name=rpmbuilddir, user=runas, group='mock')
 
     mockdir = os.path.join(home, 'mock')
     if not os.path.isdir(mockdir):
-        os.makedirs(mockdir)
+        __salt__['file.makedirs_perms'](name=mockdir, user=runas, group='mock')
 
     rpmmacros = os.path.join(home, '.rpmmacros')
     with salt.utils.files.fopen(rpmmacros, 'w') as afile:
@@ -92,7 +92,7 @@ def _create_rpmmacros():
         afile.write('%_gpg_name packaging@saltstack.com\n')
 
 
-def _mk_tree():
+def _mk_tree(runas='root'):
     '''
     Create the rpm build tree
     '''
@@ -100,7 +100,7 @@ def _mk_tree():
     paths = ['BUILD', 'RPMS', 'SOURCES', 'SPECS', 'SRPMS']
     for path in paths:
         full = os.path.join(basedir, path)
-        os.makedirs(full)
+        __salt__['file.makedirs_perms'](name=full, user=runas, group='mock')
     return basedir
 
 
@@ -116,7 +116,7 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
         saltenv=saltenv)
 
 
-def _get_src(tree_base, source, saltenv='base'):
+def _get_src(tree_base, source, saltenv='base', runas='root'):
     '''
     Get the named sources and place them into the tree_base
     '''
@@ -127,6 +127,7 @@ def _get_src(tree_base, source, saltenv='base'):
         lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
+    __salt__['file.chown'](path=dest, user=runas, group='mock')
 
 
 def _get_distset(tgt):
@@ -171,7 +172,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
     return deps_list
 
 
-def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base', runas='root'):
     '''
     Create a source rpm from the given spec file and sources
 
@@ -191,21 +192,24 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
         using SHA256 as digest and minimum level dist el6
 
     '''
-    _create_rpmmacros()
-    tree_base = _mk_tree()
+    _create_rpmmacros(runas)
+    tree_base = _mk_tree(runas)
     spec_path = _get_spec(tree_base, spec, template, saltenv)
+    __salt__['file.chown'](path=spec_path, user=runas, group='mock')
+    __salt__['file.chown'](path=tree_base, user=runas, group='mock')
+
     if isinstance(sources, six.string_types):
         sources = sources.split(',')
     for src in sources:
-        _get_src(tree_base, src, saltenv)
+        _get_src(tree_base, src, saltenv, runas)
 
     # make source rpms for dist el6 with SHA256, usable with mock on other dists
     cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(tree_base, spec_path)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, runas=runas)
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
     if not os.path.isdir(dest_dir):
-        os.makedirs(dest_dir)
+        __salt__['file.chown'](path=dest_dir, user=runas, group='mock')
     for fn_ in os.listdir(srpms):
         full = os.path.join(srpms, fn_)
         tgt = os.path.join(dest_dir, fn_)
@@ -239,7 +243,7 @@ def build(runas,
     '''
     ret = {}
     try:
-        os.makedirs(dest_dir)
+        __salt__['file.chown'](path=dest_dir, user=runas, group='mock')
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise
@@ -247,7 +251,7 @@ def build(runas,
     srpm_build_dir = tempfile.mkdtemp()
     try:
         srpms = make_src_pkg(srpm_build_dir, spec, sources,
-                             env, template, saltenv)
+                             env, template, saltenv, runas)
     except Exception as exc:
         shutil.rmtree(srpm_build_dir)
         log.error('Failed to make src package')
@@ -263,8 +267,8 @@ def build(runas,
         dbase = os.path.dirname(srpm)
         results_dir = tempfile.mkdtemp()
         try:
-            __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
-            __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
+            __salt__['file.chown'](path=dbase, user=runas, group='mock')
+            __salt__['file.chown'](path=results_dir, user=runas, group='mock')
             cmd = 'mock --root={0} --resultdir={1} --init'.format(tgt, results_dir)
             __salt__['cmd.run'](cmd, runas=runas)
             if deps_list and not deps_list.isspace():
@@ -288,7 +292,7 @@ def build(runas,
                 if filename.endswith('src.rpm'):
                     sdest = os.path.join(srpm_dir, filename)
                     try:
-                        os.makedirs(srpm_dir)
+                        __salt__['file.makedirs_perms'](name=srpm_dir, user=runas, group='mock')
                     except OSError as exc:
                         if exc.errno != errno.EEXIST:
                             raise
@@ -301,7 +305,7 @@ def build(runas,
                 else:
                     log_file = os.path.join(log_dest, filename)
                     try:
-                        os.makedirs(log_dest)
+                        __salt__['file.makedirs_perms'](name=log_dest, user=runas, group='mock')
                     except OSError as exc:
                         if exc.errno != errno.EEXIST:
                             raise
