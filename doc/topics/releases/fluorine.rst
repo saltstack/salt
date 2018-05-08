@@ -10,7 +10,7 @@ Grains Dictionary Passed into Custom Grains
 
 Starting in this release, if a custom grains function accepts a variable named
 ``grains``, the Grains dictionary of the already compiled grains will be passed
-in.  Because of the non deterministic order that grains are rendered in, the
+in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
