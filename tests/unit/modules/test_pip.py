@@ -1169,9 +1169,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_upgrades_legacy(self):
         eggs = [
-            'apache-libcloud (1.1.0) - Latest: 2.2.1 [wheel]',
-            'appdirs (1.4.1) - Latest: 1.4.3 [wheel]',
-            'awscli (1.11.63) - Latest: 1.12.1 [sdist]'
+            'apache-libcloud (Current: 1.1.0 Latest: 2.2.1 [wheel])',
+            'appdirs (Current: 1.4.1 Latest: 1.4.3 [wheel])',
+            'awscli (Current: 1.11.63 Latest: 1.12.1 [sdist])'
         ]
         mock = MagicMock(
             return_value={
@@ -1184,7 +1184,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value='6.1.1')):
                 ret = pip.list_upgrades()
                 mock.assert_called_with(
-                    ['pip', 'list', '--outdated'],
+                    [sys.executable, '-m', 'pip', 'list', '--outdated'],
                     cwd=None,
                     runas=None,
                 )
@@ -1212,15 +1212,15 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value='9.1.1')):
                 ret = pip.list_upgrades()
                 mock.assert_called_with(
-                    ['pip', 'list', '--outdated', '--format=json'],
+                    [sys.executable, '-m', 'pip', 'list', '--outdated', '--format=json'],
                     cwd=None,
                     runas=None,
                 )
                 self.assertEqual(
                     ret, {
-                        'apache-libcloud': '2.2.1',
-                        'appdirs': '1.4.3',
-                        'awscli': '1.12.1'
+                        'apache-libcloud': '2.2.1 [wheel]',
+                        'appdirs': '1.4.3 [wheel]',
+                        'awscli': '1.12.1 [sdist]'
                     }
                 )
 
@@ -1243,7 +1243,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value='6.1.1')):
                 ret = pip.is_installed(pkgname='bbfreeze')
                 mock.assert_called_with(
-                    ['pip', 'freeze'],
+                    [sys.executable, '-m', 'pip', 'freeze'],
                     cwd=None,
                     runas=None,
                     python_shell=False,
@@ -1270,7 +1270,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value='6.1.1')):
                 ret = pip.is_installed(pkgname='notexist')
                 mock.assert_called_with(
-                    ['pip', 'freeze'],
+                    [sys.executable, '-m', 'pip', 'freeze'],
                     cwd=None,
                     runas=None,
                     python_shell=False,
