@@ -3660,6 +3660,44 @@ def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False
     return matched['monitoring']
 
 
+def enable_term_protect(name, call=None):
+    '''
+    Enable termination protection on a node
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a enable_term_protect mymachine
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    return _toggle_term_protect(name, 'true')
+
+
+def disable_term_protect(name, call=None):
+    '''
+    Disable termination protection on a node
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a disable_term_protect mymachine
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The disable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    return _toggle_term_protect(name, 'false')
+
+
 def _toggle_term_protect(name, value):
     '''
     Enable or Disable termination protection on a node
@@ -3678,25 +3716,6 @@ def _toggle_term_protect(name, value):
                        sigver='4')
 
     return show_term_protect(name=name, instance_id=instance_id, call='action')
-
-
-def enable_term_protect(name, call=None):
-    '''
-    Enable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a enable_term_protect mymachine
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The enable_term_protect action must be called with '
-            '-a or --action.'
-        )
-
-    return _toggle_term_protect(name, 'true')
 
 
 def disable_detailed_monitoring(name, call=None):
