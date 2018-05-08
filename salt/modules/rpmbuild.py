@@ -65,7 +65,8 @@ def __virtual__():
             # The module will be exposed as `rpmbuild` on non-RPM based systems
             return 'rpmbuild'
     else:
-        return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
+        return False, 'The rpmbuild module could not be loaded: requires python-gnupg, ' \
+                      'gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
 
 
 def _create_rpmmacros(runas='root'):
@@ -180,12 +181,40 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     .. code-block:: bash
 
-        salt '*' pkgbuild.make_src_pkg /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.make_src_pkg /var/www/html/
+                https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec
+                https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
 
     .. versionchanged:: 2017.7.0
+
+    dest_dir
+        The directory on the minion to place the built package(s)
+
+    spec
+        The location of the spec file (used for rpms)
+
+    sources
+        The list of package sources
+
+    env
+        A dictionary of environment variables to be set prior to execution.
+
+    template
+        Run the spec file through a templating engine
+        Optional arguement, allows for no templating engine used to be
+        if none is desired.
+
+    saltenv
+        The saltenv to use for files downloaded from the salt filesever
+
+    runas
+        The user to run the build process as
+
+        .. versionadded:: 2018.3.1
+
 
     .. note::
 
@@ -205,7 +234,17 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     # make source rpms for dist el6 with SHA256, usable with mock on other dists
     cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(tree_base, spec_path)
-    __salt__['cmd.run'](cmd, runas=runas)
+    retrc = __salt__['cmd.retcode'](cmd, runas=runas)
+    if retrc != 0:
+        raise SaltInvocationError(
+             'Make source package for destination directory {0}, spec {1}, sources {2}, failed '
+             'with return error {3}, check logs for further details'.format(
+                dest_dir,
+                spec,
+                sources,
+                retrc)
+        )
+
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
     if not os.path.isdir(dest_dir):
@@ -236,7 +275,9 @@ def build(runas,
 
     .. code-block:: bash
 
-        salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html
+                    https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec
+                    https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for rhel 7 using user
     mock and place it in /var/www/html/ on the minion
@@ -263,6 +304,7 @@ def build(runas,
     deps_dir = tempfile.mkdtemp()
     deps_list = _get_deps(deps, deps_dir, saltenv)
 
+    retrc = 0
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
         results_dir = tempfile.mkdtemp()
@@ -270,10 +312,10 @@ def build(runas,
             __salt__['file.chown'](path=dbase, user=runas, group='mock')
             __salt__['file.chown'](path=results_dir, user=runas, group='mock')
             cmd = 'mock --root={0} --resultdir={1} --init'.format(tgt, results_dir)
-            __salt__['cmd.run'](cmd, runas=runas)
+            retrc |= __salt__['cmd.retcode'](cmd, runas=runas)
             if deps_list and not deps_list.isspace():
                 cmd = 'mock --root={0} --resultdir={1} --install {2} {3}'.format(tgt, results_dir, deps_list, noclean)
-                __salt__['cmd.run'](cmd, runas=runas)
+                retrc |= __salt__['cmd.retcode'](cmd, runas=runas)
                 noclean += ' --no-clean'
 
             cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
@@ -282,11 +324,14 @@ def build(runas,
                 distset,
                 noclean,
                 srpm)
-            __salt__['cmd.run'](cmd, runas=runas)
-            cmd = ['rpm', '-qp', '--queryformat',
-                   '{0}/%{{name}}/%{{version}}-%{{release}}'.format(log_dir),
-                   srpm]
-            log_dest = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+            retrc |= __salt__['cmd.retcode'](cmd, runas=runas)
+            cmdlist = [
+                        'rpm',
+                        '-qp',
+                        '--queryformat',
+                        '{0}/%{{name}}/%{{version}}-%{{release}}'.format(log_dir),
+                        srpm]
+            log_dest = __salt__['cmd.run_stdout'](cmdlist, python_shell=False)
             for filename in os.listdir(results_dir):
                 full = os.path.join(results_dir, filename)
                 if filename.endswith('src.rpm'):
@@ -315,6 +360,15 @@ def build(runas,
             log.error('Error building from %s: %s', srpm, exc)
         finally:
             shutil.rmtree(results_dir)
+    if retrc != 0:
+        raise SaltInvocationError(
+             'Building packages for destination directory {0}, spec {1}, sources {2}, failed '
+             'with return error {3}, check logs for further details'.format(
+                dest_dir,
+                spec,
+                sources,
+                retrc)
+        )
     shutil.rmtree(deps_dir)
     shutil.rmtree(srpm_build_dir)
     return ret
@@ -437,7 +491,7 @@ def make_repo(repodir,
     phrase = ''
 
     if keyid is not None:
-        ## import_keys
+        # import_keys
         pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
         pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
 
@@ -481,14 +535,21 @@ def make_repo(repodir,
 
         # need to update rpm with public key
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)
-        __salt__['cmd.run'](cmd, runas=runas, use_vt=True)
+        retrc = __salt__['cmd.retcode'](cmd, runas=runas, use_vt=True)
+        if retrc != 0:
+            raise SaltInvocationError(
+                 'Failed to import public key from file {0} with return '
+                 'error {1}, check logs for further details'.format(
+                    pkg_pub_key_file,
+                    retrc)
+            )
 
-        ## sign_it_here
+        # sign_it_here
         # interval of 0.125 is really too fast on some systems
         interval = 0.5
-        for file in os.listdir(repodir):
-            if file.endswith('.rpm'):
-                abs_file = os.path.join(repodir, file)
+        for fileused in os.listdir(repodir):
+            if fileused.endswith('.rpm'):
+                abs_file = os.path.join(repodir, fileused)
                 number_retries = timeout / interval
                 times_looped = 0
                 error_msg = 'Failed to sign file {0}'.format(abs_file)
