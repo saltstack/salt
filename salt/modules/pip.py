@@ -1253,10 +1253,6 @@ def list_upgrades(bin_env=None,
 
     pip_version = version(bin_env)
     # Pip started supporting the ability to output json starting with 9.0.0
-    if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='9.0.0'):
-        cmd.extend(['--format', 'json'])
-
-    # If pip >= 9.0 use --format=json
     min_version = '9.0'
     if salt.utils.versions.compare(ver1=pip_version,
                                    oper='>=',
