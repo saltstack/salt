@@ -42,6 +42,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application = self.build_tornado_app(urls)
 
         application.event_listener = saltnado.EventListener({}, self.opts)
+        self.application = application
         return application
 
     def test_root(self):
@@ -97,7 +98,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_no_tgt(self):
         '''
@@ -137,7 +139,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_invalid_request(self):
         '''
@@ -252,6 +255,29 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
+    def test_simple_local_post_only_dictionary_request_with_order_masters(self):
+        '''
+        Test a basic API of /
+        '''
+        low = {'client': 'local',
+                'tgt': '*',
+                'fun': 'test.ping',
+              }
+
+        self.application.opts['order_masters'] = ['']
+        self.application.opts['syndic_wait'] = 5
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=salt.utils.json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=30,
+                              request_timeout=30,
+                              )
+        response_obj = salt.utils.json.loads(response.body)
+        self.assertEqual(response_obj['return'], [{'localhost': True, 'minion': True, 'sub_minion': True}])
+
     # runner tests
     def test_simple_local_runner_post(self):
         low = [{'client': 'runner',
@@ -267,7 +293,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
-        self.assertEqual(set(response_obj['return'][0]), set(['localhost', 'minion', 'sub_minion']))
+        self.assertEqual(sorted(response_obj['return'][0]), sorted(['localhost', 'minion', 'sub_minion']))
 
     # runner_async tests
     def test_simple_local_runner_async_post(self):

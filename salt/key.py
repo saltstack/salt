@@ -1044,7 +1044,7 @@ class RaetKey(Key):
         '''
         Use libnacl to generate and safely save a private key
         '''
-        import libnacl.dual  # pylint: disable=3rd-party-module-not-gated
+        import libnacl.dual  # pylint: disable=import-error,3rd-party-module-not-gated
         d_key = libnacl.dual.DualSecret()
         keydir, keyname, _, _ = self._get_key_attrs(keydir, keyname,
                                                     keysize, user)
@@ -1440,14 +1440,13 @@ class RaetKey(Key):
         keydata = {'priv': priv,
                    'sign': sign}
         path = os.path.join(self.opts['pki_dir'], 'local.key')
-        c_umask = os.umask(191)
-        if os.path.exists(path):
-            #mode = os.stat(path).st_mode
-            os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
-        with salt.utils.files.fopen(path, 'w+b') as fp_:
-            fp_.write(self.serial.dumps(keydata))
-            os.chmod(path, stat.S_IRUSR)
-        os.umask(c_umask)
+        with salt.utils.files.set_umask(0o277):
+            if os.path.exists(path):
+                #mode = os.stat(path).st_mode
+                os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
+            with salt.utils.files.fopen(path, 'w+') as fp_:
+                fp_.write(self.serial.dumps(keydata))
+                os.chmod(path, stat.S_IRUSR)
 
     def delete_local(self):
         '''

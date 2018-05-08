@@ -511,6 +511,9 @@ def _cmp_attrs(path, attrs):
     Returns a pair (list) where first item are attributes to
     add and second item are to be removed.
 
+    Please take into account when using this function that some minions will
+    not have lsattr installed.
+
     path
         path to file to compare attributes with.
 
@@ -519,7 +522,11 @@ def _cmp_attrs(path, attrs):
     '''
     diff = [None, None]
 
-    lattrs = lsattr(path).get(path, '')
+    try:
+        lattrs = lsattr(path).get(path, '')
+    except AttributeError:
+        # lsattr not installed
+        return None
 
     old = [chr for chr in lattrs if chr not in attrs]
     if len(old) > 0:
@@ -535,6 +542,8 @@ def _cmp_attrs(path, attrs):
 def lsattr(path):
     '''
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 2018.3.1
+        If ``lsattr`` is not installed on the system, ``None`` is returned.
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -548,6 +557,9 @@ def lsattr(path):
 
         salt '*' file.lsattr foo1.txt
     '''
+    if not salt.utils.path.which('lsattr'):
+        return None
+
     if not os.path.exists(path):
         raise SaltInvocationError("File or directory does not exist.")
 
@@ -4080,7 +4092,7 @@ def get_managed(
         if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
-                return '', {}, 'Source file {0} not found'.format(source)
+                return '', {}, 'Source file {0} not found in saltenv \'{1}\''.format(source, saltenv)
         elif not source_hash and unix_local_source:
             source_sum = _get_local_file_source_sum(parsed_path)
         elif not source_hash and source.startswith(os.sep):
@@ -4425,7 +4437,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         ``follow_symlinks`` option added
     '''
     name = os.path.expanduser(name)
-    lsattr_cmd = salt.utils.path.which('lsattr')
 
     if not ret:
         ret = {'name': name,
@@ -4445,12 +4456,14 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
-        # List attributes on file
-        perms['lattrs'] = ''.join(lsattr(name).get('name', ''))
-        # Remove attributes on file so changes can be enforced.
-        if perms['lattrs']:
-            chattr(name, operator='remove', attributes=perms['lattrs'])
+    if not salt.utils.platform.is_windows() and not is_dir:
+        lattrs = lsattr(name)
+        if lattrs is not None:
+            # List attributes on file
+            perms['lattrs'] = ''.join(lattrs.get('name', ''))
+            # Remove attributes on file so changes can be enforced.
+            if perms['lattrs']:
+                chattr(name, operator='remove', attributes=perms['lattrs'])
 
     # Mode changes if needed
     if mode is not None:
@@ -4559,9 +4572,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
 
-    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
+    if not salt.utils.platform.is_windows() and not is_dir:
         # Replace attributes on file if it had been removed
-        if perms['lattrs']:
+        if perms.get('lattrs', ''):
             chattr(name, operator='add', attributes=perms['lattrs'])
 
     # Modify attributes of file if needed
@@ -4572,22 +4585,23 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
             pass
         else:
             diff_attrs = _cmp_attrs(name, attrs)
-            if diff_attrs[0] is not None or diff_attrs[1] is not None:
-                if __opts__['test'] is True:
-                    ret['changes']['attrs'] = attrs
-                else:
-                    if diff_attrs[0] is not None:
-                        chattr(name, operator="add", attributes=diff_attrs[0])
-                    if diff_attrs[1] is not None:
-                        chattr(name, operator="remove", attributes=diff_attrs[1])
-                    cmp_attrs = _cmp_attrs(name, attrs)
-                    if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change attributes to {0}'.format(attrs)
-                        )
-                    else:
+            if diff_attrs is not None:
+                if diff_attrs[0] is not None or diff_attrs[1] is not None:
+                    if __opts__['test'] is True:
                         ret['changes']['attrs'] = attrs
+                    else:
+                        if diff_attrs[0] is not None:
+                            chattr(name, operator="add", attributes=diff_attrs[0])
+                        if diff_attrs[1] is not None:
+                            chattr(name, operator="remove", attributes=diff_attrs[1])
+                        cmp_attrs = _cmp_attrs(name, attrs)
+                        if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
+                            ret['result'] = False
+                            ret['comment'].append(
+                                'Failed to change attributes to {0}'.format(attrs)
+                            )
+                        else:
+                            ret['changes']['attrs'] = attrs
 
     return ret, perms
 
@@ -4790,7 +4804,6 @@ def check_file_meta(
     contents
         File contents
     '''
-    lsattr_cmd = salt.utils.path.which('lsattr')
     changes = {}
     if not source_sum:
         source_sum = dict()
@@ -4815,7 +4828,7 @@ def check_file_meta(
             if sfn:
                 try:
                     changes['diff'] = get_diff(
-                        sfn, name, template=True, show_filenames=False)
+                        name, sfn, template=True, show_filenames=False)
                 except CommandExecutionError as exc:
                     changes['diff'] = exc.strerror
             else:
@@ -4862,14 +4875,13 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
-        if lsattr_cmd and attrs:
+        if attrs:
             diff_attrs = _cmp_attrs(name, attrs)
-            if (
-                attrs is not None and
-                diff_attrs[0] is not None or
-                diff_attrs[1] is not None
-            ):
-                changes['attrs'] = attrs
+            if diff_attrs is not None:
+                if attrs is not None \
+                        and (diff_attrs[0] is not None
+                             or diff_attrs[1] is not None):
+                    changes['attrs'] = attrs
 
     return changes
 
@@ -4970,11 +4982,10 @@ def get_diff(file1,
         )
 
     args = []
-    for idx, filename in enumerate(files):
+    for filename in files:
         try:
-            with salt.utils.files.fopen(filename, 'r') as fp_:
-                args.append([salt.utils.stringutils.to_unicode(x)
-                             for x in fp_.readlines()])
+            with salt.utils.files.fopen(filename, 'rb') as fp_:
+                args.append(fp_.readlines())
         except (IOError, OSError) as exc:
             raise CommandExecutionError(
                 'Failed to read {0}: {1}'.format(
@@ -4994,14 +5005,13 @@ def get_diff(file1,
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(
-                        [salt.utils.stringutils.to_unicode(x) for x in files]
+                    args.extend(files)
+                ret = ''.join(
+                    difflib.unified_diff(
+                        *salt.utils.data.decode(args)
                     )
-                ret = salt.utils.locales.sdecode(
-                    ''.join(difflib.unified_diff(*args))  # pylint: disable=no-value-for-parameter
                 )
         return ret
-
     return ''
 
 
@@ -5233,12 +5243,12 @@ def manage_file(name,
             if salt.utils.platform.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.files.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
-                    log.debug('File will be encoded with {0}'.format(encoding))
+                    log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
-                    tmp_.write(salt.utils.stringutils.to_str(contents))
+                    tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             try:
                 differences = get_diff(
@@ -5414,30 +5424,25 @@ def manage_file(name,
 
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
-            if mode:
-                current_umask = os.umask(0o77)
-
-            # Create a new file when test is False and source is None
-            if contents is None:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['new'] = 'file {0} created'.format(name)
-                        ret['comment'] = 'Empty file'
-                    else:
-                        return _error(
-                            ret, 'Empty file {0} not created'.format(name)
-                        )
-            else:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['diff'] = 'New file'
-                    else:
-                        return _error(
-                            ret, 'File {0} not created'.format(name)
-                        )
-
-            if mode:
-                os.umask(current_umask)
+            with salt.utils.files.set_umask(0o077 if mode else None):
+                # Create a new file when test is False and source is None
+                if contents is None:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['new'] = 'file {0} created'.format(name)
+                            ret['comment'] = 'Empty file'
+                        else:
+                            return _error(
+                                ret, 'Empty file {0} not created'.format(name)
+                            )
+                else:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['diff'] = 'New file'
+                        else:
+                            return _error(
+                                ret, 'File {0} not created'.format(name)
+                            )
 
         if contents is not None:
             # Write the static contents to a temporary file
@@ -5446,12 +5451,12 @@ def manage_file(name,
             if salt.utils.platform.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.files.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
-                    log.debug('File will be encoded with {0}'.format(encoding))
+                    log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
-                    tmp_.write(salt.utils.stringutils.to_str(contents))
+                    tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             # Copy into place
             salt.utils.files.copyfile(tmp,
@@ -5471,8 +5476,7 @@ def manage_file(name,
         # out what mode to use for the new file.
         if mode is None and not salt.utils.platform.is_windows():
             # Get current umask
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
             # Calculate the mode value that results from the umask
             mode = oct((0o777 ^ mask) & 0o666)
 

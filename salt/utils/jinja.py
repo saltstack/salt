@@ -488,6 +488,14 @@ def lst_avg(lst):
 
         2.5
     '''
+    salt.utils.versions.warn_until(
+        'Neon',
+        'This results of this function are currently being rounded.'
+        'Beginning in the Salt Neon release, results will no longer be '
+        'rounded and this warning will be removed.',
+        stacklevel=3
+    )
+
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
@@ -749,8 +757,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -889,7 +896,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

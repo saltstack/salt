@@ -3,7 +3,7 @@
 Create ssh executor system
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import copy
 import getpass
@@ -57,7 +57,7 @@ from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
 from salt.utils.zeromq import zmq
@@ -150,13 +150,9 @@ EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
-    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
-        "import sys; sys.exit(not (sys.version_info >= (2, 6)
-                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6)));"
     then
-        py_cmd_path=`"$py_cmd" -c \
-                   'from __future__ import print_function;
-                   import sys; print(sys.executable);'`
+        py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function;import sys; print(sys.executable);'`
         cmdpath=`command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null`
         if file $cmdpath | grep "shell script" > /dev/null
         then
@@ -223,8 +219,8 @@ class SSH(object):
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
         if not salt.utils.path.which('ssh'):
-            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
-                                                 'installed for salt-ssh to run. Exiting.')
+            raise salt.exceptions.SaltSystemExit(code=-1,
+                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
@@ -323,7 +319,8 @@ class SSH(object):
                                              extra_mods=self.opts.get('thin_extra_mods'),
                                              overwrite=self.opts['regen_thin'],
                                              python2_bin=self.opts['python2_bin'],
-                                             python3_bin=self.opts['python3_bin'])
+                                             python3_bin=self.opts['python3_bin'],
+                                             extended_cfg=self.opts.get('ssh_ext_alternatives'))
         self.mods = mod_data(self.fsclient)
 
     def _get_roster(self):
@@ -353,6 +350,9 @@ class SSH(object):
         needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
         if needs_expansion:
             hostname = salt.utils.network.ip_to_host(hostname)
+            if hostname is None:
+                # Reverse lookup failed
+                return
             self._get_roster()
             for roster_filename in self.__parsed_rosters:
                 roster_data = self.__parsed_rosters[roster_filename]
@@ -560,6 +560,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,
@@ -834,10 +847,10 @@ class Single(object):
 
         self.opts = opts
         self.tty = tty
-        if kwargs.get('wipe'):
-            self.wipe = 'False'
+        if kwargs.get('disable_wipe'):
+            self.wipe = False
         else:
-            self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
+            self.wipe = bool(self.opts.get('ssh_wipe'))
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
         elif self.winrm:
@@ -1031,6 +1044,7 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             opts_pkg['extension_modules'] = self.opts['extension_modules']
+            opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:
@@ -1161,38 +1175,39 @@ class Single(object):
             cachedir = self.opts['_caller_cachedir']
         else:
             cachedir = self.opts['cachedir']
-        thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
+        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
         if not self.opts.get('log_level'):
             self.opts['log_level'] = 'info'
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
             debug = '1'
         arg_str = '''
-OPTIONS = OBJ()
 OPTIONS.config = \
 """
-{0}
+{config}
 """
-OPTIONS.delimiter = '{1}'
-OPTIONS.saltdir = '{2}'
-OPTIONS.checksum = '{3}'
-OPTIONS.hashfunc = '{4}'
-OPTIONS.version = '{5}'
-OPTIONS.ext_mods = '{6}'
-OPTIONS.wipe = {7}
-OPTIONS.tty = {8}
-OPTIONS.cmd_umask = {9}
-ARGS = {10}\n'''.format(self.minion_config,
-                        RSTR,
-                        self.thin_dir,
-                        thin_sum,
-                        'sha1',
-                        salt.version.__version__,
-                        self.mods.get('version', ''),
-                        self.wipe,
-                        self.tty,
-                        self.cmd_umask,
-                        self.argv)
+OPTIONS.delimiter = '{delimeter}'
+OPTIONS.saltdir = '{saltdir}'
+OPTIONS.checksum = '{checksum}'
+OPTIONS.hashfunc = '{hashfunc}'
+OPTIONS.version = '{version}'
+OPTIONS.ext_mods = '{ext_mods}'
+OPTIONS.wipe = {wipe}
+OPTIONS.tty = {tty}
+OPTIONS.cmd_umask = {cmd_umask}
+OPTIONS.code_checksum = {code_checksum}
+ARGS = {arguments}\n'''.format(config=self.minion_config,
+                               delimeter=RSTR,
+                               saltdir=self.thin_dir,
+                               checksum=thin_sum,
+                               hashfunc='sha1',
+                               version=salt.version.__version__,
+                               ext_mods=self.mods.get('version', ''),
+                               wipe=self.wipe,
+                               tty=self.tty,
+                               cmd_umask=self.cmd_umask,
+                               code_checksum=thin_code_digest,
+                               arguments=self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         if six.PY2:
             py_code_enc = py_code.encode('base64')
@@ -1228,7 +1243,7 @@ ARGS = {10}\n'''.format(self.minion_config,
             shim_tmp_file.write(salt.utils.stringutils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
+        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)).decode('ascii'), extension)
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
@@ -1352,7 +1367,9 @@ ARGS = {10}\n'''.format(self.minion_config,
 
         return stdout, stderr, retcode
 
-    def categorize_shim_errors(self, stdout, stderr, retcode):
+    def categorize_shim_errors(self, stdout_bytes, stderr_bytes, retcode):
+        stdout = salt.utils.stringutils.to_unicode(stdout_bytes)
+        stderr = salt.utils.stringutils.to_unicode(stderr_bytes)
         if re.search(RSTR_RE, stdout) and stdout != RSTR+'\n':
             # RSTR was found in stdout which means that the shim
             # functioned without *errors* . . . but there may be shim

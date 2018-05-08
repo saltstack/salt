@@ -130,7 +130,8 @@ def _get_pip_bin(bin_env):
              'pip{0}'.format(sys.version_info[0]),
              'pip', 'pip-python']
         )
-        if salt.utils.platform.is_windows() and six.PY2:
+        if salt.utils.platform.is_windows() and six.PY2 \
+           and isinstance(which_result, str):
             which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
@@ -338,6 +339,22 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
     return cleanup_requirements, None
 
 
+def _format_env_vars(env_vars):
+    ret = {}
+    if env_vars:
+        if isinstance(env_vars, dict):
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(key, six.string_types):
+                    key = str(key)  # future lint: disable=blacklisted-function
+                if not isinstance(val, six.string_types):
+                    val = str(val)  # future lint: disable=blacklisted-function
+                ret[key] = val
+        else:
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
+    return ret
+
+
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             bin_env=None,
@@ -380,7 +397,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             use_vt=False,
             trusted_host=None,
             no_cache_dir=False,
-            cache_dir=None):
+            cache_dir=None,
+            no_binary=None):
     '''
     Install packages with pip
 
@@ -406,7 +424,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Prefer wheel archives (requires pip>=1.4)
 
     no_use_wheel
-        Force to not use wheel archives (requires pip>=1.4)
+        Force to not use wheel archives (requires pip>=1.4,<10.0.0)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or one or more package names with commas between them
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -578,29 +601,48 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                'The --use-wheel option is only supported in pip %s and '
-                'newer. The version of pip detected is %s. This option '
-                'will be ignored.', min_version, cur_version
+                'The --use-wheel option is only supported in pip between %s and '
+                '%s. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, max_version, cur_version
             )
         else:
             cmd.append('--use-wheel')
 
     if no_use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                'The --no-use-wheel option is only supported in pip %s and '
+                'The --no-use-wheel option is only supported in pip between %s and '
+                '%s. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, max_version, cur_version
+            )
+        else:
+            cmd.append('--no-use-wheel')
+
+    if no_binary:
+        min_version = '7.0.0'
+        cur_version = __salt__['pip.version'](bin_env)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            logger.error(
+                'The --no-binary option is only supported in pip %s and '
                 'newer. The version of pip detected is %s. This option '
                 'will be ignored.', min_version, cur_version
             )
         else:
-            cmd.append('--no-use-wheel')
+            if isinstance(no_binary, list):
+                no_binary = ','.join(no_binary)
+            cmd.extend(['--no-binary', no_binary])
 
     if log:
         if os.path.isdir(log):
@@ -766,6 +808,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
         cmd.extend([p.replace(';', ',') for p in pkgs])
+    elif not any([requirements, editable]):
+        # Starting with pip 10.0.0, if no packages are specified in the
+        # command, it returns a retcode 1.  So instead of running the command,
+        # just return the output without running pip.
+        return {'retcode': 0, 'stdout': 'No packages to install.'}
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
@@ -811,16 +858,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
     if env_vars:
-        if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(key, six.string_types):
-                    key = str(key)  # future lint: disable=blacklisted-function
-                if not isinstance(val, six.string_types):
-                    val = str(val)  # future lint: disable=blacklisted-function
-                cmd_kwargs.setdefault('env', {})[key] = val
-        else:
-            raise CommandExecutionError(
-                'env_vars {0} is not a dictionary'.format(env_vars))
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
 
     try:
         if cwd:
@@ -974,7 +1012,8 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            cwd=None,
-           use_vt=False):
+           use_vt=False,
+           env_vars=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1027,6 +1066,8 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
     if result['retcode'] > 0:
@@ -1038,7 +1079,8 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          cwd=None):
+          cwd=None,
+          env_vars=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1067,7 +1109,7 @@ def list_(prefix=None,
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines

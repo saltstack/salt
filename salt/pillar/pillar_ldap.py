@@ -50,179 +50,76 @@ possible to reference grains within the configuration.
     to trick the master into returning secret data.
     Use only the 'id' grain which is verified through the minion's key/cert.
 
+
 Map Mode
 --------
 
 The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 
 - filtering for:
-    - members of the group ``it-admins``
-    - objects with ``objectclass=user``
-- returning the data of users (``mode: map``) as a list of dictionaries, where
-  each user is a dictionary containing the configured string or list attributes,
-  and the user dictionaries are combined to a list.
+  - members of the group ``it-admins``
+  - objects with ``objectclass=user``
+- returning the data of users, where each user is a dictionary containing the
+  configured string or list attributes.
 
-  **Configuration:**
 
-.. code-block:: yaml
-
-    salt-users:
-        server:    ldap.company.tld
-        port:      389
-        tls:       true
-        dn:        'dc=company,dc=tld'
-        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
-        bindpw:    bi7ieBai5Ano
-        referrals: false
-        anonymous: false
-        mode:      map
-        dn:        'ou=users,dc=company,dc=tld'
-        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
-        attrs:
-            - cn
-            - displayName
-            - givenName
-            - sn
-        lists:
-            - memberOf
-
-  **Result:**
+Configuration
+*************
 
 .. code-block:: yaml
 
     salt-users:
-        - cn: cn=johndoe,ou=users,dc=company,dc=tld
-          displayName: John Doe
-          givenName:   John
-          sn:          Doe
-          memberOf:
-              - cn=it-admins,ou=groups,dc=company,dc=tld
-              - cn=team01,ou=groups,dc=company
-        - cn: cn=janedoe,ou=users,dc=company,dc=tld
-          displayName: Jane Doe
-          givenName:   Jane
-          sn:          Doe
-          memberOf:
-              - cn=it-admins,ou=groups,dc=company,dc=tld
-              - cn=team02,ou=groups,dc=company
+      server:    ldap.company.tld
+      port:      389
+      tls:       true
+      dn:        'dc=company,dc=tld'
+      binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+      bindpw:    bi7ieBai5Ano
+      referrals: false
+      anonymous: false
+      mode:      map
+      dn:        'ou=users,dc=company,dc=tld'
+      filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+      attrs:
+        - cn
+        - displayName
+        - givenName
+        - sn
+      lists:
+        - memberOf
 
+    search_order:
+      - salt-users
 
-Dict Mode
----------
+Result
+******
 
-The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
+.. code-block:: python
 
-- filtering for:
-    - members of the group ``it-admins``
-    - objects with ``objectclass=user``
-- returning the data of users (``mode: dict``), where each user is a dictionary
-  containing the configured string or list attributes, and the user dictionaries
-  are combined to a dictionary using the value of the LDAP attribute defined in the
-  ``dict_key_attr`` configuration option (defaults to ``dn`` or ``distinguishedName``)
-  as the key.
-
-
-  **Configuration:**
-
-.. code-block:: yaml
-
-    salt-users:
-        server:    ldap.company.tld
-        port:      389
-        tls:       true
-        dn:        'dc=company,dc=tld'
-        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
-        bindpw:    bi7ieBai5Ano
-        referrals: false
-        anonymous: false
-        mode:      dict
-        dn:        'ou=users,dc=company,dc=tld'
-        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
-        attrs:
-            - cn
-            - displayName
-            - givenName
-            - sn
-        lists:
-            - memberOf
-
-
-  **Result:**
-
-.. code-block:: yaml
-
-    salt-users:
-        cn=johndoe,ou=users,dc=company,dc=tld:
-            - cn: cn=johndoe,ou=users,dc=company,dc=tld
-              displayName: John Doe
-              givenName:   John
-              sn:          Doe
-              memberOf:
-                  - cn=it-admins,ou=groups,dc=company,dc=tld
-                  - cn=team01,ou=groups,dc=company
-        cn=janedoe,ou=users,dc=company,dc=tld:
-            - cn: cn=janedoe,ou=users,dc=company,dc=tld
-              displayName: Jane Doe
-              givenName:   Jane
-              sn:          Doe
-              memberOf:
-                  - cn=it-admins,ou=groups,dc=company,dc=tld
-                  - cn=team02,ou=groups,dc=company
-
-
-  **Configuration:**
-
-.. code-block:: yaml
-
-    salt-users:
-        server:    ldap.company.tld
-        port:      389
-        tls:       true
-        dn:        'dc=company,dc=tld'
-        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
-        bindpw:    bi7ieBai5Ano
-        referrals: false
-        anonymous: false
-        mode:      dict
-        dict_key_attr: displayName
-        dn:        'ou=users,dc=company,dc=tld'
-        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
-        attrs:
-            - dn
-            - cn
-            - givenName
-            - sn
-        lists:
-            - memberOf
-
-
-  **Result:**
-
-.. code-block:: yaml
-
-    salt-users:
-        John Doe:
-            - dn: cn=johndoe,ou=users,dc=company,dc=tld
-              cn: cn=johndoe,ou=users,dc=company,dc=tld
-              givenName:   John
-              sn:          Doe
-              memberOf:
-                  - cn=it-admins,ou=groups,dc=company,dc=tld
-                  - cn=team01,ou=groups,dc=company
-        Jane Doe:
-            - dn: cn=janedoe,ou=users,dc=company,dc=tld
-              cn: cn=janedoe,ou=users,dc=company,dc=tld
-              givenName:   Jane
-              sn:          Doe
-              memberOf:
-                  - cn=it-admins,ou=groups,dc=company,dc=tld
-                  - cn=team02,ou=groups,dc=company
-
-
-List Mode
----------
-
-TODO: see also ``_result_to_dict()`` documentation
+    {
+        'salt-users': [
+            {
+                'cn': 'cn=johndoe,ou=users,dc=company,dc=tld',
+                'displayName': 'John Doe'
+                'givenName': 'John'
+                'sn': 'Doe'
+                'memberOf': [
+                  'cn=it-admins,ou=groups,dc=company,dc=tld',
+                  'cn=team01,ou=groups,dc=company'
+                ]
+            },
+            {
+                'cn': 'cn=janedoe,ou=users,dc=company,dc=tld',
+                'displayName': 'Jane Doe',
+                'givenName': 'Jane',
+                'sn': 'Doe',
+                'memberOf': [
+                  'cn=it-admins,ou=groups,dc=company,dc=tld',
+                  'cn=team02,ou=groups,dc=company'
+                ]
+            }
+        ]
+    }
 '''
 
 # Import python libs
@@ -231,10 +128,11 @@ import os
 import logging
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-from jinja2 import Environment, FileSystemLoader
+import jinja2
 try:
     import ldap  # pylint: disable=W0611
     HAS_LDAP = True
@@ -260,10 +158,9 @@ def _render_template(config_file):
     Render config template, substituting grains where found.
     '''
     dirname, filename = os.path.split(config_file)
-    env = Environment(loader=FileSystemLoader(dirname))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(dirname))
     template = env.get_template(filename)
-    config = template.render(__grains__)
-    return config
+    return template.render(__grains__)
 
 
 def _config(name, conf):
@@ -271,7 +168,7 @@ def _config(name, conf):
     Return a value for 'name' from  the config file options.
     '''
     try:
-        value = conf[name]
+        value = salt.utils.data.decode(conf[name], to_str=True)
     except KeyError:
         value = None
     return value
@@ -297,19 +194,19 @@ def _result_to_dict(data, result, conf, source):
     For example, search result:
 
         { saltKeyValue': ['ntpserver=ntp.acme.local', 'foo=myfoo'],
-          'saltList': ['vhost=www.acme.net', 'vhost=www.acme.local' }
+          'saltList': ['vhost=www.acme.net', 'vhost=www.acme.local'] }
 
     is written to the pillar data dictionary as:
 
         { 'ntpserver': 'ntp.acme.local', 'foo': 'myfoo',
-           'vhost': ['www.acme.net', 'www.acme.local' }
+           'vhost': ['www.acme.net', 'www.acme.local'] }
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
     dict_key_attr = _config('dict_key_attr', conf) or 'dn'
     # TODO:
     # deprecate the default 'mode: split' and make the more
-    # straightforward 'mode: dict' the new default
+    # straightforward 'mode: map' the new default
     mode = _config('mode', conf) or 'split'
     if mode == 'map':
         data[source] = []
@@ -413,22 +310,46 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     Execute LDAP searches and return the aggregated data
     '''
-    if os.path.isfile(config_file):
-        import salt.utils.yaml
-        try:
-            #open(config_file, 'r') as raw_config:
-            config = _render_template(config_file) or {}
-            opts = salt.utils.yaml.safe_load(config) or {}
-            opts['conf_file'] = config_file
-        except Exception as err:
-            import salt.log
-            msg = 'Error parsing configuration file: {0} - {1}'.format(config_file, err)
-            if salt.log.is_console_configured():
-                log.warning(msg)
-            else:
-                print(msg)
+    config_template = None
+    try:
+        config_template = _render_template(config_file)
+    except jinja2.exceptions.TemplateNotFound:
+        log.debug('pillar_ldap: missing configuration file %s', config_file)
+    except Exception:
+        log.debug('pillar_ldap: failed to render template for %s',
+                  config_file, exc_info=True)
+
+    if not config_template:
+        # We don't have a config file
+        return {}
+
+    import salt.utils.yaml
+    try:
+        opts = salt.utils.yaml.safe_load(config_template) or {}
+        opts['conf_file'] = config_file
+    except Exception as err:
+        import salt.log
+        msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'
+        if salt.log.is_console_configured():
+            log.warning(msg.format(config_file, err))
+        else:
+            print(msg.format(config_file, err))
+        return {}
     else:
-        log.debug('Missing configuration file: %s', config_file)
+        if not isinstance(opts, dict):
+            log.warning(
+                'pillar_ldap: %s is invalidly formatted, must be a YAML '
+                'dictionary. See the documentation for more information.',
+                config_file
+            )
+            return {}
+
+    if 'search_order' not in opts:
+        log.warning(
+            'pillar_ldap: search_order missing from configuration. See the '
+            'documentation for more information.'
+        )
+        return {}
 
     data = {}
     for source in opts['search_order']:

@@ -12,6 +12,8 @@ This is an alternative to the ``ldap`` interface provided by the
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import sys
 
 available_backends = set()
 try:
@@ -22,9 +24,9 @@ try:
     available_backends.add('ldap')
 except ImportError:
     pass
-import logging
+
+import salt.utils.data
 from salt.ext import six
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -407,7 +409,10 @@ def add(connect_spec, dn, attributes):
     if 'unicodePwd' in attributes:
         attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
 
-    modlist = ldap.modlist.addModlist(attributes)
+    modlist = salt.utils.data.decode(
+        ldap.modlist.addModlist(attributes),
+        to_str=True
+    )
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -507,6 +512,7 @@ def modify(connect_spec, dn, directives):
             modlist[idx] = (mod[0], mod[1],
                 [_format_unicode_password(x) for x in mod[2]])
 
+    modlist = salt.utils.data.decode(modlist, to_str=True)
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -573,7 +579,10 @@ def change(connect_spec, dn, before, after):
     if 'unicodePwd' in after:
         after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
 
-    modlist = ldap.modlist.modifyModlist(before, after)
+    modlist = salt.utils.data.decode(
+        ldap.modlist.modifyModlist(before, after),
+        to_str=True
+    )
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:

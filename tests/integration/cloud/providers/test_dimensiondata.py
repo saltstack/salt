@@ -18,10 +18,6 @@ from tests.support.helpers import expensiveTest
 from salt.config import cloud_providers_config
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = _random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'dimensiondata'
-
 
 def _random_name(size=6):
     '''
@@ -31,6 +27,10 @@ def _random_name(size=6):
         random.choice(string.ascii_lowercase + string.digits)
         for x in range(size)
     )
+
+# Create the cloud instance name to be used throughout the tests
+INSTANCE_NAME = _random_name()
+PROVIDER_NAME = 'dimensiondata'
 
 
 class DimensionDataTest(ShellCase):

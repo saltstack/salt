@@ -28,7 +28,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 from salt.ext import six
 
 try:
-    from M2Crypto import RSA, EVP
+    from M2Crypto import RSA, EVP, BIO
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False
@@ -84,8 +84,7 @@ def dropfile(cachedir, user=None):
     '''
     dfn = os.path.join(cachedir, '.dfn')
     # set a mask (to avoid a race condition on file creation) and store original.
-    mask = os.umask(191)
-    try:
+    with salt.utils.files.set_umask(0o277):
         log.info('Rotating AES key')
         if os.path.isfile(dfn):
             log.info('AES key rotation already requested')
@@ -103,8 +102,6 @@ def dropfile(cachedir, user=None):
                 os.chown(dfn, uid, -1)
             except (KeyError, ImportError, OSError, IOError):
                 pass
-    finally:
-        os.umask(mask)  # restore original umask
 
 
 def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
@@ -138,17 +135,19 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     if not os.access(keydir, os.W_OK):
         raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
-    cumask = os.umask(0o277)
-    if HAS_M2:
-        # if passphrase is empty or None use no cipher
-        if not passphrase:
-            gen.save_pem(priv, cipher=None)
+    with salt.utils.files.set_umask(0o277):
+        if HAS_M2:
+            # if passphrase is empty or None use no cipher
+            if not passphrase:
+                gen.save_pem(priv, cipher=None)
+            else:
+                gen.save_pem(
+                    priv,
+                    cipher='des_ede3_cbc',
+                    callback=lambda x: salt.utils.stringutils.to_bytes(passphrase))
         else:
-            gen.save_pem(priv, cipher='des_ede3_cbc', callback=lambda x: six.b(passphrase))
-    else:
-        with salt.utils.files.fopen(priv, 'wb+') as f:
-            f.write(gen.exportKey('PEM', passphrase))
-    os.umask(cumask)
+            with salt.utils.files.fopen(priv, 'wb+') as f:
+                f.write(gen.exportKey('PEM', passphrase))
     if HAS_M2:
         gen.save_pub_key(pub)
     else:
@@ -207,7 +206,10 @@ def get_rsa_pub_key(path):
     '''
     log.debug('salt.crypt.get_rsa_pub_key: Loading public key')
     if HAS_M2:
-        key = RSA.load_pub_key(path)
+        with salt.utils.files.fopen(path) as f:
+            data = f.read().replace(b'RSA ', '')
+        bio = BIO.MemoryBuffer(data)
+        key = RSA.load_pub_key_bio(bio)
     else:
         with salt.utils.files.fopen(path) as f:
             key = RSA.importKey(f.read())
@@ -222,7 +224,7 @@ def sign_message(privkey_path, message, passphrase=None):
     log.debug('salt.crypt.sign_message: Signing message.')
     if HAS_M2:
         md = EVP.MessageDigest('sha1')
-        md.update(message)
+        md.update(salt.utils.stringutils.to_bytes(message))
         digest = md.final()
         return key.sign(digest)
     else:
@@ -240,7 +242,7 @@ def verify_signature(pubkey_path, message, signature):
     log.debug('salt.crypt.verify_signature: Verifying signature')
     if HAS_M2:
         md = EVP.MessageDigest('sha1')
-        md.update(message)
+        md.update(salt.utils.stringutils.to_bytes(message))
         digest = md.final()
         return pubkey.verify(digest, signature)
     else:

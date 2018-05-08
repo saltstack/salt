@@ -6,7 +6,7 @@ The Salt Fileserver and Client
 Introduction
 ------------
 
-Salt has a modular fileserver, and mulitple client classes which are used to
+Salt has a modular fileserver, and multiple client classes which are used to
 interact with it. This page serves as a developer's reference, to help explain
 how the fileserver and clients both work.
 

@@ -28,6 +28,7 @@ else:
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.dateutils
 import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
@@ -204,7 +205,8 @@ def _get_jinja_error_slug(tb_data):
         return [
             x
             for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
+                                         'template',
+                                         '<module>')
         ][-1]
     except IndexError:
         pass
@@ -372,7 +374,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.locales.sdecode(value)
+        try:
+            decoded_context[key] = salt.utils.stringutils.to_unicode(value, encoding=SLS_ENCODING)
+        except UnicodeDecodeError as ex:
+            log.debug(
+                "Failed to decode using default encoding (%s), trying system encoding",
+                SLS_ENCODING,
+            )
+            decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)

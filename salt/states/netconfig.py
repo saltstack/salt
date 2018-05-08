@@ -18,14 +18,14 @@ Dependencies
 .. versionadded:: 2017.7.0
 '''
 
+# Import Salt libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+
 log = logging.getLogger(__name__)
 
-# import NAPALM utils
+# import Salt libs
 import salt.utils.napalm
-import salt.utils.versions
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -55,7 +55,6 @@ def __virtual__():
 
 def _update_config(template_name,
                    template_source=None,
-                   template_path=None,
                    template_hash=None,
                    template_hash_name=None,
                    template_user='root',
@@ -79,7 +78,6 @@ def _update_config(template_name,
 
     return __salt__['net.load_template'](template_name,
                                          template_source=template_source,
-                                         template_path=template_path,
                                          template_hash=template_hash,
                                          template_hash_name=template_hash_name,
                                          template_user=template_user,
@@ -104,7 +102,6 @@ def _update_config(template_name,
 def managed(name,
             template_name,
             template_source=None,
-            template_path=None,
             template_hash=None,
             template_hash_name=None,
             template_user='root',
@@ -137,10 +134,6 @@ def managed(name,
 
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
-    .. warning::
-        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be deprecated and removed.
-
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
         either remotely.
@@ -155,7 +148,7 @@ def managed(name,
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
         ``salt://templates/example.jinja``.
-        Alternatively, for local files, the user can specify the abolute path.
+        Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
 
         Examples:
@@ -168,11 +161,6 @@ def managed(name,
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
-
-    template_path: None
-        Required only in case the argument ``template_name`` provides only the file basename.
-        E.g.: if ``template_name`` is specified as ``my_template.jinja``, in order to find the
-        template, this argument must be provided: ``template_path: /absolute/path/to/``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -221,8 +209,15 @@ def managed(name,
         Commit? Default: ``True``.
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         result after the template was rendered.
+
+        .. note::
+
+            This argument cannot be used directly on the command line. Instead,
+            it can be passed through the ``pillar`` variable when executing one
+            of the :ref:`salt.modules.state.sls` or :ref:`salt.modules.state.apply`
+            functions (see an example below).
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -231,7 +226,7 @@ def managed(name,
         Default variables/context passed to the template.
 
     **template_vars
-        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitely specify this
+        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitly specify this
         argument. This represents any other variable that will be sent to the template rendering system. Please
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
         template variable.
@@ -252,7 +247,6 @@ def managed(name,
         prefix_lists_example:
             netconfig.managed:
                 - template_name: prefix_lists.cheetah
-                - template_path: /absolute/path/to/
                 - debug: True
                 - template_engine: cheetah
         ntp_peers_example:
@@ -274,7 +268,7 @@ def managed(name,
 
         $ sudo salt 'juniper.device' state.sls router.config test=True
 
-        $ sudo salt -N all-routers state.sls router.config debug=True
+        $ sudo salt -N all-routers state.sls router.config pillar="{'debug': True}"
 
     ``router.config`` depends on the location of the SLS file (see above). Running this command, will be executed all
     five steps from above. These examples above are not meant to be used in a production environment, their sole purpose
@@ -333,24 +327,18 @@ def managed(name,
             }
         }
     '''
-    if template_path:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
-        )
     ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __opts__.get('test', test)
-    debug = __opts__.get('debug', debug)
-    commit = __opts__.get('commit', commit)
-    replace = __opts__.get('replace', replace)  # this might be a bit risky
-    skip_verify = __opts__.get('skip_verify', skip_verify)
+    test = __salt__['config.merge']('test', test)
+    debug = __salt__['config.merge']('debug', debug)
+    commit = __salt__['config.merge']('commit', commit)
+    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
+    skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
 
     config_update_ret = _update_config(template_name,
                                        template_source=template_source,
-                                       template_path=template_path,
                                        template_hash=template_hash,
                                        template_hash_name=template_hash_name,
                                        template_user=template_user,

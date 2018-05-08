@@ -142,7 +142,8 @@ def yamlify_arg(arg):
         return arg
 
     if arg.strip() == '':
-        # Because YAML loads empty strings as None, we return the original string
+        # Because YAML loads empty (or all whitespace) strings as None, we
+        # return the original string
         # >>> import yaml
         # >>> yaml.load('') is None
         # True
@@ -151,6 +152,9 @@ def yamlify_arg(arg):
         return arg
 
     elif '_' in arg and all([x in '0123456789_' for x in arg.strip()]):
+        # When the stripped string includes just digits and underscores, the
+        # underscores are ignored and the digits are combined together and
+        # loaded as an int. We don't want that, so return the original value.
         return arg
 
     try:
@@ -173,6 +177,14 @@ def yamlify_arg(arg):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
+                return original_arg
+            else:
+                return arg
+
+        elif isinstance(arg, list):
+            # lists must be wrapped in brackets
+            if (isinstance(original_arg, six.string_types) and
+                    not original_arg.startswith('[')):
                 return original_arg
             else:
                 return arg
@@ -460,17 +472,6 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Fluorine comes out, after
-    # which, errors will be raised instead.
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'It\'s time to start raising `SaltInvocationError` instead of '
-        'returning warnings',
-        # Let's not show the deprecation warning on the console, there's no
-        # need.
-        _dont_call_warnings=True
-    )
-
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -495,19 +496,7 @@ def format_call(fun,
                 )
             )
 
-        # Return a warning to the user explaining what's going on
-        ret.setdefault('warnings', []).append(
-            '{0}. If you were trying to pass additional data to be used '
-            'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until Salt '
-            'Fluorine is out.{1}'.format(
-                msg,
-                '' if 'full' not in ret else ' Please update your state files.'
-            )
-        )
-
-        # Lets pack the current extra kwargs as template context
-        ret.setdefault('context', {}).update(extra)
+        raise SaltInvocationError(msg)
     return ret
 
 

@@ -309,7 +309,11 @@ class _Zypper(object):
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
-        return self._is_xml_mode() and dom.parseString(self.__call_result['stdout']) or self.__call_result['stdout']
+        return (
+            self._is_xml_mode() and
+            dom.parseString(salt.utils.stringutils.to_str(self.__call_result['stdout'])) or
+            self.__call_result['stdout']
+        )
 
 
 __zypper__ = _Zypper()
@@ -724,6 +728,123 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __context__[contextkey],
         versions_as_list,
         attr)
+
+
+def list_repo_pkgs(*args, **kwargs):
+    '''
+    .. versionadded:: 2017.7.5,2018.3.1
+
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names. This is recommended as it speeds up the function considerably.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. If ``byrepo`` is set to
+    ``True``, then the return dictionary will contain repository names at the
+    top level, and each repository will map packages to lists of version
+    numbers. For example:
+
+    .. code-block:: python
+
+        # With byrepo=False (default)
+        {
+            'bash': ['4.3-83.3.1',
+                     '4.3-82.6'],
+            'vim': ['7.4.326-12.1']
+        }
+        {
+            'OSS': {
+                'bash': ['4.3-82.6'],
+                'vim': ['7.4.326-12.1']
+            },
+            'OSS Update': {
+                'bash': ['4.3-83.3.1']
+            }
+        }
+
+    fromrepo : None
+        Only include results from the specified repo(s). Multiple repos can be
+        specified, comma-separated.
+
+    byrepo : False
+        When ``True``, the return data for each package will be organized by
+        repository.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
+        salt '*' pkg.list_repo_pkgs 'python2-*' fromrepo='OSS Updates'
+    '''
+    byrepo = kwargs.pop('byrepo', False)
+    fromrepo = kwargs.pop('fromrepo', '') or ''
+    ret = {}
+
+    targets = [
+        arg if isinstance(arg, six.string_types) else six.text_type(arg)
+        for arg in args
+    ]
+
+    def _is_match(pkgname):
+        '''
+        When package names are passed to a zypper search, they will be matched
+        anywhere in the package name. This makes sure that only exact or
+        fnmatch matches are identified.
+        '''
+        if not args:
+            # No package names passed, everyone's a winner!
+            return True
+        for target in targets:
+            if fnmatch.fnmatch(pkgname, target):
+                return True
+        return False
+
+    for node in __zypper__.xml.call('se', '-s', *targets).getElementsByTagName('solvable'):
+        pkginfo = dict(node.attributes.items())
+        try:
+            if pkginfo['kind'] != 'package':
+                continue
+            reponame = pkginfo['repository']
+            if fromrepo and reponame != fromrepo:
+                continue
+            pkgname = pkginfo['name']
+            pkgversion = pkginfo['edition']
+        except KeyError:
+            continue
+        else:
+            if _is_match(pkgname):
+                repo_dict = ret.setdefault(reponame, {})
+                version_list = repo_dict.setdefault(pkgname, set())
+                version_list.add(pkgversion)
+
+    if byrepo:
+        for reponame in ret:
+            # Sort versions newest to oldest
+            for pkgname in ret[reponame]:
+                sorted_versions = sorted(
+                    [LooseVersion(x) for x in ret[reponame][pkgname]],
+                    reverse=True
+                )
+                ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
+        return ret
+    else:
+        byrepo_ret = {}
+        for reponame in ret:
+            for pkgname in ret[reponame]:
+                byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
+        for pkgname in byrepo_ret:
+            sorted_versions = sorted(
+                [LooseVersion(x) for x in byrepo_ret[pkgname]],
+                reverse=True
+            )
+            byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
+        return byrepo_ret
 
 
 def _get_configured_repos():
@@ -1144,6 +1265,15 @@ def install(name=None,
         return {}
 
     version_num = Wildcard(__zypper__)(name, version)
+
+    if version_num:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version_num}
+        else:
+            log.warning('"version" parameter will be ignored for multiple '
+                        'package targets')
+
     if pkg_type == 'repository':
         targets = []
         for param, version_num in six.iteritems(pkg_params):

@@ -21,8 +21,11 @@ import os
 import socket
 
 # Import salt libs
+import salt.ext.six as six
+import salt.utils.data
 import salt.utils.http as http
 import salt.utils.json
+import salt.utils.stringutils
 
 
 # metadata server information
@@ -48,10 +51,13 @@ def _search(prefix="latest/"):
     Recursively look up all grains in the metadata server
     '''
     ret = {}
-    linedata = http.query(os.path.join(HOST, prefix))
+    linedata = http.query(os.path.join(HOST, prefix), headers=True)
     if 'body' not in linedata:
         return ret
-    for line in linedata['body'].split('\n'):
+    body = salt.utils.stringutils.to_unicode(linedata['body'])
+    if linedata['headers'].get('Content-Type', 'text/plain') == 'application/octet-stream':
+        return body
+    for line in body.split('\n'):
         if line.endswith('/'):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
         elif prefix == 'latest/':
@@ -68,11 +74,14 @@ def _search(prefix="latest/"):
             retdata = http.query(os.path.join(HOST, prefix, line)).get('body', None)
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
-            try:
-                ret[line] = salt.utils.json.loads(retdata)
-            except ValueError:
+            if isinstance(retdata, six.binary_type):
+                try:
+                    ret[line] = salt.utils.json.loads(salt.utils.stringutils.to_unicode(retdata))
+                except ValueError:
+                    ret[line] = salt.utils.stringutils.to_unicode(retdata)
+            else:
                 ret[line] = retdata
-    return ret
+    return salt.utils.data.decode(ret)
 
 
 def metadata():

@@ -90,6 +90,13 @@ def _p_to_cp(p):
     except portage.exception.InvalidAtom:
         pass
 
+    try:
+        ret = _porttree().dbapi.xmatch("match-all", p)
+        if ret:
+            return portage.cpv_getkey(ret[0])
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -105,6 +112,13 @@ def _allnodes():
 def _cpv_to_cp(cpv):
     try:
         ret = portage.dep_getkey(cpv)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = portage.cpv_getkey(cpv)
         if ret:
             return ret
     except portage.exception.InvalidAtom:

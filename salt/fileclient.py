@@ -143,22 +143,20 @@ class Client(object):
                                     saltenv,
                                     path)
         destdir = os.path.dirname(dest)
-        cumask = os.umask(63)
+        with salt.utils.files.set_umask(0o077):
+            # remove destdir if it is a regular file to avoid an OSError when
+            # running os.makedirs below
+            if os.path.isfile(destdir):
+                os.remove(destdir)
 
-        # remove destdir if it is a regular file to avoid an OSError when
-        # running os.makedirs below
-        if os.path.isfile(destdir):
-            os.remove(destdir)
+            # ensure destdir exists
+            try:
+                os.makedirs(destdir)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:  # ignore if it was there already
+                    raise
 
-        # ensure destdir exists
-        try:
-            os.makedirs(destdir)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:  # ignore if it was there already
-                raise
-
-        yield dest
-        os.umask(cumask)
+            yield dest
 
     def get_cachedir(self, cachedir=None):
         if cachedir is None:
@@ -1383,7 +1381,17 @@ class RemoteClient(Client):
         '''
         Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_master_tops',
+        salt.utils.versions.warn_until(
+            'Magnesium',
+            'The _ext_nodes master function has '
+            'been renamed to _master_tops. To ensure '
+            'compatibility when using older Salt masters '
+            'we continue to pass the function as _ext_nodes.'
+        )
+
+        # TODO: Change back to _master_tops
+        # for Magnesium release
+        load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:

@@ -111,14 +111,14 @@ def installed(name,
               - XPS-Viewer
               - SNMP-Service
             - exclude:
-              - Web-Service
+              - Web-Server
     '''
     if 'force' in kwargs:
         salt.utils.versions.warn_until(
-            'Flourine',
+            'Fluorine',
             'Parameter \'force\' has been detected in the argument list. This'
             'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt 2018.3.0. This warning will be removed in Salt Flourine.'
+            'as of Salt 2018.3.0. This warning will be removed in Salt Fluorine.'
         )
         kwargs.pop('force')
 
