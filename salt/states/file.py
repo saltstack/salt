@@ -1226,7 +1226,7 @@ def _makedirs(name,
     Helper function for creating directories when the ``makedirs`` option is set
     to ``True``. Handles Unix and Windows based systems
 
-    .. versionadded:: 2017.7.6
+    .. versionadded:: 2017.7.7
 
     Args:
         name (str): The directory path to create
@@ -1332,22 +1332,22 @@ def symlink(
         this is not passed, ``user`` will be used. If ``user`` is not passed,
         the account under which Salt is running will be used.
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_perms : None
         A dictionary containing permissions to grant
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_deny_perms : None
         A dictionary containing permissions to deny
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_inheritance : None
         True to inherit permissions from parent, otherwise False
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
     '''
     name = os.path.expanduser(name)
 
@@ -3373,22 +3373,22 @@ def recurse(name,
         this is not passed, ``user`` will be used. If ``user`` is not passed,
         the account under which Salt is running will be used.
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_perms : None
         A dictionary containing permissions to grant
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_deny_perms : None
         A dictionary containing permissions to deny
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
 
     win_inheritance : None
         True to inherit permissions from parent, otherwise False
 
-        .. versionadded:: 2017.7.6
+        .. versionadded:: 2017.7.7
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
