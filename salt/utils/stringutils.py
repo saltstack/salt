@@ -361,7 +361,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     in the blacklist, then the whitelist is checked. If the value isn't
     found in the whitelist, the function returns ``False``.
     '''
-    if blacklist is not None:
+    # Normalize the input so that we have a list
+    if blacklist:
         if isinstance(blacklist, six.string_types):
             blacklist = [blacklist]
         if not hasattr(blacklist, '__iter__'):
@@ -370,11 +371,10 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
                     type(blacklist).__name__, blacklist
                 )
             )
-        for expr in blacklist:
-            if expr_match(value, expr):
-                return False
+    else:
+        blacklist = []
 
-    if whitelist is not None:
+    if whitelist:
         if isinstance(whitelist, six.string_types):
             whitelist = [whitelist]
         if not hasattr(whitelist, '__iter__'):
@@ -383,13 +383,24 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
                     type(whitelist).__name__, whitelist
                 )
             )
-        for expr in whitelist:
-            if expr_match(value, expr):
-                return True
     else:
-        return True
+        whitelist = []
 
-    return False
+    _blacklist_match = any(expr_match(value, expr) for expr in blacklist)
+    _whitelist_match = any(expr_match(value, expr) for expr in whitelist)
+
+    if blacklist and not whitelist:
+        # Blacklist but no whitelist
+        return not _blacklist_match
+    elif whitelist and not blacklist:
+        # Whitelist but no blacklist
+        return _whitelist_match
+    elif blacklist and whitelist:
+        # Both whitelist and blacklist
+        return not _blacklist_match and _whitelist_match
+    else:
+        # No blacklist or whitelist passed
+        return True
 
 
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
