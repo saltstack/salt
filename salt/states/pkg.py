@@ -2462,7 +2462,7 @@ def latest(
                 # Package is up-to-date, but Gentoo USE flags are changing so
                 # we need to add it to the targets
                 targets[pkg] = cur[pkg]
-        else:
+        elif not cur.get(pkg) or -1 == __salt__['pkg.version_cmp'](cur.get(pkg), avail.get(pkg)):
             # Package either a) is not installed, or b) is installed and has an
             # upgrade available
             targets[pkg] = avail[pkg]
