@@ -91,7 +91,7 @@ def _retrieve_device_cache(proxy=None):
                 DEVICE_CACHE = proxy['napalm.get_device']()
         elif not proxy and salt.utils.napalm.is_minion(__opts__):
             # if proxy var not passed and is running in a straight minion
-            DEVICE_CACHE = salt.utils.napalm.get_device_opts(__opts__)
+            DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
     return DEVICE_CACHE
 
 
@@ -413,10 +413,10 @@ def host_dns(proxy=None):
                 'AAAA': []
             }
         }
-        dns_a = salt.utils.dns.query(device_host_value, 'A')
+        dns_a = salt.utils.dns.lookup(device_host_value, 'A')
         if dns_a:
             host_dns_ret['host_dns']['A'] = dns_a
-        dns_aaaa = salt.utils.dns.query(device_host_value, 'AAAA')
+        dns_aaaa = salt.utils.dns.lookup(device_host_value, 'AAAA')
         if dns_aaaa:
             host_dns_ret['host_dns']['AAAA'] = dns_aaaa
         return host_dns_ret
