@@ -864,7 +864,7 @@ SwapTotal:       4789244 kB'''
         test virtual grain with cmd virt-what
         '''
         virt = 'kvm'
-        with patch.object(salt.utils, 'is_windows',
+        with patch.object(salt.utils.platform, 'is_windows',
                           MagicMock(return_value=False)):
             with patch.object(salt.utils.path, 'which',
                               MagicMock(return_value=True)):
