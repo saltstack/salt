@@ -328,6 +328,13 @@ def get_community_names():
         #
         # {1: "community 1",
         #  2: "community 2"}
+        #
+        # Denote that it is being managed by Group Policy.
+        #
+        # community 1:
+        #     Managed by GPO
+        # community 2:
+        #     Managed by GPO
         if isinstance(current_values, list):
             for current_value in current_values:
 
@@ -352,6 +359,11 @@ def get_community_names():
         #
         # Convert the numeric value to the text equivalent, as present in the
         # Windows SNMP service GUI.
+        #
+        # community 1:
+        #     Read Only
+        # community 2:
+        #     Read Only
         if isinstance(current_values, list):
             for current_value in current_values:
 
