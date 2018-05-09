@@ -616,6 +616,31 @@ def safe_filepath(file_path_name, dir_sep=None):
     return path
 
 
+def is_encoding(path, encoding="utf-8"):
+    '''
+    Detect if the file can be successfully decoded by the passed encoding
+
+    Args:
+
+        fp_ (pointer): A pointer to the file to check
+        encoding (str): The encoding to test
+
+    Return:
+        bool: True if successful, otherwise False
+    '''
+    if not os.path.isfile(path):
+        return False
+    try:
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                data.decode(encoding)
+            except UnicodeDecodeError:
+                return True
+    except os.error:
+        return False
+
+
 @jinja_filter('is_text_file')
 def is_text(fp_, blocksize=512):
     '''
