@@ -46,6 +46,7 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
+_SafeDumper = yaml.CSafeDumper if yaml.__with_libyaml__ else yaml.SafeDumper
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
@@ -2138,7 +2139,7 @@ def _read_conf_file(path):
     log.debug('Reading configuration from %s', path)
     with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
-            conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
+            conf_opts = salt.utils.yaml.load(conf_file, Loader=_SafeLoader) or {}
         except salt.utils.yaml.YAMLError as err:
             message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
             log.error(message)
