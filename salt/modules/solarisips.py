@@ -466,7 +466,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     '''
     if not pkgs:
         if is_installed(name):
-            return 'Package already installed.'
+            return {}
 
     if refresh:
         refresh_db(full=True)
