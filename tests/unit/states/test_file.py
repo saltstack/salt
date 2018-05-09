@@ -255,6 +255,26 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.info': mock_empty,
                                              'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isabs', mock_t):
+                    with patch.object(os.path, 'isabs', mock_f):
+                        comt = ('Backupname must be an absolute path '
+                                'or a file name: {0}').format('tmp/SALT')
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'pchanges': {'new': name}})
+                        self.assertDictEqual(filestate.symlink
+                                             (name, target, user=user,
+                                              group=group, backupname='tmp/SALT'),
+                                             ret)
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
+            with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'exists', mock_f):
                         with patch.object(os.path, 'isfile', mock_t):
