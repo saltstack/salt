@@ -28,6 +28,8 @@ import salt.utils.path
 # Import 3rd partylibs
 from salt.ext import six
 
+NILRT_FAMILY_NAME = 'NILinuxRT'
+
 HAS_PSUTIL = False
 try:
     import psutil
@@ -297,6 +299,13 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
+def _is_older_nilrt():
+    '''
+    If this is an older version of NILinuxRT, return True. Otherwise, return False.
+    '''
+    return os.path.exists('/usr/local/natinst/bin/nisafemodeversion')
+
+
 def _kernel_versions_nilrt():
     '''
     Last installed kernel name, for Debian based systems.
@@ -306,10 +315,20 @@ def _kernel_versions_nilrt():
             as they are probably interpreted in output of `uname -a` command.
     '''
     kernel_versions = []
-    kernel = os.readlink('/boot/bzImage')
-    kernel = os.path.basename(kernel)
-    kernel = kernel.strip('bzImage-')
-    kernel_versions.append(kernel)
+
+    if __grains__.get('os_family') == NILRT_FAMILY_NAME and _is_older_nilrt():
+        # bzImage is copied in the rootfs without any package management or
+        # version info. We also can't depend on kernel headers like
+        # include/generated/uapi/linux/version.h being installed. Even if
+        # we fix this in newer versions of "old NILRT" we still need to be
+        # backwards compatible so it'll just get more complicated.
+        kpath = '/boot/runmode/bzImage'
+        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kpath))
+        re_result = re.search(r'[0-9]+\.[0-9]+\.[0-9]+-rt.*(?=\s\()', kernel_strings)
+        if re_result is not None:
+            kernel_versions.append(re_result.group(0))
+    else:
+        kernel_versions.append(os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-'))
 
     return kernel_versions
 
@@ -326,6 +345,36 @@ def _check_timeout(start_time, timeout):
         raise salt.exceptions.TimeoutError('Timeout expired.')
 
 
+def _kernel_modules_changed_nilrt(kernelversion):
+    '''
+    Once a NILRT kernel module is inserted, it can't be rmmod so systems need
+    rebooting (some modules explicitely ask for reboots even on first install),
+    hence this functionality of determining if the module state got modified by
+    testing if depmod was run.
+
+    Returns:
+             - True/False depending if modules.dep got modified/touched
+    '''
+    depmodpath_base = '/lib/modules/{0}/modules.dep'.format(kernelversion)
+    depmodpath_timestamp = "/var/lib/salt/kernel_module_state/modules.dep.timestamp"
+    depmodpath_md5sum = "/var/lib/salt/kernel_module_state/modules.dep.md5sum"
+
+    # nothing can be detected without these dependencies
+    if (kernelversion is None or
+            not os.path.exists(depmodpath_timestamp) or
+            not os.path.exists(depmodpath_md5sum)):
+        return False
+
+    prev_timestamp = __salt__['file.read'](depmodpath_timestamp).rstrip()
+    # need timestamp in seconds so floor it using int()
+    cur_timestamp = str(int(os.path.getmtime(depmodpath_base)))
+
+    if prev_timestamp != cur_timestamp:
+        return True
+
+    return bool(__salt__['cmd.retcode']('md5sum -cs {0}'.format(depmodpath_md5sum), output_loglevel="quiet"))
+
+
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     '''
@@ -339,9 +388,9 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         timeout: int, timeout in minute
 
     Returns:
-        True if no packages for restart found.
-        False on failure.
-        String with checkrestart output if some package seems to need to be restarted.
+        Dict on error: { 'result': False, 'comment': '<reason>' }
+        String with checkrestart output if some package seems to need to be restarted or
+        if no packages need restarting.
 
     .. versionadded:: 2015.8.3
 
@@ -365,7 +414,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         systemd_folder = '/usr/lib/systemd/system/'
         systemd = '/usr/bin/systemctl'
         kernel_versions = _kernel_versions_redhat()
-    elif __grains__.get('os_family') == 'NILinuxRT':
+    elif __grains__.get('os_family') == NILRT_FAMILY_NAME:
         cmd_pkg_query = 'opkg files '
         systemd = ''
         kernel_versions = _kernel_versions_nilrt()
@@ -377,8 +426,14 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     for kernel in kernel_versions:
         _check_timeout(start_time, timeout)
         if kernel in kernel_current:
-            kernel_restart = False
-            break
+            if __grains__.get('os_family') == 'NILinuxRT':
+                # Check kernel modules for version changes
+                if not _kernel_modules_changed_nilrt(kernel):
+                    kernel_restart = False
+                    break
+            else:
+                kernel_restart = False
+                break
 
     packages = {}
     running_services = {}
@@ -492,10 +547,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
             service = __salt__['service.available'](packages[package]['process_name'])
 
             if service:
-                packages[package]['systemdservice'].append(packages[package]['process_name'])
-            else:
                 if os.path.exists('/etc/init.d/' + packages[package]['process_name']):
                     packages[package]['initscripts'].append(packages[package]['process_name'])
+                else:
+                    packages[package]['systemdservice'].append(packages[package]['process_name'])
 
     restartable = []
     nonrestartable = []
