@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.states.pip
+    tests.integration.states.pip_state
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -300,7 +300,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         # pip install passing the package name in `name`
         ret = self.run_state(
             'pip.installed', name='pep8', user=username, bin_env=venv_dir,
-            no_cache_dir=True, password='PassWord1!')
+            password='PassWord1!')
         self.assertSaltTrueReturn(ret)
 
         if HAS_PWD:
@@ -342,7 +342,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # pip install using a requirements file
         req_filename = os.path.join(
-            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt')
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
             reqf.write(b'pep8\n')
@@ -350,7 +350,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'pip.installed', name='', user=username, bin_env=venv_dir,
             requirements='salt://issue-6912-requirements.txt',
-            no_cache_dir=True, password='PassWord1!')
+            password='PassWord1!')
         self.assertSaltTrueReturn(ret)
 
         if HAS_PWD:
