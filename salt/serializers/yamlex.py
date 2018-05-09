@@ -322,7 +322,6 @@ Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pa
 Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
-Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class SLSMap(OrderedDict):
