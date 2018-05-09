@@ -101,7 +101,25 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function('service.enable', [self.service_name]))
 
         self.assertTrue(self.run_function('service.disable', [self.service_name]))
-        self.assertIn(self.service_name, self.run_function('service.get_disabled'))
+        if salt.utils.is_darwin():
+            self.assertTrue(self.run_function('service.disabled', [self.service_name]))
+        else:
+            self.assertIn(self.service_name, self.run_function('service.get_disabled'))
+
+    def test_service_disable_doesnot_exist(self):
+        '''
+        test service.get_disabled and service.disable module
+        when service name does not exist
+        '''
+        # enable service before test
+        srv_name = 'doesnotexist'
+        self.assertFalse(self.run_function('service.enable', [srv_name]))
+
+        self.assertFalse(self.run_function('service.disable', [srv_name]))
+        if salt.utils.is_darwin():
+            self.assertFalse(self.run_function('service.disabled', [srv_name]))
+        else:
+            self.assertNotIn(self.service_name, self.run_function('service.get_disabled'))
 
     @skipIf(not salt.utils.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):
