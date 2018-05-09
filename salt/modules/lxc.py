@@ -867,7 +867,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     # on old versions of lxc, still support the gateway auto mode
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
-    if _LooseVersion(version()) <= '1.0.7' and \
+    if _LooseVersion(version()) <= _LooseVersion('1.0.7') and \
             True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
             True in ['lxc.network.ipv4' in a for a in ret]:
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
