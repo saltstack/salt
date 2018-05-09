@@ -223,7 +223,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of get function
         '''
         ret = {}
-        ret['stdout'] = "size\t1.81T\t-\n"
+        ret['stdout'] = "mypool\tsize\t1.81T\t-\n"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
@@ -238,7 +238,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of get function with parsable output
         '''
         ret = {}
-        ret['stdout'] = "size\t1.81T\t-\n"
+        ret['stdout'] = "mypool\tsize\t1.81T\t-\n"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
@@ -253,7 +253,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of get function with a string with whitespaces
         '''
         ret = {}
-        ret['stdout'] = "comment\tmy testing pool\t-\n"
+        ret['stdout'] = "mypool\tcomment\tmy testing pool\t-\n"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
