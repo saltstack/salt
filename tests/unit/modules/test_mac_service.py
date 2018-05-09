@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: :email:`Megan Wilhite<mwilhite@saltstack.com>`
 '''
 
 # Import Python libs
@@ -21,7 +21,7 @@ from tests.support.mock import (
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
+class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_service module
     '''
@@ -58,22 +58,12 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mac_service, 'launchctl', MagicMock(return_value=cmd)):
                 self.assertFalse(mac_service.disabled(name))
 
-    def test_service_disabled_short_name(self):
+    def test_service_disabled_status_upper_case(self):
         '''
-        test service.disabled when service name is less characters
+        test service.disabled when disabled status is uppercase
         '''
-        srv_name = 'com'
-        cmd = 'disabled services = {\n\t"com.saltstack.salt.minion" => false\n\t"com.apple.atrun" => true\n{'
+        srv_name = 'com.apple.atrun'
+        cmd = 'disabled services = {\n\t"com.saltstack.salt.minion" => false\n\t"com.apple.atrun" => True\n{'
 
         with patch.object(mac_service, 'launchctl', MagicMock(return_value=cmd)):
-            self.assertFalse(mac_service.disabled(srv_name))
-
-    def test_service_disabled_status_upper_case(self):
-            '''
-            test service.disabled when disabled status is uppercase
-            '''
-            srv_name = 'com.apple.atrun'
-            cmd = 'disabled services = {\n\t"com.saltstack.salt.minion" => false\n\t"com.apple.atrun" => True\n{'
-
-            with patch.object(mac_service, 'launchctl', MagicMock(return_value=cmd)):
-                self.assertTrue(mac_service.disabled(srv_name))
+            self.assertTrue(mac_service.disabled(srv_name))
