@@ -85,17 +85,21 @@ def _get_restartcheck_result(errors):
     return rs_result
 
 
-def _is_nilrt_restart_required(rs_result):
+def _process_restartcheck_result(rs_result):
     '''
-    Check if a restart was requested based on the output of restartcheck.
-    If a restart was requested, update the NILRT kernel module state data.
-
-    Return: True/False depending if a restart is required
+    Check restartcheck output to see if system/service restarts were requested
+    and take appropriate action.
     '''
-    if any('System restart required' in s for s in rs_result):
-        _update_nilrt_module_dep_info()
-        return True
-    return False
+    if 'No packages seem to need to be restarted' in rs_result:
+        return
+    for rstr in rs_result:
+        if 'System restart required' in rstr:
+            _update_nilrt_module_dep_info()
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            service = os.path.join('/etc/init.d', rstr)
+            if os.path.exists(service):
+                __salt__['cmd.run']([service, 'restart'])
 
 
 def __virtual__():
@@ -471,8 +475,7 @@ def install(name=None,
             info={'errors': errors, 'changes': ret}
         )
 
-    if _is_nilrt_restart_required(rs_result):
-        __salt__['system.set_reboot_required_witnessed']()
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -553,8 +556,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    if _is_nilrt_restart_required(rs_result):
-        __salt__['system.set_reboot_required_witnessed']()
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -636,8 +638,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    if _is_nilrt_restart_required(rs_result):
-        __salt__['system.set_reboot_required_witnessed']()
+    _process_restartcheck_result(rs_result)
 
     return ret
 
