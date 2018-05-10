@@ -1262,7 +1262,10 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(salt.utils.to_bytes(name))
+                            if six.PY2:
+                                tar.extractall(salt.utils.to_bytes(name))
+                            else:
+                                tar.extractall(name)
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
