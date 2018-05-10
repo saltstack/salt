@@ -342,7 +342,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # pip install using a requirements file
         req_filename = os.path.join(
-            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt')
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
             reqf.write(b'pep8\n')
