@@ -41,11 +41,32 @@ import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
+import salt.utils.win_runas
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
+
+
+def can_runas():
+    '''
+    Detect if we are running in a limited shell (winrm) and are un-able to use
+    the runas
+    '''
+    if salt.utils.is_windows():
+        try:
+            salt.utils.win_runas.run_as(
+                'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
+            )
+        except WindowsError as exc:
+            if exc.winerror == 5:
+                # Access Denied
+                return False
+    return True
+
+
+CAN_RUNAS = can_runas()
 
 
 class VirtualEnv(object):
@@ -274,6 +295,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
+    @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
@@ -317,6 +339,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
+    @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
