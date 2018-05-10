@@ -11,7 +11,7 @@ Time sync do the following:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 
 # Import Salt Testing libs
@@ -22,6 +22,9 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+
+# Import 3rd Party libs
+from salt.ext import six
 
 
 @skip_if_not_root
@@ -131,12 +134,14 @@ class MacTimezoneModuleTest(ModuleCase):
         '''
         self.assertTrue(
             self.run_function('timezone.set_zone', ['Pacific/Wake']))
-        self.assertIsInstance(self.run_function('timezone.get_offset'), str)
+        self.assertIsInstance(self.run_function('timezone.get_offset'),
+                              six.string_types)
         self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
 
         self.assertTrue(
             self.run_function('timezone.set_zone', ['America/Los_Angeles']))
-        self.assertIsInstance(self.run_function('timezone.get_offset'), str)
+        self.assertIsInstance(self.run_function('timezone.get_offset'),
+                              six.string_types)
         self.assertEqual(self.run_function('timezone.get_offset'), '-0700')
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
@@ -148,12 +153,14 @@ class MacTimezoneModuleTest(ModuleCase):
         '''
         self.assertTrue(
             self.run_function('timezone.set_zone', ['America/Los_Angeles']))
-        self.assertIsInstance(self.run_function('timezone.get_zonecode'), str)
+        self.assertIsInstance(self.run_function('timezone.get_zonecode'),
+                              six.string_types)
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'PDT')
 
         self.assertTrue(
             self.run_function('timezone.set_zone', ['Pacific/Wake']))
-        self.assertIsInstance(self.run_function('timezone.get_zonecode'), str)
+        self.assertIsInstance(self.run_function('timezone.get_zonecode'),
+                              six.string_types)
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
 
     def test_list_zones(self):

@@ -30,6 +30,9 @@ The api key can be specified in the master or minion configuration like below:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -60,7 +63,7 @@ def send_message(name,
             - api_url: https://hipchat.myteam.com
             - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
             - api_version: v1
-            - color: green
+            - message_color: green
             - notify: True
 
     The following parameters are required:
@@ -93,7 +96,7 @@ def send_message(name,
         The api version for Hipchat to use,
         if not specified in the configuration options of master or minion.
 
-    color
+    message_color
         The color the Hipchat message should be displayed in. One of the following, default: yellow
         "yellow", "red", "green", "purple", "gray", or "random".
 

@@ -14,7 +14,7 @@ Manage software from FreeBSD ports
 
         salt -t 1200 '*' state.highstate
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -45,7 +45,7 @@ def _repack_options(options):
     '''
     return dict(
         [
-            (str(x), _normalize(y))
+            (six.text_type(x), _normalize(y))
             for x, y in six.iteritems(salt.utils.data.repack_dictlist(options))
         ]
     )

@@ -463,16 +463,22 @@ class Pillar(object):
                 opts['ext_pillar'].append(self.ext)
             else:
                 opts['ext_pillar'] = [self.ext]
+        if '__env__' in opts['file_roots']:
+            env = opts.get('pillarenv') or opts.get('saltenv') or 'base'
+            if env not in opts['file_roots']:
+                log.debug("pillar environment '%s' maps to __env__ pillar_roots directory", env)
+                opts['file_roots'][env] = opts['file_roots'].pop('__env__')
+            else:
+                log.debug("pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
+                          env)
+                opts['file_roots'].pop('__env__')
         return opts
 
     def _get_envs(self):
         '''
         Pull the file server environments out of the master options
         '''
-        envs = set(['base'])
-        if 'file_roots' in self.opts:
-            envs.update(list(self.opts['file_roots']))
-        return envs
+        return set(['base']) | set(self.opts.get('file_roots', []))
 
     def get_tops(self):
         '''
@@ -484,6 +490,7 @@ class Pillar(object):
         errors = []
         # Gather initial top files
         try:
+            saltenvs = set()
             if self.opts['pillarenv']:
                 # If the specified pillarenv is not present in the available
                 # pillar environments, do not cache the pillar top file.
@@ -494,42 +501,24 @@ class Pillar(object):
                         self.opts['pillarenv'], ', '.join(self.opts['file_roots'])
                     )
                 else:
-                    top = self.client.cache_file(self.opts['state_top'], self.opts['pillarenv'])
-                    if top:
-                        tops[self.opts['pillarenv']] = [
-                                compile_template(
-                                    top,
-                                    self.rend,
-                                    self.opts['renderer'],
-                                    self.opts['renderer_blacklist'],
-                                    self.opts['renderer_whitelist'],
-                                    self.opts['pillarenv'],
-                                    _pillar_rend=True,
-                                    )
-                                ]
+                    saltenvs.add(self.opts['pillarenv'])
             else:
-                for saltenv in self._get_envs():
-                    if self.opts.get('pillar_source_merging_strategy', None) == "none":
-                        if self.saltenv and saltenv != self.saltenv:
-                            continue
-                        if not self.saltenv and not saltenv == 'base':
-                            continue
-                    top = self.client.cache_file(
-                            self.opts['state_top'],
-                            saltenv
-                            )
-                    if top:
-                        tops[saltenv].append(
-                                compile_template(
-                                    top,
-                                    self.rend,
-                                    self.opts['renderer'],
-                                    self.opts['renderer_blacklist'],
-                                    self.opts['renderer_whitelist'],
-                                    saltenv=saltenv,
-                                    _pillar_rend=True,
-                                    )
-                                )
+                saltenvs = self._get_envs()
+                if self.opts.get('pillar_source_merging_strategy', None) == "none":
+                    saltenvs &= set([self.saltenv or 'base'])
+
+            for saltenv in saltenvs:
+                top = self.client.cache_file(self.opts['state_top'], saltenv)
+                if top:
+                    tops[saltenv].append(compile_template(
+                        top,
+                        self.rend,
+                        self.opts['renderer'],
+                        self.opts['renderer_blacklist'],
+                        self.opts['renderer_whitelist'],
+                        saltenv=saltenv,
+                        _pillar_rend=True,
+                    ))
         except Exception as exc:
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
@@ -729,7 +718,7 @@ class Pillar(object):
             msg = 'Rendering SLS \'{0}\' failed, render error:\n{1}'.format(
                 sls, exc
             )
-            log.critical(msg)
+            log.critical(msg, exc_info=True)
             if self.opts.get('pillar_safe_render_error', True):
                 errors.append(
                     'Rendering SLS \'{0}\' failed. Please see master log for '
@@ -754,6 +743,8 @@ class Pillar(object):
                     else:
                         # render included state(s)
                         include_states = []
+
+                        matched_pstates = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -761,6 +752,16 @@ class Pillar(object):
                                 key = v.get('key', None)
                             else:
                                 key = None
+
+                            try:
+                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
+                            except KeyError:
+                                errors.extend(
+                                    ['No matching pillar environment for environment '
+                                     '\'{0}\' found'.format(saltenv)]
+                                )
+
+                        for sub_sls in set(matched_pstates):
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
@@ -775,11 +776,22 @@ class Pillar(object):
                                             nstate = {
                                                 key_fragment: nstate
                                             }
-                                    include_states.append(nstate)
+                                    if not self.opts.get('pillar_includes_override_sls', False):
+                                        include_states.append(nstate)
+                                    else:
+                                        state = merge(
+                                            state,
+                                            nstate,
+                                            self.merge_strategy,
+                                            self.opts.get('renderer', 'yaml'),
+                                            self.opts.get('pillar_merge_lists', False))
                                 if err:
                                     errors += err
-                        if include_states:
-                            # merge included state(s) with the current state merged last
+
+                        if not self.opts.get('pillar_includes_override_sls', False):
+                            # merge included state(s) with the current state
+                            # merged last to ensure that its values are
+                            # authoritative.
                             include_states.append(state)
                             state = None
                             for s in include_states:
@@ -900,7 +912,8 @@ class Pillar(object):
                     self.opts,
                     self.ext['git'],
                     per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

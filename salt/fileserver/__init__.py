@@ -17,11 +17,11 @@ import time
 import salt.loader
 import salt.utils.data
 import salt.utils.files
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
+from salt.utils.decorators import ensure_unicode_args
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -546,8 +546,8 @@ class Fileserver(object):
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
         '''
-        path = salt.utils.locales.sdecode(path)
-        saltenv = salt.utils.locales.sdecode(saltenv)
+        path = salt.utils.stringutils.to_unicode(path)
+        saltenv = salt.utils.stringutils.to_unicode(saltenv)
         back = self.backends(back)
         kwargs = {}
         fnd = {'path': '',
@@ -557,7 +557,7 @@ class Fileserver(object):
         if '../' in path:
             return fnd
         if salt.utils.url.is_escaped(path):
-            # don't attempt to find URL query arguements in the path
+            # don't attempt to find URL query arguments in the path
             path = salt.utils.url.unescape(path)
         else:
             if '?' in path:
@@ -626,7 +626,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        fnd = self.find_file(salt.utils.locales.sdecode(load['path']),
+        fnd = self.find_file(salt.utils.stringutils.to_unicode(load['path']),
                 load['saltenv'])
         if not fnd.get('back'):
             return '', None
@@ -731,6 +731,7 @@ class Fileserver(object):
                     )
         return ret
 
+    @ensure_unicode_args
     def file_list(self, load):
         '''
         Return a list of files from the dominant environment
@@ -749,14 +750,13 @@ class Fileserver(object):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
-        # upgrade all set elements to a common encoding
-        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = [f for f in ret if f.startswith(prefix)]
         return sorted(ret)
 
+    @ensure_unicode_args
     def file_list_emptydirs(self, load):
         '''
         List all emptydirs in the given environment
@@ -775,14 +775,13 @@ class Fileserver(object):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
-        # upgrade all set elements to a common encoding
-        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = [f for f in ret if f.startswith(prefix)]
         return sorted(ret)
 
+    @ensure_unicode_args
     def dir_list(self, load):
         '''
         List all directories in the given environment
@@ -801,14 +800,13 @@ class Fileserver(object):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
-        # upgrade all set elements to a common encoding
-        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = [f for f in ret if f.startswith(prefix)]
         return sorted(ret)
 
+    @ensure_unicode_args
     def symlink_list(self, load):
         '''
         Return a list of symlinked files and dirs
@@ -827,10 +825,6 @@ class Fileserver(object):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
-        # upgrade all set elements to a common encoding
-        ret = dict([
-            (salt.utils.locales.sdecode(x), salt.utils.locales.sdecode(y)) for x, y in ret.items()
-        ])
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':

@@ -57,7 +57,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
     '''
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
-    log.debug('DSC: {0}'.format(cmd))
+    log.debug('DSC: %s', cmd)
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
 
     if 'pid' in results:

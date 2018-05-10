@@ -35,7 +35,7 @@ Mount any type of mountable filesystem with the mounted function:
         - persist: True
         - mkmnt: True
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os.path
@@ -341,10 +341,12 @@ def mounted(name,
                 mount_invisible_keys = [
                     'actimeo',
                     'comment',
+                    'credentials',
                     'direct-io-mode',
                     'password',
-                    'retry',
                     'port',
+                    'retry',
+                    'secretfile',
                 ]
 
                 if extra_mount_invisible_keys:
@@ -397,7 +399,7 @@ def mounted(name,
                             _info = __salt__[name_id_opts[_param]](_givenid)
                             if _info and _param in _info:
                                 _id = _info[_param]
-                        opt = _param + '=' + str(_id)
+                        opt = _param + '=' + six.text_type(_id)
 
                     _active_superopts = active[real_name].get('superopts', [])
                     for _active_opt in _active_superopts:

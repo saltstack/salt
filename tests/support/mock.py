@@ -5,9 +5,12 @@
     tests.support.mock
     ~~~~~~~~~~~~~~~~~~
 
-    Helper module that wraps :mod:`mock <python3:unittest.mock>` and provides
-    some fake objects in order to properly set the function/class decorators
-    and yet skip the test cases execution.
+    Helper module that wraps `mock` and provides some fake objects in order to
+    properly set the function/class decorators and yet skip the test case's
+    execution.
+
+    Note: mock >= 2.0.0 required since unittest.mock does not have
+    MagicMock.assert_called in Python < 3.6.
 '''
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
@@ -18,37 +21,20 @@ import sys
 from salt.ext import six
 
 try:
-    if sys.version_info >= (3,):
-        # Python 3
-        from unittest.mock import (
-            Mock,
-            MagicMock,
-            patch,
-            sentinel,
-            DEFAULT,
-            # ANY and call will be imported further down
-            create_autospec,
-            FILTER_DIR,
-            NonCallableMock,
-            NonCallableMagicMock,
-            PropertyMock,
-            __version__
-        )
-    else:
-        from mock import (
-            Mock,
-            MagicMock,
-            patch,
-            sentinel,
-            DEFAULT,
-            # ANY and call will be imported further down
-            create_autospec,
-            FILTER_DIR,
-            NonCallableMock,
-            NonCallableMagicMock,
-            PropertyMock,
-            __version__
-        )
+    from mock import (
+        Mock,
+        MagicMock,
+        patch,
+        sentinel,
+        DEFAULT,
+        # ANY and call will be imported further down
+        create_autospec,
+        FILTER_DIR,
+        NonCallableMock,
+        NonCallableMagicMock,
+        PropertyMock,
+        __version__
+    )
     NO_MOCK = False
     NO_MOCK_REASON = ''
     mock_version = []
@@ -99,11 +85,7 @@ except ImportError as exc:
 
 if NO_MOCK is False:
     try:
-        if sys.version_info >= (3,):
-            # Python 3
-            from unittest.mock import call, ANY
-        else:
-            from mock import call, ANY
+        from mock import call, ANY
     except ImportError:
         NO_MOCK = True
         NO_MOCK_REASON = 'you need to upgrade your mock version to >= 0.8.0'
@@ -120,7 +102,7 @@ def _iterate_read_data(read_data):
     # Retrieve lines from read_data via a generator so that separate calls to
     # readline, read, and readlines are properly interleaved
     if six.PY3 and isinstance(read_data, six.binary_type):
-        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(six.b('\n'))]
+        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(b'\n')]
     else:
         data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
 

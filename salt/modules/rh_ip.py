@@ -2,7 +2,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -94,8 +94,8 @@ def _error_msg_routes(iface, option, expected):
 
 
 def _log_default_iface(iface, opt, value):
-    msg = 'Using default option -- Interface: {0} Option: {1} Value: {2}'
-    log.info(msg.format(iface, opt, value))
+    log.info('Using default option -- Interface: %s Option: %s Value: %s',
+             iface, opt, value)
 
 
 def _error_msg_network(option, expected):
@@ -108,8 +108,8 @@ def _error_msg_network(option, expected):
 
 
 def _log_default_network(opt, value):
-    msg = 'Using existing setting -- Setting: {0} Value: {1}'
-    log.info(msg.format(opt, value))
+    log.info('Using existing setting -- Setting: %s Value: %s',
+             opt, value)
 
 
 def _parse_rh_config(path):
@@ -155,7 +155,7 @@ def _parse_ethtool_opts(opts, iface):
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
-        if str(opts['speed']) in valid:
+        if six.text_type(opts['speed']) in valid:
             config.update({'speed': opts['speed']})
         else:
             _raise_error_iface(iface, opts['speed'], valid)
@@ -167,7 +167,7 @@ def _parse_ethtool_opts(opts, iface):
             '0x200000', '0x400000', '0x800000', '0x1000000',
             '0x2000000', '0x4000000'
         ]
-        if str(opts['advertise']) in valid:
+        if six.text_type(opts['advertise']) in valid:
             config.update({'advertise': opts['advertise']})
         else:
             _raise_error_iface(iface, 'advertise', valid)
@@ -226,44 +226,42 @@ def _parse_settings_bond(opts, iface):
 
     if opts['mode'] in ['balance-rr', '0']:
         log.info(
-            'Device: {0} Bonding Mode: load balancing (round-robin)'.format(
-                iface
-            )
+            'Device: %s Bonding Mode: load balancing (round-robin)',
+            iface
         )
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
         log.info(
-            'Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(
-                iface
-            )
+            'Device: %s Bonding Mode: fault-tolerance (active-backup)',
+            iface
         )
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
         log.info(
-            'Device: {0} Bonding Mode: load balancing (xor)'.format(iface)
+            'Device: %s Bonding Mode: load balancing (xor)',
+            iface
         )
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
         log.info(
-            'Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(
-                iface
-            )
+            'Device: %s Bonding Mode: fault-tolerance (broadcast)',
+            iface
         )
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
         log.info(
-            'Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link '
-            'aggregation'.format(iface)
+            'Device: %s Bonding Mode: IEEE 802.3ad Dynamic link '
+            'aggregation', iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
         log.info(
-            'Device: {0} Bonding Mode: transmit load balancing'.format(iface)
+            'Device: %s Bonding Mode: transmit load balancing', iface
         )
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
         log.info(
-            'Device: {0} Bonding Mode: adaptive load balancing'.format(iface)
+            'Device: %s Bonding Mode: adaptive load balancing', iface
         )
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
@@ -690,7 +688,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             try:
                 __salt__['sysctl.persist'](sysctl, sysctl_value)
             except CommandExecutionError:
-                log.warning('Failed to set sysctl: {0}'.format(sysctl))
+                log.warning('Failed to set sysctl: %s', sysctl)
 
     else:
         if 'bridge' in opts:
@@ -759,7 +757,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'onboot' in opts:
         log.warning(
             'The \'onboot\' option is controlled by the \'enabled\' option. '
-            'Interface: {0} Enabled: {1}'.format(iface, enabled)
+            'Interface: %s Enabled: %s', iface, enabled
         )
 
     if enabled:
@@ -938,11 +936,7 @@ def _read_file(path):
     '''
     try:
         with salt.utils.files.fopen(path, 'rb') as rfh:
-            contents = rfh.read()
-            if six.PY3:
-                contents = contents.encode(__salt_system_encoding__)
-            # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            lines = contents.splitlines()
+            lines = salt.utils.stringutils.to_unicode(rfh.read()).splitlines()
             try:
                 lines.remove('')
             except ValueError:
@@ -963,7 +957,7 @@ def _write_file_iface(iface, data, folder, pattern):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.fopen(filename, 'w') as fp_:
-        fp_.write(data)
+        fp_.write(salt.utils.stringutils.to_str(data))
 
 
 def _write_file_network(data, filename):
@@ -971,7 +965,7 @@ def _write_file_network(data, filename):
     Writes a file to disk
     '''
     with salt.utils.files.fopen(filename, 'w') as fp_:
-        fp_.write(data)
+        fp_.write(salt.utils.stringutils.to_str(data))
 
 
 def _read_temp(data):
@@ -1065,9 +1059,8 @@ def build_interface(iface, iface_type, enabled, **settings):
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
         except jinja2.exceptions.TemplateNotFound:
             log.error(
-                'Could not load template rh{0}_eth.jinja'.format(
-                    rh_major
-                )
+                'Could not load template rh%s_eth.jinja',
+                rh_major
             )
             return ''
         ifcfg = template.render(opts)
@@ -1117,8 +1110,8 @@ def build_routes(iface, **settings):
             opts6.append(route)
         else:
             opts4.append(route)
-    log.debug("IPv4 routes:\n{0}".format(opts4))
-    log.debug("IPv6 routes:\n{0}".format(opts6))
+    log.debug("IPv4 routes:\n%s", opts4)
+    log.debug("IPv6 routes:\n%s", opts6)
 
     routecfg = template.render(routes=opts4, iface=iface)
     routecfg6 = template.render(routes=opts6, iface=iface)

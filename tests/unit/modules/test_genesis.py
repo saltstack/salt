@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -37,7 +37,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=Exception('foo'))
             with patch.dict(genesis.__salt__, {'file.mkdir': mock}):
                 self.assertEqual(genesis.bootstrap('platform', 'root'),
-                                 {'Error': "Exception('foo',)"})
+                                 {'Error': 'Exception({0},)'.format(repr('foo'))})
 
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),

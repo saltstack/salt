@@ -13,8 +13,8 @@ Master config file.
       - svnfs
 
 .. note::
-    ``svn`` also works here. Prior to the Oxygen release, *only* ``svn`` would
-    work.
+    ``svn`` also works here. Prior to the 2018.3.0 release, *only* ``svn``
+    would work.
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.

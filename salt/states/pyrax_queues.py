@@ -21,7 +21,7 @@ This module is greatly inspired by boto_* modules from SaltStack code source.
         pyrax_queues.absent:
             - provider: my-pyrax
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.openstack.pyrax as suop
 

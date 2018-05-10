@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import random
 
@@ -171,7 +171,7 @@ class DarwinSysctlModuleTest(ModuleCase):
         '''
         with salt.utils.files.fopen(conf_file, 'r') as f_in:
             for line in f_in:
-                if to_find in line:
+                if to_find in salt.utils.stringutils.to_unicode(line):
                     return True
             return False
 

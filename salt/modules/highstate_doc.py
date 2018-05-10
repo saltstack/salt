@@ -178,7 +178,7 @@ If you wish to customize the document format:
             - mode: '0640'
 
 
-Some `replace_text_regex` values that might be helpfull.
+Some `replace_text_regex` values that might be helpful.
 
     ## CERTS
     '-----BEGIN RSA PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
@@ -215,12 +215,14 @@ Some `replace_text_regex` values that might be helpfull.
 
 '''
 
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
+# Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.templates as tpl
 import salt.utils.yaml
 
@@ -412,7 +414,7 @@ def read_file(name):
     out = ''
     try:
         with salt.utils.files.fopen(name, 'r') as f:
-            out = f.read()
+            out = salt.utils.stringutils.to_unicode(f.read())
     except Exception as ex:
         log.error(ex)
         return None
@@ -434,9 +436,7 @@ def render(jinja_template_text=None, jinja_template_function='highstate_doc.mark
     '''
     config = _get_config(**kwargs)
     lowstates = proccess_lowstates(**kwargs)
-    #saltenv = __env__
-    #__opts__['enviroment']
-    #TODO: __env__,
+    # TODO: __env__,
     context = {
         'saltenv': None,
         'config': config,
@@ -538,19 +538,18 @@ def _format_markdown_system_file(filename, config):
     if file_size <= config.get('max_render_file_size'):
         is_binary = True
         try:
-            ## TODO: this is linux only should find somthing portable
+            # TODO: this is linux only should find somthing portable
             file_type = __salt__['cmd.shell']('\\file -i \'{0}\''.format(filename))
             if 'charset=binary' not in file_type:
                 is_binary = False
         except Exception as ex:
-            # likly on a windows system, set as not binary for now.
+            # likely on a windows system, set as not binary for now.
             is_binary = False
         if is_binary:
             file_data = '[[skipped binary data]]'
         else:
             with salt.utils.files.fopen(filename, 'r') as f:
-                file_data = f.read()
-        #file_data = __salt__['cmd.shell']('\\file -i \'{0}\' | \\grep -q \'charset=binary\' && echo [[binary data]] || cat \'{0}\''.format(filename))
+                file_data = salt.utils.stringutils.to_unicode(f.read())
         file_data = _md_fix(file_data)
         ret += 'file data {1}\n```\n{0}\n```\n'.format(file_data, filename)
     else:
@@ -599,13 +598,11 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
             details:       # state name, parameters and other details like file contents
 
     '''
-    ## TODO: switch or ... ext call.
+    # TODO: switch or ... ext call.
     s = lowstate_item
     state_function = '{0}.{1}'.format(s['state'], s['fun'])
     id_full = '{0}: {1}'.format(s['state'], s['__id__'])
 
-    # requisites
-    # ------------
     # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS
     requisites = ''
     if s.get('watch'):
@@ -629,8 +626,6 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
         requisites += '\n'
 
-    # details
-    # ------------
     details = ''
 
     if state_function == 'highstate_doc.note':
@@ -639,25 +634,13 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         if 'source' in s:
             text = __salt__['cp.get_file_str'](s['source'])
             if text:
-                #details += '\n`file: {0}`\n{1}\n'.format(s['source'], text)
                 details += '\n{0}\n'.format(text)
             else:
                 details += '\n{0}\n'.format('ERROR: opening {0}'.format(s['source']))
 
     if state_function == 'pkg.installed':
         pkgs = s.get('pkgs', s.get('name'))
-        #if isinstance(pkgs, list):
-        #    pkgs = ' '.join(pkgs)
         details += '\n```\ninstall: {0}\n```\n'.format(pkgs)
-
-    #if state_function == 'cmd.run':
-    #    details += 'run raw shell command\n```\n{0}\n```\n'.format(s['name'])
-
-    #if state_function == 'cmd.wait':
-    #    details += 'run raw shell command\n```\n{0}\n```\n'.format(s['name'])
-
-    #if state_function == 'service.running':
-        #d['txt'] += 'name: {0}\n'.format(s['name'])
 
     if state_function == 'file.recurse':
         details += '''recurse copy of files\n'''
@@ -693,7 +676,6 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         if y:
             details += '```\n{0}```\n'.format(y)
 
-    # ------------
     r = {
         'vars': lowstate_item,
         'state': s['state'],

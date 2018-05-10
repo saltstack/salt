@@ -7,7 +7,8 @@ System module for sleeping, restarting, and shutting down the system on Mac OS X
 .. warning::
     Using this module will enable ``atrun`` on the system if it is disabled.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import python libs
 try:  # python 3
@@ -18,9 +19,10 @@ except ImportError:  # python 2
 import getpass
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.mac_utils
 import salt.utils.platform
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 __virtualname__ = 'system'
 
@@ -47,15 +49,71 @@ def _atrun_enabled():
     '''
     Check to see if atrun is enabled on the system
     '''
-    return __salt__['service.enabled']('com.apple.atrun')
+    name = 'com.apple.atrun'
+    services = salt.utils.mac_utils.available_services()
+    label = None
+
+    if name in services:
+        label = services[name]['plist']['Label']
+    else:
+        for service in six.itervalues(services):
+            if service['file_path'].lower() == name:
+                # Match on full path
+                label = service['plist']['Label']
+                break
+            basename, ext = os.path.splitext(service['file_name'])
+            if basename.lower() == name:
+                # Match on basename
+                label = service['plist']['Label']
+                break
+
+    if not label:
+        return False
+
+    try:
+        # Collect information on service: will raise an error if it fails
+        salt.utils.mac_utils.launchctl('list',
+                                       label,
+                                       return_stdout=True,
+                                       output_loglevel='quiet')
+        return True
+    except CommandExecutionError:
+        return False
 
 
 def _enable_atrun():
     '''
     Enable and start the atrun daemon
     '''
-    __salt__['service.enable']('com.apple.atrun')
-    __salt__['service.start']('com.apple.atrun')
+    name = 'com.apple.atrun'
+    services = salt.utils.mac_utils.available_services()
+    label = None
+    path = None
+
+    if name in services:
+        label = services[name]['plist']['Label']
+        path = services[name]['file_path']
+    else:
+        for service in six.itervalues(services):
+            if service['file_path'].lower() == name:
+                # Match on full path
+                label = service['plist']['Label']
+                path = service['file_path']
+                break
+            basename, ext = os.path.splitext(service['file_name'])
+            if basename.lower() == name:
+                # Match on basename
+                label = service['plist']['Label']
+                path = service['file_path']
+                break
+
+    if not label:
+        return False
+
+    salt.utils.mac_utils.launchctl('enable',
+                                   'system/{0}'.format(label),
+                                   output_loglevel='quiet')
+    salt.utils.mac_utils.launchctl('load', path, output_loglevel='quiet')
     return _atrun_enabled()
 
 

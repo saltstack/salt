@@ -3,7 +3,7 @@
 Virtual machine image management tools
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -32,7 +32,7 @@ __func_alias__ = {
 def _file_or_content(file_):
     if os.path.exists(file_):
         with salt.utils.files.fopen(file_) as fic:
-            return fic.read()
+            return salt.utils.stringutils.to_unicode(fic.read())
     return file_
 
 
@@ -132,7 +132,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         return '{0} does not exist'.format(path)
     ftype = stats['type']
     path = stats['target']
-    log.debug('Mounting {0} at {1}'.format(ftype, path))
+    log.debug('Mounting %s at %s', ftype, path)
     try:
         os.makedirs(path)
     except OSError:
@@ -145,7 +145,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         return '{0} could not be mounted'.format(path)
 
     tmp = os.path.join(mpt, 'tmp')
-    log.debug('Attempting to create directory {0}'.format(tmp))
+    log.debug('Attempting to create directory %s', tmp)
     try:
         os.makedirs(tmp)
     except OSError:
@@ -158,7 +158,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         # salt-minion is already installed, just move the config and keys
         # into place
         log.info('salt-minion pre-installed on image, '
-                 'configuring as {0}'.format(id_))
+                 'configuring as %s', id_)
         minion_config = salt.config.minion_config(cfg_files['config'])
         pki_dir = minion_config['pki_dir']
         if not os.path.isdir(os.path.join(mpt, pki_dir.lstrip('/'))):
@@ -172,15 +172,15 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         os.rename(cfg_files['config'], os.path.join(mpt, 'etc/salt/minion'))
         res = True
     elif install:
-        log.info('Attempting to install salt-minion to {0}'.format(mpt))
+        log.info('Attempting to install salt-minion to %s', mpt)
         res = _install(mpt)
     elif prep_install:
         log.error('The prep_install option is no longer supported. Please use '
-                  'the bootstrap script installed with Salt, located at {0}.'
-                  .format(salt.syspaths.BOOTSTRAP))
+                  'the bootstrap script installed with Salt, located at %s.',
+                  salt.syspaths.BOOTSTRAP)
         res = False
     else:
-        log.warning('No useful action performed on {0}'.format(mpt))
+        log.warning('No useful action performed on %s', mpt)
         res = False
 
     _umount(mpt, ftype)
@@ -228,19 +228,19 @@ def mkconfig(config=None,
     privkeyfn = os.path.join(tmp, 'minion.pem')
     preseeded = pub_key and priv_key
     if preseeded:
-        log.debug('Writing minion.pub to {0}'.format(pubkeyfn))
-        log.debug('Writing minion.pem to {0}'.format(privkeyfn))
+        log.debug('Writing minion.pub to %s', pubkeyfn)
+        log.debug('Writing minion.pem to %s', privkeyfn)
         with salt.utils.files.fopen(pubkeyfn, 'w') as fic:
-            fic.write(_file_or_content(pub_key))
+            fic.write(salt.utils.stringutils.to_str(_file_or_content(pub_key)))
         with salt.utils.files.fopen(privkeyfn, 'w') as fic:
-            fic.write(_file_or_content(priv_key))
+            fic.write(salt.utils.stringutils.to_str(_file_or_content(priv_key)))
         os.chmod(pubkeyfn, 0o600)
         os.chmod(privkeyfn, 0o600)
     else:
         salt.crypt.gen_keys(tmp, 'minion', 2048)
     if approve_key and not preseeded:
         with salt.utils.files.fopen(pubkeyfn) as fp_:
-            pubkey = fp_.read()
+            pubkey = salt.utils.stringutils.to_unicode(fp_.read())
             __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
 
     return {'config': tmp_config, 'pubkey': pubkeyfn, 'privkey': privkeyfn}
@@ -275,7 +275,7 @@ def _check_resolv(mpt):
         replace = True
     if not replace:
         with salt.utils.files.fopen(resolv, 'rb') as fp_:
-            conts = fp_.read()
+            conts = salt.utils.stringutils.to_unicode(fp_.read())
             if 'nameserver' not in conts:
                 replace = True
             if 'nameserver 127.0.0.1' in conts:

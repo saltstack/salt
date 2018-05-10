@@ -12,7 +12,7 @@
 # pylint: disable=repr-flag-used-in-string,wrong-import-order
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
 import functools
@@ -20,10 +20,13 @@ import inspect
 import logging
 import os
 import random
+import shutil
 import signal
 import socket
 import string
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 import tornado.ioloop
@@ -50,9 +53,37 @@ except ImportError:
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
-from tests.support.paths import FILES
+from tests.support.paths import FILES, TMP
+
+# Import Salt libs
+import salt.utils.files
 
 log = logging.getLogger(__name__)
+
+
+HAS_SYMLINKS = None
+
+
+def no_symlinks():
+    '''
+    Check if git is installed and has symlinks enabled in the configuration.
+    '''
+    global HAS_SYMLINKS
+    if HAS_SYMLINKS is not None:
+        return not HAS_SYMLINKS
+    output = ''
+    try:
+        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise
+    except subprocess.CalledProcessError:
+        # git returned non-zero status
+        pass
+    HAS_SYMLINKS = False
+    if output.strip() == 'true':
+        HAS_SYMLINKS = True
+    return not HAS_SYMLINKS
 
 
 def destructiveTest(caller):
@@ -954,6 +985,63 @@ def with_system_user_and_group(username, group,
     return decorator
 
 
+class WithTempfile(object):
+    def __init__(self, **kwargs):
+        self.create = kwargs.pop('create', True)
+        if 'dir' not in kwargs:
+            kwargs['dir'] = TMP
+        if 'prefix' not in kwargs:
+            kwargs['prefix'] = '__salt.test.'
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        self.func = func
+        return functools.wraps(func)(
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+        )
+
+    def wrap(self, testcase, *args, **kwargs):
+        name = salt.utils.files.mkstemp(**self.kwargs)
+        if not self.create:
+            os.remove(name)
+        try:
+            return self.func(testcase, name, *args, **kwargs)
+        finally:
+            try:
+                os.remove(name)
+            except OSError:
+                pass
+
+
+with_tempfile = WithTempfile
+
+
+class WithTempdir(object):
+    def __init__(self, **kwargs):
+        self.create = kwargs.pop('create', True)
+        if 'dir' not in kwargs:
+            kwargs['dir'] = TMP
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        self.func = func
+        return functools.wraps(func)(
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+        )
+
+    def wrap(self, testcase, *args, **kwargs):
+        tempdir = tempfile.mkdtemp(**self.kwargs)
+        if not self.create:
+            os.rmdir(tempdir)
+        try:
+            return self.func(testcase, tempdir, *args, **kwargs)
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
+
+with_tempdir = WithTempdir
+
+
 def requires_system_grains(func):
     '''
     Function decorator which loads and passes the system's grains to the test
@@ -1344,7 +1432,7 @@ def generate_random_name(prefix, size=6):
     Generates a random name by combining the provided prefix with a randomly generated
     ascii string.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     prefix
         The string to prefix onto the randomly generated ascii string.

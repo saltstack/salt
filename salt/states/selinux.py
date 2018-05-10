@@ -24,6 +24,11 @@ booleans can be set.
     Use of these states require that the :mod:`selinux <salt.modules.selinux>`
     execution module is available.
 '''
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+
+# Import 3rd party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -37,7 +42,7 @@ def _refine_mode(mode):
     '''
     Return a mode value that is predictable
     '''
-    mode = str(mode).lower()
+    mode = six.text_type(mode).lower()
     if any([mode.startswith('e'),
             mode == '1',
             mode == 'on']):
@@ -55,7 +60,7 @@ def _refine_value(value):
     '''
     Return a yes/no value, or None if the input is invalid
     '''
-    value = str(value).lower()
+    value = six.text_type(value).lower()
     if value in ('1', 'on', 'yes', 'true'):
         return 'on'
     if value in ('0', 'off', 'no', 'false'):
@@ -68,7 +73,7 @@ def _refine_module_state(module_state):
     Return a predictable value, or allow us to error out
     .. versionadded:: 2016.3.0
     '''
-    module_state = str(module_state).lower()
+    module_state = six.text_type(module_state).lower()
     if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
         return 'enabled'
     if module_state in ('0', 'off', 'no', 'false', 'disabled'):
@@ -474,4 +479,111 @@ def fcontext_policy_applied(name, recursive=False):
         else:
             ret.update({'result': True})
             ret.update({'changes': apply_ret.get('changes')})
+    return ret
+
+
+def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Makes sure an SELinux port policy for a given port, protocol and SELinux context type is present.
+
+    name
+        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+
+    sel_type
+        The SELinux Type.
+
+    protocol
+        The protocol for the port (tcp|udp). Required if name is not formatted.
+
+    port
+        The port or port range. Required if name is not formatted.
+
+    sel_range
+        The SELinux MLS/MCS Security Range.
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    old_state = __salt__['selinux.port_get_policy'](
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port, )
+    if old_state:
+        ret.update({'result': True,
+                    'comment': 'SELinux policy for "{0}" already present '.format(name) +
+                               'with specified sel_type "{0}", protocol "{1}" and port "{2}".'.format(
+                                   sel_type, protocol, port)})
+        return ret
+    if __opts__['test']:
+        ret.update({'result': None})
+    else:
+        add_ret = __salt__['selinux.port_add_or_delete_policy'](
+            action='add',
+            name=name,
+            sel_type=sel_type,
+            protocol=protocol,
+            port=port,
+            sel_range=sel_range, )
+        if add_ret['retcode'] != 0:
+            ret.update({'comment': 'Error adding new policy: {0}'.format(add_ret)})
+        else:
+            ret.update({'result': True})
+            new_state = __salt__['selinux.port_get_policy'](
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port, )
+            ret['changes'].update({'old': old_state, 'new': new_state})
+    return ret
+
+
+def port_policy_absent(name, sel_type=None, protocol=None, port=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Makes sure an SELinux port policy for a given port, protocol and SELinux context type is absent.
+
+    name
+        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+
+    sel_type
+        The SELinux Type. Optional; can be used in determining if policy is present, ignored by semanage port --delete.
+
+    protocol
+        The protocol for the port (tcp|udp). Required if name is not formatted.
+
+    port
+        The port or port range. Required if name is not formatted.
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    old_state = __salt__['selinux.port_get_policy'](
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port, )
+    if not old_state:
+        ret.update({'result': True,
+                    'comment': 'SELinux policy for "{0}" already absent '.format(name) +
+                               'with specified sel_type "{0}", protocol "{1}" and port "{2}".'.format(
+                                   sel_type, protocol, port)})
+        return ret
+    if __opts__['test']:
+        ret.update({'result': None})
+    else:
+        delete_ret = __salt__['selinux.port_add_or_delete_policy'](
+            action='delete',
+            name=name,
+            protocol=protocol,
+            port=port, )
+        if delete_ret['retcode'] != 0:
+            ret.update({'comment': 'Error deleting policy: {0}'.format(delete_ret)})
+        else:
+            ret.update({'result': True})
+            new_state = __salt__['selinux.port_get_policy'](
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port, )
+            ret['changes'].update({'old': old_state, 'new': new_state})
     return ret

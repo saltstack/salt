@@ -14,6 +14,7 @@ import logging
 import inspect
 import tempfile
 import functools
+import threading
 import types
 from collections import MutableMapping
 from zipimport import zipimporter
@@ -22,6 +23,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.syspaths
 import salt.utils.context
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -651,7 +653,7 @@ def _load_cached_grains(opts, cfn):
     try:
         serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, 'rb') as fp_:
-            cached_grains = serial.load(fp_)
+            cached_grains = salt.utils.data.decode(serial.load(fp_), preserve_tuples=True)
         if not cached_grains:
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
             return None
@@ -791,35 +793,34 @@ def grains(opts, force_refresh=False, proxy=None):
     grains_data.update(opts['grains'])
     # Write cache if enabled
     if opts.get('grains_cache', False):
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Late import
-                import salt.modules.cmdmod
-                # Make sure cache file isn't read-only
-                salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
-            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-                try:
-                    serial = salt.payload.Serial(opts)
-                    serial.dump(grains_data, fp_)
-                except TypeError as e:
-                    log.error('Failed to serialize grains cache: %s', e)
-                    raise  # re-throw for cleanup
-        except Exception as e:
-            log.error('Unable to write to grains cache file %s: %s', cfn, e)
-            # Based on the original exception, the file may or may not have been
-            # created. If it was, we will remove it now, as the exception means
-            # the serialized data is not to be trusted, no matter what the
-            # exception is.
-            if os.path.isfile(cfn):
-                os.unlink(cfn)
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Late import
+                    import salt.modules.cmdmod
+                    # Make sure cache file isn't read-only
+                    salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
+                with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        serial = salt.payload.Serial(opts)
+                        serial.dump(grains_data, fp_)
+                    except TypeError as e:
+                        log.error('Failed to serialize grains cache: %s', e)
+                        raise  # re-throw for cleanup
+            except Exception as e:
+                log.error('Unable to write to grains cache file %s: %s', cfn, e)
+                # Based on the original exception, the file may or may not have been
+                # created. If it was, we will remove it now, as the exception means
+                # the serialized data is not to be trusted, no matter what the
+                # exception is.
+                if os.path.isfile(cfn):
+                    os.unlink(cfn)
 
     if grains_deep_merge:
         salt.utils.dictupdate.update(grains_data, opts['grains'])
     else:
         grains_data.update(opts['grains'])
-    return grains_data
+    return salt.utils.data.decode(grains_data, preserve_tuples=True)
 
 
 # TODO: get rid of? Does anyone use this? You should use raw() instead
@@ -1044,8 +1045,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Iterating over keys will cause all modules to be loaded.
 
     :param list module_dirs: A list of directories on disk to search for modules
-    :param opts dict: The salt options dictionary.
-    :param tag str': The tag for the type of module to load
+    :param dict opts: The salt options dictionary.
+    :param str tag: The tag for the type of module to load
     :param func mod_type_check: A function which can be used to verify files
     :param dict pack: A dictionary of function to be packed into modules as they are loaded
     :param list whitelist: A list of modules to whitelist
@@ -1124,7 +1125,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             )
         )
 
-        self.refresh_file_mapping()
+        self._lock = threading.RLock()
+        self._refresh_file_mapping()
 
         super(LazyLoader, self).__init__()  # late init the lazy loader
         # create all of the import namespaces
@@ -1191,7 +1193,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 else:
                     return '\'{0}\' __virtual__ returned False'.format(mod_name)
 
-    def refresh_file_mapping(self):
+    def _refresh_file_mapping(self):
         '''
         refresh the mapping of the FS on disk
         '''
@@ -1308,15 +1310,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Clear the dict
         '''
-        super(LazyLoader, self).clear()  # clear the lazy loader
-        self.loaded_files = set()
-        self.missing_modules = {}
-        self.loaded_modules = {}
-        # if we have been loaded before, lets clear the file mapping since
-        # we obviously want a re-do
-        if hasattr(self, 'opts'):
-            self.refresh_file_mapping()
-        self.initial_load = False
+        with self._lock:
+            super(LazyLoader, self).clear()  # clear the lazy loader
+            self.loaded_files = set()
+            self.missing_modules = {}
+            self.loaded_modules = {}
+            # if we have been loaded before, lets clear the file mapping since
+            # we obviously want a re-do
+            if hasattr(self, 'opts'):
+                self._refresh_file_mapping()
+            self.initial_load = False
 
     def __prep_mod_opts(self, opts):
         '''
@@ -1520,14 +1523,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs_to_process = ['__virtual__'] + self.virtual_funcs
             for virtual_func in virtual_funcs_to_process:
                 virtual_ret, module_name, virtual_err, virtual_aliases = \
-                    self.process_virtual(mod, module_name, virtual_func)
+                    self._process_virtual(mod, module_name, virtual_func)
                 if virtual_err is not None:
                     log.trace(
                         'Error loading %s.%s: %s',
                         self.tag, module_name, virtual_err
                     )
 
-                # if process_virtual returned a non-True value then we are
+                # if _process_virtual returned a non-True value then we are
                 # supposed to not process this module
                 if virtual_ret is not True and module_name not in self.missing_modules:
                     # If a module has information about why it could not be loaded, record it
@@ -1619,39 +1622,42 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if '.' not in key:
             raise KeyError('The key \'%s\' should contain a \'.\'', key)
         mod_name, _ = key.split('.', 1)
-        if mod_name in self.missing_modules:
-            return True
-        # if the modulename isn't in the whitelist, don't bother
-        if self.whitelist and mod_name not in self.whitelist:
-            raise KeyError
+        with self._lock:
+            # It is possible that the key is in the dictionary after
+            # acquiring the lock due to another thread loading it.
+            if mod_name in self.missing_modules or key in self._dict:
+                return True
+            # if the modulename isn't in the whitelist, don't bother
+            if self.whitelist and mod_name not in self.whitelist:
+                raise KeyError
 
-        def _inner_load(mod_name):
-            for name in self._iter_files(mod_name):
-                if name in self.loaded_files:
-                    continue
-                # if we got what we wanted, we are done
-                if self._load_module(name) and key in self._dict:
-                    return True
-            return False
+            def _inner_load(mod_name):
+                for name in self._iter_files(mod_name):
+                    if name in self.loaded_files:
+                        continue
+                    # if we got what we wanted, we are done
+                    if self._load_module(name) and key in self._dict:
+                        return True
+                return False
 
-        # try to load the module
-        ret = None
-        reloaded = False
-        # re-scan up to once, IOErrors or a failed load cause re-scans of the
-        # filesystem
-        while True:
-            try:
-                ret = _inner_load(mod_name)
-                if not reloaded and ret is not True:
-                    self.refresh_file_mapping()
-                    reloaded = True
+            # try to load the module
+            ret = None
+            reloaded = False
+            # re-scan up to once, IOErrors or a failed load cause re-scans of the
+            # filesystem
+            while True:
+                try:
+                    ret = _inner_load(mod_name)
+                    if not reloaded and ret is not True:
+                        self._refresh_file_mapping()
+                        reloaded = True
+                        continue
+                    break
+                except IOError:
+                    if not reloaded:
+                        self._refresh_file_mapping()
+                        reloaded = True
                     continue
-                break
-            except IOError:
-                if not reloaded:
-                    self.refresh_file_mapping()
-                    reloaded = True
-                continue
 
         return ret
 
@@ -1659,16 +1665,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Load all of them
         '''
-        for name in self.file_mapping:
-            if name in self.loaded_files or name in self.missing_modules:
-                continue
-            self._load_module(name)
+        with self._lock:
+            for name in self.file_mapping:
+                if name in self.loaded_files or name in self.missing_modules:
+                    continue
+                self._load_module(name)
 
-        self.loaded = True
+            self.loaded = True
 
     def reload_modules(self):
-        self.loaded_files = set()
-        self._load_all()
+        with self._lock:
+            self.loaded_files = set()
+            self._load_all()
 
     def _apply_outputter(self, func, mod):
         '''
@@ -1679,7 +1687,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
-    def process_virtual(self, mod, module_name, virtual_func='__virtual__'):
+    def _process_virtual(self, mod, module_name, virtual_func='__virtual__'):
         '''
         Given a loaded module and its default name determine its virtual name
 

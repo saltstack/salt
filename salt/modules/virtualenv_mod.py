@@ -6,7 +6,7 @@ Create virtualenv environments.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import shutil
 import logging
@@ -200,7 +200,7 @@ def create(path,
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
-            if virtualenv_version_info >= (1, 10) and virtualenv_version_info < (14, 0, 0):
+            if (1, 10) <= virtualenv_version_info < (14, 0, 0):
                 log.info(
                     '--never-download was deprecated in 1.10.0, but reimplemented in 14.0.0. '
                     'If this feature is needed, please install a supported virtualenv version.'

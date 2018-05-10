@@ -479,7 +479,8 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                                               list(pkg.items())[0][1])
             else:
                 pkg2inst += '{0} '.format(list(pkg.items())[0][0])
-        log.debug('Installing these packages instead of %s: %s', name, pkg2inst)
+        log.debug('Installing these packages instead of %s: %s',
+                  name, pkg2inst)
 
     else:   # install single package
         if version:

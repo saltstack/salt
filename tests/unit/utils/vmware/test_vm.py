@@ -6,7 +6,7 @@ Tests for virtual machine related functions in salt.utils.vmware
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt testing libraries
@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ConvertToKbTestCase(TestCase):
-    '''Tests for converting units'''
+    '''
+    Tests for converting units
+    '''
 
     def setUp(self):
         pass
@@ -54,7 +56,9 @@ class ConvertToKbTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class CreateVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.create_vm'''
+    '''
+    Tests for salt.utils.vmware.create_vm
+    '''
 
     def setUp(self):
         self.vm_name = 'fake_vm'
@@ -118,7 +122,9 @@ class CreateVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class RegisterVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.register_vm'''
+    '''
+    Tests for salt.utils.vmware.register_vm
+    '''
 
     def setUp(self):
         self.vm_name = 'fake_vm'
@@ -182,7 +188,9 @@ class RegisterVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class UpdateVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.update_vm'''
+    '''
+    Tests for salt.utils.vmware.update_vm
+    '''
 
     def setUp(self):
         self.mock_task = MagicMock()
@@ -225,7 +233,9 @@ class UpdateVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class DeleteVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.delete_vm'''
+    '''
+    Tests for salt.utils.vmware.delete_vm
+    '''
 
     def setUp(self):
         self.mock_task = MagicMock()
@@ -266,7 +276,9 @@ class DeleteVirtualMachineTestCase(TestCase):
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 class UnregisterVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.unregister_vm'''
+    '''
+    Tests for salt.utils.vmware.unregister_vm
+    '''
 
     def setUp(self):
         self.mock_vm_unregister = MagicMock()

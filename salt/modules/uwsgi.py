@@ -7,7 +7,7 @@ uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 :platform:   all
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.json

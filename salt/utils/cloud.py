@@ -10,6 +10,7 @@ import os
 import stat
 import codecs
 import shutil
+import uuid
 import hashlib
 import socket
 import tempfile
@@ -27,10 +28,21 @@ import uuid
 
 try:
     import salt.utils.smb
-
     HAS_SMB = True
 except ImportError:
     HAS_SMB = False
+
+try:
+    from pypsexec.client import Client as PsExecClient
+    from pypsexec.scmr import Service as ScmrService
+    from pypsexec.exceptions import SCMRException
+    from smbprotocol.tree import TreeConnect
+    from smbprotocol.exceptions import SMBResponseException
+    logging.getLogger('smbprotocol').setLevel(logging.WARNING)
+    logging.getLogger('pypsexec').setLevel(logging.WARNING)
+    HAS_PSEXEC = True
+except ImportError:
+    HAS_PSEXEC = False
 
 try:
     import winrm
@@ -51,6 +63,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -90,6 +103,10 @@ try:
 except ImportError:
     HAS_GETPASS = False
 
+# This is required to support international characters in AWS EC2 tags or any
+# other kind of metadata provided by particular Cloud vendor.
+MSGPACK_ENCODING = 'utf-8'
+
 NSTATES = {
     0: 'running',
     1: 'rebooting',
@@ -118,6 +135,13 @@ def __render_script(path, vm_=None, opts=None, minion=''):
         # Specified renderer was not found
         with salt.utils.files.fopen(path, 'r') as fp_:
             return six.text_type(fp_.read())
+
+
+def has_winexe():
+    '''
+    True when winexe is found on the system
+    '''
+    return salt.utils.path.which('winexe')
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
@@ -640,7 +664,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
-    installations, it might be port 445 (for winexe). It may also be an
+    installations, it might be port 445 (for psexec). It may also be an
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
@@ -775,15 +799,85 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-def wait_for_winexesvc(host, port, username, password, timeout=900):
+class Client(object):
     '''
-    Wait until winexe connection can be established.
+    Wrap pypsexec.client.Client to fix some stability issues:
+
+      - Set the service name from a keyword arg, this allows multiple service
+        instances to be created in a single process.
+      - Keep trying service and file deletes since they may not succeed on the
+        first try. Raises an exception if they do not succeed after a timeout
+        period.
     '''
-    start = time.time()
-    log.debug(
-        'Attempting winexe connection to host %s on port %s',
-        host, port
-    )
+
+    def __init__(self, server, username=None, password=None, port=445,
+                 encrypt=True, service_name=None):
+        self.service_name = service_name
+        self._exe_file = "{0}.exe".format(self.service_name)
+        self._client = PsExecClient(server, username, password, port, encrypt)
+        self._service = ScmrService(self.service_name, self._client.session)
+
+    def connect(self):
+        return self._client.connect()
+
+    def disconnect(self):
+        return self._client.disconnect()
+
+    def create_service(self):
+        return self._client.create_service()
+
+    def run_executabe(self, *args, **kwargs):
+        return self._client.run_executable(*args, **kwargs)
+
+    def remove_service(self, wait_timeout=10, sleep_wait=1):
+        '''
+        Removes the PAExec service and executable that was created as part of
+        the create_service function. This does not remove any older executables
+        or services from previous runs, use cleanup() instead for that purpose.
+        '''
+
+        # Stops/remove the PAExec service and removes the executable
+        log.debug("Deleting PAExec service at the end of the process")
+        wait_start = time.time()
+        while True:
+            try:
+                self._service.delete()
+            except SCMRException as exc:
+                log.debug("Exception encountered while deleting service %s", repr(exc))
+                if time.time() - wait_start > wait_timeout:
+                    raise exc
+                time.sleep(sleep_wait)
+                continue
+            break
+
+        # delete the PAExec executable
+        smb_tree = TreeConnect(
+            self._client.session,
+            r"\\{0}\ADMIN$".format(self._client.connection.server_name)
+        )
+        log.info("Connecting to SMB Tree %s", smb_tree.share_name)
+        smb_tree.connect()
+
+        wait_start = time.time()
+        while True:
+            try:
+                log.info("Creating open to PAExec file with delete on close flags")
+                self._client._delete_file(smb_tree, self._exe_file)
+            except SMBResponseException as exc:
+                log.debug("Exception deleting file %s %s", self._exe_file, repr(exc))
+                if time.time() - wait_start > wait_timeout:
+                    raise exc
+                time.sleep(sleep_wait)
+                continue
+            break
+        log.info("Disconnecting from SMB Tree %s", smb_tree.share_name)
+        smb_tree.disconnect()
+
+
+def run_winexe_command(cmd, args, host, username, password, port=445):
+    '''
+    Run a command remotly via the winexe executable
+    '''
     creds = "-U '{0}%{1}' //{2}".format(
         username,
         password,
@@ -793,15 +887,47 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
         username,
         host
     )
+    cmd = 'winexe {0} {1} {2}'.format(creds, cmd, args)
+    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args)
+    return win_cmd(cmd, logging_command=logging_cmd)
 
+
+def run_psexec_command(cmd, args, host, username, password, port=445):
+    '''
+    Run a command remotly using the psexec protocol
+    '''
+    if has_winexe() and not HAS_PSEXEC:
+        ret_code = run_winexe_command(cmd, args, host, username, password, port)
+        return None, None, ret_code
+    service_name = 'PS-Exec-{0}'.format(uuid.uuid4())
+    stdout, stderr, ret_code = '', '', None
+    client = Client(host, username, password, port=port, encrypt=False, service_name=service_name)
+    client.connect()
+    try:
+        client.create_service()
+        stdout, stderr, ret_code = client.run_executable(cmd, args)
+    finally:
+        client.remove_service()
+        client.disconnect()
+    return stdout, stderr, ret_code
+
+
+def wait_for_winexe(host, port, username, password, timeout=900):
+    '''
+    Wait until winexe connection can be established.
+    '''
+    start = time.time()
+    log.debug(
+        'Attempting winexe connection to host %s on port %s',
+        host, port
+    )
     try_count = 0
     while True:
         try_count += 1
         try:
             # Shell out to winexe to check %TEMP%
-            ret_code = win_cmd(
-                'winexe {0} "sc query winexesvc"'.format(creds),
-                logging_command=logging_creds
+            ret_code = run_winexe_command(
+                "sc", "query winexesvc", host, username, password, port
             )
             if ret_code == 0:
                 log.debug('winexe connected...')
@@ -811,11 +937,39 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             log.debug('Caught exception in wait_for_winexesvc: %s', exc)
 
         if time.time() - start > timeout:
-            log.error('winexe connection timed out: %s', timeout)
+            return False
+        time.sleep(1)
+
+
+def wait_for_psexecsvc(host, port, username, password, timeout=900):
+    '''
+    Wait until psexec connection can be established.
+    '''
+    if has_winexe() and not HAS_PSEXEC:
+        return wait_for_winexe(host, port, username, password, timeout)
+    start = time.time()
+    try_count = 0
+    while True:
+        try_count += 1
+        ret_code = 1
+        try:
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c hostname', host, username, password, port=port
+            )
+        except Exception as exc:
+            log.exception("Unable to execute command")
+        if ret_code == 0:
+            log.debug('psexec connected...')
+            return True
+        if time.time() - start > timeout:
             return False
         log.debug(
-            'Retrying winexe connection to host %s on port %s (try %s)',
-            host, port, try_count
+            'Retrying psexec connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host,
+                port,
+                try_count
+            )
         )
         time.sleep(1)
 
@@ -831,7 +985,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     )
     transport = 'ssl'
     if not use_ssl:
-        transport = 'plaintext'
+        transport = 'ntlm'
     trycount = 0
     while True:
         trycount += 1
@@ -864,7 +1018,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
         time.sleep(1)
 
 
-def validate_windows_cred(host,
+def validate_windows_cred_winexe(host,
                           username='Administrator',
                           password=None,
                           retries=10,
@@ -881,12 +1035,30 @@ def validate_windows_cred(host,
         username,
         host
     )
-
     for i in range(retries):
         ret_code = win_cmd(
             cmd,
             logging_command=logging_cmd
         )
+    return ret_code == 0
+
+
+def validate_windows_cred(host,
+                          username='Administrator',
+                          password=None,
+                          retries=10,
+                          retry_delay=1):
+    '''
+    Check if the windows credentials are valid
+    '''
+    for i in xrange(retries):
+        ret_code = 1
+        try:
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c hostname', host, username, password, port=445
+            )
+        except Exception as exc:
+            log.exception("Exceoption while executing psexec")
         if ret_code == 0:
             break
         time.sleep(retry_delay)
@@ -995,6 +1167,13 @@ def deploy_windows(host,
         log.error('WinRM requested but module winrm could not be imported')
         return False
 
+    if not use_winrm and has_winexe() and not HAS_PSEXEC:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Support for winexe has been depricated and will be remove in '
+            'Sodium, please install pypsexec instead.'
+        )
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying %s at %s (Windows)', host, starttime)
     log.trace('HAS_WINRM: %s, use_winrm: %s', HAS_WINRM, use_winrm)
@@ -1015,7 +1194,7 @@ def deploy_windows(host,
         if winrm_session is not None:
             service_available = True
     else:
-        service_available = wait_for_winexesvc(host=host, port=port,
+        service_available = wait_for_psexecsvc(host=host, port=port,
                                                username=username, password=password,
                                                timeout=port_timeout * 60)
 
@@ -1023,27 +1202,13 @@ def deploy_windows(host,
         log.debug('SMB port %s on %s is available', port, host)
         log.debug('Logging into %s:%s as %s', host, port, username)
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-
         smb_conn = salt.utils.smb.get_conn(host, username, password)
         if smb_conn is False:
-            log.error('Please install impacket to enable SMB functionality')
+            log.error('Please install smbprotocol to enable SMB functionality')
             return False
-
-        creds = "-U '{0}%{1}' //{2}".format(
-            username,
-            password,
-            host
-        )
-        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
-            username,
-            host
-        )
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
         salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
-        #  minion_pub, minion_pem
-        kwargs = {'hostname': host,
-                  'creds': creds}
 
         if minion_pub:
             salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
@@ -1055,8 +1220,12 @@ def deploy_windows(host,
             # Read master-sign.pub file
             log.debug("Copying master_sign.pub file from %s to minion", master_sign_pub_file)
             try:
-                with salt.utils.files.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
-                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+                salt.utils.smb.put_file(
+                    master_sign_pub_file,
+                    'salt\\conf\\pki\\minion\\master_sign.pub',
+                    'C$',
+                    conn=smb_conn,
+                )
             except Exception as e:
                 log.debug("Exception copying master_sign.pub file %s to minion", master_sign_pub_file)
 
@@ -1067,30 +1236,26 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        with salt.utils.files.fopen(win_installer, 'rb') as inst_fh:
-            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
+        salt.utils.smb.put_file(
+            win_installer,
+            'salttemp\\{0}'.format(installer),
+            'C$',
+            conn=smb_conn,
+        )
 
         if use_winrm:
             winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
                                                                              '/minion-name={0}'.format(name)]
             )
         else:
-            # Shell out to winexe to execute win_installer
-            #  We don't actually need to set the master and the minion here since
-            #  the minion config file will be set next via impacket
-            cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                creds,
-                installer,
-                master,
-                name
+            cmd = 'c:\\salttemp\\{0}'.format(installer)
+            args = "/S /master={0} /minion-name={1}".format(master, name)
+            stdout, stderr, ret_code = run_psexec_command(
+                cmd, args, host, username, password
             )
-            logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                logging_creds,
-                installer,
-                master,
-                name
-            )
-            win_cmd(cmd, logging_command=logging_cmd)
+
+            if ret_code != 0:
+                raise Exception("Fail installer %d", ret_code)
 
         # Copy over minion_conf
         if minion_conf:
@@ -1129,29 +1294,28 @@ def deploy_windows(host,
             if use_winrm:
                 winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
             else:
-                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-                smb_conn.deleteDirectory('C$', 'salttemp')
-        # Shell out to winexe to ensure salt-minion service started
+                salt.utils.smb.delete_file('salttemp\\{0}'.format(installer), 'C$', conn=smb_conn)
+                salt.utils.smb.delete_directory('salttemp', 'C$', conn=smb_conn)
+        # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
             time.sleep(5)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
-            stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                creds
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c sc stop salt-minion', host, username, password
             )
-            logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                logging_creds
-            )
-            win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+            if ret_code != 0:
+                return False
 
             time.sleep(5)
 
-            start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
-            logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
-                logging_creds
+            log.debug('Run psexec: sc start salt-minion')
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c sc start salt-minion', host, username, password
             )
-            win_cmd(start_cmd, logging_command=logging_start_cmd)
+            if ret_code != 0:
+                return False
 
         # Fire deploy action
         fire_event(
@@ -2259,7 +2423,7 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
         ret = event.get_event(full=True)
         if ret is None:
             continue
-        if ret['tag'] == 'minion_start' and ret['data']['id'] == name:
+        if ret['tag'] == 'salt/minion/{0}/start'.format(name):
             queue.put(name)
             newtimeout = 0
             log.debug('Minion %s is ready to receive commands', name)
@@ -2286,16 +2450,16 @@ def is_public_ip(ip):
             return False
         return True
     addr = ip_to_int(ip)
-    if addr > 167772160 and addr < 184549375:
+    if 167772160 < addr < 184549375:
         # 10.0.0.0/8
         return False
-    elif addr > 3232235520 and addr < 3232301055:
+    elif 3232235520 < addr < 3232301055:
         # 192.168.0.0/16
         return False
-    elif addr > 2886729728 and addr < 2887778303:
+    elif 2886729728 < addr < 2887778303:
         # 172.16.0.0/12
         return False
-    elif addr > 2130706432 and addr < 2147483647:
+    elif 2130706432 < addr < 2147483647:
         # 127.0.0.0/8
         return False
     return True
@@ -2506,7 +2670,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_))
+            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2523,7 +2687,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2540,7 +2704,7 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_))
+            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 
@@ -2549,7 +2713,7 @@ def cachedir_index_del(minion_id, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2607,7 +2771,7 @@ def request_minion_cachedir(
     path = os.path.join(base, 'requested', fname)
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(data, fh_)
+        msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def change_minion_cachedir(
@@ -2639,12 +2803,12 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.files.fopen(path, 'r') as fh_:
-        cache_data = salt.utils.data.decode(msgpack.load(fh_))
+        cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     cache_data.update(data)
 
     with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(cache_data, fh_)
+        msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -2718,7 +2882,7 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 mode = 'rb' if six.PY3 else 'r'
                 with salt.utils.files.fopen(fpath, mode) as fh_:
-                    minions[driver][prov][minion_id] = msgpack.load(fh_, encoding='utf-8')
+                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     return minions
 
@@ -2729,9 +2893,9 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     salt.utils.versions.warn_until(
-        'Flourine',
+        'Fluorine',
         'This function is incomplete and non-functional '
-        'and will be removed in Salt Flourine.'
+        'and will be removed in Salt Fluorine.'
     )
     if base is None:
         base = opts['cachedir']
@@ -2895,7 +3059,7 @@ def cache_node_list(nodes, provider, opts):
         path = os.path.join(prov_dir, '{0}.p'.format(node))
         mode = 'wb' if six.PY3 else 'w'
         with salt.utils.files.fopen(path, mode) as fh_:
-            msgpack.dump(nodes[node], fh_)
+            msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
 def cache_node(node, provider, opts):
@@ -2921,7 +3085,7 @@ def cache_node(node, provider, opts):
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(node, fh_)
+        msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -2996,7 +3160,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.files.fopen(path, 'r') as fh_:
         try:
-            cache_data = salt.utils.data.decode(msgpack.load(fh_))
+            cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
         except ValueError:
             log.warning('Cache for %s was corrupt: Deleting', node)
             cache_data = {}

@@ -155,7 +155,7 @@ This state creates a private key then requests a certificate signed by ca accord
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import os
 import re
@@ -308,9 +308,12 @@ def private_key_managed(name,
         file_args['contents'] = __salt__['x509.create_private_key'](
             text=True, bits=bits, passphrase=passphrase, cipher=cipher, verbose=verbose)
 
+    # Ensure the key contents are a string before passing it along
+    file_args['contents'] = salt.utils.stringutils.to_str(file_args['contents'])
+
     ret = __states__['file.managed'](**file_args)
     if ret['changes'] and new_key:
-        ret['changes'] = 'New private key generated'
+        ret['changes'] = {'new': 'New private key generated'}
 
     return ret
 

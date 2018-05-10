@@ -2,15 +2,19 @@
 '''
 Support for Linux LVM2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os.path
 
 # Import salt libs
 import salt.utils.path
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
+
+# Set up logger
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -476,7 +480,7 @@ def lvremove(lvname, vgname):
     return out.strip()
 
 
-def lvresize(size, lvpath):
+def lvresize(size=None, lvpath=None, extents=None):
     '''
     Return information about the logical volume(s)
 
@@ -486,10 +490,23 @@ def lvresize(size, lvpath):
 
 
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
+        salt '*' lvm.lvresize lvpath=/dev/mapper/vg1-test extents=+100%FREE
+
     '''
-    ret = {}
-    cmd = ['lvresize', '-L', str(size), lvpath]
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if cmd_ret['retcode'] != 0:
+    if size and extents:
+        log.error('Error: Please specify only one of size or extents')
         return {}
-    return ret
+
+    cmd = ['lvresize']
+
+    if size:
+        cmd.extend(['-L', '{0}'.format(size)])
+    elif extents:
+        cmd.extend(['-l', '{0}'.format(extents)])
+    else:
+        log.error('Error: Either size or extents must be specified')
+        return {}
+
+    cmd.append(lvpath)
+    cmd_ret = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    return {'Output from lvresize': cmd_ret[0].strip()}

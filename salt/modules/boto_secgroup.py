@@ -49,6 +49,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 
+# Import Salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.odict as odict
+import salt.utils.versions
+
 log = logging.getLogger(__name__)
 
 # Import third party libs
@@ -63,31 +68,24 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-# Import Salt libs
-import salt.utils.odict as odict
-from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.exceptions import SaltInvocationError
-
 
 def __virtual__():
     '''
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.4.0'
     # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
     # Boto >= 2.4.0 GroupOrCIDR objects
     # Differences include no group_id attribute in Boto < 2.4.0 and returning
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
-    if not HAS_BOTO:
-        return (False, 'The boto_secgroup module could not be loaded: boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
-    else:
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.4.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
         __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
-        return True
+    return has_boto_reqs
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,

@@ -74,7 +74,7 @@ cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
@@ -100,9 +100,15 @@ db: ``'0'``
 password:
     Redis connection password.
 
+unix_socket_path:
+
+    .. versionadded:: 2018.3.1
+
+    Path to a UNIX socket for access. Overrides `host` / `port`.
+
 Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.host: localhost
     cache.redis.port: 6379
@@ -115,7 +121,7 @@ Configuration Example:
 
 Cluster Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.cluster_mode: true
     cache.redis.cluster.skip_full_coverage_check: true
@@ -205,6 +211,7 @@ def _get_redis_cache_opts():
     return {
         'host': __opts__.get('cache.redis.host', 'localhost'),
         'port': __opts__.get('cache.redis.port', 6379),
+        'unix_socket_path': __opts__.get('cache.redis.unix_socket_path', None),
         'db': __opts__.get('cache.redis.db', '0'),
         'password': __opts__.get('cache.redis.password', ''),
         'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
@@ -231,6 +238,7 @@ def _get_redis_server(opts=None):
     else:
         REDIS_SERVER = redis.StrictRedis(opts['host'],
                                    opts['port'],
+                                   unix_socket_path=opts['unix_socket_path'],
                                    db=opts['db'],
                                    password=opts['password'])
     return REDIS_SERVER
@@ -341,10 +349,7 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug(
-            'Setting the value for %s under %s (%s)',
-            key=key, bank=bank, redis_key=redis_key
-        )
+        log.debug('Setting the value for %s under %s (%s)', key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
         log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()
@@ -392,7 +397,7 @@ def flush(bank, key=None):
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitely allow Salt inject scripts in their Redis instance.
+    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     '''
     redis_server = _get_redis_server()
     redis_pipe = redis_server.pipeline()

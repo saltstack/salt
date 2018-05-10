@@ -32,6 +32,12 @@ Functions to interact with Hashicorp Vault.
                 - saltstack/minions
                 - saltstack/minion/{minion}
                 .. more policies
+            keys:
+                - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+                - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+                - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+                - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+                - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
 
     url
         Url to your Vault installation. Required.
@@ -40,7 +46,7 @@ Functions to interact with Hashicorp Vault.
         For details please see
         http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     auth
         Currently only token auth is supported. The token must be able to create
@@ -92,6 +98,9 @@ Functions to interact with Hashicorp Vault.
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
 
+    keys
+        List of keys to use to unseal vault server with the vault.unseal runner.
+
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
@@ -104,11 +113,9 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup
 '''
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-
-import salt.crypt
-import salt.exceptions
 
 
 log = logging.getLogger(__name__)
@@ -131,7 +138,7 @@ def read_secret(path, key=None):
                 first: {{ supersecret.first }}
                 second: {{ supersecret.second }}
     '''
-    log.debug('Reading Vault secret for {0} at {1}'.format(__grains__['id'], path))
+    log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
@@ -142,9 +149,9 @@ def read_secret(path, key=None):
         if key is not None:
             return data[key]
         return data
-    except Exception as e:
-        log.error('Failed to read secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to read secret! %s: %s', type(err).__name__, err)
+        return None
 
 
 def write_secret(path, **kwargs):
@@ -157,20 +164,19 @@ def write_secret(path, **kwargs):
 
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
     '''
-    log.debug(
-        'Writing vault secrets for {0} at {1}'.
-        format(__grains__['id'], path)
-        )
+    log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
     data = dict([(x, y) for x, y in kwargs.items() if not x.startswith('__')])
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('POST', url, json=data)
-        if response.status_code != 204:
+        if response.status_code == 200:
+            return response.json()['data']
+        elif response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as e:
-        log.error('Failed to write secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to write secret! %s: %s', type(err).__name__, err)
+        return False
 
 
 def delete_secret(path):
@@ -183,17 +189,16 @@ def delete_secret(path):
 
             salt '*' vault.delete_secret "secret/my/secret"
     '''
-    log.debug('Deleting vault secrets for {0} in {1}'
-              .format(__grains__['id'], path))
+    log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('DELETE', url)
         if response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as e:
-        log.error('Failed to delete secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
+        return False
 
 
 def list_secrets(path):
@@ -207,14 +212,13 @@ def list_secrets(path):
 
             salt '*' vault.list_secrets "secret/my/"
     '''
-    log.debug('Listing vault secret keys for {0} in {1}'
-              .format(__grains__['id'], path))
+    log.debug('Listing vault secret keys for %s in %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('LIST', url)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()['data']
-    except Exception as e:
-        log.error('Failed to list secrets! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
+        return None

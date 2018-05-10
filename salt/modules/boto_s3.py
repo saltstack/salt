@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon S3 using boto3
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles or
@@ -55,7 +55,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -77,16 +77,9 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    needed_boto3_version = '1.2.1'
-    msg = 'The boto_s3 module cannot be loaded: {0}.'
-    if not HAS_BOTO:
-        return (False, msg.format('boto3 libraries not found'))
-    if _LooseVersion(boto3.__version__) < _LooseVersion(needed_boto3_version):
-        submsg = 'boto3 library version {0} is required'.format(
-            needed_boto3_version,
-        )
-        return (False, msg.format(submsg))
-    return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.1'
+    )
 
 
 def __init__(opts):  # pylint: disable=unused-argument

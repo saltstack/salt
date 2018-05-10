@@ -139,7 +139,6 @@ import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # from salt.utils import exactly_one
 # TODO: Uncomment this and s/_exactly_one/exactly_one/
@@ -181,22 +180,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
     # the boto_vpc execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_vpc module could not be loaded: boto library version 2.8.0 is required')
-    required_boto3_version = '1.2.6'
     # the boto_vpc execution module relies on the create_nat_gateway() method
     # which was added in boto3 1.2.6
-    if not HAS_BOTO3:
-        return (False, 'The boto_vpc module could not be loaded: boto3 libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_vpc module could not be loaded: boto3 library version 1.2.6 is required')
-    return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.2.6'
+    )
 
 
 def __init__(opts):
@@ -2317,10 +2309,10 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name, vpc_peering_connection_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
-                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+                                  'nat_gateway_subnet_id, nat_gateway_subnet_name or vpc_peering_connection_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2594,6 +2586,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                       'instance_id': 'Instance',
                       'interface_id': 'NetworkInterfaceId',
                       'nat_gateway_id': 'NatGatewayId',
+                      'vpc_peering_connection_id': 'VpcPeeringConnectionId',
                       }
         assoc_keys = {'id': 'RouteTableAssociationId',
                       'main': 'Main',
@@ -2649,7 +2642,7 @@ def _maybe_set_tags(tags, obj):
 def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_support:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
-        log.debug('DNS spport was set to: %s on vpc %s', dns_support, vpcid)
+        log.debug('DNS support was set to: %s on vpc %s', dns_support, vpcid)
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: %s on vpc %s', dns_hostnames, vpcid)

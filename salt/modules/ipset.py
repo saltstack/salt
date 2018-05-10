@@ -4,7 +4,7 @@ Support for ipset
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -458,7 +458,6 @@ def check(set=None, entry=None, family='ipv4'):
     for current_member in current_members:
         for entry in entries:
             if _member_contains(current_member, entry):
-                # print "{0} contains {1}".format(current_member, entry)
                 return True
 
     return False
@@ -521,10 +520,8 @@ def flush(set=None, family='ipv4'):
 
     ipset_family = _IPSET_FAMILIES[family]
     if set:
-        # cmd = '{0} flush {1} family {2}'.format(_ipset_cmd(), set, ipset_family)
         cmd = '{0} flush {1}'.format(_ipset_cmd(), set)
     else:
-        # cmd = '{0} flush family {1}'.format(_ipset_cmd(), ipset_family)
         cmd = '{0} flush'.format(_ipset_cmd())
     out = __salt__['cmd.run'](cmd, python_shell=False)
 

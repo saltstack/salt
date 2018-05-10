@@ -41,10 +41,12 @@ Namecheap ssl management
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
+
 try:
     import salt.utils.namecheap
     CAN_USE_NAMECHEAP = True
@@ -181,34 +183,35 @@ def __get_certificates(command,
                        http_dc_validation,
                        kwargs):
 
-    web_server_types = set(['apacheopenssl',
-                            'apachessl',
-                            'apacheraven',
-                            'apachessleay',
-                            'c2net',
-                            'ibmhttp',
-                            'iplanet',
-                            'domino',
-                            'dominogo4625',
-                            'dominogo4626',
-                            'netscape',
-                            'zeusv3',
-                            'apache2',
-                            'apacheapachessl',
-                            'cobaltseries',
-                            'cpanel',
-                            'ensim',
-                            'hsphere',
-                            'ipswitch',
-                            'plesk',
-                            'tomcat',
-                            'weblogic',
-                            'website',
-                            'webstar',
-                            'iis',
-                            'other',
-                            'iis4',
-                            'iis5'])
+    web_server_types = ('apacheopenssl',
+                        'apachessl',
+                        'apacheraven',
+                        'apachessleay',
+                        'c2net',
+                        'ibmhttp',
+                        'iplanet',
+                        'domino',
+                        'dominogo4625',
+                        'dominogo4626',
+                        'netscape',
+                        'zeusv3',
+                        'apache2',
+                        'apacheapachessl',
+                        'cobaltseries',
+                        'cpanel',
+                        'ensim',
+                        'hsphere',
+                        'ipswitch',
+                        'plesk',
+                        'tomcat',
+                        'weblogic',
+                        'website',
+                        'webstar',
+                        'iis',
+                        'other',
+                        'iis4',
+                        'iis5',
+                        )
 
     if web_server_type not in web_server_types:
         salt.utils.namecheap.log.error('Invalid option for web_server_type=' + web_server_type)
@@ -225,7 +228,9 @@ def __get_certificates(command,
     opts = salt.utils.namecheap.get_opts(command)
 
     with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = csr_handle.read()
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
     opts['CertificateID'] = certificate_id
     opts['WebServerType'] = web_server_type
@@ -303,48 +308,49 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
 
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
         salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
-    opts['Years'] = str(years)
-    opts['CertificateID'] = str(certificate_id)
+    opts['Years'] = six.text_type(years)
+    opts['CertificateID'] = six.text_type(certificate_id)
     opts['SSLType'] = certificate_type
     if promotion_code is not None:
         opts['PromotionCode'] = promotion_code
@@ -464,44 +470,45 @@ Symantec  Secure Site                      1                 25              24
 
         salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
         salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
 
@@ -561,35 +568,37 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain', 'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
         salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
@@ -598,7 +607,9 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
     with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = csr_handle.read()
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
     opts['CertificateType'] = certificate_type
     if http_dc_validation:

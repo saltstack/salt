@@ -6,7 +6,7 @@
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import base64
 import ssl
@@ -21,8 +21,6 @@ import salt.exceptions as excs
 
 # Import Salt libraries
 import salt.utils.vmware
-# Import Third Party Libs
-from salt.ext import six
 
 try:
     from pyVmomi import vim, vmodl
@@ -95,7 +93,7 @@ class GssapiTokenTest(TestCase):
             ret = salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                      'domain')
             self.assertEqual(mock_context.return_value.step.called, 1)
-            self.assertEqual(ret, base64.b64encode(six.b('out_token')))
+            self.assertEqual(ret, base64.b64encode(b'out_token'))
 
     @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
     def test_out_token_undefined(self):
@@ -131,7 +129,9 @@ class GssapiTokenTest(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class PrivateGetServiceInstanceTestCase(TestCase):
-    '''Tests for salt.utils.vmware._get_service_instance'''
+    '''
+    Tests for salt.utils.vmware._get_service_instance
+    '''
 
     def setUp(self):
         patches = (
@@ -579,7 +579,9 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInstanceTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_service_instance'''
+    '''
+    Tests for salt.utils.vmware.get_service_instance
+    '''
     def setUp(self):
         patches = (
             ('salt.utils.vmware.GetSi', MagicMock(return_value=None)),
@@ -752,7 +754,9 @@ class GetServiceInstanceTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class DisconnectTestCase(TestCase):
-    '''Tests for salt.utils.vmware.disconnect'''
+    '''
+    Tests for salt.utils.vmware.disconnect
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -798,7 +802,9 @@ class DisconnectTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class IsConnectionToAVCenterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.is_connection_to_a_vcenter'''
+    '''
+    Tests for salt.utils.vmware.is_connection_to_a_vcenter
+    '''
 
     def test_api_type_raise_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -856,7 +862,9 @@ class IsConnectionToAVCenterTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
-    '''Tests for salt.utils.vmware.get_new_service_instance_stub'''
+    '''
+    Tests for salt.utils.vmware.get_new_service_instance_stub
+    '''
     def setup_loader_modules(self):
         return {salt.utils.vmware: {
             '__virtual__': MagicMock(return_value='vmware'),
@@ -946,7 +954,9 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInstanceFromManagedObjectTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_managed_instance_from_managed_object'''
+    '''
+    Tests for salt.utils.vmware.get_managed_instance_from_managed_object
+    '''
 
     def setUp(self):
         patches = (
@@ -967,16 +977,18 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
         type(salt.utils.vmware.log).trace = mock_trace
         salt.utils.vmware.get_service_instance_from_managed_object(
             self.mock_mo_ref)
-        mock_trace.assert_called_once_with('[<unnamed>] Retrieving service '
-                                           'instance from managed object')
+        mock_trace.assert_called_once_with(
+            '[%s] Retrieving service instance from managed object',
+            '<unnamed>')
 
     def test_name_parameter_passed_in(self):
         mock_trace = MagicMock()
         type(salt.utils.vmware.log).trace = mock_trace
         salt.utils.vmware.get_service_instance_from_managed_object(
             self.mock_mo_ref, 'fake_mo_name')
-        mock_trace.assert_called_once_with('[fake_mo_name] Retrieving service '
-                                           'instance from managed object')
+        mock_trace.assert_called_once_with(
+            '[%s] Retrieving service instance from managed object',
+            'fake_mo_name')
 
     def test_service_instance_instantiation(self):
         mock_service_instance_ini = MagicMock()

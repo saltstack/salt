@@ -128,6 +128,6 @@ def start():
         raise SystemExit(1)
 
     try:
-        tornado.ioloop.IOLoop.instance().start()
+        tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -18,6 +18,7 @@ from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.stringutils
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 
@@ -36,10 +37,12 @@ class StateMatchTest(ModuleCase):
         try:
             with salt.utils.files.fopen(top_file, 'w') as fp_:
                 fp_.write(
-                    'base:\n'
-                    '  {0}:\n'
-                    '    - match: ipcidr\n'
-                    '    - test\n'.format(subnets[0])
+                    salt.utils.stringutils.to_str(
+                        'base:\n'
+                        '  {0}:\n'
+                        '    - match: ipcidr\n'
+                        '    - test\n'.format(subnets[0])
+                    )
                 )
             ret = self.run_function('state.top', [top_filename])
             self.assertNotIn(

@@ -15,9 +15,11 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.platform
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -115,13 +117,36 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
+    def test_run_all_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.run_all',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
+    def test_retcode_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.retcode',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertEqual(ret, 0)
+
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob
         '''
         self.assertEqual(self.run_function('cmd.run',
                 ['bad_command --foo']).rstrip(),
-                'ERROR: This shell command is not permitted: "bad_command --foo"')
+                'ERROR: The shell command "bad_command --foo" is not permitted')
 
     def test_script(self):
         '''
@@ -265,6 +290,15 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
         self.assertEqual(result, expected_result)
+
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skip_if_not_root
+    def test_runas(self):
+        '''
+        Ensure that the env is the runas user's
+        '''
+        out = self.run_function('cmd.run', ['env'], runas='nobody').splitlines()
+        self.assertIn('USER=nobody', out)
 
     def test_timeout(self):
         '''

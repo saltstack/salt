@@ -12,7 +12,7 @@ and manage SQL Server Users
       mssql_user.present:
         - database: yolo
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 

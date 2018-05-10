@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import textwrap
 
 # Import Salt Libs
@@ -17,6 +18,9 @@ from salt.ext import six
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
 
+# Import 3rd-party libs
+from salt.ext import six
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class YamlLoaderTestCase(TestCase):
@@ -25,7 +29,7 @@ class YamlLoaderTestCase(TestCase):
     '''
 
     @staticmethod
-    def _render_yaml(data):
+    def render_yaml(data):
         '''
         Takes a YAML string, puts it into a mock file, passes that to the YAML
         SaltYamlSafeLoader and then returns the rendered/parsed YAML data
@@ -41,12 +45,37 @@ class YamlLoaderTestCase(TestCase):
             with salt.utils.files.fopen(mocked_file) as mocked_stream:
                 return SaltYamlSafeLoader(mocked_stream).get_data()
 
+    @staticmethod
+    def raise_error(value):
+        raise TypeError('{0!r} is not a unicode string'.format(value))  # pylint: disable=repr-flag-used-in-string
+
+    def assert_unicode(self, value):
+        '''
+        Make sure the entire data structure is unicode
+        '''
+        if six.PY3:
+            return
+        if isinstance(value, six.string_types):
+            if not isinstance(value, six.text_type):
+                self.raise_error(value)
+        elif isinstance(value, collections.Mapping):
+            for k, v in six.iteritems(value):
+                self.assert_unicode(k)
+                self.assert_unicode(v)
+        elif isinstance(value, collections.Iterable):
+            for item in value:
+                self.assert_unicode(item)
+
+    def assert_matches(self, ret, expected):
+        self.assertEqual(ret, expected)
+        self.assert_unicode(ret)
+
     def test_yaml_basics(self):
         '''
         Test parsing an ordinary path
         '''
-        self.assertEqual(
-            self._render_yaml(textwrap.dedent('''\
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
                 p1:
                   - alpha
                   - beta''')),
@@ -58,8 +87,8 @@ class YamlLoaderTestCase(TestCase):
         Test YAML anchors
         '''
         # Simple merge test
-        self.assertEqual(
-            self._render_yaml(textwrap.dedent('''\
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
                 p1: &p1
                   v1: alpha
                 p2:
@@ -69,8 +98,8 @@ class YamlLoaderTestCase(TestCase):
         )
 
         # Test that keys/nodes are overwritten
-        self.assertEqual(
-            self._render_yaml(textwrap.dedent('''\
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
                 p1: &p1
                   v1: alpha
                 p2:
@@ -80,8 +109,8 @@ class YamlLoaderTestCase(TestCase):
         )
 
         # Test merging of lists
-        self.assertEqual(
-            self._render_yaml(textwrap.dedent('''\
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
                 p1: &p1
                   v1: &v1
                     - t1
@@ -96,12 +125,12 @@ class YamlLoaderTestCase(TestCase):
         Test that duplicates still throw an error
         '''
         with self.assertRaises(ConstructorError):
-            self._render_yaml(textwrap.dedent('''\
+            self.render_yaml(textwrap.dedent('''\
                 p1: alpha
                 p1: beta'''))
 
         with self.assertRaises(ConstructorError):
-            self._render_yaml(textwrap.dedent('''\
+            self.render_yaml(textwrap.dedent('''\
                 p1: &p1
                   v1: alpha
                 p2:
@@ -113,10 +142,33 @@ class YamlLoaderTestCase(TestCase):
         '''
         Test proper loading of unicode literals
         '''
-        self.assertEqual(
-            self._render_yaml(textwrap.dedent('''\
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
                 foo:
                   a: Д
                   b: {'a': u'\\u0414'}''')),
             {'foo': {'a': u'\u0414', 'b': {'a': u'\u0414'}}}
+        )
+
+    def test_yaml_with_colon_in_inline_dict(self):
+        '''
+        Test proper loading of unicode literal strings in inline dicts
+        '''
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
+                foo:
+                  b: {u'c': u'https://foo.com'}''')),
+            {'foo': {'b': {'c': 'https://foo.com'}}}
+        )
+
+    def test_yaml_with_plain_scalars(self):
+        '''
+        Test that plain (i.e. unqoted) string and non-string scalars are
+        properly handled
+        '''
+        self.assert_matches(
+            self.render_yaml(textwrap.dedent('''\
+                foo:
+                  b: {foo: bar, one: 1, list: [1, two, 3]}''')),
+            {'foo': {'b': {'foo': 'bar', 'one': 1, 'list': [1, 'two', 3]}}}
         )

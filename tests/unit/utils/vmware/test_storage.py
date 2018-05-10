@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetStorageSystemTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_storage_system'''
+    '''
+    Tests for salt.utils.vmware.get_storage_system
+    '''
     def setUp(self):
         self.mock_si = MagicMock(content=MagicMock())
         self.mock_host_ref = MagicMock()
@@ -114,7 +116,9 @@ class GetStorageSystemTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatastoresTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_datastores'''
+    '''
+    Tests for salt.utils.vmware.get_datastores
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -337,7 +341,9 @@ class GetDatastoresTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RenameDatastoreTestCase(TestCase):
-    '''Tests for salt.utils.vmware.rename_datastore'''
+    '''
+    Tests for salt.utils.vmware.rename_datastore
+    '''
 
     def setUp(self):
         self.mock_ds_ref = MagicMock()

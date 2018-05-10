@@ -4,7 +4,7 @@ The function cache system allows for data to be stored on the master so it can b
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import time
@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
-import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -52,8 +51,7 @@ def _auth():
 
 def _mine_function_available(func):
     if func not in __salt__:
-        log.error('Function {0} in mine_functions not available'
-                 .format(func))
+        log.error('Function %s in mine_functions not available', func)
         return False
     return True
 
@@ -70,7 +68,7 @@ def _mine_send(load, opts):
 def _mine_get(load, opts):
     if opts.get('transport', '') in ('zeromq', 'tcp'):
         try:
-            load['tok'] = _auth().gen_token('salt')
+            load['tok'] = _auth().gen_token(b'salt')
         except AttributeError:
             log.error('Mine could not authenticate with master. '
                       'Mine could not be retrieved.'
@@ -167,9 +165,8 @@ def update(clear=False, mine_functions=None):
                 data[func] = __salt__[func]()
         except Exception:
             trace = traceback.format_exc()
-            log.error('Function {0} in mine_functions failed to execute'
-                      .format(func))
-            log.debug('Error: {0}'.format(trace))
+            log.error('Function %s in mine_functions failed to execute', func)
+            log.debug('Error: %s', trace)
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
@@ -224,8 +221,8 @@ def send(func, *args, **kwargs):
         else:
             data[func] = __salt__[mine_func](*f_call['args'])
     except Exception as exc:
-        log.error('Function {0} in mine.send failed to execute: {1}'
-                  .format(mine_func, exc))
+        log.error('Function %s in mine.send failed to execute: %s',
+                  mine_func, exc)
         return False
     if __opts__['file_client'] == 'local':
         old = __salt__['data.get']('mine_cache')
@@ -244,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        expr_form=None):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -290,17 +286,6 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],

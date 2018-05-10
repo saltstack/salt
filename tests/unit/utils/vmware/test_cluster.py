@@ -6,7 +6,7 @@ Tests for cluster related functions in salt.utils.vmware
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
@@ -29,7 +29,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetClusterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_cluster'''
+    '''
+    Tests for salt.utils.vmware.get_cluster
+    '''
 
     def setUp(self):
         patches = (
@@ -147,7 +149,9 @@ class GetClusterTestCase(TestCase):
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateClusterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.create_cluster'''
+    '''
+    Tests for salt.utils.vmware.create_cluster
+    '''
 
     def setUp(self):
         patches = (
@@ -214,7 +218,9 @@ class CreateClusterTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class UpdateClusterTestCase(TestCase):
-    '''Tests for salt.utils.vmware.update_cluster'''
+    '''
+    Tests for salt.utils.vmware.update_cluster
+    '''
 
     def setUp(self):
         patches = (

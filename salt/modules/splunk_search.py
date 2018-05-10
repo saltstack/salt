@@ -21,7 +21,7 @@ Module for interop with the Splunk API
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import urllib
 
@@ -254,16 +254,14 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
 
     # stuff that splunk returns but that you should not attempt to set.
     # cf http://dev.splunk.com/view/python-sdk/SP-CAAAEK2
-    readonly_keys = set([
-        "triggered_alert_count",
-        "action.email",
-        "action.populate_lookup",
-        "action.rss",
-        "action.script",
-        "action.summary_index",
-        "qualifiedSearch",
-        "next_scheduled_time"
-    ])
+    readonly_keys = ("triggered_alert_count",
+                     "action.email",
+                     "action.populate_lookup",
+                     "action.rss",
+                     "action.script",
+                     "action.summary_index",
+                     "qualifiedSearch",
+                     "next_scheduled_time")
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
@@ -280,8 +278,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
                 continue
             name = prefix + name
         # put name in the OrderedDict first
-        d = []
-        d.append({"name": name})
+        d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
         description = ''
         for (k, v) in sorted(search.content.items()):

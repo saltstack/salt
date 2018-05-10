@@ -51,7 +51,10 @@ import logging
 import time
 import random
 import sys
+
+# Import Salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -73,10 +76,11 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
-    __utils__['boto3.assign_funcs'](__name__, 'kinesis')
-    return __virtualname__
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'kinesis')
+        return __virtualname__
+    return has_boto_reqs
 
 
 def _get_basic_stream(stream_name, conn):

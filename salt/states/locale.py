@@ -18,7 +18,8 @@ Manage the available locales and the system default:
           - locale: us_locale
 '''
 
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError

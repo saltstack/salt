@@ -41,7 +41,13 @@ Namecheap dns management
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 CAN_USE_NAMECHEAP = True
 
 
@@ -158,7 +164,7 @@ def set_hosts(sld, tld, hosts):
     opts['TLD'] = tld
     i = 1
     for hostrecord in hosts:
-        str_i = str(i)
+        str_i = six.text_type(i)
         opts['HostName' + str_i] = hostrecord['hostname']
         opts['RecordType' + str_i] = hostrecord['recordtype']
         opts['Address' + str_i] = hostrecord['address']

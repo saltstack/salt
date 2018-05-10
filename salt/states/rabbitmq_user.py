@@ -23,7 +23,7 @@ Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
@@ -52,7 +52,7 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
         try:
             existing = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
         except CommandExecutionError as err:
-            log.error('Error: {0}'.format(err))
+            log.error('Error: %s', err)
             return False
 
     perm_need_change = False
@@ -80,7 +80,7 @@ def _get_current_tags(name, runas=None):
     try:
         return list(__salt__['rabbitmq.list_users'](runas=runas)[name])
     except CommandExecutionError as err:
-        log.error('Error: {0}'.format(err))
+        log.error('Error: %s', err)
         return []
 
 
@@ -126,7 +126,7 @@ def present(name,
             return ret
 
     if user and not any((force, perms, tags, passwd_reqs_update)):
-        log.debug(('RabbitMQ user \'%s\' exists, password is upto'
+        log.debug(('RabbitMQ user \'%s\' exists, password is up to'
                    ' date and force is not set.'), name)
         ret['comment'] = 'User \'{0}\' is already present.'.format(name)
         ret['result'] = True
@@ -142,14 +142,14 @@ def present(name,
             return ret
 
         log.debug(
-            'RabbitMQ user \'{0}\' doesn\'t exist - Creating.'.format(name))
+            'RabbitMQ user \'%s\' doesn\'t exist - Creating.', name)
         try:
             __salt__['rabbitmq.add_user'](name, password, runas=runas)
         except CommandExecutionError as err:
             ret['comment'] = 'Error: {0}'.format(err)
             return ret
     else:
-        log.debug('RabbitMQ user \'{0}\' exists'.format(name))
+        log.debug('RabbitMQ user \'%s\' exists', name)
         if force or passwd_reqs_update:
             if password is not None:
                 if not __opts__['test']:
@@ -163,7 +163,7 @@ def present(name,
                                        'new': 'Set password.'}})
             else:
                 if not __opts__['test']:
-                    log.debug('Password for {0} is not set - Clearing password.'.format(name))
+                    log.debug('Password for %s is not set - Clearing password.', name)
                     try:
                         __salt__['rabbitmq.clear_password'](name, runas=runas)
                     except CommandExecutionError as err:

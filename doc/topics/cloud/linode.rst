@@ -38,7 +38,7 @@ Set up the provider cloud configuration file at ``/etc/salt/cloud.providers`` or
 Profile Configuration
 =====================
 Linode profiles require a ``provider``, ``size``, ``image``, and ``location``. Set up an initial profile
-at ``/etc/salt/cloud.profiles`` or in the ``/etc/salt/cloud.profiles.d/`` directory:
+at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
 

@@ -13,7 +13,7 @@ Install windows features/capabilties with DISM
     NetFx3:
       dism.feature_installed
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging

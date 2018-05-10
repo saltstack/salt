@@ -19,17 +19,16 @@ Dependencies
 .. versionchanged:: 2017.7.0
 '''
 
-from __future__ import absolute_import
-
-# Import Python lib
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
 log = logging.getLogger(__name__)
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -101,7 +100,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
 def _explicit_close(napalm_device):
     '''
-    Will explicitely close the config session with the network device,
+    Will explicily close the config session with the network device,
     when running in a now-always-alive proxy minion or regular minion.
     This helper must be used in configuration-related functions,
     as the session is preserved and not closed before making any changes.
@@ -139,7 +138,7 @@ def _config_logic(napalm_device,
     # then the decorator will make sure that
     # if not proxy (when the connection is always alive)
     # and the `inherit_napalm_device` is set,
-    # `napalm_device` will be overriden.
+    # `napalm_device` will be overridden.
     # See `salt.utils.napalm.proxy_napalm_wrap` decorator.
 
     loaded_result['already_configured'] = False
@@ -380,7 +379,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     textfsm_parse: ``False``
         Try parsing the outputs using the TextFSM templates.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -394,7 +393,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         ``salt://``, ``http://``, ``https://``, ``ftp://``,
         ``s3://``, ``swift://``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This needs to be a directory with a flat structure, having an
@@ -416,14 +415,14 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         - ``s3://``
         - ``swift://``
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     textfsm_template_dict
         A dictionary with the mapping between a command
         and the corresponding TextFSM path to use to extract the data.
         The TextFSM paths can be specified as in ``textfsm_template``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -433,7 +432,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         The name of the grain used to identify the platform name
         in the TextFSM index file. Default: ``os``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -444,7 +443,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         exactly as specified in the TextFSM index file.
         Default: ``Platform``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This is field is case sensitive, make sure
@@ -458,7 +457,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     index_file: ``index``
         The name of the TextFSM index file, under the ``textfsm_path``. Default: ``index``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -468,26 +467,26 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         Salt fileserver envrionment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     include_empty: ``False``
         Include empty files under the ``textfsm_path``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     include_pat
         Glob or regex to narrow down the files cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     exclude_pat
         Glob or regex to exclude certain files from being cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             If used with ``include_pat``, files matching this pattern will be
@@ -573,22 +572,22 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         log.error(raw_cli_outputs['comment'])
         return raw_cli_outputs
     textfsm_template = kwargs.get('textfsm_template')
-    log.debug('textfsm_template: {}'.format(textfsm_template))
+    log.debug('textfsm_template: %s', textfsm_template)
     textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
                    __pillar__.get('textfsm_path')
-    log.debug('textfsm_path: {}'.format(textfsm_path))
+    log.debug('textfsm_path: %s', textfsm_path)
     textfsm_template_dict = kwargs.get('textfsm_template_dict') or __opts__.get('napalm_cli_textfsm_template_dict') or\
                             __pillar__.get('napalm_cli_textfsm_template_dict', {})
-    log.debug('TextFSM command-template mapping: {}'.format(textfsm_template_dict))
+    log.debug('TextFSM command-template mapping: %s', textfsm_template_dict)
     index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
                  __pillar__.get('textfsm_index_file')
-    log.debug('index_file: {}'.format(index_file))
+    log.debug('index_file: %s', index_file)
     platform_grain_name = kwargs.get('platform_grain_name') or __opts__.get('textfsm_platform_grain') or\
                           __pillar__.get('textfsm_platform_grain', 'os')
-    log.debug('platform_grain_name: {}'.format(platform_grain_name))
+    log.debug('platform_grain_name: %s', platform_grain_name)
     platform_column_name = kwargs.get('platform_column_name') or __opts__.get('textfsm_platform_column_name') or\
                            __pillar__.get('textfsm_platform_column_name', 'Platform')
-    log.debug('platform_column_name: {}'.format(platform_column_name))
+    log.debug('platform_column_name: %s', platform_column_name)
     saltenv = kwargs.get('saltenv', 'base')
     include_empty = kwargs.get('include_empty', False)
     include_pat = kwargs.get('include_pat')
@@ -601,11 +600,11 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     log.debug('Starting to analyse the raw outputs')
     for command in list(commands):
         command_output = raw_cli_outputs['out'][command]
-        log.debug('Output from command: {}'.format(command))
+        log.debug('Output from command: %s', command)
         log.debug(command_output)
         processed_command_output = None
         if textfsm_path:
-            log.debug('Using the templates under {}'.format(textfsm_path))
+            log.debug('Using the templates under %s', textfsm_path)
             processed_cli_output = __salt__['textfsm.index'](command,
                                                              platform_grain_name=platform_grain_name,
                                                              platform_column_name=platform_column_name,
@@ -624,7 +623,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
                 comment = '''\nProcessing "{}" didn't fail, but didn't return anything either. Dumping raw.'''.format(
@@ -635,23 +634,25 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         elif textfsm_template or command in textfsm_template_dict:
             if command in textfsm_template_dict:
                 textfsm_template = textfsm_template_dict[command]
-            log.debug('Using {0} to process the command: {1}'.format(textfsm_template, command))
+            log.debug('Using %s to process the command: %s', textfsm_template, command)
             processed_cli_output = __salt__['textfsm.extract'](textfsm_template,
                                                                raw_text=command_output,
                                                                saltenv=saltenv)
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returnin the raw output')
+                log.debug('Apparently this didnt work, returning '
+                          'the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                log.debug('Processing %s didnt fail, but didnt return'
+                          ' anything either. Dumping raw.', command)
                 processed_command_output = command_output
         else:
             log.error('No TextFSM template specified, or no TextFSM path defined')
@@ -1099,10 +1100,10 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
 
         - running (string): Representation of the native running configuration.
         - candidate (string): Representation of the native candidate configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
         - startup (string): Representation of the native startup configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
 
     CLI Example:
@@ -1205,7 +1206,7 @@ def load_config(filename=None,
         - ``s3://``
         - ``swift://``
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
 
     text
         String containing the desired configuration.
@@ -1232,7 +1233,7 @@ def load_config(filename=None,
     saltenv: ``base``
         Specifies the Salt environment name.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :return: a dictionary having the following keys:
 
@@ -1299,7 +1300,7 @@ def load_config(filename=None,
     if debug:
         if filename:
             with salt.utils.files.fopen(filename) as rfh:
-                loaded_config = rfh.read()
+                loaded_config = salt.utils.stringutils.to_unicode(rfh.read())
         else:
             loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
@@ -1312,7 +1313,6 @@ def load_config(filename=None,
 @salt.utils.napalm.proxy_napalm_wrap
 def load_template(template_name,
                   template_source=None,
-                  template_path=None,
                   template_hash=None,
                   template_hash_name=None,
                   template_user='root',
@@ -1348,10 +1348,6 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
-    .. warning::
-        The support for native NAPALM templates will be dropped in Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be removed.
-
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1380,16 +1376,6 @@ def load_template(template_name,
 
     template_source: None
         Inline config template to be rendered and loaded on the device.
-
-    template_path: None
-        Required only in case the argument ``template_name`` provides only the file basename
-        when referencing a local template using the absolute path.
-        E.g.: if ``template_name`` is specified as ``my_template.jinja``,
-        in order to find the template, this argument must be provided:
-        ``template_path: /absolute/path/to/``.
-
-        .. note::
-            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1420,7 +1406,7 @@ def load_template(template_name,
     template_attrs: "--------------e----"
         attributes of file. (see `man lsattr`)
 
-        .. versionadded:: oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment.
@@ -1526,15 +1512,15 @@ def load_template(template_name,
         # inline template using pillar data:
         salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{pillar.proxy.host}}; }'
 
-        salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa'  # will commit
-        salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa' test=True  # dry run
+        salt '*' net.load_template my_template my_param='aaa'  # will commit
+        salt '*' net.load_template my_template my_param='aaa' test=True  # dry run
 
         salt '*' net.load_template salt://templates/my_stuff.jinja debug=True  # equivalent of the next command
-        salt '*' net.load_template my_stuff.jinja template_path=salt://templates/ debug=True
+        salt '*' net.load_template my_stuff.jinja debug=True
 
         # in case the template needs to include files that are not under the same path (e.g. http://),
         # to help the templating engine find it, you will need to specify the `saltenv` argument:
-        salt '*' net.load_template my_stuff.jinja template_path=salt://templates saltenv=/path/to/includes debug=True
+        salt '*' net.load_template my_stuff.jinja saltenv=/path/to/includes debug=True
 
         # render a mako template:
         salt '*' net.load_template salt://templates/my_stuff.mako template_engine=mako debug=True
@@ -1562,11 +1548,6 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-    if template_path:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
-        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
@@ -1582,11 +1563,10 @@ def load_template(template_name,
     salt_render = False
     for salt_render_prefix in salt_render_prefixes:
         if not salt_render:
-            salt_render = salt_render or template_name.startswith(salt_render_prefix) or \
-                          (template_path and template_path.startswith(salt_render_prefix))
+            salt_render = salt_render or template_name.startswith(salt_render_prefix)
     file_exists = __salt__['file.file_exists'](template_name)
 
-    if template_source or template_path or file_exists or salt_render:
+    if template_source or file_exists or salt_render:
         # either inline template
         # either template in a custom path
         # either abs path send
@@ -1597,7 +1577,7 @@ def load_template(template_name,
         if template_source:
             # render the content
             if not saltenv:
-                saltenv = template_path if template_path else 'base'  # either use the env from the path, either base
+                saltenv = 'base'
             _rendered = __salt__['file.apply_template_on_contents'](
                 contents=template_source,
                 template=template_engine,
@@ -1616,16 +1596,15 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                 return _loaded
         else:
-            if template_path and not file_exists:
-                template_name = __salt__['file.join'](template_path, template_name)
-                if not saltenv:
-                    # no saltenv overridden
-                    # use the custom template path
-                    saltenv = template_path if not salt_render else 'base'
+            if not file_exists and not saltenv:
+                # no saltenv overridden
+                # use the custom template path
+                saltenv = 'base'
             elif salt_render and not saltenv:
-                # if saltenv not overrided and path specified as salt:// or http:// etc.
+                # if saltenv not overridden and path specified as salt:// or http:// etc.
                 # will use the default environment, from the base
-                saltenv = template_path if template_path else 'base'
+                saltenv = 'base'
+
             if not saltenv:
                 # still not specified, default to `base`
                 saltenv = 'base'
@@ -1662,7 +1641,7 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
                 with salt.utils.files.fopen(_temp_tpl_file) as rfh:
-                    _rendered = rfh.read()
+                    _rendered = salt.utils.stringutils.to_unicode(rfh.read())
                 __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit
@@ -1698,7 +1677,6 @@ def load_template(template_name,
             {
                 'template_name': template_name,
                 'template_source': template_source,  # inline template
-                'template_path': template_path,
                 'pillar': __pillar__,  # inject pillar content
                 'grains': __grains__,  # inject grains content
                 'opts': __opts__  # inject opts content
@@ -1712,7 +1690,7 @@ def load_template(template_name,
             # after running the other features:
             # compare_config, discard / commit
             # which have to be over the same session
-            # so we'll set the CLOSE global explicitely as False
+            # so we'll set the CLOSE global explicitly as False
             napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable

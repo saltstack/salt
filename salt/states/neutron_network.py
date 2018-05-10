@@ -3,7 +3,7 @@
 Management of OpenStack Neutron Networks
 =========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions
@@ -29,7 +29,7 @@ Example States
         - project: project1
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_network'
 

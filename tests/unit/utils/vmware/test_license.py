@@ -6,7 +6,7 @@
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt testing libraries
@@ -34,7 +34,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicenseManagerTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_license_manager'''
+    '''
+    Tests for salt.utils.vmware.get_license_manager
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -83,7 +85,9 @@ class GetLicenseManagerTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicenseAssignmentManagerTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_license_assignment_manager'''
+    '''
+    Tests for salt.utils.vmware.get_license_assignment_manager
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -140,7 +144,9 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicensesTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_licenses'''
+    '''
+    Tests for salt.utils.vmware.get_licenses
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -213,7 +219,9 @@ class GetLicensesTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class AddLicenseTestCase(TestCase):
-    '''Tests for salt.utils.vmware.add_license'''
+    '''
+    Tests for salt.utils.vmware.add_license
+    '''
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -312,7 +320,9 @@ class AddLicenseTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetAssignedLicensesTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_assigned_licenses'''
+    '''
+    Tests for salt.utils.vmware.get_assigned_licenses
+    '''
 
     def setUp(self):
         self.mock_ent_id = MagicMock()
@@ -368,8 +378,8 @@ class GetAssignedLicensesTestCase(TestCase):
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
-        mock_trace.assert_called_once_with('Retrieving licenses assigned to '
-                                           '\'fake_entity_name\'')
+        mock_trace.assert_called_once_with(
+            "Retrieving licenses assigned to '%s'", 'fake_entity_name')
 
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()
@@ -489,7 +499,9 @@ class GetAssignedLicensesTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class AssignLicenseTestCase(TestCase):
-    '''Tests for salt.utils.vmware.assign_license'''
+    '''
+    Tests for salt.utils.vmware.assign_license
+    '''
 
     def setUp(self):
         self.mock_ent_id = MagicMock()
@@ -544,8 +556,8 @@ class AssignLicenseTestCase(TestCase):
                                              'fake_license_name',
                                              self.mock_entity_ref,
                                              'fake_entity_name')
-        mock_trace.assert_called_once_with('Assigning license to '
-                                           '\'fake_entity_name\'')
+        mock_trace.assert_called_once_with(
+            "Assigning license to '%s'", 'fake_entity_name')
 
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()

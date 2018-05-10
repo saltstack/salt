@@ -1,0 +1,9 @@
+<pool type='{{ ptype }}'>
+  <name>{{ name }}</name>
+  <target>
+    <path>/dev/{{ target }}</path>
+  </target>{% if source != None %}
+  <source>
+    <device path='/dev/{{ source }}'/>
+  </source>{% endif %}
+</pool>

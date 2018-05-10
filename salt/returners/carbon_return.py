@@ -166,7 +166,7 @@ def _send_picklemetrics(metrics):
                for (metric_name, value, timestamp) in metrics]
 
     data = cPickle.dumps(metrics, -1)
-    payload = struct.pack('!L', len(data)) + data
+    payload = struct.pack(b'!L', len(data)) + data
 
     return payload
 

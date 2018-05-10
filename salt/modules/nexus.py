@@ -2,17 +2,18 @@
 '''
 Module for fetching artifacts from Nexus 3.x
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import base64
 import logging
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
@@ -442,7 +443,7 @@ def __save_artifact(artifact_url, target_file, headers):
     }
 
     if os.path.isfile(target_file):
-        log.debug("File {0} already exists, checking checksum...".format(target_file))
+        log.debug("File %s already exists, checking checksum...", target_file)
         checksum_url = artifact_url + ".sha1"
 
         checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
@@ -466,13 +467,15 @@ def __save_artifact(artifact_url, target_file, headers):
             result['comment'] = checksum_comment
             return result
 
-    log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
+    log.debug('Downloading: %s -> %s', artifact_url, target_file)
 
     try:
         request = urllib.request.Request(artifact_url, None, headers)
         f = urllib.request.urlopen(request)
         with salt.utils.files.fopen(target_file, "wb") as local_file:
-            local_file.write(f.read())
+            local_file.write(
+                salt.utils.stringutils.to_bytes(f.read())
+            )
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
@@ -495,7 +498,7 @@ def __get_classifier_url(classifier):
 
 
 def __download(request_url, headers):
-    log.debug('Downloading content from {0}'.format(request_url))
+    log.debug('Downloading content from %s', request_url)
 
     success = False
     content = None

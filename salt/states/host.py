@@ -58,10 +58,13 @@ Or delete all existing names for an address:
           - hostnames: []
 
 '''
-from __future__ import absolute_import
 
-import salt.utils.validate.net
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
 from salt.ext import six
+import salt.utils.validate.net
 
 
 def present(name, ip):  # pylint: disable=C0103

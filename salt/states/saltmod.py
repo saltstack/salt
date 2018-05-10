@@ -21,7 +21,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -36,7 +36,6 @@ import salt.exceptions
 import salt.output
 import salt.utils.data
 import salt.utils.event
-import salt.utils.versions
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -110,7 +109,6 @@ def state(name,
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -118,7 +116,7 @@ def state(name,
         sls=None,
         top=None,
         saltenv=None,
-        test=False,
+        test=None,
         pillar=None,
         pillarenv=None,
         expect_minions=True,
@@ -148,10 +146,6 @@ def state(name,
     tgt_type
         The target type to resolve, defaults to ``glob``
 
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
-
     ret
         Optionally set a single or a list of returners to use
 
@@ -175,7 +169,10 @@ def state(name,
         containing a single sls file, or a list of sls files
 
     test
-        Pass ``test=true`` through to the state function
+        Pass ``test=true`` or ``test=false`` through to the state function. This
+        can be used to overide a test mode set in the minion's config file. If
+        left as the default of None and the 'test' mode is supplied on the
+        command line, that value is passed instead.
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
@@ -271,17 +268,6 @@ def state(name,
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
@@ -300,8 +286,8 @@ def state(name,
         state_ret['result'] = False
         return state_ret
 
-    if test or __opts__.get('test'):
-        cmd_kw['kwarg']['test'] = True
+    if test is not None or __opts__.get('test'):
+        cmd_kw['kwarg']['test'] = test if test is not None else __opts__.get('test')
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
@@ -322,7 +308,7 @@ def state(name,
         return state_ret
 
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -429,7 +415,6 @@ def function(
         tgt,
         ssh=False,
         tgt_type='glob',
-        expr_form=None,
         ret='',
         ret_config=None,
         ret_kwargs=None,
@@ -452,10 +437,6 @@ def function(
 
     tgt_type
         The target type, defaults to ``glob``
-
-    expr_form
-        .. deprecated:: 2017.7.0
-            Use tgt_type instead
 
     arg
         The list of arguments to pass into the function
@@ -508,19 +489,8 @@ def function(
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -539,7 +509,7 @@ def function(
     if __opts__['test'] is True:
         func_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, str(False))
+                ).format(fun, tgt, six.text_type(False))
         func_ret['result'] = None
         return func_ret
     try:
@@ -547,7 +517,7 @@ def function(
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
         func_ret['result'] = False
-        func_ret['comment'] = str(exc)
+        func_ret['comment'] = six.text_type(exc)
         return func_ret
 
     try:
@@ -584,8 +554,6 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            changes[minion] = m_ret
-            continue
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret['result'] = False
@@ -689,23 +657,23 @@ def wait_for_event(
                 try:
                     val_idx = id_list.index(val)
                 except ValueError:
-                    log.trace("wait_for_event: Event identifier '{0}' not in "
-                            "id_list; skipping.".format(event_id))
+                    log.trace("wait_for_event: Event identifier '%s' not in "
+                              "id_list; skipping.", event_id)
                 else:
                     del id_list[val_idx]
                     del_counter += 1
                     minions_seen = ret['changes'].setdefault('minions_seen', [])
                     minions_seen.append(val)
 
-                    log.debug("wait_for_event: Event identifier '{0}' removed "
-                            "from id_list; {1} items remaining."
-                            .format(val, len(id_list)))
+                    log.debug("wait_for_event: Event identifier '%s' removed "
+                              "from id_list; %s items remaining.",
+                              val, len(id_list))
             else:
-                log.trace("wait_for_event: Event identifier '{0}' not in event "
-                        "'{1}'; skipping.".format(event_id, event['tag']))
+                log.trace("wait_for_event: Event identifier '%s' not in event "
+                          "'%s'; skipping.", event_id, event['tag'])
         else:
-            log.debug("wait_for_event: Skipping unmatched event '{0}'"
-                    .format(event['tag']))
+            log.debug("wait_for_event: Skipping unmatched event '%s'",
+                      event['tag'])
 
         if len(id_list) == 0:
             ret['result'] = True

@@ -25,7 +25,6 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
@@ -34,11 +33,7 @@ from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 from salt.ext import six
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
@@ -76,19 +71,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 expr_form=None):
-
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
+                 opts=None):
 
         log.debug('New instance of %s created.',
                   self.__class__.__name__)
@@ -300,7 +283,7 @@ class MasterPillarUtil(object):
         cached minion data on the master, or by fetching the grains
         directly on the minion.
 
-        By default, this function tries hard to get the pillar data:
+        By default, this function tries hard to get the grains data:
             - Try to get the cached minion grains if the master
                 has minion_data_cache: True
             - If the grains data for the minion is cached, use it.
@@ -309,6 +292,8 @@ class MasterPillarUtil(object):
         '''
         minion_grains = {}
         minion_ids = self._tgt_to_list()
+        if not minion_ids:
+            return {}
         if any(arg for arg in [self.use_cached_grains, self.grains_fallback]):
             log.debug('Getting cached minion data.')
             cached_minion_grains, cached_minion_pillars = self._get_cached_minion_data(*minion_ids)
@@ -440,11 +425,11 @@ class CacheWorker(MultiprocessingProcess):
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__(log_queue=log_queue)
+        super(CacheWorker, self).__init__(**kwargs)
         self.opts = opts
 
     # __setstate__ and __getstate__ are only used on Windows.
@@ -452,11 +437,18 @@ class CacheWorker(MultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -477,11 +469,11 @@ class ConnectedCache(MultiprocessingProcess):
     the master publisher port.
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__(log_queue=log_queue)
+        super(ConnectedCache, self).__init__(**kwargs)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -508,11 +500,18 @@ class ConnectedCache(MultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def signal_handler(self, sig, frame):
         '''
@@ -568,13 +567,13 @@ class ConnectedCache(MultiprocessingProcess):
 
         # the socket for incoming cache-updates from workers
         cupd_in = context.socket(zmq.SUB)
-        cupd_in.setsockopt(zmq.SUBSCRIBE, '')
+        cupd_in.setsockopt(zmq.SUBSCRIBE, b'')
         cupd_in.setsockopt(zmq.LINGER, 100)
         cupd_in.bind('ipc://' + self.update_sock)
 
         # the socket for the timer-event
         timer_in = context.socket(zmq.SUB)
-        timer_in.setsockopt(zmq.SUBSCRIBE, '')
+        timer_in.setsockopt(zmq.SUBSCRIBE, b'')
         timer_in.setsockopt(zmq.LINGER, 100)
         timer_in.connect('ipc://' + self.upd_t_sock)
 

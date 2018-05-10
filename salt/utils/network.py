@@ -168,7 +168,11 @@ def generate_minion_id():
 
     :return:
     '''
-    return _generate_minion_id().first() or 'localhost'
+    try:
+        ret = salt.utils.stringutils.to_unicode(_generate_minion_id().first())
+    except TypeError:
+        ret = None
+    return ret or 'localhost'
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
@@ -189,8 +193,7 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = []
-    l.append(socket.getfqdn())
+    l = [socket.getfqdn()]
 
     # try socket.getaddrinfo
     try:
@@ -214,7 +217,8 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception:
+    except Exception as exc:
+        log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
 
@@ -1751,42 +1755,35 @@ def refresh_dns():
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception. Obeys system preference for IPv4/6 address resolution.
+    exception. Obeys system preference for IPv4/6 address resolution - this
+    can be overridden by the ipv6 flag.
     Tries to connect to the address before considering it useful. If no address
     can be reached, the first one resolved is used as a fallback.
     '''
     error = False
     lookup = addr
     seen_ipv6 = False
+    family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
     try:
         refresh_dns()
-        hostnames = socket.getaddrinfo(
-            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
-        )
+        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
         if not hostnames:
             error = True
         else:
             resolved = False
             candidates = []
             for h in hostnames:
-                # It's an IP address, just return it
+                # Input is IP address, passed through unchanged, just return it
                 if h[4][0] == addr:
                     resolved = salt.utils.zeromq.ip_bracket(addr)
                     break
 
-                if h[0] == socket.AF_INET and ipv6 is True:
-                    continue
-                if h[0] == socket.AF_INET6 and ipv6 is False:
-                    continue
-
                 candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
-
-                if h[0] != socket.AF_INET6 or ipv6 is not None:
-                    candidates.append(candidate_addr)
+                candidates.append(candidate_addr)
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), port))
+                    s.connect((candidate_addr.strip('[]'), h[1]))
                     s.close()
 
                     resolved = candidate_addr

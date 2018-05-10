@@ -75,6 +75,7 @@ import time
 import uuid
 import pprint
 import logging
+import random
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -112,6 +113,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as 
 
 # Import 3rd-Party Libs
 # Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+
 try:
     import Crypto
     # PKCS1_v1_5 was added in PyCrypto 2.5
@@ -194,7 +201,7 @@ def get_dependencies():
     '''
     deps = {
         'requests': HAS_REQUESTS,
-        'pycrypto': HAS_PYCRYPTO
+        'pycrypto or m2crypto': HAS_M2 or HAS_PYCRYPTO
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -1185,6 +1192,33 @@ def get_tenancy(vm_):
     )
 
 
+def get_imageid(vm_):
+    '''
+    Returns the ImageId to use
+    '''
+    image = config.get_cloud_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
+    if image.startswith('ami-'):
+        return image
+    # a poor man's cache
+    if not hasattr(get_imageid, 'images'):
+        get_imageid.images = {}
+    elif image in get_imageid.images:
+        return get_imageid.images[image]
+    params = {'Action': 'DescribeImages',
+              'Filter.0.Name': 'name',
+              'Filter.0.Value.0': image}
+    # Query AWS, sort by 'creationDate' and get the last imageId
+    _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    image_id = sorted(aws.query(params, location=get_location(),
+                                 provider=get_provider(), opts=__opts__, sigver='4'),
+                      lambda i, j: cmp(_t(i), _t(j))
+                      )[-1]['imageId']
+    get_imageid.images[image] = image_id
+    return image_id
+
+
 def _get_subnetname_id(subnetname):
     '''
     Returns the SubnetId of a SubnetName to use
@@ -1768,7 +1802,7 @@ def request_instance(vm_=None, call=None):
         # Normal instances should have no prefix.
         spot_prefix = ''
 
-    image_id = vm_['image']
+    image_id = get_imageid(vm_)
     params[spot_prefix + 'ImageId'] = image_id
 
     userdata = None
@@ -2147,8 +2181,9 @@ def query_instance(vm_=None, call=None):
 
     provider = get_provider(vm_)
 
-    attempts = 5
-    while attempts > 0:
+    attempts = 0
+    # perform exponential backoff and wait up to one minute (2**6 seconds)
+    while attempts < 7:
         data, requesturl = aws.query(params,                # pylint: disable=unbalanced-tuple-unpacking
                                      location=location,
                                      provider=provider,
@@ -2162,22 +2197,17 @@ def query_instance(vm_=None, call=None):
                 'There was an error in the query. %s attempts '
                 'remaining: %s', attempts, data['error']
             )
-            attempts -= 1
-            # Just a little delay between attempts...
-            time.sleep(1)
-            continue
-
-        if isinstance(data, list) and not data:
+        elif isinstance(data, list) and not data:
             log.warning(
                 'Query returned an empty list. %s attempts '
                 'remaining.', attempts
             )
-            attempts -= 1
-            # Just a little delay between attempts...
-            time.sleep(1)
-            continue
+        else:
+            break
 
-        break
+        time.sleep(random.uniform(1, 2**attempts))
+        attempts += 1
+        continue
     else:
         raise SaltCloudSystemExit(
             'An error occurred while creating VM: {0}'.format(data['error'])
@@ -2342,7 +2372,7 @@ def wait_for_instance(
                     vm_['win_password'] = win_passwd
                     break
 
-        # SMB used whether winexe or winrm
+        # SMB used whether psexec or winrm
         if not salt.utils.cloud.wait_for_port(ip_address,
                                               port=445,
                                               timeout=ssh_connect_timeout):
@@ -2350,10 +2380,10 @@ def wait_for_instance(
                 'Failed to connect to remote windows host'
             )
 
-        # If not using winrm keep same winexe behavior
+        # If not using winrm keep same psexec behavior
         if not use_winrm:
 
-            log.debug('Trying to authenticate via SMB using winexe')
+            log.debug('Trying to authenticate via SMB using psexec')
 
             if not salt.utils.cloud.validate_windows_cred(ip_address,
                                                           username,
@@ -4723,7 +4753,7 @@ def get_password_data(
     for item in data:
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
-    if not HAS_PYCRYPTO:
+    if not HAS_M2 and not HAS_PYCRYPTO:
         return ret
 
     if 'key' not in kwargs:
@@ -4736,11 +4766,16 @@ def get_password_data(
         if pwdata is not None:
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
-            dsize = Crypto.Hash.SHA.digest_size
-            sentinel = Crypto.Random.new().read(15 + dsize)
-            key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
-            key_obj = PKCS1_v1_5.new(key_obj)
-            ret['password'] = key_obj.decrypt(pwdata, sentinel)
+            if HAS_M2:
+                key = RSA.load_key_string(rsa_key)
+                password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
+            else:
+                dsize = Crypto.Hash.SHA.digest_size
+                sentinel = Crypto.Random.new().read(15 + dsize)
+                key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
+                key_obj = PKCS1_v1_5.new(key_obj)
+                password = key_obj.decrypt(pwdata, sentinel)
+            ret['password'] = password
 
     return ret
 

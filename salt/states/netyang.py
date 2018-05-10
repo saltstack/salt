@@ -21,7 +21,7 @@ Please check Installation_ for complete details.
 .. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__file__)
@@ -39,6 +39,7 @@ except ImportError:
 import salt.utils.files
 import salt.utils.json
 import salt.utils.napalm
+import salt.utils.stringutils
 import salt.utils.yaml
 
 # ------------------------------------------------------------------------------
@@ -109,7 +110,7 @@ def managed(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?
@@ -152,12 +153,16 @@ def managed(name,
     return_compliance_report = kwargs.get('compliance_report', False) or __opts__.get('compliance_report', False)
     profiles = kwargs.get('profiles', [])
     temp_file = __salt__['temp.file']()
-    log.debug('Creating temp file: {0}'.format(temp_file))
+    log.debug('Creating temp file: %s', temp_file)
     if 'to_dict' not in data:
         data = {'to_dict': data}
     data = [data]
     with salt.utils.files.fopen(temp_file, 'w') as file_handle:
-        salt.utils.yaml.safe_dump(salt.utils.json.loads(salt.utils.json.dumps(data)), file_handle, encoding='utf-8')
+        salt.utils.yaml.safe_dump(
+            salt.utils.json.loads(salt.utils.json.dumps(data)),
+            file_handle,
+            encoding='utf-8'
+        )
     device_config = __salt__['napalm_yang.parse'](*models,
                                                   config=True,
                                                   profiles=profiles)
@@ -214,7 +219,7 @@ def configured(name,
         configuration on the device and the expected
         configuration. Depending on the platform and hardware
         capabilities, one could be more optimal than the other.
-        Additionally, the output of the ``managed`` is diferent,
+        Additionally, the output of the ``managed`` is different,
         in such a way that the ``pchange`` field in the output
         contains structured data, rather than text.
 
@@ -238,7 +243,7 @@ def configured(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?

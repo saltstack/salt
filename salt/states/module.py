@@ -172,7 +172,7 @@ configuration to the minion:
       - module.run
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.loader
@@ -531,7 +531,25 @@ def _get_result(func_ret, changes):
                 res = changes_ret.get('result', {})
             elif changes_ret.get('retcode', 0) != 0:
                 res = False
+            # Explore dict in depth to determine if there is a
+            # 'result' key set to False which sets the global
+            # state result.
+            else:
+                res = _get_dict_result(changes_ret)
 
     return res
+
+
+def _get_dict_result(node):
+    ret = True
+    for key, val in six.iteritems(node):
+        if key == 'result' and val is False:
+            ret = False
+            break
+        elif isinstance(val, dict):
+            ret = _get_dict_result(val)
+            if ret is False:
+                break
+    return ret
 
 mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')

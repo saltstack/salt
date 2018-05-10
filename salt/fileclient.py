@@ -13,6 +13,7 @@ import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
+import salt.utils.atomicfile
 
 # Import salt libs
 from salt.exceptions import (
@@ -24,6 +25,7 @@ import salt.loader
 import salt.payload
 import salt.transport
 import salt.fileserver
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
@@ -142,22 +144,20 @@ class Client(object):
                                     saltenv,
                                     path)
         destdir = os.path.dirname(dest)
-        cumask = os.umask(63)
+        with salt.utils.files.set_umask(0o077):
+            # remove destdir if it is a regular file to avoid an OSError when
+            # running os.makedirs below
+            if os.path.isfile(destdir):
+                os.remove(destdir)
 
-        # remove destdir if it is a regular file to avoid an OSError when
-        # running os.makedirs below
-        if os.path.isfile(destdir):
-            os.remove(destdir)
+            # ensure destdir exists
+            try:
+                os.makedirs(destdir)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:  # ignore if it was there already
+                    raise
 
-        # ensure destdir exists
-        try:
-            os.makedirs(destdir)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:  # ignore if it was there already
-                raise
-
-        yield dest
-        os.umask(cumask)
+            yield dest
 
     def get_cachedir(self, cachedir=None):
         if cachedir is None:
@@ -359,13 +359,16 @@ class Client(object):
                 )
                 return states
             for path in self.opts['file_roots'][saltenv]:
-                for root, dirs, files in salt.utils.path.os_walk(path, topdown=True):
+                for root, dirs, files in os.walk(path, topdown=True):  # future lint: disable=blacklisted-function
+                    root = salt.utils.data.decode(root)
+                    files = salt.utils.data.decode(files)
                     log.debug(
                         'Searching for states in dirs %s and files %s',
-                        dirs, files
+                        salt.utils.data.decode(dirs), files
                     )
                     if not [filename.endswith('.sls') for filename in files]:
-                        #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
+                        #  Use shallow copy so we don't disturb the memory used
+                        #  by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
                         for found_file in files:
@@ -737,7 +740,7 @@ class Client(object):
             if no_cache:
                 if write_body[2]:
                     return ''.join(result)
-                return six.b('').join(result)
+                return b''.join(result)
             else:
                 destfp.close()
                 destfp = None
@@ -852,12 +855,10 @@ class LocalClient(Client):
         fnd = {'path': '',
                'rel': ''}
 
-        if saltenv not in self.opts['file_roots']:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
             path = salt.utils.url.unescape(path)
-        for root in self.opts['file_roots'][saltenv]:
+        for root in self.opts['file_roots'].get(saltenv, []):
             full = os.path.join(root, path)
             if os.path.isfile(full):
                 fnd['path'] = full
@@ -890,10 +891,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -911,9 +910,7 @@ class LocalClient(Client):
         '''
         ret = []
         prefix = prefix.strip('/')
-        if saltenv not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -929,10 +926,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -1027,10 +1022,7 @@ class LocalClient(Client):
         '''
         Return the available environments
         '''
-        ret = []
-        for saltenv in self.opts['file_roots']:
-            ret.append(saltenv)
-        return ret
+        return list(self.opts['file_roots'])
 
     def master_tops(self):
         '''
@@ -1165,7 +1157,11 @@ class RemoteClient(Client):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 if makedirs:
-                    os.makedirs(destdir)
+                    try:
+                        os.makedirs(destdir)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:  # ignore if it was there already
+                            raise
                 else:
                     return False
             # We need an open filehandle here, that's why we're not using a
@@ -1220,7 +1216,7 @@ class RemoteClient(Client):
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
                             salt.utils.files.rm_rf(dest)
-                        fn_ = salt.utils.files.fopen(dest, 'wb+')
+                        fn_ = salt.utils.atomicfile.atomic_open(dest, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
@@ -1270,8 +1266,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list'}
-
-        return [sdecode(fn_) for fn_ in self.channel.send(load)]
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
@@ -1280,7 +1276,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''
@@ -1289,7 +1286,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix=''):
         '''
@@ -1298,7 +1296,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def __hash_and_stat_file(self, path, saltenv='base'):
         '''
@@ -1364,32 +1363,46 @@ class RemoteClient(Client):
         '''
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_tops(self):
         '''
         Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_master_tops',
+        salt.utils.versions.warn_until(
+            'Magnesium',
+            'The _ext_nodes master function has '
+            'been renamed to _master_tops. To ensure '
+            'compatibility when using older Salt masters '
+            'we continue to pass the function as _ext_nodes.'
+        )
+
+        # TODO: Change back to _master_tops
+        # for Magnesium release
+        load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
-            load['tok'] = self.auth.gen_token('salt')
-        return self.channel.send(load)
+            load['tok'] = self.auth.gen_token(b'salt')
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
 
 class FSClient(RemoteClient):

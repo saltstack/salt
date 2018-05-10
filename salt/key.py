@@ -125,7 +125,7 @@ class KeyCLI(object):
         if self.opts['eauth']:
             if 'token' in self.opts:
                 try:
-                    with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
+                    with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                         low['key'] = \
                             salt.utils.stringutils.to_unicode(fp_.readline())
                 except IOError:
@@ -380,7 +380,7 @@ class Key(object):
                 io_loop=io_loop
                 )
 
-        self.passphrase = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+        self.passphrase = salt.utils.sdb.sdb_get(self.opts.get('signing_key_pass'), self.opts)
 
     def _check_minions_directories(self):
         '''
@@ -1044,7 +1044,7 @@ class RaetKey(Key):
         '''
         Use libnacl to generate and safely save a private key
         '''
-        import libnacl.dual  # pylint: disable=3rd-party-module-not-gated
+        import libnacl.dual  # pylint: disable=import-error,3rd-party-module-not-gated
         d_key = libnacl.dual.DualSecret()
         keydir, keyname, _, _ = self._get_key_attrs(keydir, keyname,
                                                     keysize, user)
@@ -1082,6 +1082,8 @@ class RaetKey(Key):
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
         # open mode is turned on, force accept the key
+        pub = salt.utils.stringutils.to_str(pub)
+        verify = salt.utils.stringutils.to_str(verify)
         keydata = {
                 'minion_id': minion_id,
                 'pub': pub,
@@ -1148,7 +1150,7 @@ class RaetKey(Key):
         verify: <verify>
         '''
         path = os.path.join(self.opts['pki_dir'], status, minion_id)
-        with salt.utils.files.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             keydata = self.serial.loads(fp_.read())
             return 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1158,7 +1160,7 @@ class RaetKey(Key):
         '''
         Return a sha256 kingerprint for the key
         '''
-        with salt.utils.files.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             keydata = self.serial.loads(fp_.read())
             key = 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1438,14 +1440,13 @@ class RaetKey(Key):
         keydata = {'priv': priv,
                    'sign': sign}
         path = os.path.join(self.opts['pki_dir'], 'local.key')
-        c_umask = os.umask(191)
-        if os.path.exists(path):
-            #mode = os.stat(path).st_mode
-            os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
-        with salt.utils.files.fopen(path, 'w+') as fp_:
-            fp_.write(self.serial.dumps(keydata))
-            os.chmod(path, stat.S_IRUSR)
-        os.umask(c_umask)
+        with salt.utils.files.set_umask(0o277):
+            if os.path.exists(path):
+                #mode = os.stat(path).st_mode
+                os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
+            with salt.utils.files.fopen(path, 'w+') as fp_:
+                fp_.write(self.serial.dumps(keydata))
+                os.chmod(path, stat.S_IRUSR)
 
     def delete_local(self):
         '''

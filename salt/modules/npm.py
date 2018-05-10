@@ -2,7 +2,7 @@
 '''
 Manage and query NPM packages.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -18,6 +18,7 @@ import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def __virtual__():
             return (False, 'npm execution module could not be loaded '
                            'because the npm binary could not be located')
     except CommandExecutionError as exc:
-        return (False, str(exc))
+        return (False, six.text_type(exc))
 
 
 def _check_valid_version():
@@ -158,7 +159,7 @@ def install(pkg=None,
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
@@ -237,7 +238,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'uninstall', '"{0}"'.format(pkg)]
     if not dir:
@@ -296,7 +297,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'list', '--json', '--silent']
 
@@ -359,7 +360,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'clean']
     if path:
@@ -406,7 +407,7 @@ def cache_list(path=None, runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'ls']
     if path:
@@ -446,7 +447,7 @@ def cache_path(runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = 'npm config get cache'
 

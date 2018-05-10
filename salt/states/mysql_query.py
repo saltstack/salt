@@ -21,12 +21,13 @@ Its output may be stored in a file or in a grain.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os.path
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -56,6 +57,7 @@ def run_file(name,
         grain=None,
         key=None,
         overwrite=True,
+        check_db_exists=True,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database
@@ -84,6 +86,10 @@ def run_file(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
 
+    check_db_exists:
+        The state run will check that the specified database exists (default=True)
+        before running any queries
+
     .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
@@ -97,7 +103,7 @@ def run_file(name,
         return ret
 
     # check if database exists
-    if not __salt__['mysql.db_exists'](database, **connection_args):
+    if check_db_exists and not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
         if err is not None:
             ret['comment'] = err
@@ -171,7 +177,7 @@ def run_file(name,
             mapped_results.append(mapped_line)
         query_result['results'] = mapped_results
 
-    ret['comment'] = str(query_result)
+    ret['comment'] = six.text_type(query_result)
 
     if output == 'grain':
         if grain is not None and key is None:
@@ -193,9 +199,15 @@ def run_file(name,
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
-                        output_file.write(col + ':' + val + '\n')
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                col + ':' + val + '\n'
+                            )
+                        )
             else:
-                output_file.write(str(query_result))
+                output_file.write(
+                    salt.utils.stringutils.to_str(query_result)
+                )
     else:
         ret['changes']['query'] = "Executed"
 
@@ -209,6 +221,7 @@ def run(name,
         grain=None,
         key=None,
         overwrite=True,
+        check_db_exists=True,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database
@@ -236,13 +249,17 @@ def run(name,
 
     overwrite:
         The file or grain will be overwritten if it already exists (default)
+
+    check_db_exists:
+        The state run will check that the specified database exists (default=True)
+        before running any queries
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(database)}
     # check if database exists
-    if not __salt__['mysql.db_exists'](database, **connection_args):
+    if check_db_exists and not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
         if err is not None:
             ret['comment'] = err
@@ -311,7 +328,7 @@ def run(name,
             mapped_results.append(mapped_line)
         query_result['results'] = mapped_results
 
-    ret['comment'] = str(query_result)
+    ret['comment'] = six.text_type(query_result)
 
     if output == 'grain':
         if grain is not None and key is None:
@@ -333,9 +350,15 @@ def run(name,
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
-                        output_file.write(col + ':' + val + '\n')
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                col + ':' + val + '\n'
+                            )
+                        )
             else:
-                output_file.write(str(query_result))
+                output_file.write(
+                    salt.utils.stringutils.to_str(query_result)
+                )
     else:
         ret['changes']['query'] = "Executed"
 

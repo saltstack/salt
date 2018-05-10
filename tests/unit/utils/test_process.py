@@ -228,7 +228,8 @@ class TestProcess(TestCase):
             ret = salt.utils.process.daemonize_if({})
             self.assertEqual(None, ret)
 
-        with patch('salt.utils.process.daemonize'):
+        with patch('salt.utils.process.daemonize'), \
+                patch('sys.platform', 'linux2'):
             salt.utils.process.daemonize_if({})
             self.assertTrue(salt.utils.process.daemonize.called)
         # pylint: enable=assignment-from-none

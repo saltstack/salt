@@ -24,7 +24,7 @@ as either absent or present
       user.absent
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -33,6 +33,7 @@ import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
 from salt.utils.locales import sdecode, sdecode_if_string
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six import string_types, iteritems
@@ -77,7 +78,9 @@ def _changes(name,
              win_homedrive=None,
              win_profile=None,
              win_logonscript=None,
-             win_description=None):
+             win_description=None,
+             allow_uid_change=False,
+             allow_gid_change=False):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
@@ -191,6 +194,25 @@ def _changes(name,
             if __salt__['user.get_loginclass'](name) != loginclass:
                 change['loginclass'] = loginclass
 
+    errors = []
+    if not allow_uid_change and 'uid' in change:
+        errors.append(
+            'Changing uid ({0} -> {1}) not permitted, set allow_uid_change to '
+            'True to force this change. Note that this will not change file '
+            'ownership.'.format(lusr['uid'], uid)
+        )
+    if not allow_gid_change and 'gid' in change:
+        errors.append(
+            'Changing gid ({0} -> {1}) not permitted, set allow_gid_change to '
+            'True to force this change. Note that this will not change file '
+            'ownership.'.format(lusr['gid'], gid)
+        )
+    if errors:
+        raise CommandExecutionError(
+            'Encountered error checking for needed changes',
+            info=errors
+        )
+
     return change
 
 
@@ -225,7 +247,9 @@ def present(name,
             win_profile=None,
             win_logonscript=None,
             win_description=None,
-            nologinit=False):
+            nologinit=False,
+            allow_uid_change=False,
+            allow_gid_change=False):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -233,15 +257,28 @@ def present(name,
         The name of the user to manage
 
     uid
-        The user id to assign, if left empty then the next available user id
-        will be assigned
+        The user id to assign. If not specified, and the user does not exist,
+        then the next available uid will be assigned.
 
     gid
-        The default group id. Also accepts group name.
+        The id of the default group to assign to the user. Either a group name
+        or gid can be used. If not specified, and the user does not exist, then
+        he next available gid will be assigned.
 
-    gid_from_name
-        If True, the default group id will be set to the id of the group with
-        the same name as the user, Default is ``False``.
+    gid_from_name : False
+        If ``True``, the default group id will be set to the id of the group
+        with the same name as the user. If the group does not exist the state
+        will fail.
+
+    allow_uid_change : False
+        Set to ``True`` to allow the state to update the uid.
+
+        .. versionadded:: 2018.3.1
+
+    allow_gid_change : False
+        Set to ``True`` to allow the state to update the gid.
+
+        .. versionadded:: 2018.3.1
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -442,8 +479,10 @@ def present(name,
                              if __salt__['group.info'](x)]
         for missing_optgroup in [x for x in optional_groups
                                  if x not in present_optgroups]:
-            log.debug('Optional group "{0}" for user "{1}" is not '
-                      'present'.format(missing_optgroup, name))
+            log.debug(
+                'Optional group "%s" for user "%s" is not present',
+                missing_optgroup, name
+            )
     else:
         present_optgroups = None
 
@@ -451,39 +490,52 @@ def present(name,
     # "optional_groups" lists.
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
-            log.warning('Group "{0}" specified in both groups and '
-                        'optional_groups for user {1}'.format(isected, name))
+            log.warning(
+                'Group "%s" specified in both groups and optional_groups '
+                'for user %s', isected, name
+            )
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+        if gid == '':
+            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
+            ret['result'] = False
+            return ret
 
-    changes = _changes(name,
-                       uid,
-                       gid,
-                       groups,
-                       present_optgroups,
-                       remove_groups,
-                       home,
-                       createhome,
-                       password,
-                       enforce_password,
-                       empty_password,
-                       shell,
-                       fullname,
-                       roomnumber,
-                       workphone,
-                       homephone,
-                       loginclass,
-                       date,
-                       mindays,
-                       maxdays,
-                       inactdays,
-                       warndays,
-                       expire,
-                       win_homedrive,
-                       win_profile,
-                       win_logonscript,
-                       win_description)
+    try:
+        changes = _changes(name,
+                           uid,
+                           gid,
+                           groups,
+                           present_optgroups,
+                           remove_groups,
+                           home,
+                           createhome,
+                           password,
+                           enforce_password,
+                           empty_password,
+                           shell,
+                           fullname,
+                           roomnumber,
+                           workphone,
+                           homephone,
+                           loginclass,
+                           date,
+                           mindays,
+                           maxdays,
+                           inactdays,
+                           warndays,
+                           expire,
+                           win_homedrive,
+                           win_profile,
+                           win_logonscript,
+                           win_description,
+                           allow_uid_change,
+                           allow_gid_change)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
 
     if changes:
         if __opts__['test']:
@@ -612,7 +664,13 @@ def present(name,
                            win_homedrive,
                            win_profile,
                            win_logonscript,
-                           win_description)
+                           win_description,
+                           allow_uid_change=True,
+                           allow_gid_change=True)
+        # allow_uid_change and allow_gid_change passed as True to avoid race
+        # conditions where a uid/gid is modified outside of Salt. If an
+        # unauthorized change was requested, it would have been caught the
+        # first time we ran _changes().
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(

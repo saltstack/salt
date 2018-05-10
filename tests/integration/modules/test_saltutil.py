@@ -4,7 +4,7 @@ Integration tests for the saltutil module.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import textwrap
@@ -84,7 +84,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
-                           'modules': ['modules.override_test',
+                           'modules': ['modules.mantest',
+                                       'modules.override_test',
                                        'modules.runtests_decorators',
                                        'modules.runtests_helpers',
                                        'modules.salttest'],
@@ -94,7 +95,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all')
         self.assertEqual(ret, expected_return)
 
@@ -115,7 +117,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
         self.assertEqual(ret, expected_return)
 
@@ -129,7 +132,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
-                           'modules': ['modules.override_test',
+                           'modules': ['modules.mantest',
+                                       'modules.override_test',
                                        'modules.runtests_helpers',
                                        'modules.salttest'],
                            'renderers': [],
@@ -138,7 +142,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
@@ -159,7 +164,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
@@ -180,7 +186,9 @@ class SaltUtilSyncPillarTest(ModuleCase):
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
-            fp.write('{0}: itworked'.format(pillar_key))
+            fp.write(salt.utils.stringutils.to_str(
+                '{0}: itworked'.format(pillar_key)
+            ))
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\

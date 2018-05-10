@@ -22,6 +22,7 @@ import copy
 import os
 import re
 import logging
+import errno
 
 # Import salt libs
 import salt.utils.args
@@ -55,12 +56,68 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
+NILRT_MODULE_STATE_PATH = '/var/lib/salt/kernel_module_state'
+
+
+def _update_nilrt_module_dep_info():
+    '''
+    Update modules.dep timestamp & checksum.
+
+    NILRT systems determine whether to reboot after kernel module install/
+    removals/etc by checking modules.dep which gets modified/touched by
+    each kernel module on-target dkms-like compilation. This function
+    updates the module.dep data after each opkg kernel module operation
+    which needs a reboot as detected by the salt checkrestart module.
+    '''
+    __salt__['cmd.shell']('stat -c %Y /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.timestamp'
+                          .format(NILRT_MODULE_STATE_PATH))
+    __salt__['cmd.shell']('md5sum /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.md5sum'
+                          .format(NILRT_MODULE_STATE_PATH))
+
+
+def _get_restartcheck_result(errors):
+    '''
+    Return restartcheck result and append errors (if any) to ``errors``
+    '''
+    rs_result = __salt__['restartcheck.restartcheck'](verbose=False)
+    if isinstance(rs_result, dict) and 'comment' in rs_result:
+        errors.append(rs_result['comment'])
+    return rs_result
+
+
+def _process_restartcheck_result(rs_result):
+    '''
+    Check restartcheck output to see if system/service restarts were requested
+    and take appropriate action.
+    '''
+    if 'No packages seem to need to be restarted' in rs_result:
+        return
+    for rstr in rs_result:
+        if 'System restart required' in rstr:
+            _update_nilrt_module_dep_info()
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            service = os.path.join('/etc/init.d', rstr)
+            if os.path.exists(service):
+                __salt__['cmd.run']([service, 'restart'])
+
 
 def __virtual__():
     '''
     Confirm this module is on a nilrt based system
     '''
-    if __grains__.get('os_family', False) == 'NILinuxRT':
+    if __grains__.get('os_family') == 'NILinuxRT':
+        try:
+            os.makedirs(NILRT_MODULE_STATE_PATH)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                return False, 'Error creating {0} (-{1}): {2}'.format(
+                    NILRT_MODULE_STATE_PATH,
+                    exc.errno,
+                    exc.strerror)
+        if not (os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.timestamp')) and
+                os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.md5sum'))):
+            _update_nilrt_module_dep_info()
         return __virtualname__
     return (False, "Module opkg only works on nilrt based systems")
 
@@ -149,7 +206,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
         If True, raise an error with a list of the package databases that
         encountered errors.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -412,11 +469,15 @@ def install(name=None,
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -475,11 +536,15 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered removing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -536,6 +601,8 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
            'comment': '',
            }
 
+    errors = []
+
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -550,10 +617,17 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
+        errors.append(result)
+
+    rs_result = _get_restartcheck_result(errors)
+
+    if errors:
         raise CommandExecutionError(
             'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -1348,5 +1422,5 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret

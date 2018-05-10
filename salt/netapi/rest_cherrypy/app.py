@@ -103,7 +103,7 @@ A REST API for Salt
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
 
-        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+        .. deprecated:: 2016.11.9,2017.7.3,2018.3.0
 
             The "expire_responses" configuration setting, which corresponds
             to the ``timeout_monitor`` setting in CherryPy, is no longer
@@ -118,7 +118,7 @@ A REST API for Salt
     stats_disable_auth : False
         Do not require authentication to access the ``/stats`` endpoint.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -135,7 +135,7 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
 
         Warning! If you set this option to a custom web application, anything
-        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        that uses cookie-based authentication is vulnerable to XSRF attacks.
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
@@ -174,7 +174,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 
@@ -856,7 +856,9 @@ def hypermedia_handler(*args, **kwargs):
     try:
         cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
-    except (salt.exceptions.EauthAuthenticationError,
+    except (salt.exceptions.AuthenticationError,
+            salt.exceptions.AuthorizationError,
+            salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
     except salt.exceptions.SaltInvocationError:
@@ -2080,7 +2082,7 @@ class Run(LowDataAdapter):
         The /run enpoint can also be used to issue commands using the salt-ssh
         subsystem.
 
-        When using salt-ssh, eauth credentials should not be supplied. Instad,
+        When using salt-ssh, eauth credentials should not be supplied. Instead,
         authentication should be handled by the SSH layer itself. The use of
         the salt-ssh client does not require a salt master to be running.
         Instead, only a roster file must be present in the salt configuration
@@ -2265,7 +2267,7 @@ class Events(object):
           very busy and can quickly overwhelm the memory allocated to a
           browser tab.
 
-        A full, working proof-of-concept JavaScript appliction is available
+        A full, working proof-of-concept JavaScript application is available
         :blob:`adjacent to this file <salt/netapi/rest_cherrypy/index.html>`.
         It can be viewed by pointing a browser at the ``/app`` endpoint in a
         running ``rest_cherrypy`` instance.

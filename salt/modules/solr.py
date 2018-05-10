@@ -60,7 +60,7 @@ verbose : True
 '''
 
 # Import python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import 3rd-party libs
@@ -367,7 +367,7 @@ def _merge_options(options):
         defaults.update(options)
     for key, val in six.iteritems(defaults):
         if isinstance(val, bool):
-            defaults[key] = str(val).lower()
+            defaults[key] = six.text_type(val).lower()
     return defaults
 
 
