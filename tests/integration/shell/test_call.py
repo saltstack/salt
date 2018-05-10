@@ -368,7 +368,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             with_retcode=True
         )
         try:
-            if six.PY3:
+            if sys.version_info >= (3, 5, 4):
                 self.assertIn('local:', ret[0])
                 self.assertIn('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.', ret[1])
                 self.assertEqual(ret[2], 0)
