@@ -245,7 +245,7 @@ def get_grains():
         facts = call('get_facts', **{})
         DETAILS['grains_cache'] = facts
 
-    return DETAILS.get('grains_cache', {})
+    return call('get_facts', **{})
 
 
 def grains_refresh():
