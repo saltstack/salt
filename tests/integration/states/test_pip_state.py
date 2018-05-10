@@ -48,7 +48,7 @@ import salt.ext.six as six
 def can_runas():
     '''
     Detect if we are running in a limited shell (winrm) and are un-able to use
-    the runas
+    the runas utility method.
     '''
     if salt.utils.is_windows():
         try:
