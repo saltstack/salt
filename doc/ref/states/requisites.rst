@@ -410,16 +410,12 @@ exactly like the ``require`` requisite (the watching state will execute if
       service.running:
         - watch_any:
           - file: /etc/apache2/sites-available/site1.conf
-          - file: /etc/apache2/sites-available/site2.conf
       file.managed:
         - name: /etc/apache2/sites-available/site1.conf
         - source: salt://apache2/files/site1.conf
-      file.managed:
-        - name: /etc/apache2/sites-available/site2.conf
-        - source: salt://apache2/files/site2.conf
 
-In this example, the service will be reloaded/restarted if either of the
-file.managed states has a result of True and has changes.
+In this example, the service will be reloaded/restarted if the
+file.managed state has a result of True and has changes.
 
 .. _requisites-prereq:
 
