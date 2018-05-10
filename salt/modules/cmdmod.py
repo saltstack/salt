@@ -478,10 +478,18 @@ def _run(cmd,
                 for k, v in six.iteritems(env_runas)
             )
             env_runas.update(env)
+
             # Fix platforms like Solaris that don't set a USER env var in the
             # user's default environment as obtained above.
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
+
+            # Fix some corner cases where shelling out to get the user's
+            # environment returns the wrong home directory.
+            runas_home = os.path.expanduser('~{0}'.format(runas))
+            if env_runas.get('HOME') != runas_home:
+                env_runas['HOME'] = runas_home
+
             env = env_runas
         except ValueError as exc:
             log.exception('Error raised retrieving environment for user %s', runas)
