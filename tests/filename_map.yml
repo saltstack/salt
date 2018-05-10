@@ -77,5 +77,20 @@ salt/modules/ssh.py:
   - unit.states.test_ssh_auth
   - unit.states.test_ssh_known_hosts
 
+salt/cloud/*:
+  - unit.cloud.test_map_conf
+
+salt/config/*:
+  - unit.test_config
+
+salt/serializers/*:
+  - unit.serializers.test_serializers
+
+salt/spm/*:
+  - unit.test_spm
+
+salt/transport/*:
+  - unit.test_transport
+
 salt/utils/docker/*:
   - unit.utils.test_docker
