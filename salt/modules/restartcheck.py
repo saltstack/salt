@@ -314,21 +314,33 @@ def _kernel_versions_nilrt():
             as they are probably interpreted in output of `uname -a` command.
     '''
     kernel_versions = []
+    kvregex = r'[0-9]+\.[0-9]+\.[0-9]+-rt'
+    kv_cmd = 'strings {0} | awk \'$1 ~ /{1}/ {{print $1}}\' | head -n1'
 
-    if __grains__.get('os_family') == 'NILinuxRT' and _is_older_nilrt():
-        # bzImage is copied in the rootfs without any package management or
-        # version info. We also can't depend on kernel headers like
-        # include/generated/uapi/linux/version.h being installed. Even if
-        # we fix this in newer versions of "old NILRT" we still need to be
-        # backwards compatible so it'll just get more complicated.
-        kpath = '/boot/runmode/bzImage'
-        kvregex = r'[0-9]+\.[0-9]+\.[0-9]+-rt'
-        kernel = __salt__['cmd.shell']('strings {0} | awk \'$1 ~ /{1}/ {{print $1}}\''
-                                       .format(kpath, kvregex))
+    if _is_older_nilrt():
+        if 'arm' in __grains__.get('cpuarch'):
+            # the kernel is inside a uboot created itb (FIT) image alongside the
+            # device tree, ramdisk and a bootscript. There is no package management
+            # or any other kind of versioning info, so we need to extract the itb.
+            itb_path = '/boot/linux_runmode.itb'
+            compressed_kernel = '/var/volatile/tmp/uImage.gz'
+            uncompressed_kernel = '/var/volatile/tmp/uImage'
+            __salt__['cmd.run']('dumpimage -i {0} -T flat_dt -p0 kernel -o {1}'
+                                .format(itb_path, compressed_kernel))
+            __salt__['cmd.run']('gunzip {0}'.format(compressed_kernel))
+            kernel = __salt__['cmd.shell'](kv_cmd.format(uncompressed_kernel, kvregex))
+        else:
+            # the kernel bzImage is copied to rootfs without package management or
+            # other versioning info.
+            kpath = '/boot/runmode/bzImage'
+            kernel = __salt__['cmd.shell'](kv_cmd.format(kpath, kvregex))
     else:
-        kernel = os.readlink('/boot/bzImage')
-        kernel = os.path.basename(kernel)
-        kernel = kernel.strip('bzImage-')
+        # kernels in newer NILRT's are installed via package management and
+        # have the version appended in the kernel image name
+        if 'arm' in __grains__.get('cpuarch'):
+            kernel = os.path.basename(os.readlink('/boot/uImage')).strip('uImage-')
+        else:
+            kernel = os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-')
 
     kernel_versions.append(kernel)
 
