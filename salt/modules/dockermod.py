@@ -3210,6 +3210,7 @@ def run_container(image,
     CLI Examples:
 
     .. code-block:: bash
+
         salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh
         # Run container in the background
         salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh bg=True
