@@ -27,11 +27,9 @@ def base64_b64encode(instr):
     Among other possible differences, the "modern" encoder does not include
     newline ('\\n') characters in the encoded output.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        b64 = base64.b64encode(b)
-        return salt.utils.stringutils.to_str(b64)
-    return base64.b64encode(instr)
+    return salt.utils.stringutils.to_unicode(
+        base64.b64encode(salt.utils.stringutils.to_bytes(instr))
+    )
 
 
 @jinja_filter('base64_decode')
@@ -39,14 +37,11 @@ def base64_b64decode(instr):
     '''
     Decode a base64-encoded string using the "modern" Python interface.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        data = base64.b64decode(b)
-        try:
-            return salt.utils.stringutils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.b64decode(instr)
+    decoded = base64.b64decode(salt.utils.stringutils.to_bytes(instr))
+    try:
+        return salt.utils.stringutils.to_unicode(decoded)
+    except UnicodeDecodeError:
+        return decoded
 
 
 def base64_encodestring(instr):
@@ -57,26 +52,26 @@ def base64_encodestring(instr):
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        b64 = base64.encodebytes(b)
-        return salt.utils.stringutils.to_str(b64)
-    return base64.encodestring(instr)
+    return salt.utils.stringutils.to_unicode(
+        base64.encodestring(salt.utils.stringutils.to_bytes(instr))
+    )
 
 
 def base64_decodestring(instr):
     '''
     Decode a base64-encoded string using the "legacy" Python interface.
-
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        data = base64.decodebytes(b)
-        try:
-            return salt.utils.stringutils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.decodestring(instr)
+    b = salt.utils.stringutils.to_bytes(instr)
+    try:
+        # PY3
+        decoded = base64.decodebytes(b)
+    except AttributeError:
+        # PY2
+        decoded = base64.decodestring(b)
+    try:
+        return salt.utils.stringutils.to_unicode(decoded)
+    except UnicodeDecodeError:
+        return decoded
 
 
 @jinja_filter('md5')
@@ -84,32 +79,29 @@ def md5_digest(instr):
     '''
     Generate an md5 hash of a given string.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.md5(b).hexdigest()
-    return hashlib.md5(instr).hexdigest()
+    return salt.utils.stringutils.to_unicode(
+        hashlib.md5(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
 
 
 @jinja_filter('sha256')
 def sha256_digest(instr):
     '''
-    Generate an sha256 hash of a given string.
+    Generate a sha256 hash of a given string.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.sha256(b).hexdigest()
-    return hashlib.sha256(instr).hexdigest()
+    return salt.utils.stringutils.to_unicode(
+        hashlib.sha256(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
 
 
 @jinja_filter('sha512')
 def sha512_digest(instr):
     '''
-    Generate an sha512 hash of a given string
+    Generate a sha512 hash of a given string
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.sha512(b).hexdigest()
-    return hashlib.sha512(instr).hexdigest()
+    return salt.utils.stringutils.to_unicode(
+        hashlib.sha512(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
 
 
 @jinja_filter('hmac')
@@ -118,14 +110,9 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret
     Returns a boolean if the verification succeeded or failed.
     '''
-    if six.text_type:
-        msg = salt.utils.stringutils.to_bytes(string)
-        key = salt.utils.stringutils.to_bytes(shared_secret)
-        challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
-    else:
-        msg = string
-        key = shared_secret
-        challenge = challenge_hmac
+    msg = salt.utils.stringutils.to_bytes(string)
+    key = salt.utils.stringutils.to_bytes(shared_secret)
+    challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
     hmac_hash = hmac.new(key, msg, hashlib.sha256)
     valid_hmac = base64.b64encode(hmac_hash.digest())
     return valid_hmac == challenge
