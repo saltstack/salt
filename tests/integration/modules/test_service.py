@@ -10,6 +10,7 @@ from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.utils
+import salt.utils.systemd
 
 
 @destructiveTest
@@ -113,13 +114,17 @@ class ServiceModuleTest(ModuleCase):
         '''
         # enable service before test
         srv_name = 'doesnotexist'
-        self.assertFalse(self.run_function('service.enable', [srv_name]))
+        enable = self.run_function('service.enable', [srv_name])
+        if salt.utils.systemd.booted():
+            self.assertIn('ERROR', enable)
+        else:
+            self.assertFalse(enable)
 
         self.assertFalse(self.run_function('service.disable', [srv_name]))
         if salt.utils.is_darwin():
             self.assertFalse(self.run_function('service.disabled', [srv_name]))
         else:
-            self.assertNotIn(self.service_name, self.run_function('service.get_disabled'))
+            self.assertNotIn(srv_name, self.run_function('service.get_disabled'))
 
     @skipIf(not salt.utils.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):
