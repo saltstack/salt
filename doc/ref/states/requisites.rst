@@ -410,10 +410,11 @@ exactly like the ``require`` requisite (the watching state will execute if
       service.running:
         - watch_any:
           - file: /etc/apache2/sites-available/site1.conf
-          - file: /etc/apache2/sites-available/site2.conf
+          - file: apache2-site2
       file.managed:
         - name: /etc/apache2/sites-available/site1.conf
         - source: salt://apache2/files/site1.conf
+    apache2-site2:
       file.managed:
         - name: /etc/apache2/sites-available/site2.conf
         - source: salt://apache2/files/site2.conf
