@@ -302,8 +302,8 @@ def query(params=None, setname=None, requesturl=None, location=None,
     # Retrieve access credentials from meta-data, or use provided
     access_key_id, secret_access_key, token = aws.creds(provider)
 
-    attempts = 5
-    while attempts > 0:
+    attempts = 0
+    while attempts < aws.AWS_MAX_RETRIES:
         params_with_headers = params.copy()
         timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -407,15 +407,14 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             # check to see if we should retry the query
             err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
-            if attempts > 0 and err_code and err_code in EC2_RETRY_CODES:
-                attempts -= 1
+            if err_code and err_code in EC2_RETRY_CODES:
+                attempts += 1
                 log.error(
                     'EC2 Response Status Code and Error: [%s %s] %s; '
                     'Attempts remaining: %s',
                     exc.response.status_code, exc, data, attempts
                 )
-                # Wait a bit before continuing to prevent throttling
-                time.sleep(2)
+                aws.sleep_exponential_backoff(attempts)
                 continue
 
             log.error(
@@ -1562,29 +1561,22 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
     for k, v in six.iteritems(properties):
         params[k] = v
 
-    retries = 5
-    while retries > 0:
-        retries = retries - 1
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(vm_),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
-        result = aws.query(params,
-                           return_root=True,
-                           location=get_location(vm_),
-                           provider=get_provider(),
-                           opts=__opts__,
-                           sigver='4')
-
-        if isinstance(result, dict) and result.get('error'):
-            time.sleep(1)
-            continue
-
+    if isinstance(result, dict) and result.get('error'):
+        raise SaltCloudException(
+            'Could not change interface <{0}> attributes <\'{1}\'>'.format(
+                eni_id, properties
+            )
+        )
+    else:
         return result
 
-    raise SaltCloudException(
-        'Could not change interface <{0}> attributes '
-        '<\'{1}\'> after 5 retries'.format(
-            eni_id, properties
-        )
-    )
 
 
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None, vm_=None):
@@ -1597,43 +1589,35 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None, vm_=None):
     be NATted to - useful if you have multiple IP addresses assigned to an
     interface.
     '''
-    retries = 5
-    while retries > 0:
-        params = {'Action': 'AssociateAddress',
-                  'NetworkInterfaceId': eni_id,
-                  'AllocationId': eip_id}
+    params = {'Action': 'AssociateAddress',
+              'NetworkInterfaceId': eni_id,
+              'AllocationId': eip_id}
 
-        if private_ip:
-            params['PrivateIpAddress'] = private_ip
+    if private_ip:
+        params['PrivateIpAddress'] = private_ip
 
-        retries = retries - 1
-        result = aws.query(params,
-                           return_root=True,
-                           location=get_location(vm_),
-                           provider=get_provider(),
-                           opts=__opts__,
-                           sigver='4')
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(vm_),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
-        if isinstance(result, dict) and result.get('error'):
-            time.sleep(1)
-            continue
-
-        if not result[2].get('associationId'):
-            break
-
-        log.debug(
-            'Associated ElasticIP address %s with interface %s',
-            eip_id, eni_id
+    if not result[2].get('associationId'):
+        raise SaltCloudException(
+            'Could not associate elastic ip address '
+            '<{0}> with network interface <{1}>'.format(
+                eip_id, eni_id
+            )
         )
 
-        return result[2].get('associationId')
-
-    raise SaltCloudException(
-        'Could not associate elastic ip address '
-        '<{0}> with network interface <{1}>'.format(
-            eip_id, eni_id
-        )
+    log.debug(
+        'Associated ElasticIP address %s with interface %s',
+        eip_id, eni_id
     )
+
+    return result[2].get('associationId')
+
 
 
 def _update_enis(interfaces, instance, vm_=None):
@@ -2182,8 +2166,7 @@ def query_instance(vm_=None, call=None):
     provider = get_provider(vm_)
 
     attempts = 0
-    # perform exponential backoff and wait up to one minute (2**6 seconds)
-    while attempts < 7:
+    while attempts < aws.AWS_MAX_RETRIES:
         data, requesturl = aws.query(params,                # pylint: disable=unbalanced-tuple-unpacking
                                      location=location,
                                      provider=provider,
@@ -2205,7 +2188,7 @@ def query_instance(vm_=None, call=None):
         else:
             break
 
-        time.sleep(random.uniform(1, 2**attempts))
+        aws.sleep_exponential_backoff(attempts)
         attempts += 1
         continue
     else:
@@ -3028,9 +3011,9 @@ def set_tags(name=None,
         params['Tag.{0}.Key'.format(idx)] = tag_k
         params['Tag.{0}.Value'.format(idx)] = tag_v
 
-    attempts = 5
-    while attempts >= 0:
-        result = aws.query(params,
+    attempts = 0
+    while attempts < aws.AWS_MAX_RETRIES:
+        aws.query(params,
                            setname='tagSet',
                            location=location,
                            provider=get_provider(),
@@ -3064,9 +3047,8 @@ def set_tags(name=None,
 
         if failed_to_set_tags:
             log.warning('Failed to set tags. Remaining attempts %s', attempts)
-            attempts -= 1
-            # Just a little delay between attempts...
-            time.sleep(1)
+            attempts += 1
+            aws.sleep_exponential_backoff(attempts)
             continue
 
         return settags
@@ -3405,8 +3387,8 @@ def _get_node(name=None, instance_id=None, location=None):
 
     provider = get_provider()
 
-    attempts = 10
-    while attempts >= 0:
+    attempts = 0
+    while attempts < aws.AWS_MAX_RETRIES:
         try:
             instances = aws.query(params,
                                   location=location,
@@ -3416,13 +3398,12 @@ def _get_node(name=None, instance_id=None, location=None):
             instance_info = _extract_instance_info(instances).values()
             return next(iter(instance_info))
         except IndexError:
-            attempts -= 1
+            attempts += 1
             log.debug(
                 'Failed to get the data for node \'%s\'. Remaining '
                 'attempts: %s', instance_id or name, attempts
             )
-            # Just a little delay between attempts...
-            time.sleep(0.5)
+            aws.sleep_exponential_backoff(attempts)
     return {}
 
 
