@@ -6,7 +6,7 @@ Debian GNU/Linux / Raspbian
 
 Debian GNU/Linux distribution and some derivatives such as Raspbian already
 have included Salt packages to their repositories. However, current stable
-debian release contains old outdated Salt releases. It is
+Debian release contains old outdated Salt releases. It is
 recommended to use SaltStack repository for Debian as described
 :ref:`below <installation-debian-repo>`.
 
