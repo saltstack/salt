@@ -267,6 +267,8 @@ def _create_resource(resource, name=None, tags=None, region=None, key=None,
                 return {'created': True}
             else:
                 log.info('A {0} with id {1} was created'.format(resource, r.id))
+                if hasattr(r, 'id'):
+                    wait_til_resource_exists(resource_type=resource, resource_id=r.id, region=region, key=key, keyid=keyid, profile=profile)
                 _maybe_set_name_tag(name, r)
                 _maybe_set_tags(tags, r)
 
@@ -487,6 +489,30 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
     except BotoServerError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
+def wait_til_resource_exists(resource_type, resource_id, region=None, key=None, keyid=None, profile=None):
+    '''Wait for the resource to exist/be ready
+    :type resource_type: string
+    :param resource_type: the type of resource, should match one of the keys of resource_id_argument_keyword_dict for waiting to actually occur 
+    :type resource_id: string
+    :param resource_id: the id of the resource
+    '''
+    resourceWaitErrorCount = 0
+    # connect to boto3
+    conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    # a dict to map resource types to the corresponding boto3 describe command and that command's keyword for id's
+    resource_id_argument_keyword_dict = {'vpc': { 'command': 'describe_vpcs', 'id_keyword': 'VpcIds' }, 'subnet': {'command': 'describe_subnets', 'id_keyword': 'SubnetIds' }, 'internet_gateway': { 'command': 'describe_internet_gateways', 'id_keyword': 'InternetGatewayIds' }, 'nat_gateway': { 'command': 'describe_customer_gateways', 'id_keyword': 'CustomerGatewayIds' }, 'dhcp_options': { 'command': 'describe_dhcp_options', 'id_keyword': 'DhcpOptionsIds' }, 'network_acl': { 'command': 'describe_network_acls', 'id_keyword': 'NetworkAclIds' }, 'route_table': { 'command': 'describe_route_tables', 'id_keyword': 'RouteTableIds' }, 'vpc_peering_connection': { 'command': 'describe_vpc_peering_connections', 'id_keyword': 'VpcPeeringConnectionIds' } }
+    # if it isn't in our resource_id_argument_keyword_dict ignore it because we don't know how to wait for it
+    if resource_type in list(resource_id_argument_keyword_dict.keys()):
+        kwargs = {resource_id_argument_keyword_dict[resource_type]['id_keyword']: [resource_id, ] }
+        while resourceWaitErrorCount < 10:
+            try:
+                response = getattr(conn3, resource_id_argument_keyword_dict[resource_type]['command'])(**kwargs)
+                # if the response statement above works that means it exists/is ready so break out of loop
+                break
+            except botocore.exceptions.ClientError as e:
+                log.info("Waiting for %s with id %s to be competed", resource_type, resource_id)
+                sleep(5)
+                resourceWaitErrorCount += 1
 
 def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
                region=None, key=None, keyid=None, profile=None):
@@ -633,6 +659,8 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
+        if hasattr(vpc, 'id'):
+            wait_til_resource_exists(resource_type='vpc', resource_id=vpc.id, region=region, key=key, keyid=keyid, profile=profile)
         if vpc:
             log.info('The newly created VPC id is {0}'.format(vpc.id))
 
@@ -878,10 +906,13 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+    subnet_object_dict = _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
                             availability_zone=availability_zone,
                             cidr_block=cidr_block, region=region, key=key,
                             keyid=keyid, profile=profile)
+    if 'id' in subnet_object_dict.keys():
+        wait_til_resource_exists(resource_type='subnet', resource_id=subnet_object_dict['id'], region=region, key=key, keyid=keyid, profile=profile)
+    return subnet_object_dict
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
@@ -1153,6 +1184,8 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
         r = _create_resource('internet_gateway', name=internet_gateway_name,
                              tags=tags, region=region, key=key, keyid=keyid,
                              profile=profile)
+        if 'id' in r.keys():
+            wait_til_resource_exists(resource_type='internet_gateway', resource_id=r['id'], region=region, key=key, keyid=keyid, profile=profile)
         if r.get('created') and vpc_id:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             conn.attach_internet_gateway(r['id'], vpc_id)
@@ -2078,9 +2111,14 @@ def delete_route_table(route_table_id=None, route_table_name=None,
         salt myminion boto_vpc.delete_route_table route_table_name='myroutetable'
 
     '''
-    return _delete_resource(resource='route_table', name=route_table_name,
+    route_table_object_dict = _delete_resource(resource='route_table', name=route_table_name,
                             resource_id=route_table_id, region=region, key=key,
                             keyid=keyid, profile=profile)
+
+    if 'id' in route_table_object_dict.keys():
+        wait_til_resource_exists(resource_type='route_table', resource_id=route_table_object_dict['id'], region=region, key=key, keyid=keyid, profile=profile)
+    return route_table_object_dict
+
 
 
 def route_table_exists(route_table_id=None, name=None, route_table_name=None,
@@ -2798,6 +2836,8 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
                 DryRun=dry_run)
         peering = vpc_peering.get('VpcPeeringConnection', {})
         peering_conn_id = peering.get('VpcPeeringConnectionId', 'ERROR')
+        if peering_conn_id != 'ERROR':
+            wait_til_resource_exists(resource_type='vpc_peering_connection', resource_id=peering_conn_id, region=region, key=key, keyid=keyid, profile=profile)
         msg = 'VPC peering {0} requested.'.format(peering_conn_id)
         log.debug(msg)
 
