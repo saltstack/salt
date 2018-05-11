@@ -236,15 +236,6 @@ def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-    refresh_needed = False
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('out', {}))
-
-    if refresh_needed:
-        facts = call('get_facts', **{})
-        DETAILS['grains_cache'] = facts
-
     return call('get_facts', **{})
 
 
