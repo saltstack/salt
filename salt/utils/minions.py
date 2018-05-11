@@ -240,7 +240,7 @@ class CkMinions(object):
         Respects cache if configured
         '''
         opts_role = self.opts.get('__role')
-        if ((opts_role == 'master' and self.opts.get('__cli') == 'salt-run') or (opts_role == 'minion')):
+        if (opts_role == 'master' and self.opts.get('__cli') == 'salt-run') or (opts_role == 'minion'):
             # If we're compiling the pillar directly on the master (or running masterless)
             # just return our local ID as that is the only one that is available.
             return [self.opts['id']]
