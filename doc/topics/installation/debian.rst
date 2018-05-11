@@ -33,11 +33,11 @@ Instructions are at https://repo.saltstack.com/#debian.
 Installation from the Debian / Raspbian Official Repository
 ===========================================================
 
-The debian distributions contain mostly old Salt packages
+The Debian distributions contain mostly old Salt packages
 built by the Debian Salt Team. You can install Salt
 components directly from Debian but it is recommended to
 use the instructions above for the packages from the official
-saltstack repository.
+Salt repository.
 
 On Jessie there is an option to install Salt minion from Stretch with
 `python-tornado` dependency from `jessie-backports` repositories.
