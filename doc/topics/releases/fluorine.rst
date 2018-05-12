@@ -434,7 +434,7 @@ The ``vault`` utils module had the following changes:
   Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
   details on the new configuration schema.
 
-=======
+=====================
 SaltSSH major updates
 =====================
 
@@ -471,7 +471,25 @@ a minimal tarball using runners and include that. But this is only possible, whe
 Salt version is also available on the Master machine, although does not need to be directly
 installed together with the older Python interpreter.
 
-=======
+
+========================
+Salt-Cloud major updates
+========================
+
+
+Dependency Deprecations
+=======================
+
+Salt-Cloud has been updated to use the ``pypsexec`` Python library instead of the
+``winexe`` executable. Both ``winexe`` and ``pypsexec`` run remote commands
+against Windows OSes. Since ``winexe`` is not packaged for every system, it has
+been deprecated in favor of ``pypsexec``.
+
+Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
+This changes was made because ``impacket`` is not compatible with Python 3.
+
+
+====================
 State Module Changes
 ====================
 
