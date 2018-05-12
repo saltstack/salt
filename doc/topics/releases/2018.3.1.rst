@@ -17,6 +17,6 @@ environments.
 Sent events can return as unchanged
 -------------------------------
   
-The `event.send <salt.states.event.send>` state does not know the results of 
+The :ref:`event.send <salt.states.event.send>` state does not know the results of 
 the sent event, so returns changed every state run.  It can now be set to 
 return changed or unchanged.
