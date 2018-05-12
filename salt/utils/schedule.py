@@ -731,6 +731,7 @@ class Schedule(object):
                     for global_key, value in six.iteritems(func_globals):
                         self.functions[mod_name].__globals__[global_key] = value
 
+            self.functions.pack['__context__']['retcode'] = 0
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
