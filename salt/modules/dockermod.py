@@ -483,20 +483,6 @@ def _clear_context():
             pass
 
 
-def _pull_if_needed(image, client_timeout):
-    '''
-    Pull the desired image if not present, and return the image ID or name
-    '''
-    image_id = resolve_image_id(image)
-    if not image_id:
-        pull(image, client_timeout=client_timeout)
-        # Avoid another inspect and just use the passed image. docker-py
-        # will do the right thing and resolve the tag for us if we pass it
-        # a tagged image.
-        image_id = image
-    return image_id
-
-
 def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
@@ -3115,8 +3101,8 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion docker.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     kwargs, unused_kwargs = _get_create_kwargs(
         skip_translate=skip_translate,
@@ -3138,7 +3124,7 @@ def create(image,
     )
     time_started = time.time()
     response = _client_wrapper('create_container',
-                               image_id,
+                               image,
                                name=name,
                                **kwargs)
     response['Time_Elapsed'] = time.time() - time_started
@@ -3232,8 +3218,8 @@ def run_container(image,
         # net1 using automatic IP, net2 using static IPv4 address
         salt myminion docker.run_container myuser/myimage command='perl /scripts/sync.py' networks='{"net1": {}, "net2": {"ipv4_address": "192.168.27.12"}}'
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     removed_ids = None
     if name is not None:
@@ -3303,7 +3289,7 @@ def run_container(image,
 
     time_started = time.time()
     # Create the container
-    ret = _client_wrapper('create_container', image_id, name=name, **kwargs)
+    ret = _client_wrapper('create_container', image, name=name, **kwargs)
 
     if removed_ids:
         ret['Replaces'] = removed_ids

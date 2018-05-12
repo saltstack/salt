@@ -240,7 +240,7 @@ def _reverse_lookup(dictionary, value):
             value_index = idx
             break
 
-    return dictionary.keys()[value_index]
+    return list(dictionary)[value_index]
 
 
 def _lookup_first(dictionary, key):
