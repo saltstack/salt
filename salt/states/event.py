@@ -11,20 +11,20 @@ import salt.utils.functools
 
 
 def send(name,
-        data=None,
-        preload=None,
-        show_changed=True,
-        with_env=False,
-        with_grains=False,
-        with_pillar=False,
-        **kwargs):
+         data=None,
+         preload=None,
+         show_changed=True,
+         with_env=False,
+         with_grains=False,
+         with_pillar=False,
+         **kwargs):
     '''
     Send an event to the Salt Master
 
     .. versionadded:: 2014.7.0
 
     Accepts the same arguments as the :py:func:`event.send
-    <salt.modules.event.send>` execution module of the same name, 
+    <salt.modules.event.send>` execution module of the same name,
     with the additional argument:
 
     :param show_changed: state will show as changed with the data
@@ -45,9 +45,9 @@ def send(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     if show_changed:
-      ret['changes'] = {'tag': name, 'data': data}
+        ret['changes'] = {'tag': name, 'data': data}
     else:
-      ret['changes'] = {}
+        ret['changes'] = {}
 
     if __opts__['test']:
         ret['result'] = None
@@ -55,12 +55,12 @@ def send(name,
         return ret
 
     ret['result'] = __salt__['event.send'](name,
-            data=data,
-            preload=preload,
-            with_env=with_env,
-            with_grains=with_grains,
-            with_pillar=with_pillar,
-            **kwargs)
+                                           data=data,
+                                           preload=preload,
+                                           with_env=with_env,
+                                           with_grains=with_grains,
+                                           with_pillar=with_pillar,
+                                           **kwargs)
     ret['comment'] = 'Event fired'
 
     return ret
