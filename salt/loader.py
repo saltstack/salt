@@ -303,6 +303,24 @@ def engines(opts, functions, runners, utils, proxy=None):
     )
 
 
+def fileprotos(opts, functions=None, util_mods=None):
+    '''
+    Return the functions to get file protos
+    '''
+    if util_mods is None:
+        util_mods = utils(opts)
+    if functions is None:
+        functions = minion_mods(opts, utils=util_mods)
+    pack = {'__salt__': functions,
+            '__utils__': util_mods}
+    return LazyLoader(
+        _module_dirs(opts, 'fileprotos'),
+        opts,
+        tag='fileprotos',
+        pack=pack,
+    )
+
+
 def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
     '''
     Returns the proxy module for this salt-proxy-minion
