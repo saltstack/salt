@@ -11,6 +11,7 @@ MANIFEST
 *.wpr
 *.wpu
 *.DS_Store
+.pytest_cache
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
