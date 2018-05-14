@@ -1,5 +1,7 @@
 Jinja2
-msgpack-python>0.3,!=0.5.5
+# This should be changed to msgpack-python for Packages
+# msgpack-python>0.3,!=0.5.5
+msgpack>=0.5,!=0.5.5
 PyYAML
 MarkupSafe
 requests>=1.0.0
