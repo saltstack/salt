@@ -15,7 +15,7 @@ Support for Zabbix
 
 
     Connection arguments from the minion config file can be overridden on the CLI by using arguments with
-    _connection_ prefix.
+    ``_connection_`` prefix.
 
     .. code-block:: bash
 
@@ -23,26 +23,24 @@ Support for Zabbix
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import logging
 import socket
 import os
 
-# Import salt libs
-try:
-    import salt.utils
-    from salt.ext import six
-    from salt.utils.versions import LooseVersion as _LooseVersion
-    # pylint: disable=import-error,no-name-in-module,unused-import
-    from salt.ext.six.moves.urllib.error import HTTPError, URLError
-    from salt.exceptions import SaltException
-    IMPORTS_OK = True
-except ImportError:
-    IMPORTS_OK = False
+# Import Salt libs
+from salt.ext import six
+from salt.exceptions import SaltException
+import salt.utils.data
+import salt.utils.files
+import salt.utils.http
+import salt.utils.json
+from salt.utils.versions import LooseVersion as _LooseVersion
+# pylint: disable=import-error,no-name-in-module,unused-import
+from salt.ext.six.moves.urllib.error import HTTPError, URLError
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 log = logging.getLogger(__name__)
 
@@ -104,9 +102,7 @@ def __virtual__():
     '''
     Only load the module if all modules are imported correctly.
     '''
-    if IMPORTS_OK:
-        return __virtualname__
-    return False, 'Importing modules failed.'
+    return __virtualname__
 
 
 def _frontend_url():
@@ -349,7 +345,7 @@ def compare_params(defined, existing, return_old_value=False):
                                                                                    defined))
 
     # Comparison of values
-    if not salt.utils.is_iter(defined):
+    if not salt.utils.data.is_iter(defined):
         if six.text_type(defined) != six.text_type(existing) and return_old_value:
             return {'new': six.text_type(defined), 'old': six.text_type(existing)}
         elif six.text_type(defined) != six.text_type(existing) and not return_old_value:
@@ -2390,7 +2386,7 @@ def configuration_import(config_file, rules=None, file_format='xml', **connectio
             else:
                 new_rules[rule] = rules[rule]
     if 'salt://' in config_file:
-        tmpfile = salt.utils.mkstemp()
+        tmpfile = salt.utils.files.mkstemp()
         cfile = __salt__['cp.get_file'](config_file, tmpfile)
         if not cfile or os.path.getsize(cfile) == 0:
             return {'name': config_file, 'result': False, 'message': 'Failed to fetch config file.'}
@@ -2399,11 +2395,11 @@ def configuration_import(config_file, rules=None, file_format='xml', **connectio
         if not os.path.isfile(cfile):
             return {'name': config_file, 'result': False, 'message': 'Invalid file path.'}
 
-    with salt.utils.fopen(cfile, mode='r') as fp_:
+    with salt.utils.files.fopen(cfile, mode='r') as fp_:
         xml = fp_.read()
 
     if 'salt://' in config_file:
-        salt.utils.safe_rm(cfile)
+        salt.utils.files.safe_rm(cfile)
 
     params = {'format': file_format,
               'rules': new_rules,
