@@ -171,26 +171,22 @@ def _changes(name,
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
-    if 'user.chroomnumber' in __salt__ \
-            and roomnumber is not None:
+    if 'user.chroomnumber' in __salt__ and roomnumber is not None:
         roomnumber = sdecode_if_string(roomnumber)
         lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
         if lusr['roomnumber'] != roomnumber:
             change['roomnumber'] = roomnumber
-    if 'user.chworkphone' in __salt__ \
-            and workphone is not None:
+    if 'user.chworkphone' in __salt__ and workphone is not None:
         workphone = sdecode_if_string(workphone)
         lusr['workphone'] = sdecode_if_string(lusr['workphone'])
         if lusr['workphone'] != workphone:
             change['workphone'] = workphone
-    if 'user.chhomephone' in __salt__ \
-            and homephone is not None:
+    if 'user.chhomephone' in __salt__ and homephone is not None:
         homephone = sdecode_if_string(homephone)
         lusr['homephone'] = sdecode_if_string(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
-    if 'user.chother' in __salt__ \
-            and other is not None:
+    if 'user.chother' in __salt__ and other is not None:
         other = sdecode_if_string(other)
         lusr['other'] = sdecode_if_string(lusr['other'])
         if lusr['other'] != other:
