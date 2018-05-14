@@ -603,23 +603,22 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.serial = salt.payload.Serial(self.opts)
-        if USE_LOAD_BALANCER:
-            self.req_server = LoadBalancerWorker(self.socket_queue,
-                                                 self.handle_message,
-                                                 io_loop=self.io_loop,
-                                                 ssl_options=self.opts.get('ssl'))
-        else:
-            if salt.utils.platform.is_windows():
-                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                _set_tcp_keepalive(self._socket, self.opts)
-                self._socket.setblocking(0)
-                self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
-            self.req_server = SaltMessageServer(self.handle_message,
-                                                io_loop=self.io_loop,
-                                                ssl_options=self.opts.get('ssl'))
-            self.req_server.add_socket(self._socket)
-            self._socket.listen(self.backlog)
+        with salt.utils.async.current_ioloop(self.io_loop):
+            if USE_LOAD_BALANCER:
+                self.req_server = LoadBalancerWorker(self.socket_queue,
+                                                     self.handle_message,
+                                                     ssl_options=self.opts.get('ssl'))
+            else:
+                if salt.utils.platform.is_windows():
+                    self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    _set_tcp_keepalive(self._socket, self.opts)
+                    self._socket.setblocking(0)
+                    self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
+                self.req_server = SaltMessageServer(self.handle_message,
+                                                    ssl_options=self.opts.get('ssl'))
+                self.req_server.add_socket(self._socket)
+                self._socket.listen(self.backlog)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
 
     @tornado.gen.coroutine
@@ -704,6 +703,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
     '''
     def __init__(self, message_handler, *args, **kwargs):
         super(SaltMessageServer, self).__init__(*args, **kwargs)
+        self.io_loop = tornado.ioloop.IOLoop.current()
 
         self.clients = []
         self.message_handler = message_handler
@@ -807,7 +807,9 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         stream = tornado.iostream.IOStream(
             sock,
             max_buffer_size=max_buffer_size)
-        return stream.connect(addr)
+        if tornado.version_info < (5,):
+            return stream.connect(addr)
+        return stream, stream.connect(addr)
 
 
 class SaltMessageClientPool(salt.transport.MessageClientPool):
@@ -970,7 +972,8 @@ class SaltMessageClient(object):
                 with salt.utils.async.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(self.host,
                                                                   self.port,
-                                                                  ssl_options=self.opts.get('ssl'))
+                                                                  ssl_options=self.opts.get('ssl'),
+                                                                  **kwargs)
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
