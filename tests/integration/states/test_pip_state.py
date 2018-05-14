@@ -52,7 +52,7 @@ def can_runas():
     '''
     if salt.utils.is_windows():
         try:
-            salt.utils.win_runas.run_as(
+            salt.utils.win_runas.runas(
                 'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
             )
         except WindowsError as exc:  # pylint: disable=undefined-variable
