@@ -650,8 +650,13 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 fixed_rrs += [rr]
         ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
+    # https://github.com/boto/boto/pull/1216
+    # the Route53 API returns the unicode version of the '*' character
+    UnicodedName = Name
+    if '*' in Name:
+        UnicodedName = Name.replace('*',r'\052')
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
-            StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
+            StartRecordName=UnicodedName, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
 
     if SetIdentifier and recordsets:
