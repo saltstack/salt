@@ -469,26 +469,33 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in pkg_nfo.items():
-            if isinstance(value, six.string_types):
-                # Check, if string is encoded in a proper UTF-8
-                if six.PY3:
-                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in _nfo.items():
+                if isinstance(value, six.string_types):
+                    # Check, if string is encoded in a proper UTF-8
+                    if six.PY3:
+                        value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+                    else:
+                        value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                    if value != value_:
+                        value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
+                        log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
                 else:
-                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
-                if value != value_:
-                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
-                    log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
+            elif not pkg_name in ret:
+                ret[pkg_name] = [t_nfo]
             else:
-                t_nfo[key] = value
-        ret[pkg_name] = t_nfo
-
+                ret[pkg_name].append(t_nfo)
     return ret
 
 
