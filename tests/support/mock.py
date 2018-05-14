@@ -5,12 +5,12 @@
     tests.support.mock
     ~~~~~~~~~~~~~~~~~~
 
-    Helper module that wraps `mock` and provides some fake objects in order to
-    properly set the function/class decorators and yet skip the test case's
-    execution.
+    Helper module that wraps :mod:`mock <python3:unittest.mock>` or `mock` and
+    provides some fake objects in order to properly set the function/class
+    decorators and yet skip the test case's execution.
 
-    Note: mock >= 2.0.0 required since unittest.mock does not have
-    MagicMock.assert_called in Python < 3.6.
+    Note: mock >= 2.0.0 is required for Python < 3.6 since unittest.mock in
+    older Python versions does not have MagicMock.assert_called.
 '''
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
@@ -21,20 +21,37 @@ import sys
 from salt.ext import six
 
 try:
-    from mock import (
-        Mock,
-        MagicMock,
-        patch,
-        sentinel,
-        DEFAULT,
-        # ANY and call will be imported further down
-        create_autospec,
-        FILTER_DIR,
-        NonCallableMock,
-        NonCallableMagicMock,
-        PropertyMock,
-        __version__
-    )
+    if sys.version_info >= (3, 6):
+        # Python 3
+        from unittest.mock import (
+            Mock,
+            MagicMock,
+            patch,
+            sentinel,
+            DEFAULT,
+            # ANY and call will be imported further down
+            create_autospec,
+            FILTER_DIR,
+            NonCallableMock,
+            NonCallableMagicMock,
+            PropertyMock,
+            __version__
+        )
+    else:
+        from mock import (
+            Mock,
+            MagicMock,
+            patch,
+            sentinel,
+            DEFAULT,
+            # ANY and call will be imported further down
+            create_autospec,
+            FILTER_DIR,
+            NonCallableMock,
+            NonCallableMagicMock,
+            PropertyMock,
+            __version__
+        )
     NO_MOCK = False
     NO_MOCK_REASON = ''
     mock_version = []
@@ -85,7 +102,11 @@ except ImportError as exc:
 
 if NO_MOCK is False:
     try:
-        from mock import call, ANY
+        if sys.version_info >= (3, 6):
+            # Python 3
+            from unittest.mock import call, ANY
+        else:
+            from mock import call, ANY
     except ImportError:
         NO_MOCK = True
         NO_MOCK_REASON = 'you need to upgrade your mock version to >= 0.8.0'
