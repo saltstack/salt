@@ -470,13 +470,17 @@ def info_installed(*names, **kwargs):
         Valid attributes are:
             ignore, report
 
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
-        salt '*' pkg.info_installed <package1> attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
+        salt '*' pkg.info_installed <package1> attr=version,vendor all_versions=True
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report

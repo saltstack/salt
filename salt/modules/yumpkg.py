@@ -1015,12 +1015,16 @@ def info_installed(*names, **kwargs):
 
     Return the information of the named package(s), installed on the system.
 
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
     '''
     all_versions = kwargs.get('all_versions', False)
     ret = dict()
