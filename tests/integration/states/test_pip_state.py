@@ -55,7 +55,7 @@ def can_runas():
             salt.utils.win_runas.run_as(
                 'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
             )
-        except WindowsError as exc:  # pylint: disable=E060
+        except WindowsError as exc:  # pylint: disable=undefined-variable
             if exc.winerror == 5:
                 # Access Denied
                 return False
