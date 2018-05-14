@@ -1009,7 +1009,7 @@ def list_downloaded():
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     .. versionadded:: 2015.8.1
 
@@ -1022,17 +1022,24 @@ def info_installed(*names):
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in pkg_nfo.items():
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in _nfo.items():
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
+                else:
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
+            elif not pkg_name in ret:
+                ret[pkg_name] = [t_nfo]
             else:
-                t_nfo[key] = value
-
-        ret[pkg_name] = t_nfo
+                ret[pkg_name].append(t_nfo)
 
     return ret
 
