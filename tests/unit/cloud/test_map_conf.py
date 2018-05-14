@@ -21,25 +21,15 @@ import salt.cloud
 EXAMPLE_PROVIDERS = {
  'nyc_vcenter': {'vmware': {'driver': 'vmware',
                             'password': '123456',
-                            'profiles': {'nyc-vm': {'cluster': 'nycvirt',
-                                                    'datastore': 'datastore1',
-                                                    'devices': {'disk': {'Hard disk 1': {'controller': 'SCSI controller 1',
-                                                                                         'size': 20}},
-                                                                 'network': {'Network Adapter 1': {'mac': '44:44:44:44:44:42',
-                                                                                                   'name': 'vlan50',
-                                                                                                   'switch_type': 'standard'}},
-                                                                 'scsi': {'SCSI controller 1': {'type': 'paravirtual'}}},
-                                                    'extra_config': {'mem.hotadd': 'yes'},
-                                                    'folder': 'coreinfra',
-                                                    'image': 'rhel6_64Guest',
-                                                    'memory': '8GB',
-                                                    'num_cpus': 2,
-                                                    'power_on': True,
-                                                    'profile': 'nyc-vm',
-                                                    'provider': 'nyc_vcenter:vmware',
-                                                    'resourcepool': 'Resources'}},
                             'url': 'vca1.saltstack.com',
-                            'user': 'root'}}
+                            'profiles': {},
+                            'user': 'root'}},
+ 'nj_vcenter': {'vmware': {'driver': 'vmware',
+                           'password': '333',
+                           'profiles': {},
+                           'image': 'rhel6_64prod',
+                           'url': 'vca2.saltstack.com',
+                           'user': 'root'}}
 }
 
 EXAMPLE_PROFILES = {
@@ -47,7 +37,7 @@ EXAMPLE_PROFILES = {
             'datastore': 'datastore1',
             'devices': {'disk': {'Hard disk 1': {'controller': 'SCSI controller 1',
                                                  'size': 20}},
-                        'network': {'Network Adapter 1': {'mac': '44:44:44:44:44:42',
+                        'network': {'Network Adapter 1': {'mac': '88:88:88:88:88:42',
                                                           'name': 'vlan50',
                                                           'switch_type': 'standard'}},
                         'scsi': {'SCSI controller 1': {'type': 'paravirtual'}}},
@@ -59,7 +49,7 @@ EXAMPLE_PROFILES = {
             'power_on': True,
             'profile': 'nyc-vm',
             'provider': 'nyc_vcenter:vmware',
-            'resourcepool': 'Resources'}
+            'resourcepool': 'Resources'},
 }
 
 EXAMPLE_MAP = {
@@ -67,7 +57,10 @@ EXAMPLE_MAP = {
                     'devices': {'disk': {'Hard disk 1': {'size': 40}},
                                 'network': {'Network Adapter 1': {'mac': '22:4a:b2:92:b3:eb'}}},
                     'memory': '16GB',
-                    'name': 'db1'}}
+                    'name': 'db1'},
+            'db2': {'name': 'db2',
+                    'password': '456',
+                    'provider': 'nj_vcenter:vmware'}}
 }
 
 
@@ -87,6 +80,7 @@ class MapConfTest(TestCase):
             opts = {'extension_modules': '/var/cache/salt/master/extmods',
                     'providers': EXAMPLE_PROVIDERS, 'profiles': EXAMPLE_PROFILES}
             cloud_map = salt.cloud.Map(opts)
+
             merged_profile = {
              'create': {'db1': {'cluster': 'nycvirt',
                                 'cpus': 4,
@@ -110,6 +104,32 @@ class MapConfTest(TestCase):
                                 'provider': 'nyc_vcenter:vmware',
                                 'resourcepool': 'Resources',
                                 'url': 'vca1.saltstack.com',
+                                'user': 'root'},
+                        'db2': {'cluster': 'nycvirt',
+                                'datastore': 'datastore1',
+                                'devices': {'disk': {'Hard disk 1': {'controller': 'SCSI controller 1',
+                                                                     'size': 20}},
+                                            'network': {'Network Adapter 1': {'mac': '88:88:88:88:88:42',
+                                                                              'name': 'vlan50',
+                                                                              'switch_type': 'standard'}},
+                                            'scsi': {'SCSI controller 1': {'type': 'paravirtual'}}},
+                                'driver': 'vmware',
+                                'extra_config': {'mem.hotadd': 'yes'},
+                                'folder': 'coreinfra',
+                                'image': 'rhel6_64Guest',
+                                'memory': '8GB',
+                                'name': 'db2',
+                                'num_cpus': 2,
+                                'password': '456',
+                                'power_on': True,
+                                'profile': 'nyc-vm',
+                                'provider': 'nj_vcenter:vmware',
+                                'resourcepool': 'Resources',
+                                'url': 'vca2.saltstack.com',
                                 'user': 'root'}}
             }
+            # what we assert above w.r.t db2 using nj_vcenter:vmware provider:
+            # - url is from the overriden nj_vcenter provider, not nyc_vcenter
+            # - image from provider is still overridden by the nyc-vm profile
+            # - password from map override is still overriding both the provider and profile password
             self.assertEqual(cloud_map.map_data(), merged_profile)
