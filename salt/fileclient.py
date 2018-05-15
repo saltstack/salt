@@ -13,6 +13,7 @@ import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
+import salt.utils.atomicfile
 
 # Import salt libs
 from salt.exceptions import (
@@ -1166,7 +1167,11 @@ class RemoteClient(Client):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 if makedirs:
-                    os.makedirs(destdir)
+                    try:
+                        os.makedirs(destdir)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:  # ignore if it was there already
+                            raise
                 else:
                     return False
             # We need an open filehandle here, that's why we're not using a
@@ -1221,7 +1226,7 @@ class RemoteClient(Client):
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
                             salt.utils.files.rm_rf(dest)
-                        fn_ = salt.utils.files.fopen(dest, 'wb+')
+                        fn_ = salt.utils.atomicfile.atomic_open(dest, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:

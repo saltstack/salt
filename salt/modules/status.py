@@ -989,7 +989,7 @@ def diskusage(*args):
         elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
             ifile = __salt__['cmd.run']('mount -p').splitlines()
         else:
-            ifile = []
+            raise CommandExecutionError('status.diskusage not yet supported on this platform')
 
         for line in ifile:
             comps = line.split()
