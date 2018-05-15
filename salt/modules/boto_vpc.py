@@ -490,11 +490,20 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
         return {'error': salt.utils.boto.get_error(e)}
 
 def wait_til_resource_exists(resource_type, resource_id, region=None, key=None, keyid=None, profile=None):
-    '''Wait for the resource to exist/be ready
+    '''
+    Wait for the resource to exist/be ready
+
+    .. versionadded:: 2017.7.7
+
     :type resource_type: string
     :param resource_type: the type of resource, should match one of the keys of resource_id_argument_keyword_dict for waiting to actually occur 
     :type resource_id: string
     :param resource_id: the id of the resource
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.wait_til_resource_exists internet_gateway igw-xxxxx
+
     '''
     resourceWaitErrorCount = 0
     # connect to boto3
