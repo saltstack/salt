@@ -76,11 +76,13 @@ def top(**kwargs):
             __opts__['master_tops']['ext_nodes'],
             kwargs['opts']['id']
             )
-    ndata = salt.utils.yaml.safe_load(
-        subprocess.Popen(
+    ext_p = subprocess.Popen(
             cmd,
             shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+            stdout=subprocess.PIPE
+            )
+    ndata = salt.utils.yaml.safe_load(
+        ext_p.communicate()[0]
     )
     if not ndata:
         log.info('master_tops ext_nodes call did not return any data')
