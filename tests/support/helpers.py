@@ -57,6 +57,7 @@ from tests.support.paths import FILES, TMP
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -613,10 +614,10 @@ def requires_network(only_local_network=False):
     return decorator
 
 
-def with_system_user(username, on_existing='delete', delete=True):
+def with_system_user(username, on_existing='delete', delete=True, password=None):
     '''
     Create and optionally destroy a system user to be used within a test
-    case. The system user is crated using the ``user`` salt module.
+    case. The system user is created using the ``user`` salt module.
 
     The decorated testcase function must accept 'username' as an argument.
 
@@ -646,7 +647,10 @@ def with_system_user(username, on_existing='delete', delete=True):
 
             # Let's add the user to the system.
             log.debug('Creating system user {0!r}'.format(username))
-            create_user = cls.run_function('user.add', [username])
+            kwargs = {'timeout': 60}
+            if salt.utils.platform.is_windows():
+                kwargs.update({'password': password})
+            create_user = cls.run_function('user.add', [username], **kwargs)
             if not create_user:
                 log.debug('Failed to create system user')
                 # The user was not created
@@ -702,7 +706,7 @@ def with_system_user(username, on_existing='delete', delete=True):
             finally:
                 if delete:
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True]
+                        'user.delete', [username, True, True], timeout=60
                     )
                     if not delete_user:
                         if failure is None:
@@ -1117,7 +1121,6 @@ def requires_salt_modules(*names):
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
-    import salt.utils
     import salt.utils.path
     if len(binaries) == 1:
         if isinstance(binaries[0], (list, tuple, set, frozenset)):
