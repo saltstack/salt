@@ -173,11 +173,7 @@ from __future__ import absolute_import
 import logging
 
 # Import third party libraries
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 try:
     # pylint: disable=W0611
@@ -209,7 +205,7 @@ def __virtual__():
     '''
     Load only if napalm-logs is installed.
     '''
-    if not HAS_NAPALM_LOGS or not HAS_ZMQ:
+    if not HAS_NAPALM_LOGS or not zmq:
         return (False, 'napalm_syslog could not be loaded. \
             Please install napalm-logs library amd ZeroMQ.')
     return True

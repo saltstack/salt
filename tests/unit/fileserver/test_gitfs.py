@@ -220,6 +220,8 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         repo.index.add([x for x in os.listdir(self.tmp_repo_dir)
                         if x != '.git'])
         repo.index.commit('Test')
+        if hasattr(repo, 'close'):
+            repo.close()
         gitfs.update()
 
     def tearDown(self):

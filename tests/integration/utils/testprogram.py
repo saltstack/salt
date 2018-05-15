@@ -29,6 +29,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
+from tests.support.helpers import win32_kill_process_tree
 from tests.support.paths import CODE_DIR
 from tests.support.processes import terminate_process, terminate_process_list
 
@@ -414,9 +415,6 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
         self.argv = [self.program]
         self.argv.extend(args)
         log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
@@ -431,16 +429,26 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
                 if datetime.now() > stop_at:
                     if term_sent is False:
-                        # Kill the process group since sending the term signal
-                        # would only terminate the shell, not the command
-                        # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                        term_sent = True
-                        continue
+                        if salt.utils.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            # Kill the process group since sending the term signal
+                            # would only terminate the shell, not the command
+                            # executed in the shell
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                            term_sent = True
+                            continue
 
                     try:
-                        # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            # As a last resort, kill the process group
+                            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         process.wait()
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:

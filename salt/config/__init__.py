@@ -3571,6 +3571,8 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides:
         opts.update(overrides)
 
+    opts['__cli'] = os.path.basename(sys.argv[0])
+
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 

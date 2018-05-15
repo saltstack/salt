@@ -280,7 +280,7 @@ def _get_opts(**kwargs):
 
 
 def _get_initial_pillar(opts):
-    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+    return __pillar__ if __opts__.get('__cli', None) == 'salt-call' \
         and opts['pillarenv'] == __opts__['pillarenv'] \
         else None
 

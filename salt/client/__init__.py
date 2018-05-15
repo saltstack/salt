@@ -47,11 +47,6 @@ from salt.exceptions import (
 # Import third party libs
 import salt.ext.six as six
 # pylint: disable=import-error
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
