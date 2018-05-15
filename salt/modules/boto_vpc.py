@@ -844,8 +844,8 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
 
 
 def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
-                  availability_zone=None, subnet_name=None, auto_assign_public_ipv4=False, tags=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  availability_zone=None, subnet_name=None, tags=None,
+                  region=None, key=None, keyid=None, profile=None, auto_assign_public_ipv4=False):
     '''
     Given a valid VPC ID or Name and a CIDR block, create a subnet for the VPC.
 
