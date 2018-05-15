@@ -13,7 +13,6 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import fnmatch
 import logging
 import os
 import shutil
@@ -231,7 +230,7 @@ def soft_kill(jid, state_id=None):
     this instructs a running state to safely exit at a given
     state id. This needs to pass in the jid of the running state.
     If a state_id is not passed then the jid referenced will be safely exited
-    at the begining of the next state run.
+    at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -264,7 +263,7 @@ def pause(jid, state_id=None, duration=None):
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds. If a state_id is not passed then
-    the jid referenced will be paused at the begining of the next state run.
+    the jid referenced will be paused at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -423,7 +422,7 @@ def _check_queue(queue, kwargs):
 
 
 def _get_initial_pillar(opts):
-    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+    return __pillar__ if __opts__.get('__cli', None) == 'salt-call' \
         and opts['pillarenv'] == __opts__['pillarenv'] \
         else None
 
@@ -778,19 +777,18 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write state request file %s. Check permission.',
-            notify_path
-        )
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write state request file %s. Check permission.',
+                notify_path
+            )
     return ret
 
 
@@ -844,19 +842,18 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            log.error(
-                'Unable to write state request file %s. Check permission.',
-                notify_path
-            )
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                log.error(
+                    'Unable to write state request file %s. Check permission.',
+                    notify_path
+                )
     return True
 
 
@@ -1249,13 +1246,12 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
-    umask = os.umask(0o77)
-    if kwargs.get('cache'):
-        if os.path.isfile(cfn):
-            with salt.utils.files.fopen(cfn, 'rb') as fp_:
-                high_ = serial.load(fp_)
-                return st_.state.call_high(high_, orchestration_jid)
-    os.umask(umask)
+    with salt.utils.files.set_umask(0o077):
+        if kwargs.get('cache'):
+            if os.path.isfile(cfn):
+                with salt.utils.files.fopen(cfn, 'rb') as fp_:
+                    high_ = serial.load(fp_)
+                    return st_.state.call_high(high_, orchestration_jid)
 
     mods = salt.utils.args.split_input(mods)
 
@@ -1280,36 +1276,36 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to SLS cache file %s. Check permission.',
-            cache_file
-        )
-    _set_retcode(ret, high_)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
+            with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
+                serial.dump(ret, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to SLS cache file %s. Check permission.',
+                cache_file
+            )
+        _set_retcode(ret, high_)
+        # Work around Windows multiprocessing bug, set __opts__['test'] back to
+        # value from before this function was run.
+        __opts__['test'] = orig_test
 
-    try:
-        with salt.utils.files.fopen(cfn, 'w+b') as fp_:
-            try:
-                serial.dump(high_, fp_)
-            except TypeError:
-                # Can't serialize pydsl
-                pass
-    except (IOError, OSError):
-        log.error(
-            'Unable to write to highstate cache file %s. Do you have permissions?',
-            cfn
-        )
-    os.umask(cumask)
+        try:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
+                try:
+                    serial.dump(high_, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            log.error(
+                'Unable to write to highstate cache file %s. Do you have permissions?',
+                cfn
+            )
+
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
@@ -2290,15 +2286,17 @@ def _disabled(funs):
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='minion'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='minion'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+        ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.
@@ -2306,7 +2304,7 @@ def event(tagmatch='*',
     Enable debug logging to see ignored events.
 
     :param tagmatch: the event is written to stdout for each tag that matches
-        this pattern; uses the same matching semantics as Salt's Reactor.
+        this glob or regular expression.
     :param count: this number is decremented for each event that matches the
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
@@ -2322,18 +2320,18 @@ def event(tagmatch='*',
         salt-call --local state.event pretty=True
     '''
     sevent = salt.utils.event.get_event(
-            node,
-            sock_dir or __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+                 node,
+                 sock_dir or __opts__['sock_dir'],
+                 __opts__['transport'],
+                 opts=__opts__,
+                 listen=True)
 
     while True:
         ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
+        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
             if not quiet:
                 salt.utils.stringutils.print_cli(
                     str('{0}\t{1}').format(  # future lint: blacklisted-function
@@ -2346,8 +2344,9 @@ def event(tagmatch='*',
                 )
                 sys.stdout.flush()
 
-            count -= 1
-            log.debug('Remaining event matches: %s', count)
+            if count > 0:
+                count -= 1
+                log.debug('Remaining event matches: %s', count)
 
             if count == 0:
                 break

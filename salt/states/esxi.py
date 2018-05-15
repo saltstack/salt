@@ -1061,7 +1061,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
     erase_disks
         Specifies whether to erase all partitions on all disks member of the
-        disk group before the disk group is created. Default vaule is False.
+        disk group before the disk group is created. Default value is False.
     '''
     proxy_details = __salt__['esxi.get_details']()
     hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
@@ -1371,7 +1371,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
 
     erase_backing_disk
         Specifies whether to erase all partitions on the backing disk before
-        the datastore is created. Default vaule is False.
+        the datastore is created. Default value is False.
     '''
     log.trace('enabled = %s', enabled)
     log.trace('datastore = %s', datastore)

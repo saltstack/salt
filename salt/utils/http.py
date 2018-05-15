@@ -568,6 +568,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result_text.decode('utf-8')
         ret['body'] = result_text
         if 'Set-Cookie' in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
@@ -818,7 +820,7 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')

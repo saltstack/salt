@@ -36,6 +36,8 @@ import salt.utils.timed_subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
+import salt.utils.win_dacl
+import salt.utils.win_reg
 import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
@@ -436,10 +438,16 @@ def _run(cmd,
     if runas or group:
         try:
             # Getting the environment for the runas user
+            # Use markers to thwart any stdout noise
             # There must be a better way to do this.
+            import uuid
+            marker = '<<<' + str(uuid.uuid4()) + '>>>'
+            marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
-                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
+                'sys.stdout.write(\"' + marker + '\"); '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items()))); '
+                'sys.stdout.write(\"' + marker + '\");'
             )
 
             if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
@@ -465,11 +473,34 @@ def _run(cmd,
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             msg = 'env command: {0}'.format(env_cmd)
             log.debug(log_callback(msg))
-            env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
+
+            env_bytes, env_encoded_err = subprocess.Popen(
                 env_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0])
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            marker_count = env_bytes.count(marker_b)
+            if marker_count == 0:
+                # Possibly PAM prevented the login
+                log.error(
+                    'Environment could not be retrieved for user \'%s\': '
+                    'stderr=%r stdout=%r',
+                    runas, env_encoded_err, env_bytes
+                )
+                # Ensure that we get an empty env_runas dict below since we
+                # were not able to get the environment.
+                env_bytes = b''
+            elif marker_count != 2:
+                raise CommandExecutionError(
+                    'Environment could not be retrieved for user \'{0}\'',
+                    info={'stderr': repr(env_encoded_err),
+                          'stdout': repr(env_bytes)}
+                )
+            else:
+                # Strip the marker
+                env_bytes = env_bytes.split(marker_b)[1]
+
             if six.PY2:
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_bytes.split(b'\0'))]*2))
@@ -487,10 +518,11 @@ def _run(cmd,
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
             env = env_runas
-        except ValueError:
+        except ValueError as exc:
+            log.exception('Error raised retrieving environment for user %s', runas)
             raise CommandExecutionError(
-                'Environment could not be retrieved for User \'{0}\''.format(
-                    runas
+                'Environment could not be retrieved for user \'{0}\': {1}'.format(
+                    runas, exc
                 )
             )
 
@@ -511,6 +543,7 @@ def _run(cmd,
             env.setdefault('LC_TELEPHONE', 'C')
             env.setdefault('LC_MEASUREMENT', 'C')
             env.setdefault('LC_IDENTIFICATION', 'C')
+            env.setdefault('LANGUAGE', 'C')
         else:
             # On Windows set the codepage to US English.
             if python_shell:
@@ -529,16 +562,19 @@ def _run(cmd,
     if python_shell is None:
         python_shell = False
 
-    kwargs = {'cwd': cwd,
-              'shell': python_shell,
-              'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
-              'stdin': six.text_type(stdin) if stdin is not None else stdin,
-              'stdout': stdout,
-              'stderr': stderr,
-              'with_communicate': with_communicate,
-              'timeout': timeout,
-              'bg': bg,
-              }
+    new_kwargs = {'cwd': cwd,
+                  'shell': python_shell,
+                  'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
+                  'stdin': six.text_type(stdin) if stdin is not None else stdin,
+                  'stdout': stdout,
+                  'stderr': stderr,
+                  'with_communicate': with_communicate,
+                  'timeout': timeout,
+                  'bg': bg,
+                  }
+
+    if 'stdin_raw_newlines' in kwargs:
+        new_kwargs['stdin_raw_newlines'] = kwargs['stdin_raw_newlines']
 
     if umask is not None:
         _umask = six.text_type(umask).lstrip('0')
@@ -555,18 +591,18 @@ def _run(cmd,
         _umask = None
 
     if runas or group or umask:
-        kwargs['preexec_fn'] = functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas,
-            _umask,
-            group)
+        new_kwargs['preexec_fn'] = functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas,
+                _umask,
+                group)
 
     if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
-        if kwargs['shell'] is True:
-            kwargs['executable'] = shell
-        kwargs['close_fds'] = True
+        if new_kwargs['shell'] is True:
+            new_kwargs['executable'] = shell
+        new_kwargs['close_fds'] = True
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
@@ -594,14 +630,13 @@ def _run(cmd,
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if output_loglevel is not None
-                        else 'REDACTED',
-                    kwargs
+                    cmd if output_loglevel is not None else 'REDACTED',
+                    new_kwargs
                 )
             )
             try:
@@ -627,7 +662,7 @@ def _run(cmd,
             ret['retcode'] = 1
             return ret
 
-        if output_encoding is not None:
+        if output_loglevel != 'quiet' and output_encoding is not None:
             log.debug('Decoding output from command %s using %s encoding',
                       cmd, output_encoding)
 
@@ -643,10 +678,11 @@ def _run(cmd,
                 proc.stdout,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stdout from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stdout from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         try:
             err = salt.utils.stringutils.to_unicode(
@@ -660,10 +696,11 @@ def _run(cmd,
                 proc.stderr,
                 encoding=output_encoding,
                 errors='replace')
-            log.error(
-                'Failed to decode stderr from command %s, non-decodable '
-                'characters have been replaced', cmd
-            )
+            if output_loglevel != 'quiet':
+                log.error(
+                    'Failed to decode stderr from command %s, non-decodable '
+                    'characters have been replaced', cmd
+                )
 
         if rstrip:
             if out is not None:
@@ -677,11 +714,11 @@ def _run(cmd,
         ret['stdout'] = out
         ret['stderr'] = err
     else:
-        to = ''
+        formatted_timeout = ''
         if timeout:
-            to = ' (timeout: {0}s)'.format(timeout)
+            formatted_timeout = ' (timeout: {0}s)'.format(timeout)
         if output_loglevel is not None:
-            msg = 'Running {0} in VT{1}'.format(cmd, to)
+            msg = 'Running {0} in VT{1}'.format(cmd, formatted_timeout)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
         now = time.time()
@@ -690,18 +727,20 @@ def _run(cmd,
         else:
             will_timeout = -1
         try:
-            proc = salt.utils.vt.Terminal(cmd,
-                               shell=True,
-                               log_stdout=True,
-                               log_stderr=True,
-                               cwd=cwd,
-                               preexec_fn=kwargs.get('preexec_fn', None),
-                               env=run_env,
-                               log_stdin_level=output_loglevel,
-                               log_stdout_level=output_loglevel,
-                               log_stderr_level=output_loglevel,
-                               stream_stdout=True,
-                               stream_stderr=True)
+            proc = salt.utils.vt.Terminal(
+                    cmd,
+                    shell=True,
+                    log_stdout=True,
+                    log_stderr=True,
+                    cwd=cwd,
+                    preexec_fn=new_kwargs.get('preexec_fn', None),
+                    env=run_env,
+                    log_stdin_level=output_loglevel,
+                    log_stdout_level=output_loglevel,
+                    log_stderr_level=output_loglevel,
+                    stream_stdout=True,
+                    stream_stderr=True
+            )
             ret['pid'] = proc.pid
             while proc.has_unread_data:
                 try:
@@ -1027,6 +1066,14 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1260,6 +1307,15 @@ def shell(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1466,6 +1522,15 @@ def run_stdout(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1655,6 +1720,15 @@ def run_stderr(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1868,6 +1942,15 @@ def run_all(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2048,6 +2131,15 @@ def retcode(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2287,6 +2379,15 @@ def script(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2316,11 +2417,14 @@ def script(source,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
+    win_cwd = False
     if salt.utils.platform.is_windows() and runas and cwd is None:
+        # Create a temp working directory
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
-        __salt__['win_dacl.add_ace'](
-            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
-            'FOLDER&SUBFOLDERS&FILES')
+        win_cwd = True
+        salt.utils.win_dacl.set_permissions(obj_name=cwd,
+                                            principal=runas,
+                                            permissions='full_control')
 
     path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
@@ -2334,10 +2438,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            if salt.utils.platform.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2346,10 +2450,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            if salt.utils.platform.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2382,10 +2486,10 @@ def script(source,
                password=password,
                success_retcodes=success_retcodes,
                **kwargs)
-    if salt.utils.platform.is_windows() and runas:
+    _cleanup_tempfile(path)
+    # If a temp working directory was created (Windows), let's remove that
+    if win_cwd:
         _cleanup_tempfile(cwd)
-    else:
-        _cleanup_tempfile(path)
 
     if hide_output:
         ret['stdout'] = ret['stderr'] = ''
@@ -2521,6 +2625,15 @@ def script_retcode(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -3027,9 +3140,9 @@ def shell_info(shell, list_modules=False):
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {'installed': False}
     if salt.utils.platform.is_windows() and shell == 'powershell':
-        pw_keys = __salt__['reg.list_keys'](
-            'HKEY_LOCAL_MACHINE',
-            'Software\\Microsoft\\PowerShell')
+        pw_keys = salt.utils.win_reg.list_keys(
+            hive='HKEY_LOCAL_MACHINE',
+            key='Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
             return {
@@ -3038,16 +3151,16 @@ def shell_info(shell, list_modules=False):
                 'installed': False,
             }
         for reg_ver in pw_keys:
-            install_data = __salt__['reg.read_value'](
-                'HKEY_LOCAL_MACHINE',
-                'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
-                'Install')
+            install_data = salt.utils.win_reg.read_value(
+                hive='HKEY_LOCAL_MACHINE',
+                key='Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
+                vname='Install')
             if install_data.get('vtype') == 'REG_DWORD' and \
                     install_data.get('vdata') == 1:
-                details = __salt__['reg.list_values'](
-                    'HKEY_LOCAL_MACHINE',
-                    'Software\\Microsoft\\PowerShell\\{0}\\'
-                    'PowerShellEngine'.format(reg_ver))
+                details = salt.utils.win_reg.list_values(
+                    hive='HKEY_LOCAL_MACHINE',
+                    key='Software\\Microsoft\\PowerShell\\{0}\\'
+                        'PowerShellEngine'.format(reg_ver))
 
                 # reset data, want the newest version details only as powershell
                 # is backwards compatible
@@ -3319,6 +3432,14 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
+
+      .. versionadded:: Fluorine
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -3334,9 +3455,12 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd += ' | ConvertTo-JSON'
-    if depth is not None:
-        cmd += ' -Depth {0}'.format(depth)
+    # ConvertTo-JSON is only available on PowerShell 3.0 and later
+    psversion = shell_info('powershell')['psversion']
+    if salt.utils.versions.version_cmp(psversion, '2.0') == 1:
+        cmd += ' | ConvertTo-JSON'
+        if depth is not None:
+            cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -3353,7 +3477,7 @@ def powershell(cmd,
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+    cmd = 'try {' + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -3425,10 +3549,10 @@ def powershell_all(cmd,
     empty Powershell output (which would result in an exception). Instead we
     treat this as a special case and one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field of the return dictionary will be an empty list.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the
+    - If the value of the ``force_list`` parameter is ``False``, then the
       return dictionary **will not have a result key added to it**. We aren't
       setting ``result`` to ``None`` in this case, because ``None`` is the
       Python representation of "null" in JSON. (We likewise can't use ``False``
@@ -3441,20 +3565,20 @@ def powershell_all(cmd,
     content, and the type of the resulting Python object is other than ``list``
     then one of two things will happen:
 
-    - If the value of the ``force_list`` paramater is ``True``, then the
+    - If the value of the ``force_list`` parameter is ``True``, then the
       ``result`` field will be a singleton list with the Python object as its
       sole member.
 
-    - If the value of the ``force_list`` paramater is ``False``, then the value
+    - If the value of the ``force_list`` parameter is ``False``, then the value
       of ``result`` will be the unmodified Python object.
 
     If Powershell's output is not an empty string, Python is able to parse its
     content, and the type of the resulting Python object is ``list``, then the
     value of ``result`` will be the unmodified Python object. The
-    ``force_list`` paramater has no effect in this case.
+    ``force_list`` parameter has no effect in this case.
 
     .. note::
-         An example of why the ``force_list`` paramater is useful is as
+         An example of why the ``force_list`` parameter is useful is as
          follows: The Powershell command ``dir x | Convert-ToJson`` results in
 
          - no output when x is an empty directory.
@@ -3602,13 +3726,21 @@ def powershell_all(cmd,
         where characters may be dropped or incorrectly converted when executed.
         Default is False.
 
-    :param bool force_list: The purpose of this paramater is described in the
+    :param bool force_list: The purpose of this parameter is described in the
         preamble of this function's documentation. Default value is False.
 
     :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
 
       .. versionadded:: Fluorine
 
@@ -3860,6 +3992,14 @@ def run_bg(cmd,
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
+    :param bool stdin_raw_newlines : False
+        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
+        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
+        the newlines as-is. This should be used when you are supplying data
+        using ``stdin`` that should not be modified.
 
       .. versionadded:: Fluorine
 

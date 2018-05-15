@@ -174,6 +174,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         available = self.run_function('sys.doc', ['pkg.hold'])
 
         if available:
+            self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
                 lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
                 versionlock = self.run_function('pkg.version', [lock_pkg])
@@ -186,11 +187,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
             unhold_ret = self.run_function('pkg.unhold', [self.pkg])
             self.assertIn(self.pkg, unhold_ret)
-            self.assertTrue(hold_ret[self.pkg]['result'])
+            self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
                 if not versionlock:
                     self.run_function('pkg.remove', [lock_pkg])
+            self.run_function('pkg.remove', [self.pkg])
 
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
@@ -270,38 +272,53 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('pkg.refresh_db')
 
         if os_family == 'Suse':
-            # pkg.latest version returns empty if the latest version is already installed
-            vim_version_dict = self.run_function('pkg.latest_version', ['vim'])
-            vim_info = self.run_function('pkg.info_available', ['vim'])['vim']
-            if vim_version_dict == {}:
-                # Latest version is installed, get its version and construct
-                # a version selector so the immediately previous version is selected
-                vim_version = 'version=<'+vim_info['version']
-            else:
-                # Vim was not installed, so pkg.latest_version returns the latest one.
-                # Construct a version selector so immediately previous version is selected
-                vim_version = 'version=<'+vim_version_dict
+            # This test assumes that there are multiple possible versions of a
+            # package available. That makes it brittle if you pick just one
+            # target, as changes in the available packages will break the test.
+            # Therefore, we'll choose from several packages to make sure we get
+            # one that is suitable for this test.
+            packages = ('hwinfo', 'avrdude', 'diffoscope', 'vim')
 
-            # Only install a new version of vim if vim is up-to-date, otherwise we don't
-            # need this check. (And the test will fail when we check for the empty dict
-            # since vim gets upgraded in the install step.)
-            if 'out-of-date' not in vim_info['status']:
-                # Install a version of vim that should need upgrading
-                ret = self.run_function('pkg.install', ['vim', vim_version])
-                if not isinstance(ret, dict):
-                    if ret.startswith('ERROR'):
-                        self.skipTest('Could not install earlier vim to complete test.')
+            available = self.run_function('pkg.list_repo_pkgs', packages)
+            versions = self.run_function('pkg.version', packages)
+
+            for package in packages:
+                try:
+                    new, old = available[package][:2]
+                except (KeyError, ValueError):
+                    # Package not available, or less than 2 versions
+                    # available. This is not a suitable target.
+                    continue
                 else:
-                    self.assertNotEqual(ret, {})
+                    target = package
+                    current = versions[target]
+                    break
+            else:
+                # None of the packages have more than one version available, so
+                # we need to find new package(s). pkg.list_repo_pkgs can be
+                # used to get an overview of the available packages. We should
+                # try to find packages with few dependencies and small download
+                # sizes, to keep this test from taking longer than necessary.
+                self.fail('No suitable package found for this test')
 
-            # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
+            # Make sure we have the 2nd-oldest available version installed
+            ret = self.run_function('pkg.install', [target], version=old)
+            if not isinstance(ret, dict):
+                if ret.startswith('ERROR'):
+                    self.skipTest(
+                        'Could not install older {0} to complete '
+                        'test.'.format(target)
+                    )
+
+            # Run a system upgrade, which should catch the fact that the
+            # targeted package needs upgrading, and upgrade it.
             ret = self.run_function(func)
 
             # The changes dictionary should not be empty.
             if 'changes' in ret:
-                self.assertIn('vim', ret['changes'])
+                self.assertIn(target, ret['changes'])
             else:
-                self.assertIn('vim', ret)
+                self.assertIn(target, ret)
         else:
             ret = self.run_function('pkg.list_upgrades')
             if ret == '' or ret == {}:

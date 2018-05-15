@@ -256,7 +256,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         ``name`` and ``pattern`` were kept for backwards compatibility reasons.
 
         ``name`` is an alias for the ``entryname`` argument, ``pattern`` is an alias
-        for ``log_file``. These aliasses wil only be used if the ``entryname`` and
+        for ``log_file``. These aliases will only be used if the ``entryname`` and
         ``log_file`` arguments are not passed.
 
         For a full list of arguments see ```logadm.show_args```.

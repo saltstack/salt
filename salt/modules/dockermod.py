@@ -483,20 +483,6 @@ def _clear_context():
             pass
 
 
-def _pull_if_needed(image, client_timeout):
-    '''
-    Pull the desired image if not present, and return the image ID or name
-    '''
-    image_id = resolve_image_id(image)
-    if not image_id:
-        pull(image, client_timeout=client_timeout)
-        # Avoid another inspect and just use the passed image. docker-py
-        # will do the right thing and resolve the tag for us if we pass it
-        # a tagged image.
-        image_id = image
-    return image_id
-
-
 def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
@@ -1369,7 +1355,7 @@ def login(*registries):
     # information is added to the config.json, since docker-py isn't designed
     # to do so.
     registry_auth = __pillar__.get('docker-registries', {})
-    ret = {}
+    ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
         errors.append('\'docker-registries\' Pillar value must be a dictionary')
@@ -1427,6 +1413,8 @@ def login(*registries):
                     errors.append(login_cmd['stderr'])
                 elif login_cmd['stdout']:
                     errors.append(login_cmd['stdout'])
+    if errors:
+        ret['retcode'] = 1
     return ret
 
 
@@ -3113,8 +3101,8 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion docker.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     kwargs, unused_kwargs = _get_create_kwargs(
         skip_translate=skip_translate,
@@ -3136,7 +3124,7 @@ def create(image,
     )
     time_started = time.time()
     response = _client_wrapper('create_container',
-                               image_id,
+                               image,
                                name=name,
                                **kwargs)
     response['Time_Elapsed'] = time.time() - time_started
@@ -3230,8 +3218,8 @@ def run_container(image,
         # net1 using automatic IP, net2 using static IPv4 address
         salt myminion docker.run_container myuser/myimage command='perl /scripts/sync.py' networks='{"net1": {}, "net2": {"ipv4_address": "192.168.27.12"}}'
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     removed_ids = None
     if name is not None:
@@ -3301,7 +3289,7 @@ def run_container(image,
 
     time_started = time.time()
     # Create the container
-    ret = _client_wrapper('create_container', image_id, name=name, **kwargs)
+    ret = _client_wrapper('create_container', image, name=name, **kwargs)
 
     if removed_ids:
         ret['Replaces'] = removed_ids
@@ -3798,6 +3786,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
     kwargs = __utils__['args.clean_kwargs'](**kwargs)
     stop_ = kwargs.pop('stop', False)
     timeout = kwargs.pop('timeout', None)
+    auto_remove = False
     if kwargs:
         __utils__['args.invalid_kwargs'](kwargs)
 
@@ -3807,9 +3796,19 @@ def rm_(name, force=False, volumes=False, **kwargs):
             'remove this container'.format(name)
         )
     if stop_ and not force:
+        inspect_results = inspect_container(name)
+        try:
+            auto_remove = inspect_results['HostConfig']['AutoRemove']
+        except KeyError:
+            log.error(
+                'Failed to find AutoRemove in inspect results, Docker API may '
+                'have changed. Full results: %s', inspect_results
+            )
         stop(name, timeout=timeout)
     pre = ps_(all=True)
-    _client_wrapper('remove_container', name, v=volumes, force=force)
+
+    if not auto_remove:
+        _client_wrapper('remove_container', name, v=volumes, force=force)
     _clear_context()
     return [x for x in pre if x not in ps_(all=True)]
 
@@ -4505,7 +4504,7 @@ def pull(image,
 
     time_started = time.time()
     response = _client_wrapper('pull', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4538,6 +4537,7 @@ def pull(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4600,7 +4600,7 @@ def push(image,
 
     time_started = time.time()
     response = _client_wrapper('push', image, **kwargs)
-    ret = {'Time_Elapsed': time.time() - time_started}
+    ret = {'Time_Elapsed': time.time() - time_started, 'retcode': 0}
     _clear_context()
 
     if not response:
@@ -4632,6 +4632,7 @@ def push(image,
 
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -4703,9 +4704,11 @@ def rmi(*names, **kwargs):
 
     _clear_context()
     ret = {'Layers': [x for x in pre_images if x not in images(all=True)],
-           'Tags': [x for x in pre_tags if x not in list_tags()]}
+           'Tags': [x for x in pre_tags if x not in list_tags()],
+           'retcode': 0}
     if errors:
         ret['Errors'] = errors
+        ret['retcode'] = 1
     return ret
 
 
@@ -6541,7 +6544,7 @@ def _generate_tmp_path():
         'salt.docker.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
+def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=''):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
@@ -6549,7 +6552,7 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
     chunks = _compile_state(sls_opts, mods)
     # reuse it from salt.ssh, however this function should
     # be somewhere else
-    refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
         sls_opts,
@@ -6740,7 +6743,8 @@ def sls(name, mods=None, **kwargs):
         name,
         sls_opts,
         mods=mods,
-        pillar=pillar)
+        pillar=pillar,
+        extra_filerefs=kwargs.get('extra_filerefs', ''))
 
     # where to put the salt trans tar
     trans_dest_path = _generate_tmp_path()
@@ -6848,7 +6852,7 @@ def sls_build(repository,
         .. versionadded:: 2018.3.0
 
     dryrun: False
-        when set to True the container will not be commited at the end of
+        when set to True the container will not be committed at the end of
         the build. The dryrun succeed also when the state contains errors.
 
     **RETURN DATA**
@@ -6870,10 +6874,10 @@ def sls_build(repository,
             'The \'name\' argument to docker.sls_build has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = name
+        repository = name
 
     create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
-    for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
+    for key in ('image', 'name', 'cmd', 'interactive', 'tty', 'extra_filerefs'):
         try:
             del create_kwargs[key]
         except KeyError:

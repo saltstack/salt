@@ -475,6 +475,8 @@ class CkMinions(object):
         minions = set(self._pki_minions())
         log.debug('minions: %s', minions)
 
+        nodegroups = self.opts.get('nodegroups', {})
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -497,9 +499,11 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
@@ -556,9 +560,12 @@ class CkMinions(object):
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "%s"', word)
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
@@ -718,21 +725,11 @@ class CkMinions(object):
         _res = self.check_minions(v_expr, v_matcher)
         return set(_res['minions'])
 
-    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = self._expand_matching(valid)
         if minions is None:

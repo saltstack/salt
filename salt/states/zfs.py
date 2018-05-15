@@ -8,7 +8,7 @@ States for managing zfs datasets
 :platform:      smartos, illumos, solaris, freebsd, linux
 
 .. versionadded:: 2016.3.0
-.. versionchanged:: Flourine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -454,8 +454,9 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
         ## NOTE: fetch current volume properties
         properties_current = __salt__['zfs.get'](
             name,
+            type=dataset_type,
             fields='value',
-            depth=1,
+            depth=0,
             parsable=True,
         ).get(name, OrderedDict())
 

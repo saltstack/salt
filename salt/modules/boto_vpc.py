@@ -2309,10 +2309,10 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name, vpc_peering_connection_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
-                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+                                  'nat_gateway_subnet_id, nat_gateway_subnet_name or vpc_peering_connection_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2642,7 +2642,7 @@ def _maybe_set_tags(tags, obj):
 def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_support:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
-        log.debug('DNS spport was set to: %s on vpc %s', dns_support, vpcid)
+        log.debug('DNS support was set to: %s on vpc %s', dns_support, vpcid)
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: %s on vpc %s', dns_hostnames, vpcid)

@@ -21,17 +21,38 @@ import salt.config
 from salt.ext import six
 
 
+class LibvirtMock(MagicMock):
+
+    class libvirtError(Exception):
+        pass
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        self.mock_libvirt = LibvirtMock()
+        self.mock_conn = MagicMock()
+        self.mock_libvirt.openAuth.return_value = self.mock_conn
+        self.addCleanup(delattr, self, 'mock_libvirt')
+        self.addCleanup(delattr, self, 'mock_conn')
         loader_globals = {
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
-            }
+            },
+            'libvirt': self.mock_libvirt
         }
         return {virt: loader_globals, config: loader_globals}
+
+    def set_mock_vm(self, name, xml):
+        self.mock_conn.listDefinedDomains.return_value = [name]
+        mock_domain = MagicMock()
+        self.mock_conn.lookupByName.return_value = mock_domain
+        mock_domain.getXMLDesc.return_value = xml
+
+        # Return state as shutdown
+        mock_domain.info.return_value = [4, 0, 0, 0]
 
     def test_boot_default_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
@@ -434,31 +455,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     def test_mixed_dict_and_list_as_profile_objects(self):
 
         yaml_config = '''
-          virt.nic:
-             new-listonly-profile:
-                - bridge: br0
-                  name: eth0
-                - model: virtio
-                  name: eth1
-                  source: test_network
-                  type: network
-             new-list-with-legacy-names:
-                - eth0:
-                     bridge: br0
-                - eth1:
-                     bridge: br1
-                     model: virtio
-             non-default-legacy-profile:
-                eth0:
-                   bridge: br0
-                eth1:
-                   bridge: br1
-                   model: virtio
+          virt:
+             nic:
+                new-listonly-profile:
+                   - bridge: br0
+                     name: eth0
+                   - model: virtio
+                     name: eth1
+                     source: test_network
+                     type: network
+                new-list-with-legacy-names:
+                   - eth0:
+                        bridge: br0
+                   - eth1:
+                        bridge: br1
+                        model: virtio
+                non-default-legacy-profile:
+                   eth0:
+                      bridge: br0
+                   eth1:
+                      bridge: br1
+                      model: virtio
         '''
         mock_config = salt.utils.yaml.safe_load(yaml_config)
         with patch.dict(salt.modules.config.__opts__, mock_config):
 
-            for name in six.iterkeys(mock_config['virt.nic']):
+            for name in six.iterkeys(mock_config['virt']['nic']):
                 profile = salt.modules.virt._nic_profile(name, 'kvm')
                 self.assertEqual(len(profile), 2)
 
@@ -474,7 +496,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     interface_attrs['mac'], re.I))
 
     def test_get_graphics(self):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
@@ -482,15 +504,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </graphics>
               </devices>
             </domain>
-        ''')
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            graphics = virt.get_graphics('test-vm')
-            self.assertEqual('vnc', graphics['type'])
-            self.assertEqual('5900', graphics['port'])
-            self.assertEqual('0.0.0.0', graphics['listen'])
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        graphics = virt.get_graphics('test-vm')
+        self.assertEqual('vnc', graphics['type'])
+        self.assertEqual('5900', graphics['port'])
+        self.assertEqual('0.0.0.0', graphics['listen'])
 
     def test_get_nics(self):
-        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
+        xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <interface type='bridge'>
@@ -501,9 +524,139 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </interface>
               </devices>
             </domain>
-        ''')
-        with patch.object(virt, 'get_xml', get_xml_mock):
-            nics = virt.get_nics('test-vm')
-            nic = nics[list(nics)[0]]
-            self.assertEqual('bridge', nic['type'])
-            self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        nics = virt.get_nics('test-vm')
+        nic = nics[list(nics)[0]]
+        self.assertEqual('bridge', nic['type'])
+        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    def test_get_disks(self, mock_communicate, mock_popen):
+        xml = '''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        disks = virt.get_disks('test-vm')
+        disk = disks[list(disks)[0]]
+        self.assertEqual('/disks/test.qcow2', disk['file'])
+        self.assertEqual('disk', disk['type'])
+        cdrom = disks[list(disks)[1]]
+        self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
+        self.assertEqual('cdrom', cdrom['type'])
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    @patch('salt.modules.virt.stop', return_value=True)
+    @patch('salt.modules.virt.undefine')
+    @patch('os.remove')
+    def test_purge_default(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+        xml = '''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        res = virt.purge('test-vm')
+        self.assertTrue(res)
+        mock_remove.assert_any_call('/disks/test.qcow2')
+        mock_remove.assert_any_call('/disks/test-cdrom.iso')
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate', return_value="")
+    @patch('salt.modules.virt.stop', return_value=True)
+    @patch('salt.modules.virt.undefine')
+    @patch('os.remove')
+    def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+
+        xml = '''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/disks/test.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-cdrom.iso'/>
+                <target dev='hda' bus='ide'/>
+                <readonly/>
+              </disk>
+              <disk type='file' device='floppy'>
+                <driver name='qemu' type='raw'/>
+                <source file='/disks/test-floppy.iso'/>
+                <target dev='hdb' bus='ide'/>
+                <readonly/>
+              </disk>
+              </devices>
+            </domain>
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        res = virt.purge('test-vm', removables=False)
+        self.assertTrue(res)
+        mock_remove.assert_called_once()
+        mock_remove.assert_any_call('/disks/test.qcow2')
+
+    def test_network(self):
+        xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'network')
+        self.assertEqual(root.find('bridge').attrib['name'], 'main')
+        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
+        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
+
+    def test_network_tag(self):
+        xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch', 1001)
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'network')
+        self.assertEqual(root.find('bridge').attrib['name'], 'main')
+        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
+        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
+        self.assertEqual(root.find('vlan/tag').attrib['id'], '1001')
+
+    def test_pool(self):
+        xml_data = virt._gen_pool_xml('pool', 'logical', 'base')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'logical')
+        self.assertEqual(root.find('target/path').text, '/dev/base')
+
+    def test_pool_with_source(self):
+        xml_data = virt._gen_pool_xml('pool', 'logical', 'base', 'sda')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'logical')
+        self.assertEqual(root.find('target/path').text, '/dev/base')
+        self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')

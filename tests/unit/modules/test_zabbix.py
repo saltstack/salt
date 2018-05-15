@@ -3,18 +3,97 @@
     :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
 '''
 
-# Import python libs
+# Import Python Libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import salt.modules.zabbix as zabbix
 
-# Import Salt Testing libs
+# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+
+from salt.exceptions import SaltException
 
 CONN_ARGS = {}
 CONN_ARGS['url'] = 'http://test.url'
 CONN_ARGS['auth'] = '1234'
+
+GETID_QUERY_RESULT_OK = [{'internal': '0', 'flags': '0', 'groupid': '11', 'name': 'Databases'}]
+GETID_QUERY_RESULT_BAD = [{'internal': '0', 'flags': '0', 'groupid': '11', 'name': 'Databases'}, {'another': 'object'}]
+
+DEFINED_PARAMS = {'name': 'beta',
+                  'eventsource': 2,
+                  'status': 0,
+                  'filter': {'evaltype': 2,
+                             'conditions': [{'conditiontype': 24,
+                                             'operator': 2,
+                                             'value': 'db'}]},
+                  'operations': [{'operationtype': 2},
+                                 {'operationtype': 4,
+                                  'opgroup': [{'groupid': {'query_object': 'hostgroup',
+                                                           'query_name': 'Databases'}}]}],
+                  'empty_list': []}
+
+SUBSTITUTED_DEFINED_PARAMS = {'status': '0',
+                              'filter': {'evaltype': '2',
+                                         'conditions': [{'operator': '2',
+                                                         'conditiontype': '24',
+                                                         'value': 'db'}]},
+                              'eventsource': '2',
+                              'name': 'beta',
+                              'operations': [{'operationtype': '2'},
+                                             {'opgroup': [{'groupid': '11'}],
+                                              'operationtype': '4'}],
+                              'empty_list': []}
+
+EXISTING_OBJECT_PARAMS = {'status': '0',
+                          'operations': [{'operationtype': '2', 'esc_period': '0', 'evaltype': '0', 'opconditions': [],
+                                          'esc_step_to': '1', 'actionid': '23', 'esc_step_from': '1',
+                                          'operationid': '64'},
+                                         {'operationtype': '4', 'esc_period': '0', 'evaltype': '0', 'opconditions': [],
+                                          'esc_step_to': '1', 'actionid': '23', 'esc_step_from': '1',
+                                          'opgroup': [{'groupid': '11',
+                                                       'operationid': '65'}],
+                                          'operationid': '65'}],
+                          'def_shortdata': '',
+                          'name': 'beta',
+                          'esc_period': '0',
+                          'def_longdata': '',
+                          'filter': {'formula': '',
+                                     'evaltype': '2',
+                                     'conditions': [{'operator': '2',
+                                                     'conditiontype': '24',
+                                                     'formulaid': 'A',
+                                                     'value': 'DIFFERENT VALUE HERE'}],
+                                     'eval_formula': 'A'},
+                          'eventsource': '2',
+                          'actionid': '23',
+                          'r_shortdata': '',
+                          'r_longdata': '',
+                          'recovery_msg': '0',
+                          'empty_list': [{'dict_key': 'dic_val'}]}
+
+DIFF_PARAMS_RESULT = {'filter': {'evaltype': '2',
+                                 'conditions': [{'operator': '2',
+                                                 'conditiontype': '24',
+                                                 'value': 'db'}]},
+                      'empty_list': []}
+
+DIFF_PARAMS_RESULT_WITH_ROLLBACK = {'new': DIFF_PARAMS_RESULT,
+                                    'old': {'filter': {'formula': '',
+                                                       'evaltype': '2',
+                                                       'conditions': [{'operator': '2',
+                                                                       'conditiontype': '24',
+                                                                       'formulaid': 'A',
+                                                                       'value': 'DIFFERENT VALUE HERE'}],
+                                                       'eval_formula': 'A'},
+                                            'empty_list': [{'dict_key': 'dic_val'}]}}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -25,6 +104,53 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {zabbix: {'__salt__': {'cmd.which_bin': lambda _: 'zabbix_server'}}}
+
+    def test_get_object_id_by_params(self):
+        '''
+        Test get_object_id function with expected result from API call
+        '''
+        with patch('salt.modules.zabbix.run_query', MagicMock(return_value=GETID_QUERY_RESULT_OK)):
+            self.assertEqual(zabbix.get_object_id_by_params('hostgroup', 'Databases'), '11')
+
+    def test_get_obj_id_by_params_fail(self):
+        '''
+        Test get_object_id function with unexpected result from API call
+        '''
+        with patch('salt.modules.zabbix.run_query', MagicMock(return_value=GETID_QUERY_RESULT_BAD)):
+            self.assertRaises(SaltException, zabbix.get_object_id_by_params, 'hostgroup', 'Databases')
+
+    def test_substitute_params(self):
+        '''
+        Test proper parameter substitution for defined input
+        '''
+        with patch('salt.modules.zabbix.get_object_id_by_params', MagicMock(return_value='11')):
+            self.assertEqual(zabbix.substitute_params(DEFINED_PARAMS), SUBSTITUTED_DEFINED_PARAMS)
+
+    def test_substitute_params_fail(self):
+        '''
+        Test proper parameter substitution if there is needed parameter missing
+        '''
+        self.assertRaises(SaltException, zabbix.substitute_params, {'groupid': {'query_object': 'hostgroup'}})
+
+    def test_compare_params(self):
+        '''
+        Test result comparison of two params structures
+        '''
+        self.assertEqual(zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS),
+                         DIFF_PARAMS_RESULT)
+
+    def test_compare_params_rollback(self):
+        '''
+        Test result comparison of two params structures with rollback return value option
+        '''
+        self.assertEqual(zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS, True),
+                         DIFF_PARAMS_RESULT_WITH_ROLLBACK)
+
+    def test_compare_params_fail(self):
+        '''
+        Test result comparison of two params structures where some data type mismatch exists
+        '''
+        self.assertRaises(SaltException, zabbix.compare_params, {'dict': 'val'}, {'dict': ['list']})
 
     def test_apiiinfo_version(self):
         '''

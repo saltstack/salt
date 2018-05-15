@@ -88,6 +88,33 @@ by their ``os`` grain:
         - match: grain
         - servers
 
+Pillar definitions can also take a keyword argument ``ignore_missing``.
+When the value of ``ignore_missing`` is ``True``, all errors for missing
+pillar files are ignored. The default value for ``ignore_missing`` is
+``False``.
+
+Here is an example using the ``ignore_missing`` keyword parameter to ignore
+errors for missing pillar files:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - servers
+        - systems
+        - ignore_missing: True
+
+Assuming that the pillar ``servers`` exists in the fileserver backend
+and the pillar ``systems`` doesn't, all pillar data from ``servers``
+pillar is delivered to minions and no error for the missing pillar
+``systems`` is noted under the key ``_errors`` in the pillar data
+delivered to minions.
+
+Should the ``ignore_missing`` keyword parameter have the value ``False``,
+an error for the missing pillar ``systems`` would produce the value
+``Specified SLS 'servers' in environment 'base' is not available on the salt master``
+under the key ``_errors`` in the pillar data delivered to minions.
+
 ``/srv/pillar/packages.sls``
 
 .. code-block:: jinja
@@ -166,6 +193,28 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     which parses top files when :ref:`running states <running-highstate>`, so
     the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
     context.
+
+
+Dynamic Pillar Environments
+===========================
+
+If environment ``__env__`` is specified in :conf_master:`pillar_roots`, all
+environments that are not explicitly specified in :conf_master:`pillar_roots`
+will map to the directories from ``__env__``. This allows one to use dynamic
+git branch based environments for state/pillar files with the same file-based
+pillar applying to all environments. For example:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/pillar
+
+    ext_pillar:
+      - git:
+        - __env__ https://example.com/git-pillar.git
+
+.. versionadded:: 2017.7.5,2018.3.1
 
 
 Pillar Namespace Flattening
@@ -262,6 +311,8 @@ The resulting pillar dictionary will be:
 Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
+
+.. _pillar-include:
 
 Including Other Pillars
 =======================
@@ -409,7 +460,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function

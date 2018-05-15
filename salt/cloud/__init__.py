@@ -1499,8 +1499,8 @@ class Cloud(object):
                             vm_name = vm_details['id']
                         else:
                             log.debug(
-                                'vm:{0} in provider:{1} is not in name '
-                                'list:\'{2}\''.format(vm_name, driver, names)
+                                'vm:%s in provider:%s is not in name '
+                                'list:\'%s\'', vm_name, driver, names
                             )
                             continue
 
@@ -1786,7 +1786,7 @@ class Map(Cloud):
             else:
                 cached_map = self.opts['map']
             try:
-                renderer = self.opts.get('renderer', 'yaml_jinja')
+                renderer = self.opts.get('renderer', 'jinja|yaml')
                 rend = salt.loader.render(self.opts, {})
                 blacklist = self.opts.get('renderer_blacklist')
                 whitelist = self.opts.get('renderer_whitelist')
