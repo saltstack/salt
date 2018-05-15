@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: `Anthony Shaw <anthonyshaw@apache.org>`
-
-    tests.unit.cloud.clouds.dimensiondata_test
+    tests.unit.cloud.test_libcloudfuncs
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 

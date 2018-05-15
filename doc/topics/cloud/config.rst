@@ -351,6 +351,7 @@ This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
 `os-client-config <https://docs.openstack.org/os-client-config/latest/>`
 
 .. code-block:: yaml
+
     myopenstack:
       driver: openstack
       region_name: RegionOne
@@ -359,6 +360,7 @@ This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
 Or by just configuring the same auth block directly in the cloud provider config.
 
 .. code-block:: yaml
+
     myopenstack:
       driver: openstack
       region_name: RegionOne
