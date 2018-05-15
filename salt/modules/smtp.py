@@ -46,6 +46,9 @@ import logging
 import os
 import socket
 
+# Import salt libs
+import salt.utils.fopen
+
 log = logging.getLogger(__name__)
 
 HAS_LIBS = False
@@ -106,10 +109,10 @@ def send_msg(recipient,
         password = creds.get('smtp.password')
 
     if attachments:
-      msg = email.mime.multipart.MIMEMultipart()
-      msg.attach(email.mime.text.MIMEText(message))
+        msg = email.mime.multipart.MIMEMultipart()
+        msg.attach(email.mime.text.MIMEText(message))
     else:
-      msg = email.mime.text.MIMEText(message)
+        msg = email.mime.text.MIMEText(message)
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
@@ -153,7 +156,7 @@ def send_msg(recipient,
     if attachments:
         for f in attachments:
             name = os.path.basename(f)
-            with open(f, 'rb') as fin:
+            with salt.utils.fopen(f, 'rb') as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
             att['Content-Disposition'] = 'attachment; filename="%s"' % name
             msg.attach(att)
