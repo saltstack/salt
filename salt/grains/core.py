@@ -1213,6 +1213,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'nilrt-xfce': 'NILinuxRT-XFCE',
+    'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
@@ -1766,7 +1767,7 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os_family') == 'RedHat':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
-    elif grains.get('os_family') == 'NILinuxRT':
+    elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
             if line.startswith('arch'):
