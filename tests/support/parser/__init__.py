@@ -398,6 +398,18 @@ class SaltTestingParser(optparse.OptionParser):
         else:
             filename_map = {}
 
+        def _add(comps):
+            '''
+            Helper to add unit and integration tests matching a given mod path
+            '''
+            mod_relname = '.'.join(comps)
+            ret.update(
+                x for x in
+                ['.'.join(('unit', mod_relname)),
+                 '.'.join(('integration', mod_relname))]
+                if x in self._test_mods
+            )
+
         # First, try a path match
         for path in files:
             match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
@@ -412,15 +424,6 @@ class SaltTestingParser(optparse.OptionParser):
                     else:
                         comps[-1] = 'test_{0}'.format(comps[-1][:-3])
 
-                    candidates = []
-
-                    def _add(comps):
-                        mod_relname = '.'.join(comps)
-                        candidates.extend(
-                            ['.'.join(('unit', mod_relname)),
-                             '.'.join(('integration', mod_relname))]
-                        )
-
                     # Direct name matches
                     _add(comps)
 
@@ -430,9 +433,6 @@ class SaltTestingParser(optparse.OptionParser):
                     if comps[-2] == 'modules':
                         comps[-2] = 'states'
                         _add(comps)
-
-                    # Add any candidates for which test modules exist
-                    ret.update([x for x in candidates if x in self._test_mods])
 
                 # Make sure to run a test module if it's been modified
                 elif match.group(1).startswith('tests/'):
