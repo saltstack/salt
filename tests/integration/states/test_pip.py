@@ -240,8 +240,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
             # Let's remove the pip binary
             pip_bin = os.path.join(venv_dir, 'bin', 'pip')
-            py_dir = 'python{0}.{1}'.format(*sys.version_info[:2])
-            site_dir = os.path.join(venv_dir, 'lib', py_dir, 'site-packages')
+            site_dir = self.run_function('virtualenv.get_distribution_path', [venv_dir, 'pip'])
             if salt.utils.platform.is_windows():
                 pip_bin = os.path.join(venv_dir, 'Scripts', 'pip.exe')
                 site_dir = os.path.join(venv_dir, 'lib', 'site-packages')
