@@ -39,14 +39,8 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.yaml
-
-try:
-    # 2018.3 and later
-    from salt.utils.stringutils import expr_match as _expr_match
-except ImportError:
-    # 2017.7 and earlier
-    from salt.utils import expr_match as _expr_match
 
 try:
     from tests.support.ext import console
@@ -438,7 +432,7 @@ class SaltTestingParser(optparse.OptionParser):
         # Next, try the filename_map
         for path_expr in filename_map:
             for filename in files:
-                if _expr_match(filename, path_expr):
+                if salt.utils.stringutils.expr_match(filename, path_expr):
                     ret.update(filename_map[path_expr])
                     break
 
