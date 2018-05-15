@@ -5,7 +5,12 @@
 
     .. versionadded:: 0.17.0
 
-    This module provides a `Sentry`_ logging handler.
+    This module provides a `Sentry`_ logging handler. Sentry is an open source
+    error tracking platform that provides deep context about exceptions that
+    happen in production. Details about stack traces along with the context
+    variables available at the time of the exeption are easily browsable and
+    filterable from the online interface. For more details please see
+    `Sentry`_.
 
     .. admonition:: Note
 
@@ -40,6 +45,11 @@
             - saltversion
             - cpuarch
             - ec2.tags.environment
+
+    .. admonition:: Note
+
+        The ``public_key`` and ``secret_key`` variables are not supported with
+        Sentry > 3.0. The `DSN`_ key should be used instead.
 
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
