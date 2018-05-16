@@ -847,6 +847,17 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
             cver = new_pkgs.get(pkgname.split('%')[0])
         elif __grains__['os_family'] == 'Debian':
             cver = new_pkgs.get(pkgname.split('=')[0])
+        elif __grains__['os_family'] == 'Suse':
+            # On SUSE systems. Zypper returns packages without "arch" in name
+            try:
+                namepart, archpart = pkgname.rsplit('.', 1)
+            except ValueError:
+                cver = new_pkgs.get(pkgname)
+            else:
+                if archpart in salt.utils.pkg.rpm.ARCHES + ("noarch",):
+                    cver = new_pkgs.get(namepart)
+                else:
+                    cver = new_pkgs.get(pkgname)
         else:
             cver = new_pkgs.get(pkgname)
 
