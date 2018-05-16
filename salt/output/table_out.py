@@ -43,6 +43,7 @@ from functools import reduce  # pylint: disable=redefined-builtin
 # Import Salt libs
 import salt.output
 import salt.utils.color
+import salt.utils.data
 import salt.utils.locales
 
 # Import 3rd-party libs
@@ -62,9 +63,9 @@ class TableDisplay(object):
     '''
 
     _JUSTIFY_MAP = {
-        'center': str.center,
-        'right': str.rjust,
-        'left': str.ljust
+        'center': six.text_type.center,
+        'right': six.text_type.rjust,
+        'left': six.text_type.ljust
     }
 
     def __init__(self,
@@ -363,7 +364,7 @@ def output(ret, **kwargs):
             )
         )
 
-    return '\n'.join(table.display(ret,
+    return '\n'.join(table.display(salt.utils.data.decode(ret),
                                    base_indent,
                                    out,
                                    rows_key=rows_key,
