@@ -156,7 +156,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Manually compile the high data. We don't have to worry about all of
         # the normal error checking we do here since we know that all the SLS
         # files exist and there is no whitelist/blacklist being used.
-        top = self.highstate.get_top()
+        top = self.highstate.get_top()  # pylint: disable=assignment-from-none
         matches = self.highstate.top_matches(top)
         high, _ = self.highstate.render_highstate(matches)
         ret = salt.state.find_sls_ids('issue-47182.stateA.newer', high)
