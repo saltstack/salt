@@ -248,7 +248,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
     if not os.path.isdir(dest_dir):
-        __salt__['file.chown'](path=dest_dir, user=runas, group='mock')
+        __salt__['file.makedirs_perms'](name=dest_dir, user=runas, group='mock')
     for fn_ in os.listdir(srpms):
         full = os.path.join(srpms, fn_)
         tgt = os.path.join(dest_dir, fn_)
