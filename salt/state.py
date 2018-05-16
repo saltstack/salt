@@ -3294,7 +3294,7 @@ class BaseHighState(object):
             states = []
             for item in tgt:
                 if isinstance(item, dict):
-                    match_type = item
+                    params.update(item)
                 if isinstance(item, six.string_types):
                     states.append(item)
             return params, states
