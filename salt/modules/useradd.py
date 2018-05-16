@@ -126,6 +126,7 @@ def add(name,
         roomnumber='',
         workphone='',
         homephone='',
+        other='',
         createhome=True,
         loginclass=None,
         root=None,
@@ -239,6 +240,8 @@ def add(name,
         chworkphone(name, workphone)
     if homephone:
         chhomephone(name, homephone)
+    if other:
+        chother(name, other)
     return True
 
 
