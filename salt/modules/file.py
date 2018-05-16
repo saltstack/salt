@@ -2599,8 +2599,6 @@ def blockreplace(path,
     # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
-    #
-    # We could also use salt.utils.filebuffer.BufferedReader
     try:
         fi_file = io.open(path, mode='r', encoding=file_encoding)
         for line in fi_file:
