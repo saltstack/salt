@@ -3904,7 +3904,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)
