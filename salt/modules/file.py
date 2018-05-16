@@ -14,8 +14,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import difflib
 import errno
-import fileinput
 import fnmatch
+import io
 import itertools
 import logging
 import operator
@@ -2535,17 +2535,17 @@ def blockreplace(path,
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
 
+    try:
+        file_encoding = __utils__['files.get_encoding'](path)
+    except CommandExecutionError:
+        file_encoding = None
+
     if __utils__['files.is_binary'](path):
-        # it may be a utf-8 or utf-16 encoded file
-        for encoding in ['utf-16-le', 'utf-8', 'utf-16']:
-            if __utils__['files.is_encoding'](path, encoding):
-                log.debug('Found "{0}" encoding'.format(encoding))
-                break
-        else:
+        if not file_encoding:
             raise SaltInvocationError(
                 'Cannot perform string replacements on a binary file: {0}'
                 .format(path)
-            )
+        )
 
     if append_newline is None and not content.endswith((os.linesep, '\n')):
         append_newline = True
@@ -2602,23 +2602,12 @@ def blockreplace(path,
     #
     # We could also use salt.utils.filebuffer.BufferedReader
     try:
-        fi_file = fileinput.input(
-            path,
-            inplace=False,
-            backup=False,
-            bufsize=1,
-            mode='rb')
-
+        fi_file = io.open(path, mode='r', encoding=file_encoding)
         for line in fi_file:
-            line = salt.utils.stringutils.to_unicode(line)
             write_line_to_new_file = True
 
             if linesep is None:
-                # Auto-detect line separator
-                # utf-16 encodings have \x00 between each character
-                if line.endswith('\r\x00\n'):
-                    linesep = '\r\n'
-                elif line.endswith('\r\n'):
+                if line.endswith('\r\n'):
                     linesep = '\r\n'
                 elif line.endswith('\n'):
                     linesep = '\n'
@@ -2718,7 +2707,7 @@ def blockreplace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_bytes(line))
+                    fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
             finally:
                 fh_.close()
 
