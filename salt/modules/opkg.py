@@ -60,9 +60,9 @@ def __virtual__():
     '''
     Confirm this module is on a nilrt based system
     '''
-    if __grains__.get('os_family', False) == 'NILinuxRT':
+    if os.path.isdir(OPKG_CONFDIR):
         return __virtualname__
-    return (False, "Module opkg only works on nilrt based systems")
+    return False, "Module opkg only works on OpenEmbedded based systems"
 
 
 def latest_version(*names, **kwargs):
