@@ -3290,14 +3290,14 @@ class BaseHighState(object):
         Merge the top files into a single dictionary
         '''
         def _read_tgt(tgt):
-            match_type = None
+            params = {}
             states = []
             for item in tgt:
                 if isinstance(item, dict):
                     match_type = item
                 if isinstance(item, six.string_types):
                     states.append(item)
-            return match_type, states
+            return params, states
 
         top = DefaultOrderedDict(OrderedDict)
         for ctops in six.itervalues(tops):
@@ -3801,9 +3801,7 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             # Separate possible keyword parameters from the list of states.
-            kparams = self._get_topmatch_params(states)
-            ignore_missing = ('ignore_missing' in kparams and
-                              kparams['ignore_missing'])
+            ignore_missing = kparams.get('ignore_missing', False)
             for sls_match in self._get_topmatch_states(states):
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
@@ -3830,8 +3828,8 @@ class BaseHighState(object):
                     for i, error in enumerate(errors[:]):
                         if 'is not available' in error:
                             if ignore_missing:
-                                log.debug('Missing SLS {0} ignored.'.format(
-                                    sls_match))
+                                log.debug('Missing SLS %s ignored',
+                                          sls_match)
                                 del errors[i]
                             else:
                                 # match SLS foobar in environment
