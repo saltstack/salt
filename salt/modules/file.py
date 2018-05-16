@@ -2607,6 +2607,7 @@ def blockreplace(path,
             write_line_to_new_file = True
 
             if linesep is None:
+                # Auto-detect line separator
                 if line.endswith('\r\n'):
                     linesep = '\r\n'
                 elif line.endswith('\n'):
