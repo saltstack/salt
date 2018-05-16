@@ -499,10 +499,8 @@ def info_installed(*names, **kwargs):
                     t_nfo[key] = value
             if not all_versions:
                 ret[pkg_name] = t_nfo
-            elif not pkg_name in ret:
-                ret[pkg_name] = [t_nfo]
             else:
-                ret[pkg_name].append(t_nfo)
+                ret.setdefault(pkg_name, []).append(t_nfo)
     return ret
 
 
