@@ -105,7 +105,7 @@ def pytest_addoption(parser):
     test_selection_group.addoption(
         '--proxy',
         '--proxy-tests',
-        dest='ssh',
+        dest='proxy',
         action='store_true',
         default=False,
         help='Run proxy tests'
