@@ -2051,8 +2051,8 @@ class State(object):
         for atype, avalues in ctx:
             for ind, arg in avalues:
                 arg = salt.utils.data.decode(arg, keep=True)
-                if not isinstance(arg, six.string_types) \
-                        or not arg.startswith(str('__slot__:')):
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
