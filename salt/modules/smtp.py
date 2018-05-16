@@ -158,7 +158,7 @@ def send_msg(recipient,
             name = os.path.basename(f)
             with salt.utils.fopen(f, 'rb') as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
-            att['Content-Disposition'] = 'attachment; filename="%s"' % name
+            att['Content-Disposition'] = 'attachment; filename="{0}"'.format(name)
             msg.attach(att)
 
     try:
