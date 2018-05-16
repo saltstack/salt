@@ -243,11 +243,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
