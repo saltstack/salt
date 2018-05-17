@@ -131,7 +131,8 @@ _TERM_FIELDS = {
     'flattened': False,
     'flattened_addr': None,
     'flattened_saddr': None,
-    'flattened_daddr': None
+    'flattened_daddr': None,
+    'priority': None
 }
 
 # IP-type fields
@@ -746,6 +747,7 @@ def get_term_config(platform,
         - flattened_addr
         - flattened_saddr
         - flattened_daddr
+        - priority
 
     .. note::
         The following fields can be also a single value and a list of values:

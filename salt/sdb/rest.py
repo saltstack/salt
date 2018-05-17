@@ -119,10 +119,15 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
         **key_vars
     )
 
+    extras = {}
+    for item in profile[key]:
+        if item not in ('backend', 'url'):
+            extras[item] = profile[key][item]
+
     result = http.query(
         url,
         decode=True,
-        **key_vars
+        **extras
     )
 
     return result['dict']

@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 import time
+import warnings
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -112,6 +113,9 @@ TEST_SUITES = {
     'client':
        {'display_name': 'Client',
         'path': 'integration/client'},
+    'doc':
+       {'display_name': 'Documentation',
+        'path': 'integration/doc'},
     'ext_pillar':
        {'display_name': 'External Pillar',
         'path': 'integration/pillar'},
@@ -276,6 +280,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run tests for client'
+        )
+        self.test_selection_group.add_option(
+            '-d',
+            '--doc',
+            '--doc-tests',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help='Run tests for documentation'
         )
         self.test_selection_group.add_option(
             '-I',
@@ -464,20 +477,26 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 is_admin = True
             else:
                 is_admin = salt.utils.win_functions.is_admin(current_user)
+            if self.options.coverage and any((
+                        self.options.name,
+                        not is_admin,
+                        not self.options.run_destructive)) \
+                    and self._check_enabled_suites(include_unit=True):
+                warnings.warn("Test suite not running with elevated priviledges")
         else:
             is_admin = os.geteuid() == 0
 
-        if self.options.coverage and any((
-                    self.options.name,
-                    not is_admin,
-                    not self.options.run_destructive)) \
-                and self._check_enabled_suites(include_unit=True):
-            self.error(
-                'No sense in generating the tests coverage report when '
-                'not running the full test suite, including the '
-                'destructive tests, as \'root\'. It would only produce '
-                'incorrect results.'
-            )
+            if self.options.coverage and any((
+                        self.options.name,
+                        not is_admin,
+                        not self.options.run_destructive)) \
+                    and self._check_enabled_suites(include_unit=True):
+                self.error(
+                    'No sense in generating the tests coverage report when '
+                    'not running the full test suite, including the '
+                    'destructive tests, as \'root\'. It would only produce '
+                    'incorrect results.'
+                )
 
         # When no tests are specifically enumerated on the command line, setup
         # a default run: +unit -cloud_provider
@@ -694,6 +713,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
+                return status
             for suite in TEST_SUITES:
                 if suite != 'unit' and getattr(self.options, suite):
                     status.append(self.run_integration_suite(**TEST_SUITES[suite]))
