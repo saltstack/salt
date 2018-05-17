@@ -235,7 +235,10 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_binary': MagicMock(return_value=False),
+                    'files.get_encoding': MagicMock(return_value=None)
+                },
             }
         }
 
@@ -266,10 +269,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         quis leo.
         ''')
 
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
     def setUp(self):
         self.tfile = tempfile.NamedTemporaryFile(delete=False,
                                                  prefix='blockrepltmp',
-                                                 mode='w+')
+                                                 mode='w+b')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
 

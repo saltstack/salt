@@ -2600,7 +2600,7 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     try:
-        fi_file = io.open(path, mode='r', encoding=file_encoding)
+        fi_file = io.open(path, mode='r', encoding=file_encoding, newline='')
         for line in fi_file:
             write_line_to_new_file = True
 
