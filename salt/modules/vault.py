@@ -186,7 +186,7 @@ def write_raw(path, raw):
 
     .. code-block:: bash
 
-            salt '*' vault.write_secret "secret/my/secret" '{"user":"foo","password": "bar"}'
+            salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
     '''
     log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
     try:
