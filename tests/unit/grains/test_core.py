@@ -43,6 +43,7 @@ IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
