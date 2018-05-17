@@ -1965,7 +1965,24 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and not pkg_params[target]:
+            targets.append(target)
+        elif target in old and pkg_params[target] in old[target].split(','):
+            arch = ''
+            pkgname = target
+            try:
+                namepart, archpart = target.rsplit('.', 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in salt.utils.pkg.rpm.ARCHES:
+                    arch = '.' + archpart
+                    pkgname = namepart
+            targets.append('{0}-{1}{2}'.format(pkgname, pkg_params[target], arch))
     if not targets:
         return {}
 

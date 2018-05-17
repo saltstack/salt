@@ -415,6 +415,16 @@ def _find_remove_targets(name=None,
 
         if __grains__['os'] == 'FreeBSD' and origin:
             cver = [k for k, v in six.iteritems(cur_pkgs) if v['origin'] == pkgname]
+        elif __grains__['os_family'] == 'Suse':
+            # On SUSE systems. Zypper returns packages without "arch" in name
+            try:
+                namepart, archpart = pkgname.rsplit('.', 1)
+            except ValueError:
+                cver = cur_pkgs.get(pkgname, [])
+            else:
+                if archpart in salt.utils.pkg.rpm.ARCHES + ("noarch",):
+                    pkgname = namepart
+                cver = cur_pkgs.get(pkgname, [])
         else:
             cver = cur_pkgs.get(pkgname, [])
 
@@ -2677,7 +2687,17 @@ def _uninstall(
 
     changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, version=version, **kwargs)
     new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
-    failed = [x for x in pkg_params if x in new]
+    failed = []
+    for x in pkg_params:
+        if __grains__['os_family'] in ['Suse', 'RedHat']:
+            # Check if the package version set to be removed is actually removed:
+            if x in new and not pkg_params[x]:
+                failed.append(x)
+            elif x in new and pkg_params[x] in new[x]:
+                failed.append(x + "-" + pkg_params[x])
+        elif x in new:
+            failed.append(x)
+
     if action == 'purge':
         new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
                                                 removed=True,

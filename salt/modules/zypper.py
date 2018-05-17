@@ -1503,7 +1503,14 @@ def _uninstall(name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [target for target in pkg_params if target in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and pkg_params[target] in old[target].split(','):
+            targets.append(target + "-" + pkg_params[target])
+        elif target in old and not pkg_params[target]:
+            targets.append(target)
     if not targets:
         return {}
 
@@ -1524,6 +1531,32 @@ def _uninstall(name=None, pkgs=None):
         )
 
     return ret
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+    Circumstances where this would be done include:
+
+    * If the arch is 32 bit and the package name ends in a 32-bit arch.
+    * If the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
+        return name[:-(len(arch) + 1)]
+    return name
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
