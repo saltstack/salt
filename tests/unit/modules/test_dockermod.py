@@ -45,11 +45,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
+            whitelist=['args']
         )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 
