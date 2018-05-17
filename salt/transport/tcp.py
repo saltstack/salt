@@ -913,11 +913,11 @@ class SaltMessageClient(object):
                     if (not self._stream_return_future.done() and
                             self.io_loop != tornado.ioloop.IOLoop.current(
                                 instance=False)):
-                            self.io_loop.add_future(
-                                self._stream_return_future,
-                                lambda future: self.io_loop.stop()
-                            )
-                            self.io_loop.start()
+                        self.io_loop.add_future(
+                            self._stream_return_future,
+                            lambda future: self.io_loop.stop()
+                        )
+                        self.io_loop.start()
             finally:
                 orig_loop.make_current()
         self._tcp_client.close()
