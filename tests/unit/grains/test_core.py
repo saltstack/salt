@@ -773,7 +773,7 @@ PATCHLEVEL = 3
         '''
         path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/release'])
         with patch.object(platform, 'uname',
-                  MagicMock(return_value=('SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'))
+                  MagicMock(return_value=('SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc')))
             with patch.object(salt.utils, 'is_proxy',
                       MagicMock(return_value=False)):
                 with patch.object(salt.utils, 'is_linux',
