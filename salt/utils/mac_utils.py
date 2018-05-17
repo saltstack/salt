@@ -327,7 +327,6 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-
                     plist_xml = __salt__['cmd.run'](cmd)
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
