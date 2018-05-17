@@ -42,7 +42,6 @@ __salt__ = {
 }
 
 
-
 def __virtual__():
     '''
     Load only on Mac OS
