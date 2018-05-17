@@ -157,13 +157,11 @@ def list_(name=None, runas=None):
         return launchctl('list',
                          label,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
                      return_stdout=True,
-                     output_loglevel='trace',
                      runas=runas)
 
 
