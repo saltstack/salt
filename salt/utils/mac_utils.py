@@ -13,7 +13,6 @@ import plistlib
 import time
 
 # Import Salt Libs
-import salt.modules.cmdmod
 import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files
@@ -24,6 +23,7 @@ import salt.utils.timed_subprocess
 import salt.grains.extra
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
+from salt.loader import minion_mods
 
 # Import Third Party Libs
 from salt.ext.six.moves import range
@@ -36,6 +36,8 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
 
+__salt__ = None
+
 
 def __virtual__():
     '''
@@ -44,6 +46,9 @@ def __virtual__():
     if not salt.utils.platform.is_darwin():
         return (False, 'The mac_utils utility could not be loaded: '
                        'utility only works on MacOS systems.')
+    global __salt__
+    if not __salt__:
+        __salt__ = minion_mods(__opts__)
 
     return __virtualname__
 
@@ -267,7 +272,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Run command
     kwargs['python_shell'] = False
-    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
 
     # Raise an error or return successful result
     if ret['retcode']:
@@ -321,7 +326,7 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
+                    plist_xml = __salt__['cmd.run'](cmd, output_loglevel='quiet')
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
