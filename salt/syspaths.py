@@ -37,7 +37,7 @@ except ImportError:
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
                 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
-                'SHARE_DIR'):
+                'SHARE_DIR', 'VARIABLE_STATE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -99,6 +99,10 @@ if SOCK_DIR is None:
 SRV_ROOT_DIR = __generated_syspaths.SRV_ROOT_DIR
 if SRV_ROOT_DIR is None:
     SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')
+
+VARIABLE_STATE_DIR = __generated_syspaths.VARIABLE_STATE_DIR
+if VARIABLE_STATE_DIR is None:
+    VARIABLE_STATE_DIR = CONFIG_DIR
 
 BASE_FILE_ROOTS_DIR = __generated_syspaths.BASE_FILE_ROOTS_DIR
 if BASE_FILE_ROOTS_DIR is None:

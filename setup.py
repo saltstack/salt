@@ -223,6 +223,7 @@ class GenerateSaltSyspaths(Command):
                 cache_dir=self.distribution.salt_cache_dir,
                 sock_dir=self.distribution.salt_sock_dir,
                 srv_root_dir=self.distribution.salt_srv_root_dir,
+                variable_state_dir=self.distribution.salt_variable_state_dir,
                 base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
@@ -643,7 +644,8 @@ SHARE_DIR = {share_dir!r}
 CONFIG_DIR = {config_dir!r}
 CACHE_DIR = {cache_dir!r}
 SOCK_DIR = {sock_dir!r}
-SRV_ROOT_DIR= {srv_root_dir!r}
+SRV_ROOT_DIR = {srv_root_dir!r}
+VARIABLE_STATE_DIR = {variable_state_dir!r}
 BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
@@ -779,6 +781,8 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured socket directory'),
         ('salt-srv-root-dir=', None,
          'Salt\'s pre-configured service directory'),
+        ('salt-state-dir=', None,
+         'Salt\'s pre-configured variable state directory (used for storing pki data)'),
         ('salt-base-file-roots-dir=', None,
          'Salt\'s pre-configured file roots directory'),
         ('salt-base-pillar-roots-dir=', None,
@@ -812,6 +816,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_cache_dir = None
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
+        self.salt_variable_state_dir = None
         self.salt_base_file_roots_dir = None
         self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
