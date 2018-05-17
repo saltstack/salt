@@ -792,7 +792,7 @@ PATCHLEVEL = 3
                                         with patch("salt.utils.fopen", mock_open()) as os_release_file:
                                             os_release_file.return_value.__iter__.return_value = os_release_content
                                             with patch.object(core, '_sunos_cpudata',
-                                                      MagicMock(return_value={'cpuarch':'sparcv9',
+                                                      MagicMock(return_value={'cpuarch': 'sparcv9',
                                                                               'num_cpus': '1',
                                                                               'cpu_model': 'MOCK_CPU_MODEL',
                                                                               'cpu_flags': []})):
