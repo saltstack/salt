@@ -2275,57 +2275,64 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = textwrap.dedent('''\
-        Line 1 of block
-        Line 2 of block
-        ''')
-    without_block = textwrap.dedent('''\
-        Hello world!
-
-        # comment here
-        ''')
-    with_non_matching_block = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        No match here
-        # end
-        # comment here
-        ''')
-    with_non_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        No match here# end
-        # comment here
-        ''')
-    with_matching_block = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block
-        # end
-        # comment here
-        ''')
-    with_matching_block_and_extra_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block
-
-        # end
-        # comment here
-        ''')
-    with_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block# end
-        # comment here
-        ''')
+    content = os.linesep.join([
+        'Line 1 of block',
+        'Line 2 of block',
+        ''
+    ])
+    without_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# comment here',
+        ''
+    ])
+    with_non_matching_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'No match here',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_non_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'No match here# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block_and_extra_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block',
+        '',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block# end',
+        '# comment here',
+        ''
+    ])
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'
