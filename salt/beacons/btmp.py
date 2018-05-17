@@ -111,6 +111,26 @@ def validate(config):
                                 return False, ('The time_range parameter for '
                                                'btmp beacon must contain '
                                                'start & end options.')
+
+        if 'groups' in _config:
+            if not isinstance(_config['groups'], dict):
+                return False, ('Group configuration for btmp beacon must '
+                               'be a dictionary.')
+            else:
+                for group in _config['groups']:
+                    if _config['groups'][group] and \
+                       'time_range' in _config['groups'][group]:
+                        _time_range = _config['groups'][group]['time_range']
+                        if not isinstance(_time_range, dict):
+                            return False, ('The time_range parameter for '
+                                           'btmp beacon must '
+                                           'be a dictionary.')
+                        else:
+                            if not all(k in _time_range for k in ('start', 'end')):
+                                return False, ('The time_range parameter for '
+                                               'btmp beacon must contain '
+                                               'start & end options.')
+
         if 'defaults' in _config:
             if not isinstance(_config['defaults'], dict):
                 return False, ('Defaults configuration for btmp beacon must '
@@ -131,7 +151,6 @@ def validate(config):
     return True, 'Valid beacon configuration'
 
 
-# TODO: add support for only firing events for specific users and login times
 def beacon(config):
     '''
     Read the last btmp file and return information on the failed logins
@@ -161,15 +180,32 @@ def beacon(config):
                 time_range:
                     start: '8am'
                     end: '4pm'
+
+        beacons:
+          btmp:
+            - groups:
+                users:
+                    time_range:
+                        start: '8am'
+                        end: '4pm'
+            - defaults:
+                time_range:
+                    start: '8am'
+                    end: '4pm'
+
+        .. versionadded:: Fluorine
     '''
     ret = []
 
-    users = None
+    users = {}
     defaults = None
 
     for config_item in config:
         if 'users' in config_item:
             users = config_item['users']
+
+        if 'groups' in config_item:
+            groups = config_item['groups']
 
         if 'defaults' in config_item:
             defaults = config_item['defaults']
@@ -196,6 +232,18 @@ def beacon(config):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip('\x00')
+
+            if groups:
+                for group in groups:
+                    _group = __salt__['group.info'](group)
+
+                    if not _group:
+                        log.warning('Group %s does not exist, ignoring.', group)
+                        continue
+
+                    for member in _group['members']:
+                        if member not in users:
+                            users[member] = groups[group]
 
             if users:
                 if event['user'] in users:

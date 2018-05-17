@@ -119,3 +119,46 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret = wtmp.beacon(config)
                     self.assertEqual(ret, _expected)
+
+    def test_match_group(self):
+
+        for groupadd in ('salt.modules.aix_group',
+                         'salt.modules.groupadd mac_group',
+                         'salt.modules.pw_group',
+                         'salt.modules.solaris_group',
+                         'win_groupadd'):
+            mock_group_info = {'passwd': 'x',
+                               'gid': 100,
+                               'name': 'users',
+                               'members': ['gareth']}
+
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=raw)):
+                with patch('time.time',
+                           MagicMock(return_value=1506121200)):
+                    with patch('struct.unpack',
+                               MagicMock(return_value=pack)):
+                        with patch.dict('{0}.__salt__'.format(groupadd),
+                                        {'group.info': MagicMock(return_value=mock_group_info)}):
+                            config = [{'group': {'users': {'time': {'end': '5pm',
+                                                                    'start': '3pm'}}}}
+                                      ]
+
+                            ret = wtmp.validate(config)
+
+                            self.assertEqual(ret,
+                                             (True, 'Valid beacon configuration'))
+
+                            _expected = [{'PID': 6216,
+                                          'line': 'pts/14',
+                                          'session': 0,
+                                          'time': 0,
+                                          'exit_status': 0,
+                                          'inittab': 's/14',
+                                          'type': 7,
+                                          'addr': 1506101523,
+                                          'hostname': '::1',
+                                          'user': 'gareth'}]
+
+                            ret = wtmp.beacon(config)
+                            self.assertEqual(ret, _expected)

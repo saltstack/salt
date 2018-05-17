@@ -117,3 +117,46 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                   'type': 6}]
                     ret = btmp.beacon(config)
                     self.assertEqual(ret, _expected)
+
+    def test_match_group(self):
+
+        for groupadd in ('salt.modules.aix_group',
+                         'salt.modules.groupadd mac_group',
+                         'salt.modules.pw_group',
+                         'salt.modules.solaris_group',
+                         'win_groupadd'):
+            mock_group_info = {'passwd': 'x',
+                               'gid': 100,
+                               'name': 'users',
+                               'members': ['garet']}
+
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=raw)):
+                with patch('time.time',
+                           MagicMock(return_value=1506121200)):
+                    with patch('struct.unpack',
+                               MagicMock(return_value=pack)):
+                        with patch.dict('{0}.__salt__'.format(groupadd),
+                                        {'group.info': MagicMock(return_value=mock_group_info)}):
+                            config = [{'group': {'users': {'time': {'end': '5pm',
+                                                                    'start': '3pm'}}}}
+                                      ]
+
+                            ret = btmp.validate(config)
+
+                            self.assertEqual(ret,
+                                             (True, 'Valid beacon configuration'))
+
+                            _expected = [{'addr': 1505937373,
+                                          'exit_status': 0,
+                                          'inittab': '',
+                                          'hostname': '::1',
+                                          'PID': 29774,
+                                          'session': 0,
+                                          'user':
+                                          'garet',
+                                          'time': 0,
+                                          'line': 'ssh:notty',
+                                          'type': 6}]
+                            ret = btmp.beacon(config)
+                            self.assertEqual(ret, _expected)
