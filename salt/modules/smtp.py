@@ -47,7 +47,7 @@ import os
 import socket
 
 # Import salt libs
-import salt.utils.fopen
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ def send_msg(recipient,
     if attachments:
         for f in attachments:
             name = os.path.basename(f)
-            with salt.utils.fopen(f, 'rb') as fin:
+            with salt.utils.files.fopen(f, 'rb') as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
             att['Content-Disposition'] = 'attachment; filename="{0}"'.format(name)
             msg.attach(att)
