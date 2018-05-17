@@ -78,7 +78,7 @@ class ProfitBricksTest(ShellCase):
         username = config[profile_str][DRIVER_NAME]['username']
         password = config[profile_str][DRIVER_NAME]['password']
         datacenter_id = config[profile_str][DRIVER_NAME]['datacenter_id']
-        if username == '' or password == '' or datacenter_id == '':
+        if username in ('' or 'foo') or password in ('' or 'bar') or datacenter_id == '':
             self.skipTest(
                 'A username, password, and an datacenter must be provided to '
                 'run these tests. Check '

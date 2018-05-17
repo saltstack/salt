@@ -607,28 +607,34 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _find_keep_files(root, keep):
     '''
-    Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep) and part of exclude_pat
+    Compile a list of valid keep files (and directories).
     '''
-    removed = set()
     real_keep = set()
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
-                fn_ = os.path.dirname(fn_)
+                fn_ = os.path.abspath(os.path.dirname(fn_))
                 real_keep.add(fn_)
-                if fn_ in [
-                           os.sep,
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
-                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
-                          ]:
+                drive, path = os.path.splitdrive(fn_)
+                if not path.lstrip(os.sep):
                     break
+    return real_keep
+
+
+def _clean_dir(root, keep, exclude_pat):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep) and part of exclude_pat
+    '''
+    real_keep = _find_keep_files(root, keep)
+    removed = set()
 
     def _delete_not_kept(nfn):
         if nfn not in real_keep:
@@ -5015,15 +5021,13 @@ def patch(name,
           dry_run_first=True,
           **kwargs):
     '''
-    Apply a patch to a file or directory.
+    Ensure that a patch has been applied to the specified file
 
     .. note::
-
-        A suitable ``patch`` executable must be available on the minion when
-        using this state function.
+        A suitable ``patch`` executable must be available on the minion
 
     name
-        The file or directory to which the patch will be applied.
+        The file to which the patch should be applied
 
     source
         The source patch to download to the minion, this source file must be
@@ -5218,9 +5222,14 @@ def copy(
         subdir=False,
         **kwargs):
     '''
-    If the source file exists on the system, copy it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the file defined by the ``source`` option exists on the minion, copy it
+    to the named path. The file will not be overwritten if it already exists,
+    unless the ``force`` option is set to ``True``.
+
+    .. note::
+        This state only copies files from one location on a minion to another
+        location on the same minion. For copying files from the master, use a
+        :py:func:`file.managed <salt.states.file.managed>` state.
 
     name
         The location of the file to copy to

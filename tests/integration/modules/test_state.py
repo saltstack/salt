@@ -12,7 +12,7 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
+from tests.support.paths import TMP, FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -23,12 +23,50 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 import salt.ext.six as six
 
 
+DEFAULT_ENDING = salt.utils.to_bytes(os.linesep)
+
+
+def trim_line_end(line):
+    '''
+    Remove CRLF or LF from the end of line.
+    '''
+    if line[-2:] == salt.utils.to_bytes('\r\n'):
+        return line[:-2]
+    elif line[-1:] == salt.utils.to_bytes('\n'):
+        return line[:-1]
+    raise Exception("Invalid line ending")
+
+
+def reline(source, dest, force=False, ending=DEFAULT_ENDING):
+    '''
+    Normalize the line endings of a file.
+    '''
+    fp, tmp = tempfile.mkstemp()
+    os.close(fp)
+    with salt.utils.fopen(tmp, 'wb') as tmp_fd:
+        with salt.utils.fopen(source, 'rb') as fd:
+            lines = fd.readlines()
+            for line in lines:
+                line_noend = trim_line_end(line)
+                tmp_fd.write(line_noend + ending)
+    if os.path.exists(dest) and force:
+        os.remove(dest)
+    os.rename(tmp, dest)
+
+
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''
 
     maxDiff = None
+
+    def setUp(self):
+        super(StateModuleTest, self).setUp()
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
+        reline(destpath, destpath, force=True)
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
+        reline(destpath, destpath, force=True)
 
     def test_show_highstate(self):
         '''
@@ -1095,6 +1133,56 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']
         self.assertIn('duration', test_data)
 
+    def test_multiple_onfail_requisite_with_required(self):
+        '''
+        test to ensure multiple states are run
+        when specified as onfails for a single state.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required')
+
+        retcode = state_run['cmd_|-b_|-echo b_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-c_|-echo c_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        retcode = state_run['cmd_|-d_|-echo d_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'b')
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'c')
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'd')
+
+    def test_multiple_onfail_requisite_with_required_no_run(self):
+        '''
+        test to ensure multiple states are not run
+        when specified as onfails for a single state
+        which fails.
+        This is a test for the issue:
+        https://github.com/saltstack/salt/issues/46552
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple_required_no_run')
+
+        expected = 'State was not run because onfail req did not change'
+
+        stdout = state_run['cmd_|-b_|-echo b_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-c_|-echo c_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
+        stdout = state_run['cmd_|-d_|-echo d_|-run']['comment']
+        self.assertEqual(stdout, expected)
+
     # listen tests
 
     def test_listen_requisite(self):
@@ -1295,6 +1383,39 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
+        self.assertFalse(state_run[state_id]['result'])
+
+    def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(self):
+        '''
+        This tests the case where state C requires state A, which fails.
+        State C is a pre-required state for State B.
+        Since state A fails, state C will not run because the requisite failed,
+        therefore state B will not run because state C failed to run.
+
+        See https://github.com/saltstack/salt/issues/46762 for
+        more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='issue-46762'
+        )
+
+        state_id = 'test_|-a_|-a_|-fail_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Failure!')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-b_|-b_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.c')
+        self.assertFalse(state_run[state_id]['result'])
+
+        state_id = 'test_|-c_|-c_|-nop'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'One or more requisite failed: issue-46762.a')
         self.assertFalse(state_run[state_id]['result'])
 
     def test_state_nonbase_environment(self):

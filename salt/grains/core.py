@@ -675,13 +675,6 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
             break
-        elif command == 'virt-what':
-            # if 'virt-what' returns nothing, it's either an undetected platform
-            # so we default just as virt-what to 'physical', otherwise use the
-            # platform detected/returned by virt-what
-            if output:
-                grains['virtual'] = output.lower()
-            break
         elif command == 'prtdiag':
             model = output.lower().split("\n")[0]
             if 'vmware' in model:
@@ -713,19 +706,6 @@ def _virtual(osdata):
                 if self_root != init_root:
                     grains['virtual_subtype'] = 'chroot'
             except (IOError, OSError):
-                pass
-        if os.path.isfile('/proc/1/cgroup'):
-            try:
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
-                    fhr_contents = fhr.read()
-                if ':/lxc/' in fhr_contents:
-                    grains['virtual_subtype'] = 'LXC'
-                else:
-                    if any(x in fhr_contents
-                           for x in (':/system.slice/docker', ':/docker/',
-                                     ':/docker-ce/')):
-                        grains['virtual_subtype'] = 'Docker'
-            except IOError:
                 pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
@@ -776,6 +756,20 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile('/proc/1/cgroup'):
+            try:
+                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                    fhr_contents = fhr.read()
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
+                        grains['virtual_subtype'] = 'Docker'
+            except IOError:
+                pass
         if os.path.isfile('/proc/cpuinfo'):
             with salt.utils.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
@@ -2404,7 +2398,29 @@ def get_server_id():
 
     if salt.utils.is_proxy():
         return {}
-    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        id_hash = __salt__['cmd.run'](
+            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+            env={'PYTHONHASHSEED': '0'}
+        )
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug(
+                'Failed to hash the ID to get the server_id grain. Result of '
+                'hash command: %s', id_hash
+            )
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return {'server_id': abs(id_hash % (2 ** 31))}
 
 
 def get_master():

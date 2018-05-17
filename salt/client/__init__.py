@@ -47,11 +47,6 @@ from salt.exceptions import (
 # Import third party libs
 import salt.ext.six as six
 # pylint: disable=import-error
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -246,7 +241,7 @@ class LocalClient(object):
 
         return pub_data
 
-    def _check_pub_data(self, pub_data):
+    def _check_pub_data(self, pub_data, listen=True):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
@@ -279,7 +274,13 @@ class LocalClient(object):
                 print('No minions matched the target. '
                       'No command was sent, no jid was assigned.')
                 return {}
-        else:
+
+        # don't install event subscription listeners when the request is async
+        # and doesn't care. this is important as it will create event leaks otherwise
+        if not listen:
+            return pub_data
+
+        if self.opts.get('order_masters'):
             self.event.subscribe('syndic/.*/{0}'.format(pub_data['jid']), 'regex')
 
         self.event.subscribe('salt/job/{0}'.format(pub_data['jid']))
@@ -343,7 +344,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        return self._check_pub_data(pub_data)
+        return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
         return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
@@ -408,7 +409,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise tornado.gen.Return(self._check_pub_data(pub_data))
+        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
             self,
@@ -449,6 +450,7 @@ class LocalClient(object):
                                 tgt_type,
                                 ret,
                                 jid=jid,
+                                listen=False,
                                 **kwargs)
         try:
             return pub_data['jid']
@@ -466,6 +468,7 @@ class LocalClient(object):
             sub=3,
             cli=False,
             progress=False,
+            full_return=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -474,6 +477,8 @@ class LocalClient(object):
         following exceptions.
 
         :param sub: The number of systems to execute on
+        :param cli: When this is set to True, a generator is returned,
+                    otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
@@ -512,6 +517,7 @@ class LocalClient(object):
                 ret=ret,
                 kwarg=kwarg,
                 progress=progress,
+                full_return=full_return,
                 **kwargs)
 
     def cmd_batch(

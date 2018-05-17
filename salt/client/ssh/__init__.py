@@ -53,14 +53,10 @@ import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 try:
     import saltwinshell
-    HAS_WINSHELL = False
+    HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
@@ -207,7 +203,7 @@ class SSH(object):
     '''
     def __init__(self, opts):
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.isfile(pull_sock) and HAS_ZMQ:
+        if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -470,6 +466,19 @@ class SSH(object):
                         self.targets[host][default] = self.defaults[default]
                 if 'host' not in self.targets[host]:
                     self.targets[host]['host'] = host
+                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log.debug(log_msg)
+                    no_ret = {'fun_args': [],
+                              'jid': None,
+                              'return': log_msg,
+                              'retcode': 1,
+                              'fun': '',
+                              'id': host}
+                    yield {host: no_ret}
+                    continue
                 args = (
                         que,
                         self.opts,

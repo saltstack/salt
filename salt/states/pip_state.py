@@ -41,14 +41,18 @@ except ImportError:
 
 if HAS_PIP is True:
     try:
-        import pip.req
+        from pip.req import InstallRequirement
     except ImportError:
-        HAS_PIP = False
-        # Remove references to the loaded pip module above so reloading works
-        import sys
-        del pip
-        if 'pip' in sys.modules:
-            del sys.modules['pip']
+        # pip 10.0.0 move req module under pip._internal
+        try:
+            from pip._internal.req import InstallRequirement
+        except ImportError:
+            HAS_PIP = False
+            # Remove references to the loaded pip module above so reloading works
+            import sys
+            del pip
+            if 'pip' in sys.modules:
+                del sys.modules['pip']
 
     try:
         from pip.exceptions import InstallationError
@@ -129,7 +133,7 @@ def _check_pkg_version_format(pkg):
             logger.debug(
                 'Installed pip version: {0}'.format(pip.__version__)
             )
-            install_req = pip.req.InstallRequirement.from_line(pkg)
+            install_req = InstallRequirement.from_line(pkg)
         except AttributeError:
             logger.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
@@ -137,12 +141,12 @@ def _check_pkg_version_format(pkg):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
                         from_vcs = True
-                        install_req = pip.req.InstallRequirement.from_line(
+                        install_req = InstallRequirement.from_line(
                             pkg.split('{0}+'.format(vcs))[-1]
                         )
                         break
             else:
-                install_req = pip.req.InstallRequirement.from_line(pkg)
+                install_req = InstallRequirement.from_line(pkg)
     except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
@@ -180,24 +184,19 @@ def _check_pkg_version_format(pkg):
     return ret
 
 
-def _check_if_installed(prefix, state_pkg_name, version_spec,
-                        ignore_installed, force_reinstall,
-                        upgrade, user, cwd, bin_env, env_vars):
+def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
+                        force_reinstall, upgrade, user, cwd, bin_env, env_vars,
+                        **kwargs):
     # result: None means the command failed to run
     # result: True means the package is installed
     # result: False means the package is not installed
     ret = {'result': False, 'comment': None}
 
     # Check if the requested package is already installed.
-    try:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd,
-                                        env_vars=env_vars)
-        prefix_realname = _find_key(prefix, pip_list)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(state_pkg_name, err)
-        return ret
+    pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                    user=user, cwd=cwd,
+                                    env_vars=env_vars, **kwargs)
+    prefix_realname = _find_key(prefix, pip_list)
 
     # If the package was already installed, check
     # the ignore_installed and force_reinstall flags
@@ -309,7 +308,6 @@ def installed(name,
               install_options=None,
               global_options=None,
               user=None,
-              no_chown=False,
               cwd=None,
               pre_releases=False,
               cert=None,
@@ -321,7 +319,9 @@ def installed(name,
               use_vt=False,
               trusted_host=None,
               no_cache_dir=False,
-              cache_dir=None):
+              cache_dir=None,
+              no_binary=None,
+              **kwargs):
     '''
     Make sure the package is installed
 
@@ -355,6 +355,25 @@ def installed(name,
 
     no_use_wheel : False
         Force to not use wheel archives (requires pip>=1.4)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or a list of one or more packages
+
+    Example:
+
+    .. code-block:: yaml
+
+        django:
+          pip.installed:
+            - no_binary: ':all:'
+
+        flask:
+          pip.installed:
+            - no_binary:
+              - itsdangerous
+              - click
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -423,10 +442,6 @@ def installed(name,
 
     no_install
         Download and unpack all packages, but don't actually install them
-
-    no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file
 
     no_cache_dir:
         Disable the cache.
@@ -570,6 +585,12 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
+    if 'no_chown' in kwargs:
+        salt.utils.warn_until(
+            'Flourine',
+            'The no_chown argument has been deprecated and is no longer used. '
+            'Its functionality was removed in Boron.')
+        kwargs.pop('no_chown')
 
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -595,26 +616,45 @@ def installed(name,
     ret = {'name': ';'.join(pkgs), 'result': None,
            'comment': '', 'changes': {}}
 
+    try:
+        cur_version = __salt__['pip.version'](bin_env)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = None
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        return ret
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        max_version = '9.0.3'
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
-                              'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        max_version = '9.0.3'
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
+            return ret
+
+    # Check that the pip binary supports the 'no_binary' option
+    if no_binary:
+        min_version = '7.0.0'
+        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            ret['result'] = False
+            ret['comment'] = ('The \'no_binary\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -683,7 +723,8 @@ def installed(name,
                 version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
-                                          upgrade, user, cwd, bin_env, env_vars)
+                                          upgrade, user, cwd, bin_env, env_vars,
+                                          **kwargs)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -720,6 +761,14 @@ def installed(name,
                 ret['comment'] = out['comment']
                 return ret
 
+        # No packages to install.
+        if not target_pkgs:
+            ret['result'] = True
+            aicomms = '\n'.join(already_installed_comments)
+            last_line = 'All specified packages are already installed' + (' and up-to-date' if upgrade else '')
+            ret['comment'] = aicomms + ('\n' if aicomms else '') + last_line
+            return ret
+
     # Construct the string that will get passed to the install call
     pkgs_str = ','.join([state_name for _, state_name in target_pkgs])
 
@@ -730,6 +779,7 @@ def installed(name,
         bin_env=bin_env,
         use_wheel=use_wheel,
         no_use_wheel=no_use_wheel,
+        no_binary=no_binary,
         log=log,
         proxy=proxy,
         timeout=timeout,
@@ -754,7 +804,6 @@ def installed(name,
         install_options=install_options,
         global_options=global_options,
         user=user,
-        no_chown=no_chown,
         cwd=cwd,
         pre_releases=pre_releases,
         cert=cert,
@@ -766,15 +815,11 @@ def installed(name,
         env_vars=env_vars,
         use_vt=use_vt,
         trusted_host=trusted_host,
-        no_cache_dir=no_cache_dir
+        no_cache_dir=no_cache_dir,
+        **kwargs
     )
 
-    # Check the retcode for success, but don't fail if using pip1 and the package is
-    # already present. Pip1 returns a retcode of 1 (instead of 0 for pip2) if you run
-    # "pip install" without any arguments. See issue #21845.
-    if pip_install_call and \
-            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout', '').startswith(
-                'You must give at least one requirement to install')):
+    if pip_install_call and pip_install_call.get('retcode', 1) == 0:
         ret['result'] = True
 
         if requirements or editable:
@@ -782,6 +827,8 @@ def installed(name,
             if requirements:
                 PIP_REQUIREMENTS_NOCHANGE = [
                     'Requirement already satisfied',
+                    'Requirement already up-to-date',
+                    'Requirement not upgraded',
                     'Collecting',
                     'Cloning',
                     'Cleaning up...',
@@ -825,7 +872,8 @@ def installed(name,
                 if prefix:
                     pipsearch = __salt__['pip.list'](prefix, bin_env,
                                                      user=user, cwd=cwd,
-                                                     env_vars=env_vars)
+                                                     env_vars=env_vars,
+                                                     **kwargs)
 
                     # If we didn't find the package in the system after
                     # installing it report it

@@ -2582,7 +2582,8 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Build a list of keys to be deleted
     todelete = []
-    for key in repo_opts:
+    # list() of keys because the dict could be shrinking in the for loop.
+    for key in list(repo_opts):
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
             todelete.append(key)
@@ -2663,20 +2664,18 @@ def mod_repo(repo, basedir=None, **kwargs):
     filerepos[repo].update(repo_opts)
     content = header
     for stanza in six.iterkeys(filerepos):
-        comments = ''
-        if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = salt.utils.pkg.rpm.combine_comments(
-                    filerepos[stanza]['comments'])
-            del filerepos[stanza]['comments']
-        content += '\n[{0}]'.format(stanza)
+        comments = salt.utils.pkg.rpm.combine_comments(
+            filerepos[stanza].pop('comments', [])
+        )
+        content += '[{0}]\n'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            content += '\n{0}={1}'.format(
+            content += '{0}={1}\n'.format(
                 line,
                 filerepos[stanza][line]
                     if not isinstance(filerepos[stanza][line], bool)
                     else _bool_to_str(filerepos[stanza][line])
             )
-        content += '\n{0}\n'.format(comments)
+        content += comments + '\n'
 
     with salt.utils.fopen(repofile, 'w') as fileout:
         fileout.write(content)
@@ -2704,14 +2703,29 @@ def _parse_repo_file(filename):
         section_dict.pop('__name__', None)
         config[section] = section_dict
 
-    # Try to extract leading comments
+    # Try to extract header comments, as well as comments for each repo. Read
+    # from the beginning of the file and assume any leading comments are
+    # header comments. Continue to read each section header and then find the
+    # comments for each repo.
     headers = ''
-    with salt.utils.fopen(filename, 'r') as rawfile:
-        for line in rawfile:
-            if line.strip().startswith('#'):
-                headers += '{0}\n'.format(line.strip())
-            else:
-                break
+    section = None
+    with salt.utils.fopen(filename, 'r') as repofile:
+        for line in repofile:
+            line = line.strip()
+            if line.startswith('#'):
+                if section is None:
+                    headers += line + '\n'
+                else:
+                    try:
+                        comments = config[section].setdefault('comments', [])
+                        comments.append(line[1:].lstrip())
+                    except KeyError:
+                        log.debug(
+                            'Found comment in %s which does not appear to '
+                            'belong to any repo section: %s', filename, line
+                        )
+            elif line.startswith('[') and line.endswith(']'):
+                section = line[1:-1]
 
     return (headers, config)
 

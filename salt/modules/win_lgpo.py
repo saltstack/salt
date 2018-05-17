@@ -54,6 +54,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
+from salt.serializers.configparser import deserialize
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -3430,7 +3431,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 this_element_value = b''.join([this_element_value.encode('utf-16-le'),
                                                encoded_null])
         elif etree.QName(element).localname == 'multiText':
-            this_vtype = 'REG_MULTI_SZ'
+            this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
                 this_element_value = '{0}{1}{1}'.format(chr(0).join(this_element_value), chr(0))
         elif etree.QName(element).localname == 'list':
@@ -3439,7 +3440,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(range(1, len(this_element_value) + 1))
+                element_valuenames = list([str(z) for z in range(1, len(this_element_value) + 1)])
             if 'additive' in element.attrib:
                 if element.attrib['additive'].lower() == 'false':
                     # a delete values will be added before all the other
@@ -3464,11 +3465,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 if this_element_value is not None:
                     element_valuenames = this_element_value.keys()
                     element_values = this_element_value.values()
-
-            if 'valuePrefix' in element.attrib and element.attrib['valuePrefix'] != '':
-                if this_element_value is not None:
-                    element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                          k) for k in element_valuenames]
+            if 'valuePrefix' in element.attrib:
+                # if the valuePrefix attribute exists, the valuenames are <prefix><number>
+                # most prefixes attributes are empty in the admx files, so the valuenames
+                # end up being just numbers
+                if element.attrib['valuePrefix'] != '':
+                    if this_element_value is not None:
+                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
+                                                              k) for k in element_valuenames]
+            else:
+                # if there is no valuePrefix attribute, the valuename is the value
+                if element_values is not None:
+                    element_valuenames = [str(z) for z in element_values]
             if not check_deleted:
                 if this_element_value is not None:
                     log.debug('_processValueItem has an explicit element_value of {0}'.format(this_element_value))
@@ -3671,7 +3679,7 @@ def _checkAllAdmxPolicies(policy_class,
             if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
                 # some policies have a disabled list but not an enabled list
                 # added this to address those issues
-                if DISABLED_LIST_XPATH(admx_policy):
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
                     element_only_enabled_disabled = False
                     explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
@@ -3681,14 +3689,14 @@ def _checkAllAdmxPolicies(policy_class,
                                          ENABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
                 # some policies have a disabled list but not an enabled list
                 # added this to address those issues
-                if ENABLED_LIST_XPATH(admx_policy):
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
                     element_only_enabled_disabled = False
                     explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
@@ -3698,25 +3706,27 @@ def _checkAllAdmxPolicies(policy_class,
                                          DISABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if ENABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, ENABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, DISABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3731,7 +3741,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                 '1')),
                                           policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3742,7 +3752,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                   check_deleted=True)),
                                             policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -4626,37 +4636,34 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
 def _getScriptSettingsFromIniFile(policy_info):
     '''
     helper function to parse/read a GPO Startup/Shutdown script file
+
+    psscript.ini and script.ini file definitions are here
+        https://msdn.microsoft.com/en-us/library/ff842529.aspx
+        https://msdn.microsoft.com/en-us/library/dd303238.aspx
     '''
-    _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    if _existingData:
-        _existingData = _existingData.split('\r\n')
-        script_settings = {}
-        this_section = None
-        for eLine in _existingData:
-            if eLine.startswith('[') and eLine.endswith(']'):
-                this_section = eLine.replace('[', '').replace(']', '')
-                log.debug('adding section {0}'.format(this_section))
-                if this_section:
-                    script_settings[this_section] = {}
-            else:
-                if '=' in eLine:
-                    log.debug('working with config line {0}'.format(eLine))
-                    eLine = eLine.split('=')
-                    if this_section in script_settings:
-                        script_settings[this_section][eLine[0]] = eLine[1]
-        if 'SettingName' in policy_info['ScriptIni']:
-            log.debug('Setting Name is in policy_info')
-            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-                log.debug('the value is set in the file')
-                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+    _existingData = None
+    if os.path.isfile(policy_info['ScriptIni']['IniPath']):
+        with salt.utils.fopen(policy_info['ScriptIni']['IniPath'], 'rb') as fhr:
+            _existingData = fhr.read()
+        if _existingData:
+            try:
+                _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
+                log.debug('Have deserialized data {0}'.format(_existingData))
+            except Exception as error:
+                log.error('An error occurred attempting to deserialize data for {0}'.format(policy_info['Policy']))
+                raise CommandExecutionError(error)
+            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
+                if 'SettingName' in policy_info['ScriptIni']:
+                    log.debug('Need to look for {0}'.format(policy_info['ScriptIni']['SettingName']))
+                    if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
+                        return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
+                    else:
+                        return None
+                else:
+                    return _existingData[policy_info['ScriptIni']['Section']]
             else:
                 return None
-        elif policy_info['ScriptIni']['Section'] in script_settings:
-            log.debug('no setting name')
-            return script_settings[policy_info['ScriptIni']['Section']]
-        else:
-            log.debug('broad else')
-            return None
+
     return None
 
 

@@ -19,8 +19,10 @@ import functools
 import inspect
 import logging
 import os
+import shutil
 import signal
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -51,7 +53,35 @@ from tests.support.unit import skip, _id
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
+# Import Salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
+
+
+HAS_SYMLINKS = None
+
+
+def no_symlinks():
+    '''
+    Check if git is installed and has symlinks enabled in the configuration.
+    '''
+    global HAS_SYMLINKS
+    if HAS_SYMLINKS is not None:
+        return not HAS_SYMLINKS
+    output = ''
+    try:
+        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise
+    except subprocess.CalledProcessError:
+        # git returned non-zero status
+        pass
+    HAS_SYMLINKS = False
+    if output.strip() == 'true':
+        HAS_SYMLINKS = True
+    return not HAS_SYMLINKS
 
 
 def destructiveTest(caller):
@@ -576,10 +606,10 @@ def requires_network(only_local_network=False):
     return decorator
 
 
-def with_system_user(username, on_existing='delete', delete=True):
+def with_system_user(username, on_existing='delete', delete=True, password=None):
     '''
     Create and optionally destroy a system user to be used within a test
-    case. The system user is crated using the ``user`` salt module.
+    case. The system user is created using the ``user`` salt module.
 
     The decorated testcase function must accept 'username' as an argument.
 
@@ -609,7 +639,10 @@ def with_system_user(username, on_existing='delete', delete=True):
 
             # Let's add the user to the system.
             log.debug('Creating system user {0!r}'.format(username))
-            create_user = cls.run_function('user.add', [username])
+            kwargs = {'timeout': 60}
+            if salt.utils.is_windows():
+                kwargs.update({'password': password})
+            create_user = cls.run_function('user.add', [username], **kwargs)
             if not create_user:
                 log.debug('Failed to create system user')
                 # The user was not created
@@ -665,7 +698,7 @@ def with_system_user(username, on_existing='delete', delete=True):
             finally:
                 if delete:
                     delete_user = cls.run_function(
-                        'user.delete', [username, True, True]
+                        'user.delete', [username, True, True], timeout=60
                     )
                     if not delete_user:
                         if failure is None:
@@ -964,6 +997,32 @@ def with_tempfile(func):
             pass
         return ret
     return wrapper
+
+
+class WithTempdir(object):
+    def __init__(self, **kwargs):
+        self.create = kwargs.pop('create', True)
+        if 'dir' not in kwargs:
+            kwargs['dir'] = TMP
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        self.func = func
+        return functools.wraps(func)(
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+        )
+
+    def wrap(self, testcase, *args, **kwargs):
+        tempdir = tempfile.mkdtemp(**self.kwargs)
+        if not self.create:
+            os.rmdir(tempdir)
+        try:
+            return self.func(testcase, tempdir, *args, **kwargs)
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
+
+with_tempdir = WithTempdir
 
 
 def requires_system_grains(func):

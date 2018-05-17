@@ -11,6 +11,7 @@ import os
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
 from salt import minion
@@ -18,12 +19,13 @@ from salt.utils import event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 import tornado
+import tornado.testing
 
 __opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MinionTestCase(TestCase):
+class MinionTestCase(TestCase, tornado.testing.AsyncTestCase, AdaptedConfigurationTestCaseMixin):
     def test_invalid_master_address(self):
         with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
             self.assertRaises(SaltSystemExit, minion.resolve_dns, __opts__)
@@ -46,6 +48,10 @@ class MinionTestCase(TestCase):
         with patch.dict(__opts__, opts):
             try:
                 event_publisher = event.AsyncEventPublisher(__opts__)
+                result = True
+            except ValueError:
+                #  There are rare cases where we operate a closed socket, especially in containers.
+                # In this case, don't fail the test because we'll catch it down the road.
                 result = True
             except SaltSystemExit:
                 result = False
@@ -140,7 +146,7 @@ class MinionTestCase(TestCase):
                 patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
-            mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
+            mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['beacons_before_connect'] = True
             try:
                 minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
@@ -164,7 +170,7 @@ class MinionTestCase(TestCase):
                 patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
-            mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
+            mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['scheduler_before_connect'] = True
             try:
                 minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())

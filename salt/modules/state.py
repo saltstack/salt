@@ -280,7 +280,7 @@ def _get_opts(**kwargs):
 
 
 def _get_initial_pillar(opts):
-    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+    return __pillar__ if __opts__.get('__cli', None) == 'salt-call' \
         and opts['pillarenv'] == __opts__['pillarenv'] \
         else None
 
@@ -2030,8 +2030,9 @@ def event(tagmatch='*',
                         indent=None if not pretty else 4)))
                 sys.stdout.flush()
 
-            count -= 1
-            log.debug('Remaining event matches: %s', count)
+            if count > 0:
+                count -= 1
+                log.debug('Remaining event matches: %s', count)
 
             if count == 0:
                 break
