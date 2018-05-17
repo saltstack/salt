@@ -2449,18 +2449,33 @@ def latest(
                     'result': None,
                     'comment': '\n'.join(comments)}
 
-        # Build updated list of pkgs to exclude non-targeted ones
-        targeted_pkgs = list(targets.keys()) if pkgs else None
 
+        # No need to refresh, if a refresh was necessary it would have been
+        # performed above when pkg.latest_version was run.
         try:
-            # No need to refresh, if a refresh was necessary it would have been
-            # performed above when pkg.latest_version was run.
-            changes = __salt__['pkg.install'](name,
-                                              refresh=False,
-                                              fromrepo=fromrepo,
-                                              skip_verify=skip_verify,
-                                              pkgs=targeted_pkgs,
-                                              **kwargs)
+            if salt.utils.is_windows():
+                # pkg.install execution module on windows ensures the
+                # software package is installed when no version is
+                # specified, it does not upgrade the software to the 
+                # latest. This is per the design. 
+                # Build updated list of pkgs *with verion number*, exclude
+                # non-targeted ones
+                targeted_pkgs = [{x: targets[x]} for x in targets.keys()]
+                changes = __salt__['pkg.install'](name=None,
+                                                  refresh=False,
+                                                  fromrepo=fromrepo,
+                                                  skip_verify=skip_verify,
+                                                  pkgs=targeted_pkgs,
+                                                  **kwargs)
+            else:
+                # Build updated list of pkgs to exclude non-targeted ones
+                targeted_pkgs = list(targets.keys()) if pkgs else None
+                changes = __salt__['pkg.install'](name,
+                                                  refresh=False,
+                                                  fromrepo=fromrepo,
+                                                  skip_verify=skip_verify,
+                                                  pkgs=targeted_pkgs,
+                                                  **kwargs)
         except CommandExecutionError as exc:
             return {'name': name,
                     'changes': {},
