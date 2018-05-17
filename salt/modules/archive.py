@@ -410,23 +410,15 @@ def list_(name,
                 item.sort()
 
         if verbose:
-            ret = {'dirs': sorted(dirs),
-                   'files': sorted(files),
-                   'links': sorted(links)}
-            if six.PY2:
-                ret['top_level_dirs'] = [x for x in ret['dirs']
-                                         if x.decode('utf-8').count('/') == 1]
-                ret['top_level_files'] = [x for x in ret['files']
-                                          if x.decode('utf-8').count('/') == 0]
-                ret['top_level_links'] = [x for x in ret['links']
-                                          if x.decode('utf-8').count('/') == 0]
-            else:
-                ret['top_level_dirs'] = [x for x in ret['dirs']
-                                         if x.count('/') == 1]
-                ret['top_level_files'] = [x for x in ret['files']
-                                          if x.count('/') == 0]
-                ret['top_level_links'] = [x for x in ret['links']
-                                          if x.count('/') == 0]
+            ret = {'dirs': sorted(salt.utils.data.decode_list(dirs)),
+                   'files': sorted(salt.utils.data.decode_list(files)),
+                   'links': sorted(salt.utils.data.decode_list(links))}
+            ret['top_level_dirs'] = [x for x in ret['dirs']
+                                     if x.count('/') == 1]
+            ret['top_level_files'] = [x for x in ret['files']
+                                      if x.count('/') == 0]
+            ret['top_level_links'] = [x for x in ret['links']
+                                      if x.count('/') == 0]
         else:
             ret = sorted(dirs + files + links)
         return ret
