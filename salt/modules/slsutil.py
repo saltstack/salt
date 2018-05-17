@@ -53,6 +53,7 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     return salt.utils.dictupdate.merge(obj_a, obj_b, strategy, renderer,
             merge_lists)
 
+
 def merge_all(lst, strategy='smart', renderer='yaml', merge_lists=False):
     '''
     Merge a list of objects into each other in order
@@ -61,7 +62,7 @@ def merge_all(lst, strategy='smart', renderer='yaml', merge_lists=False):
 
     .. code-block:: shell
 
-        > salt '*' slsutil.merge_all '[{foo: Foo}, {foo: Bar}]'
+        > salt-call --output=txt slsutil.merge_all '[{foo: Foo}, {foo: Bar}]'
         local: {u'foo': u'Bar'}
     '''
 
