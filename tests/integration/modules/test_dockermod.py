@@ -43,7 +43,7 @@ def with_random_name(func):
 
 
 @destructiveTest
-@skipIf(not salt.utils.path.which('docker'), 'Docker not installed')
+@skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
@@ -62,6 +62,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
                        name='{0}/Dockerfile'.format(self.tmp_build_dir))
         self.run_state('docker_image.present',
                        build=self.tmp_build_dir,
+                       tag='latest',
                        name=self.random_name)
         self.run_state('docker_container.running',
                        name=self.random_name,
@@ -85,11 +86,18 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         check that docker.call works, and works with a container not running as root
         '''
         ret = self.run_function('docker.call', [self.random_name, 'test.ping'])
-        self.assertTrue(ret)
+        assert ret is True
+
+    def test_docker_sls(self):
+        '''
+        check that docker.sls works, and works with a container not running as root
+        '''
+        ret = self.run_function('docker.apply', [self.random_name, 'core'])
+        self.assertSaltTrueReturn(ret)
 
     def test_docker_highstate(self):
         '''
         check that docker.highstate works, and works with a container not running as root
         '''
-        ret = self.run_function('docker.call', [self.random_name, 'state.apply', 'prod'])
-        self.assertSaltTrueReturn({'test': ret})
+        ret = self.run_function('docker.apply', [self.random_name])
+        self.assertSaltTrueReturn(ret)

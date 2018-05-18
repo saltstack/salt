@@ -16,6 +16,14 @@ DOCKER_MOD_MAP = {
 }
 
 
+def __virtual__():
+    if 'proxy' not in __opts__:
+        return False, 'Docker executor is only meant to be used with Docker Proxy Minions'
+    if __opts__.get('proxy', {}).get('proxytype') != __virtualname__:
+        return False, 'Proxytype does not match: {0}'.format(__virtualname__)
+    return True
+
+
 def execute(opts, data, func, args, kwargs):
     '''
     Directly calls the given function with arguments
@@ -25,7 +33,3 @@ def execute(opts, data, func, args, kwargs):
     if data['fun'] in DOCKER_MOD_MAP:
         return __executors__['direct_call.execute'](opts, data, __salt__[DOCKER_MOD_MAP[data['fun']]], [opts['proxy']['name']] + args, kwargs)
     return __salt__['docker.call'](opts['proxy']['name'], data['fun'], *args, **kwargs)
-
-
-def allow_missing_funcs():
-    return True
