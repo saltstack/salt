@@ -2518,10 +2518,10 @@ def latest(
             # upgrade the software to the latest. This is per the design.
             # Build updated list of pkgs *with verion number*, exclude
             # non-targeted ones
-            targeted_pkgs = [{x: targets[x]} for x in targets.keys()]
+            targeted_pkgs = [{x: targets[x]} for x in targets]
         else:
             # Build updated list of pkgs to exclude non-targeted ones
-            targeted_pkgs = list(targets.keys()) if pkgs else None
+            targeted_pkgs = list(targets)
 
         # No need to refresh, if a refresh was necessary it would have been
         # performed above when pkg.latest_version was run.
