@@ -119,7 +119,7 @@ _target_opt_pat=(
 
 _target_options=(
     "$_target_opt_pat[2]"{-E,--pcre}'[use pcre regular expressions]:pcre:'
-    "$_target_opt_pat[2]"{-L,--list}'[take a comma or space delimited list of servers.]:list:'
+    "$_target_opt_pat[2]"{-L,--list}'[take a comma or whitespace delimited list of servers.]:list:'
     "$_target_opt_pat[2]"{-G,--grain}'[use a grain value to identify targets]:Grains:'
     "$_target_opt_pat[2]--grain-pcre[use a grain value to identify targets.]:pcre:"
     "$_target_opt_pat[2]"{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
