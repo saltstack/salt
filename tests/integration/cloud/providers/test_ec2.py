@@ -18,11 +18,12 @@ import salt.utils
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
-from tests.support.unit import expectedFailure
+from tests.support.unit import expectedFailure, skipIf
 from tests.support import win_installer
 
 # Import Third-Party Libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import salt.utils.cloud
 
 
 def __random_name(size=6):
@@ -37,6 +38,7 @@ def __random_name(size=6):
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
+HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 
 
 class EC2Test(ShellCase):
@@ -238,6 +240,7 @@ class EC2Test(ShellCase):
         )
         self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
         '''
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
@@ -252,7 +255,7 @@ class EC2Test(ShellCase):
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=800)
 
     @expectedFailure
     def test_win2016_winexe(self):
@@ -272,6 +275,7 @@ class EC2Test(ShellCase):
         )
         self._test_instance('ec2-win2016-test', debug=True, timeout=500)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
         '''
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
@@ -286,7 +290,7 @@ class EC2Test(ShellCase):
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=800)
 
     def tearDown(self):
         '''
