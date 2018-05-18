@@ -3254,7 +3254,7 @@ class BaseHighState(object):
         return top
 
     @staticmethod
-    def _get_topmatch_params(lst):
+    def _get_topmatch_params(matches):
         '''
         Take a list of state names and dictionaries of keyword parameters,
         and produce a dictionary of all keyword parameters.
@@ -3266,9 +3266,11 @@ class BaseHighState(object):
         { 'prm1': 'v1', 'prm2': 'v2' }
         '''
         ret = {}
-        for elem in lst:
-            if isinstance(elem, dict):
-                ret.update(elem)
+        for match in matches:
+            if isinstance(matches[match], list):
+                for item in matches[match]:
+                    if isinstance(item, dict):
+                        ret.update(item)
         return ret
 
     @staticmethod
@@ -3476,6 +3478,9 @@ class BaseHighState(object):
         Render a state file and retrieve all of the include states
         '''
         errors = []
+        kparams = self._get_topmatch_params(matches)
+        ignore_missing = kparams.get('ignore_missing', False)
+
         if not local:
             state_data = self.client.get_state(sls, saltenv)
             fn_ = state_data.get('dest', False)
@@ -3487,6 +3492,10 @@ class BaseHighState(object):
                     'be found.'.format(sls)
                 )
         if not fn_:
+            log.debug('render_state: not fn_: %s', sls)
+            if ignore_missing:
+                log.debug('Ignoring missing SLS %s', sls)
+                return {}, errors
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master or through a configured '
@@ -3804,8 +3813,6 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             # Separate possible keyword parameters from the list of states.
-            kparams = self._get_topmatch_params(matches)
-            ignore_missing = kparams.get('ignore_missing', False)
             for sls_match in self._get_topmatch_states(states):
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
@@ -3831,18 +3838,13 @@ class BaseHighState(object):
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
                         if 'is not available' in error:
-                            if ignore_missing:
-                                log.debug('Missing SLS %s ignored',
-                                          sls_match)
-                                del errors[i]
-                            else:
-                                # match SLS foobar in environment
-                                this_sls = 'SLS {0} in saltenv'.format(
-                                    sls_match)
-                                if this_sls in error:
-                                    errors[i] = (
-                                        'No matching sls found for \'{0}\' '
-                                        'in env \'{1}\''.format(sls_match, saltenv))
+                            # match SLS foobar in environment
+                            this_sls = 'SLS {0} in saltenv'.format(
+                                sls_match)
+                            if this_sls in error:
+                                errors[i] = (
+                                    'No matching sls found for \'{0}\' '
+                                    'in env \'{1}\''.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
