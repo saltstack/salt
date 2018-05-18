@@ -3492,7 +3492,6 @@ class BaseHighState(object):
                     'be found.'.format(sls)
                 )
         if not fn_:
-            log.debug('render_state: not fn_: %s', sls)
             if ignore_missing:
                 log.debug('Ignoring missing SLS %s', sls)
                 return {}, errors
