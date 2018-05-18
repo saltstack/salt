@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.states.pip
+    tests.integration.states.pip_state
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -317,7 +317,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         # pip install passing the package name in `name`
         ret = self.run_state(
             'pip.installed', name='pep8', user=username, bin_env=venv_dir,
-            no_cache_dir=True, password='PassWord1!')
+            password='PassWord1!')
         self.assertSaltTrueReturn(ret)
 
         if HAS_PWD:
@@ -362,12 +362,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         req_filename = os.path.join(
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt')
         with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
+            reqf.write(b'pep8')
 
         ret = self.run_state(
             'pip.installed', name='', user=username, bin_env=venv_dir,
             requirements='salt://issue-6912-requirements.txt',
-            no_cache_dir=True, password='PassWord1!')
+            password='PassWord1!')
         self.assertSaltTrueReturn(ret)
 
         if HAS_PWD:
@@ -452,7 +452,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
         with salt.utils.fopen(requirements_file, 'wb') as reqf:
-            reqf.write(six.b('pep8\n'))
+            reqf.write(b'pep8\n')
 
         try:
             self.run_function('virtualenv.create', [venv_dir])
