@@ -3804,6 +3804,7 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             # Separate possible keyword parameters from the list of states.
+            kparams = self._get_topmatch_params(matches)
             ignore_missing = kparams.get('ignore_missing', False)
             for sls_match in self._get_topmatch_states(states):
                 try:
