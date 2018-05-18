@@ -129,7 +129,7 @@ class SaltCacheLoader(BaseLoader):
             if _template.split('/', 1)[0] == '..':
                 log.warning(
                     'Discarded template path "%s": attempts to'
-                    ' ascend outside of file roots', template
+                    ' ascend outside of salt://', template
                 )
                 raise TemplateNotFound(template)
 
