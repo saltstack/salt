@@ -349,9 +349,10 @@ def present(name,
             # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
+    error = False
+
     try:
         __salt__['docker.inspect_image'](full_image)
-        error = False
     except CommandExecutionError as exc:
         msg = exc.__str__()
         if '404' not in msg:
