@@ -4,6 +4,24 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+New Docker Proxy Minion
+-----------------------
+
+Docker containers can now be treated as actual minions without installing salt
+in the container, using the new :py:mod:`docker proxy minion <salt.proxy.docker>`.
+
+This proxy minion uses the :py:mod:`docker executor <salt.executors.docker>` to
+pass commands to the docker container using :py:func:`docker.call
+<salt.modules.dockermod.call>`.  Any state module calls are passed through the
+corresponding function from the :py:mod:`docker <salt.modules.dockermod>`
+module.
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: docker
+      name: keen_proskuriakova
+
 
 Grains Dictionary Passed into Custom Grains
 -------------------------------------------
