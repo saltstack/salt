@@ -510,7 +510,7 @@ def get_system_info():
 
     .. code-block:: bash
 
-        salt 'minion-id' system.get_info
+        salt 'minion-id' system.get_system_info
     '''
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
