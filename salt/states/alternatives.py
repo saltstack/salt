@@ -85,7 +85,7 @@ def install(name, link, path, priority):
             if __salt__['alternatives.check_installed'](name, path):
                 ret['comment'] = (
                     'Alternative for {0} set to path {1} with priority {2}'
-                ).format(name, current, priority)
+                ).format(name, path, priority)
             else:
                 ret['comment'] = (
                     'Alternative {0} for {1} registered  with priority {2} and not set to default'
