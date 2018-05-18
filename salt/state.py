@@ -3311,8 +3311,8 @@ class BaseHighState(object):
                                 top[saltenv][tgt] = ctop[saltenv][tgt]
                                 continue
                             kargs = {}
-                            kargs1, m_states_1 = _read_tgt(top[saltenv][tgt])
-                            kargs2, m_states_2 = _read_tgt(ctop[saltenv][tgt])
+                            kargs1, m_states1 = _read_tgt(top[saltenv][tgt])
+                            kargs2, m_states2 = _read_tgt(ctop[saltenv][tgt])
                             kargs.update(kargs1)
                             kargs.update(kargs2)
                             merged = []
@@ -3423,15 +3423,18 @@ class BaseHighState(object):
                             # The item is either a keyword parameter
                             # or a reference to an environment.
                             elif isinstance(item, dict):
-                                env_key, inc_sls = item.popitem()
-                                if env_key not in self.avail:
-                                    # Pass through any keyword parameters.
-                                    matches[saltenv].append({ env_key:
-                                                                  inc_sls })
-                                    continue
-                                if env_key not in matches:
-                                    matches[env_key] = []
-                                matches[env_key].append(inc_sls)
+                                kwargs = {}
+                                for env_key, inc_sls in six.iteritems(item):
+                                    # This is a reference to an env.
+                                    if env_key in self.avail:
+                                        matches.setdefault(env_key,
+                                            []).append(inc_sls)
+                                    # If it's not a reference to an env,
+                                    # assume it's a keyword parameter.
+                                    else:
+                                        kwargs[env_key] = inc_sls
+                                if kwargs:
+                                    matches[saltenv].append(kwargs)
                 _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
