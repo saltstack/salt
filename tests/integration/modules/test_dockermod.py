@@ -43,7 +43,7 @@ def with_random_name(func):
 
 
 @destructiveTest
-@skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
+@skipIf(not salt.utils.path.which('docker'), 'Docker not installed')
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
@@ -86,3 +86,10 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_function('docker.call', [self.random_name, 'test.ping'])
         self.assertTrue(ret)
+
+    def test_docker_highstate(self):
+        '''
+        check that docker.highstate works, and works with a container not running as root
+        '''
+        ret = self.run_function('docker.call', [self.random_name, 'state.apply', 'prod'])
+        self.assertSaltTrueReturn({'test': ret})
