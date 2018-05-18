@@ -178,6 +178,7 @@ def write_secret(path, **kwargs):
         log.error('Failed to write secret! %s: %s', type(err).__name__, err)
         return False
 
+
 def write_raw(path, raw):
     '''
     Set raw data at the path in vault. The vault policy used must allow this.
@@ -200,6 +201,7 @@ def write_raw(path, raw):
     except Exception as err:
         log.error('Failed to write secret! %s: %s', type(err).__name__, err)
         return False
+
 
 def delete_secret(path):
     '''
