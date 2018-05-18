@@ -66,6 +66,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __salt__ = None
+__virtualname__ = 'boto'
 
 
 def __virtual__():
@@ -78,6 +79,7 @@ def __virtual__():
         global __salt__
         if not __salt__:
             __salt__ = minion_mods(__opts__)
+        return __virtualname__
     return has_boto_requirements
 
 

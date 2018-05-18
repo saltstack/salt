@@ -68,13 +68,18 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'boto3'
+
 
 def __virtual__():
     '''
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    return salt.utils.versions.check_boto_reqs()
+    has_boto = salt.utils.versions.check_boto_reqs()
+    if has_boto is True:
+        return __virtualname__
+    return has_boto
 
 
 def _option(value):
