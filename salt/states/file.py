@@ -267,6 +267,7 @@ For example:
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import difflib
+import fnmatch
 import itertools
 import logging
 import os
@@ -277,7 +278,7 @@ import sys
 import time
 import traceback
 from collections import Iterable, Mapping, defaultdict
-from datetime import datetime   # python3 problem in the making?
+from datetime import datetime, date   # python3 problem in the making?
 
 # Import salt libs
 import salt.loader
@@ -1676,6 +1677,128 @@ def absent(name,
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
+    return ret
+
+
+# Helper to match a given name against one or more glob patterns
+def _matches(name, patterns=[]):
+    for pattern in patterns:
+        if fnmatch.fnmatch(name, pattern):
+            return True
+    return False
+
+
+def tidied(name,
+           age=0,
+           matches=['*'],
+           rmdirs=False,
+           size=0,
+           **kwargs):
+    '''
+    Remove unwanted files based on specific criteria. Multiple criteria
+    are OR’d together, so a file that is too large but is not old enough
+    will still get tidied.
+
+    If neither age nor size is given all files which match a pattern in
+    matches will be removed.
+
+    name
+        The directory tree that should be tidied
+
+    age
+        Maximum age in days after which files are considered for removal
+
+    matches
+        Array of glob patterns to restrict what gets removed
+
+    rmdirs
+        Whether or not it's allowed to remove directories
+
+    size
+        Maximum allowed file size. Files greater or equal to this size are
+        removed. Doesn't apply to directories or symbolic links
+
+    .. code-block:: yaml
+
+        cleanup:
+          file.tidied:
+            - name: /tmp/salt_test
+            - rmdirs: True
+            - matches:
+              - foo
+              - b*r
+    '''
+    name = os.path.expanduser(name)
+
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
+
+    # Check preconditions
+    if not name:
+        return _error(ret, 'Must provide name to file.tidied')
+    if not os.path.isabs(name):
+        return _error(ret, 'Specified file {0} is not an absolute path'.format(name))
+    if not os.path.isdir(name):
+        return _error(ret, '{0} does not exist or is not a directory.'.format(name))
+
+    # Define some variables
+    todelete = []
+    today = date.today()
+
+    # Iterate over given directory tree, depth-first
+    for root, dirs, files in os.walk(top=name, topdown=False):
+        # Check criteria for the found files and directories
+        for elem in files + dirs:
+            myage = 0
+            mysize = 0
+            deleteme = True
+            path = os.path.join(root, elem)
+            if os.path.islink(path):
+                # Get age of symlink (not symlinked file)
+                myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
+            elif os.path.isdir(path):
+                # Get age of directory, check if directories should be deleted at all
+                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
+                deleteme = rmdirs
+            else:
+                # Get age and size of regular file
+                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
+                mysize = os.path.getsize(path)
+            # Verify against given criteria, collect all elements that should be removed
+            if (mysize >= size or myage.days >= age) and _matches(name=elem, patterns=matches) and deleteme:
+                todelete.append(path)
+
+    # Now delete the stuff
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = '{0} is set for tidy'.format(name)
+        return ret
+    try:
+        # Need to remove something?
+        if len(todelete) > 0:
+            ret['pchanges']['tidied'] = name
+            ret['changes']['removed'] = []
+            count = 0
+            # Iterate over collected items
+            for path in todelete:
+                if salt.utils.platform.is_windows():
+                    __salt__['file.remove'](path, force=True)
+                else:
+                    __salt__['file.remove'](path)
+                # Remember what we've removed, will appear in the summary
+                ret['changes']['removed'].append(path)
+                count += 1
+            if count == len(todelete):
+                # Set comment for the summary
+                ret['comment'] = 'Removed {0} files or directories from directory {1}'.format(count, name)
+        else:
+            # Set comment in case there was nothing to remove
+            ret['comment'] = 'Nothing to remove from directory {0}'.format(name)
+    except CommandExecutionError as exc:
+        return _error(ret, '{0}'.format(exc))
     return ret
 
 
