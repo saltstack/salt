@@ -1742,6 +1742,269 @@ def upgrade(name=None,
 
     return ret
 
+def update_minimal(name=None,
+            pkgs=None,
+            refresh=True,
+            skip_verify=False,
+            normalize=True,
+            **kwargs):
+    '''
+    Run a full system update-minimal (a ``yum update-minimal`` or ``dnf update-minimal --obsoletes=False``), or
+    update-minimal specified packages. If the packages aren't installed, they will
+    not be installed. update-minimal and update will not force the removal of
+    obsolete packages (use upgrade instead).
+
+    .. versionadded:: 2017.7.6
+
+    Run a full system update-minimal, a yum update-minimal
+
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.update_minimal
+        salt '*' pkg.update_minimal name=openssl
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+    disableexcludes
+        Disable exclude from main, for a repo or for everything.
+        (e.g., ``yum --disableexcludes='main'``)
+
+    name
+        The name of the package to be upgraded. Note that this parameter is
+        ignored if "pkgs" is passed.
+
+        32-bit packages can be upgraded on 64-bit systems by appending the
+        architecture designation (``.i686``, ``.i586``, etc.) to the end of the
+        package name.
+
+        Warning: if you forget 'name=' and run pkg.update_minimal openssl, ALL packages
+        are upgraded. This will be addressed in next releases.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.update_minimal name=openssl
+
+    pkgs
+        A list of packages to update_minimal from a software repository. Must be
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version. If the package was not already installed on the system,
+        it will not be installed.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.update_minimal pkgs='["foo", "bar"]'
+            salt '*' pkg.update_minimal pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
+
+    normalize : True
+        Normalize the package name by removing the architecture. This is useful
+        for poorly created packages which might include the architecture as an
+        actual part of the name such as kernel modules which match a specific
+        kernel version.
+
+        .. code-block:: bash
+
+            salt -G role:nsd pkg.update_minimal gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+
+    .. note::
+
+        To add extra arguments to the ``yum update_minimal`` command, pass them as key
+        word arguments. For arguments without assignments, pass ``True``
+
+    .. code-block:: bash
+
+        salt '*' pkg.update_minimal security=True exclude='kernel*'
+
+    '''
+    return update(name, pkgs, refresh, skip_verify, normalize, update_minimal=True, **kwargs)
+
+
+def update(name=None,
+            pkgs=None,
+            refresh=True,
+            skip_verify=False,
+            normalize=True,
+            update_minimal=False,
+            **kwargs):
+    '''
+    Run a full system update (a ``yum update`` or ``dnf update``), or
+    update specified packages. If the packages aren't installed, they will
+    not be installed. Update will not force the removal of obsolete
+    packages (use upgrade instead).
+
+    .. versionadded:: 2017.7.6
+
+    Run a full system update, a yum update
+
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.update
+        salt '*' pkg.update name=openssl
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+    disableexcludes
+        Disable exclude from main, for a repo or for everything.
+        (e.g., ``yum --disableexcludes='main'``)
+
+    name
+        The name of the package to be upgraded. Note that this parameter is
+        ignored if "pkgs" is passed.
+
+        32-bit packages can be upgraded on 64-bit systems by appending the
+        architecture designation (``.i686``, ``.i586``, etc.) to the end of the
+        package name.
+
+        Warning: if you forget 'name=' and run pkg.update openssl, ALL packages
+        are upgraded. This will be addressed in next releases.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.update name=openssl
+
+    pkgs
+        A list of packages to update from a software repository. Must be
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version. If the package was not already installed on the system,
+        it will not be installed.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.update pkgs='["foo", "bar"]'
+            salt '*' pkg.update pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
+
+    normalize : True
+        Normalize the package name by removing the architecture. This is useful
+        for poorly created packages which might include the architecture as an
+        actual part of the name such as kernel modules which match a specific
+        kernel version.
+
+        .. code-block:: bash
+
+            salt -G role:nsd pkg.update gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+
+    update_minimal : False
+        Uses update-minimal instead of update (e.g., ``yum update-minimal``)
+        Works like update, but goes to the 'newest' package match which fixes a problem that affects your system
+
+    .. note::
+
+        To add extra arguments to the ``yum update`` command, pass them as key
+        word arguments. For arguments without assignments, pass ``True``
+
+    .. code-block:: bash
+
+        salt '*' pkg.update security=True exclude='kernel*'
+
+    '''
+    options = _get_options(get_extra_options=True, **kwargs)
+
+    if salt.utils.is_true(refresh):
+        refresh_db(**kwargs)
+
+    old = list_pkgs()
+
+    targets = []
+    if name or pkgs:
+        try:
+            pkg_params = __salt__['pkg_resource.parse_targets'](
+                name=name,
+                pkgs=pkgs,
+                sources=None,
+                normalize=normalize,
+                **kwargs)[0]
+        except MinionError as exc:
+            raise CommandExecutionError(exc)
+
+        if pkg_params:
+            # Calling list.extend() on a dict will extend it using the
+            # dictionary's keys.
+            targets.extend(pkg_params)
+
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend([_yum(), '--quiet', '-y'])
+    cmd.extend(options)
+    if _yum() == 'dnf':
+        cmd.append('--obsoletes=False')
+    if skip_verify:
+        cmd.append('--nogpgcheck')
+    if update_minimal:
+        cmd.append('update-minimal')
+    else:
+        cmd.append('update')
+    cmd.extend(targets)
+
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
+
+    return ret
+
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
