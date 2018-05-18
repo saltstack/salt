@@ -275,7 +275,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.tfile = tempfile.NamedTemporaryFile(delete=False,
                                                  prefix='blockrepltmp',
                                                  mode='w+b')
-        self.tfile.write(self.MULTILINE_STRING)
+        self.tfile.write(salt.utils.stringutils.to_bytes(self.MULTILINE_STRING))
         self.tfile.close()
 
     def tearDown(self):
