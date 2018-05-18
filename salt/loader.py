@@ -1630,8 +1630,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # if the modulename isn't in the whitelist, don't bother
             if self.whitelist and mod_name not in self.whitelist:
                 log.error(
-                    'Failed to load key %s because its module (%s) is not in '
-                    'the whitelist: %s', key, mod_name, self.whitelist
+                    'Failed to load function %s because its module (%s) is '
+                    'not in the whitelist: %s', key, mod_name, self.whitelist
                 )
                 raise KeyError(key)
 
