@@ -66,7 +66,7 @@ def validate(config):
 
         for item in interfaces:
             if not isinstance(_config['interfaces'][item], dict):
-                return False, ('Interface attirbutes for network_settings beacon'
+                return False, ('Interface attributes for network_settings beacon'
                                ' must be a dictionary.')
             if not all(j in ATTRS for j in _config['interfaces'][item]):
                 return False, ('Invalid attributes in beacon configuration.')
