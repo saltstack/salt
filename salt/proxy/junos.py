@@ -114,7 +114,10 @@ def init(opts):
         thisproxy['initialized'] = False
         return
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
-    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    try:
+        thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    except Exception as ex:
+        log.error('Bind failed with SW class due to: %s' % ex)
     thisproxy['initialized'] = True
 
 
