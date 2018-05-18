@@ -275,7 +275,7 @@ __virtual_aliases__ = ('dockerng', 'moby')
 __proxyenabled__ = ['docker']
 __outputter__ = {
     'sls': 'highstate',
-    'apply': 'highstate',
+    'apply_': 'highstate',
     'highstate': 'highstate',
 }
 
