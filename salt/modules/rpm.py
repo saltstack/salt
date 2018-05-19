@@ -453,7 +453,7 @@ def diff(package, path):
     return res
 
 
-def info(*packages, **attr):
+def info(*packages, **kwargs):
     '''
     Return a detailed package(s) summary information.
     If no packages specified, all packages will be returned.
@@ -467,6 +467,9 @@ def info(*packages, **attr):
             version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
             build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
 
+    :param all_versions:
+        Return information for all installed versions of the packages
+
     :return:
 
     CLI example:
@@ -476,7 +479,9 @@ def info(*packages, **attr):
         salt '*' lowpkg.info apache2 bash
         salt '*' lowpkg.info apache2 bash attr=version
         salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size all_versions=True
     '''
+    all_versions = kwargs.get('all_versions', False)
     # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
     # available, then we can just use SIZE for older versions. See Issue #31366.
     rpm_tags = __salt__['cmd.run_stdout'](
@@ -516,7 +521,7 @@ def info(*packages, **attr):
         "edition": "edition: %|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\\n",
     }
 
-    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    attr = kwargs.get('attr', None) and kwargs['attr'].split(",") or None
     query = list()
     if attr:
         for attr_k in attr:
@@ -610,8 +615,13 @@ def info(*packages, **attr):
         if pkg_name.startswith('gpg-pubkey'):
             continue
         if pkg_name not in ret:
-            ret[pkg_name] = pkg_data.copy()
-            del ret[pkg_name]['edition']
+            if all_versions:
+                ret[pkg_name] = [pkg_data.copy()]
+            else:
+                ret[pkg_name] = pkg_data.copy()
+                del ret[pkg_name]['edition']
+        elif all_versions:
+            ret[pkg_name].append(pkg_data.copy())
 
     return ret
 
