@@ -198,6 +198,7 @@ def beacon(config):
     ret = []
 
     users = {}
+    groups = {}
     defaults = None
 
     for config_item in config:
