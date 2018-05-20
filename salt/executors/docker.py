@@ -36,5 +36,11 @@ def execute(opts, data, func, args, kwargs):
     return __salt__['docker.call'](opts['proxy']['name'], data['fun'], *args, **kwargs)
 
 
-def allow_missing_funcs():
+def allow_missing_func(function):  # pylint: disable=unused-argument
+    '''
+    Allow all calls to be passed through to docker container.
+
+    The docker call will use direct_call, which will return back if the module
+    was unable to be run.
+    '''
     return True

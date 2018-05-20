@@ -1569,9 +1569,9 @@ class Minion(MinionBase):
                     getattr(minion_instance, 'module_executors', []) or \
                     opts.get('module_executors', ['direct_call'])
         allow_missing_funcs = any([
-            minion_instance.executors['{0}.allow_missing_funcs'.format(executor)]()
+            minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
             for executor in executors
-            if '{0}.allow_missing_funcs' in minion_instance.executors
+            if '{0}.allow_missing_func' in minion_instance.executors
         ])
         if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
