@@ -1434,7 +1434,7 @@ def create(vm_):
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_request, __opts__)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM \'%s\'', vm_['name'])
