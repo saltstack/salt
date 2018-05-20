@@ -125,7 +125,6 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
     infoblox_a
     infoblox_cname
     infoblox_host_record

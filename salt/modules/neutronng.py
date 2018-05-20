@@ -9,10 +9,12 @@ Neutron module for interacting with OpenStack Neutron
 Example configuration
 
 .. code-block:: yaml
+
     neutron:
       cloud: default
 
 .. code-block:: yaml
+
     neutron:
       auth:
         username: admin

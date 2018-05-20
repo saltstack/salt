@@ -470,28 +470,37 @@ def info_installed(*names, **kwargs):
         Valid attributes are:
             ignore, report
 
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
-        salt '*' pkg.info_installed <package1> attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
+        salt '*' pkg.info_installed <package1> attr=version,vendor all_versions=True
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in six.iteritems(pkg_nfo):
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in six.iteritems(_nfo):
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
+                else:
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
             else:
-                t_nfo[key] = value
-        ret[pkg_name] = t_nfo
-
+                ret.setdefault(pkg_name, []).append(t_nfo)
     return ret
 
 
@@ -1494,7 +1503,14 @@ def _uninstall(name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [target for target in pkg_params if target in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and pkg_params[target] in old[target].split(','):
+            targets.append(target + "-" + pkg_params[target])
+        elif target in old and not pkg_params[target]:
+            targets.append(target)
     if not targets:
         return {}
 
@@ -1515,6 +1531,32 @@ def _uninstall(name=None, pkgs=None):
         )
 
     return ret
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+    Circumstances where this would be done include:
+
+    * If the arch is 32 bit and the package name ends in a 32-bit arch.
+    * If the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
+        return name[:-(len(arch) + 1)]
+    return name
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
