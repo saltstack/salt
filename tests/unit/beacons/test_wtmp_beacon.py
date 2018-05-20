@@ -123,10 +123,10 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_match_group(self):
 
         for groupadd in ('salt.modules.aix_group',
-                         'salt.modules.groupadd mac_group',
+                         'salt.modules.mac_group',
                          'salt.modules.pw_group',
                          'salt.modules.solaris_group',
-                         'win_groupadd'):
+                         'salt.modules.win_groupadd'):
             mock_group_info = {'passwd': 'x',
                                'gid': 100,
                                'name': 'users',
@@ -138,8 +138,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                            MagicMock(return_value=1506121200)):
                     with patch('struct.unpack',
                                MagicMock(return_value=pack)):
-                        with patch.dict('{0}.__salt__'.format(groupadd),
-                                        {'group.info': MagicMock(return_value=mock_group_info)}):
+                        with patch('{0}.info'.format(groupadd),
+                                   new=MagicMock(return_value=mock_group_info)):
                             config = [{'group': {'users': {'time': {'end': '5pm',
                                                                     'start': '3pm'}}}}
                                       ]
