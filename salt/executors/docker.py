@@ -9,6 +9,7 @@ Used with the docker proxy minion.
 from __future__ import absolute_import, unicode_literals
 
 
+__virtualname__ = 'docker'
 DOCKER_MOD_MAP = {
     'state.sls': 'docker.sls',
     'state.apply': 'docker.apply',
@@ -33,3 +34,7 @@ def execute(opts, data, func, args, kwargs):
     if data['fun'] in DOCKER_MOD_MAP:
         return __executors__['direct_call.execute'](opts, data, __salt__[DOCKER_MOD_MAP[data['fun']]], [opts['proxy']['name']] + args, kwargs)
     return __salt__['docker.call'](opts['proxy']['name'], data['fun'], *args, **kwargs)
+
+
+def allow_missing_funcs():
+    return True
