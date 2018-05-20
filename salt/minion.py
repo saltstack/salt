@@ -1565,7 +1565,15 @@ class Minion(MinionBase):
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
-        if function_name in minion_instance.functions:
+        executors = data.get('module_executors') or \
+                    getattr(minion_instance, 'module_executors', []) or \
+                    opts.get('module_executors', ['direct_call'])
+        allow_missing_funcs = any([
+            minion_instance.executors['{0}.allow_missing_funcs'.format(executor)]()
+            for executor in executors
+            if '{0}.allow_missing_funcs' in minion_instance.executors
+        ])
+        if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
                 minion_blackout_violation = False
                 if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
@@ -1583,15 +1591,17 @@ class Minion(MinionBase):
                                              'to False in pillar or grains to resume operations. Only '
                                              'saltutil.refresh_pillar allowed in blackout mode.')
 
-                func = minion_instance.functions[function_name]
-                args, kwargs = load_args_and_kwargs(
-                    func,
-                    data['arg'],
-                    data)
+                if function_name in minion_instance.functions:
+                    func = minion_instance.functions[function_name]
+                    args, kwargs = load_args_and_kwargs(
+                        func,
+                        data['arg'],
+                        data)
+                else:
+                    # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
+                    func = function_name
+                    args, kwargs = data['arg'], data
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-                executors = data.get('module_executors') or \
-                            getattr(minion_instance, 'module_executors', []) or \
-                            opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
