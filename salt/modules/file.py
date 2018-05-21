@@ -61,6 +61,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -1911,7 +1912,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.files.fopen(path, mode='r') as fp_:
-        body = [salt.utils.stringutils.to_unicode(line) for line in fp_.readlines()]
+        body = salt.utils.data.decode_list(fp_.readlines())
     body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
     if body and _get_eol(body[-1]):
         body.append('')
@@ -2025,8 +2026,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
-                path_content = [salt.utils.stringutils.to_unicode(x)
-                                for x in fp_.read().splitlines(True)]
+                path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
             changes_diff = ''.join(difflib.unified_diff(
                 path_content, body
             ))
