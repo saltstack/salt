@@ -20,7 +20,7 @@ illustrate:
 
 .. code-block:: yaml
 
-    /etc/salt/master: # maps to "name"
+    /etc/salt/master: # maps to "name", unless a "name" argument is specified below
       file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
