@@ -252,6 +252,7 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
@@ -287,6 +288,7 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
