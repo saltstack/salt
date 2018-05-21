@@ -19,8 +19,6 @@ Example Usage:
 
     .. code-block:: python
 
-        import salt.utils.boto3
-
         def __virtual__():
             # only required in 2015.2
             salt.utils.compat.pack_dunder(__name__)
