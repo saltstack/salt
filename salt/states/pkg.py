@@ -2512,7 +2512,7 @@ def latest(
                     'result': None,
                     'comment': '\n'.join(comments)}
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # pkg.install execution module on windows ensures the software
             # package is installed when no version is specified, it does not
             # upgrade the software to the latest. This is per the design.
