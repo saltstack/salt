@@ -54,7 +54,6 @@ import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
