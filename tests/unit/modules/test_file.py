@@ -831,6 +831,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_delete_no_match(self):
+        '''
+        Tests that when calling file.line with ``mode=delete``,
+        with not matching pattern to delete returns False
+        :return:
+        '''
+        file_content = os.linesep.join([
+            'file_roots:',
+            '  base:',
+            '    - /srv/salt',
+            '    - /srv/custom'
+        ])
+        match = 'not matching'
+        for mode in ['delete', 'replace']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    self.assertFalse(filemod.line('foo', content='foo', match=match, mode=mode))
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_modecheck_failure(self):
         '''
         Test for file.line for empty or wrong mode.

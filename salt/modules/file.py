@@ -1924,9 +1924,9 @@ def line(path, content=None, match=None, mode=None, location=None,
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
         body = []
-    elif mode == 'delete':
+    elif mode == 'delete' and match:
         body = [line for line in body if line != match[0]]
-    elif mode == 'replace':
+    elif mode == 'replace' and match:
         body = [(_set_line_indent(file_line, _set_line_eol(file_line, content), indent)
                 if (file_line == match[0] and not file_line.strip() == content) else file_line)
                 for file_line in body]
