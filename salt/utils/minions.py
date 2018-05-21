@@ -475,6 +475,8 @@ class CkMinions(object):
         minions = set(self._pki_minions())
         log.debug('minions: %s', minions)
 
+        nodegroups = self.opts.get('nodegroups', {})
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -497,9 +499,11 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
@@ -556,9 +560,12 @@ class CkMinions(object):
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "%s"', word)
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out

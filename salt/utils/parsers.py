@@ -1088,7 +1088,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, take a comma or space delimited list of '
+                  'servers, take a comma or whitespace delimited list of '
                   'servers.')
         )
         group.add_option(

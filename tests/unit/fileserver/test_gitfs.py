@@ -305,14 +305,14 @@ class GitFSTestFuncs(object):
             gitfs_disable_saltenv_mapping: True
             gitfs_saltenv:
               - foo:
-                - ref: base
+                - ref: somebranch
             '''))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['foo'])
+            self.assertEqual(ret, ['base', 'foo'])
 
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         '''
@@ -326,14 +326,14 @@ class GitFSTestFuncs(object):
               - file://{0}:
                 - saltenv:
                   - bar:
-                    - ref: base
+                    - ref: somebranch
             '''.format(TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['bar'])
+            self.assertEqual(ret, ['bar', 'base'])
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         '''
@@ -348,14 +348,14 @@ class GitFSTestFuncs(object):
 
             gitfs_saltenv:
               - hello:
-                - ref: base
-            '''))
+                - ref: somebranch
+            '''.format(TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['hello'])
+            self.assertEqual(ret, ['base', 'hello'])
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         '''
@@ -369,14 +369,14 @@ class GitFSTestFuncs(object):
                 - disable_saltenv_mapping: True
                 - saltenv:
                   - world:
-                    - ref: base
+                    - ref: somebranch
             '''.format(TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['world'])
+            self.assertEqual(ret, ['base', 'world'])
 
 
 class GitFSTestBase(object):

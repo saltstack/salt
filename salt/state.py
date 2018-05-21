@@ -3012,7 +3012,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
-            self.opts['environment'] = self.opts['default_top']
+            self.opts['saltenv'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
@@ -3443,43 +3443,45 @@ class BaseHighState(object):
                     'Specified SLS {0} on local filesystem cannot '
                     'be found.'.format(sls)
                 )
+        state = None
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master or through a configured '
                 'fileserver'.format(sls, saltenv)
             )
-        state = None
-        try:
-            state = compile_template(fn_,
-                                     self.state.rend,
-                                     self.state.opts['renderer'],
-                                     self.state.opts['renderer_blacklist'],
-                                     self.state.opts['renderer_whitelist'],
-                                     saltenv,
-                                     sls,
-                                     rendered_sls=mods
-                                     )
-        except SaltRenderError as exc:
-            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
-                saltenv, sls, exc
-            )
-            log.critical(msg)
-            errors.append(msg)
-        except Exception as exc:
-            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
-                sls, exc
-            )
-            log.critical(
-                msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        try:
-            mods.add('{0}:{1}'.format(saltenv, sls))
-        except AttributeError:
-            pass
+        else:
+            try:
+                state = compile_template(fn_,
+                                         self.state.rend,
+                                         self.state.opts['renderer'],
+                                         self.state.opts['renderer_blacklist'],
+                                         self.state.opts['renderer_whitelist'],
+                                         saltenv,
+                                         sls,
+                                         rendered_sls=mods
+                                         )
+            except SaltRenderError as exc:
+                msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
+                    saltenv, sls, exc
+                )
+                log.critical(msg)
+                errors.append(msg)
+            except Exception as exc:
+                msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                    sls, exc
+                )
+                log.critical(
+                    msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
+            try:
+                mods.add('{0}:{1}'.format(saltenv, sls))
+            except AttributeError:
+                pass
+
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -3902,7 +3904,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)

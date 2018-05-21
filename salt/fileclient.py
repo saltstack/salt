@@ -13,6 +13,7 @@ import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
+import salt.utils.atomicfile
 
 # Import salt libs
 from salt.exceptions import (
@@ -46,6 +47,7 @@ from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
+MAX_FILENAME_LENGTH = 255
 
 
 def get_file_client(opts, pillar=False):
@@ -831,6 +833,9 @@ class Client(object):
         else:
             file_name = url_data.path
 
+        if len(file_name) > MAX_FILENAME_LENGTH:
+            file_name = salt.utils.hashutils.sha256_digest(file_name)
+
         return salt.utils.path.join(
             cachedir,
             'extrn_files',
@@ -1156,7 +1161,11 @@ class RemoteClient(Client):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 if makedirs:
-                    os.makedirs(destdir)
+                    try:
+                        os.makedirs(destdir)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:  # ignore if it was there already
+                            raise
                 else:
                     return False
             # We need an open filehandle here, that's why we're not using a
@@ -1211,7 +1220,7 @@ class RemoteClient(Client):
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
                             salt.utils.files.rm_rf(dest)
-                        fn_ = salt.utils.files.fopen(dest, 'wb+')
+                        fn_ = salt.utils.atomicfile.atomic_open(dest, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
