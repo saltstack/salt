@@ -118,8 +118,7 @@ def validate(config):
                                'be a dictionary.')
             else:
                 for group in _config['groups']:
-                    if _config['groups'][group] and \
-                       'time_range' in _config['groups'][group]:
+                    if 'time_range' in _config['groups'][group]:
                         _time_range = _config['groups'][group]['time_range']
                         if not isinstance(_time_range, dict):
                             return False, ('The time_range parameter for '
