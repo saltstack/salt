@@ -2482,6 +2482,51 @@ def _hw_data(osdata):
                 grains['product'] = res.group(1).strip().replace("'", "")
                 break
 
+    elif osdata['kernel'] == 'AIX':
+        data = ""
+        cmd = '/usr/sbin/prtconf'
+        if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
+            data += __salt__['cmd.run']('{0}'.format(cmd))
+            data += '\n'
+
+        sn_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        fw_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Firmware\s+Version:\s+(.*)',  # prtconf
+            ]
+        ]
+
+        product_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*System\s+Model:\s+(\S+)',  # prtconf
+            ]
+        ]
+
+        for regex in sn_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['serialnumber'] = res.group(1).strip().replace("'", "")
+                break
+
+        for regex in fw_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                fw_string = res.group(1).strip().replace("'", "")
+                _, grains['systemfirmware'] = fw_string.split(",")
+                break
+
+        for regex in product_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                sn_string = res.group(1).strip().replace("'", "")
+                grains['manufacturer'], grains['product'] = sn_string.split(",")
+                break
+
     return grains
 
 
