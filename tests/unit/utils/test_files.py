@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Unit Tests for functions located in salt.utils.files.py.
+Unit Tests for functions located in salt/utils/files.py
 '''
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import copy
 import os
 
 # Import Salt libs
@@ -21,7 +22,7 @@ from tests.support.mock import (
 )
 
 
-class FilesUtilTestCase(TestCase):
+class FilesTestCase(TestCase):
     '''
     Test case for files util.
     '''
@@ -94,3 +95,54 @@ class FilesUtilTestCase(TestCase):
                     'fopen() should have been prevented from opening a file '
                     'using {0} as the filename'.format(invalid_fn)
                 )
+
+    def _create_temp_structure(self, temp_directory, structure):
+        for folder, files in six.iteritems(structure):
+            current_directory = os.path.join(temp_directory, folder)
+            os.makedirs(current_directory)
+            for name, content in six.iteritems(files):
+                path = os.path.join(temp_directory, folder, name)
+                with salt.utils.files.fopen(path, 'w+') as fh:
+                    fh.write(content)
+
+    def _validate_folder_structure_and_contents(self, target_directory,
+                                                desired_structure):
+        for folder, files in six.iteritems(desired_structure):
+            for name, content in six.iteritems(files):
+                path = os.path.join(target_directory, folder, name)
+                with salt.utils.files.fopen(path) as fh:
+                    assert fh.read().strip() == content
+
+    @with_tempdir()
+    @with_tempdir()
+    def test_recursive_copy(self, src, dest):
+        src_structure = {
+            'foo': {
+                'foofile.txt': 'fooSTRUCTURE'
+            },
+            'bar': {
+                'barfile.txt': 'barSTRUCTURE'
+            }
+        }
+        dest_structure = {
+            'foo': {
+                'foo.txt': 'fooTARGET_STRUCTURE'
+            },
+            'baz': {
+                'baz.txt': 'bazTARGET_STRUCTURE'
+            }
+        }
+
+        # Create the file structures in both src and dest dirs
+        self._create_temp_structure(src, src_structure)
+        self._create_temp_structure(dest, dest_structure)
+
+        # Perform the recursive copy
+        salt.utils.files.recursive_copy(src, dest)
+
+        # Confirm results match expected results
+        desired_structure = copy.copy(dest_structure)
+        desired_structure.update(src_structure)
+        self._validate_folder_structure_and_contents(
+            dest,
+            desired_structure)
