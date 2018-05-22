@@ -57,9 +57,12 @@ def run_file(name,
         grain=None,
         key=None,
         overwrite=True,
+        saltenv=None,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database
+
+    .. versionadded:: 2017.7.0
 
     name
         Used only as an ID
@@ -85,12 +88,16 @@ def run_file(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
 
-    .. versionadded:: 2017.7.0
+    saltenv:
+        The saltenv to pull the query_file from
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(database)}
+
+    if any([query_file.startswith(proto) for proto in ['http://', 'https://', 'salt://', 's3://', 'swift://']]):
+        query_file = __salt__['cp.cache_file'](query_file, saltenv=saltenv or __env__)
 
     if not os.path.exists(query_file):
         ret['comment'] = 'File {0} does not exist'.format(query_file)
