@@ -43,7 +43,7 @@ from functools import reduce  # pylint: disable=redefined-builtin
 # Import Salt libs
 import salt.output
 import salt.utils.color
-import salt.utils.locales
+import salt.utils.data
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -116,7 +116,7 @@ class TableDisplay(object):
         try:
             return fmt.format(indent, color, prefix, msg, endc, suffix)
         except UnicodeDecodeError:
-            return fmt.format(indent, color, prefix, salt.utils.locales.sdecode(msg), endc, suffix)
+            return fmt.format(indent, color, prefix, salt.utils.data.decode(msg), endc, suffix)
 
     def wrap_onspace(self, text):
 
