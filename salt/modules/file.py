@@ -1927,9 +1927,9 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'delete' and match:
         body = [line for line in body if line != match[0]]
     elif mode == 'replace' and match:
-        body = [(_set_line_indent(file_line, _set_line_eol(file_line, content), indent)
-                if (file_line == match[0] and not file_line.strip() == content) else file_line)
-                for file_line in body]
+        idx = body.index(match[0])
+        file_line = body.pop(idx)
+        body.insert(idx, _set_line_indent(file_line, content, indent))
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
