@@ -2062,8 +2062,6 @@ def update(name=None,
         cmd.append('--nogpgcheck')
     if _yum() == 'dnf':
         cmd.append('--obsoletes=False')
-    if skip_verify:
-        cmd.append('--nogpgcheck')
     if update_minimal:
         if _yum() == 'dnf':
             cmd.append('upgrade-minimal')
