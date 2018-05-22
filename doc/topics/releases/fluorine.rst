@@ -507,3 +507,15 @@ passed correctly to the minion to run an orchestration in test mode. At present
 it is not possible to pass ``test=False`` on the command-line to override a
 minion in permanent test mode and so the ``test:False`` option must still be set
 in the orchestration file.
+
+============================
+LDAP External Authentication
+============================
+
+freeipa 'groupattribute' support
+--------------------------------
+Previously, if Salt was using external authentication against a freeipa LDAP system
+it could only search for users via the 'accountattributename' field. This release
+add an additional search using the 'groupattribute' field as well. The original
+'accountattributename' search is done first then the 'groupattribute' allowing for
+backward compatibility with previous Salt releases.
