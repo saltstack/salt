@@ -39,6 +39,8 @@ def present(name,
         auth='password',
         encoding='UTF8',
         locale=None,
+        waldir=None,
+        checksums=False,
         runas=None):
     '''
     Initialize the PostgreSQL data directory
@@ -61,8 +63,21 @@ def present(name,
     locale
         The default locale for new databases
 
+    waldir
+        The transaction log (WAL) directory (default is to keep WAL
+        inside the data directory)
+
+    checksums
+        If True, the cluster will be created with data page checksums.
+
     runas
         The system user the operation should be performed on behalf of
+
+    .. note:
+
+        The ``waldir`` and ``checksum`` options have been added in
+        version XXX. The ``checksum`` option requires PostgreSQL 9.3
+        or later.
     '''
     _cmt = 'Postgres data directory {0} is already present'.format(name)
     ret = {
@@ -85,6 +100,8 @@ def present(name,
                 auth=auth,
                 encoding=encoding,
                 locale=locale,
+                waldir=waldir,
+                checksums=checksums,
                 runas=runas)
 
         if __salt__['postgres.datadir_init'](name, **kwargs):
