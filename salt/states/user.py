@@ -68,6 +68,7 @@ def _changes(name,
              roomnumber='',
              workphone='',
              homephone='',
+             other='',
              loginclass=None,
              date=None,
              mindays=0,
@@ -170,24 +171,26 @@ def _changes(name,
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
-    if 'user.chroomnumber' in __salt__ \
-            and roomnumber is not None:
+    if 'user.chroomnumber' in __salt__ and roomnumber is not None:
         roomnumber = sdecode_if_string(roomnumber)
         lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
         if lusr['roomnumber'] != roomnumber:
             change['roomnumber'] = roomnumber
-    if 'user.chworkphone' in __salt__ \
-            and workphone is not None:
+    if 'user.chworkphone' in __salt__ and workphone is not None:
         workphone = sdecode_if_string(workphone)
         lusr['workphone'] = sdecode_if_string(lusr['workphone'])
         if lusr['workphone'] != workphone:
             change['workphone'] = workphone
-    if 'user.chhomephone' in __salt__ \
-            and homephone is not None:
+    if 'user.chhomephone' in __salt__ and homephone is not None:
         homephone = sdecode_if_string(homephone)
         lusr['homephone'] = sdecode_if_string(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    if 'user.chother' in __salt__ and other is not None:
+        other = sdecode_if_string(other)
+        lusr['other'] = sdecode_if_string(lusr['other'])
+        if lusr['other'] != other:
+            change['other'] = other
     # OpenBSD/FreeBSD login class
     if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if loginclass:
@@ -236,6 +239,7 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            other=None,
             loginclass=None,
             date=None,
             mindays=None,
@@ -377,7 +381,10 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
-        If GECOS field contains more than 3 commas, this field will have the rest of 'em
+
+    other
+        The user's other attribute (not supported in MacOS)
+        If GECOS field contains more than 4 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -448,6 +455,8 @@ def present(name,
         workphone = sdecode(workphone)
     if homephone is not None:
         homephone = sdecode(homephone)
+    if other is not None:
+        other = sdecode(other)
 
     # createhome not supported on Windows or Mac
     if __grains__['kernel'] in ('Darwin', 'Windows'):
@@ -460,7 +469,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
+    for gecos_field in [fullname, roomnumber, workphone]:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
@@ -519,6 +528,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           other,
                            loginclass,
                            date,
                            mindays,
@@ -654,6 +664,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           other,
                            loginclass,
                            date,
                            mindays,
@@ -705,6 +716,7 @@ def present(name,
                       'roomnumber': roomnumber,
                       'workphone': workphone,
                       'homephone': homephone,
+                      'other': other,
                       'createhome': createhome,
                       'nologinit': nologinit,
                       'loginclass': loginclass}
