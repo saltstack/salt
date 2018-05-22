@@ -1158,11 +1158,11 @@ def request_instance(vm_):
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
 
         if 'image' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.from_image
+            volume['create_option'] = 'from_image'
         elif 'attach' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.attach
+            volume['create_option'] = 'attach'
         else:
-            volume['create_option'] = DiskCreateOptionTypes.empty
+            volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
@@ -1434,7 +1434,7 @@ def create(vm_):
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-    ret = __utils__['cloud.bootstrap'](vm_request, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM \'%s\'', vm_['name'])
