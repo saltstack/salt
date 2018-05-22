@@ -43,6 +43,7 @@ from functools import reduce  # pylint: disable=redefined-builtin
 # Import Salt libs
 import salt.output
 import salt.utils.color
+import salt.utils.data
 import salt.utils.locales
 
 # Import 3rd-party libs
@@ -62,9 +63,9 @@ class TableDisplay(object):
     '''
 
     _JUSTIFY_MAP = {
-        'center': str.center,
-        'right': str.rjust,
-        'left': str.ljust
+        'center': six.text_type.center,
+        'right': six.text_type.rjust,
+        'left': six.text_type.ljust
     }
 
     def __init__(self,
@@ -147,7 +148,7 @@ class TableDisplay(object):
                 for item in row
             ]
             rows = []
-            for item in map(None, *new_rows):
+            for item in map(lambda *args: args, *new_rows):
                 if isinstance(item, (tuple, list)):
                     rows.append([substr or '' for substr in item])
                 else:
@@ -159,7 +160,7 @@ class TableDisplay(object):
             for row in rows
         ]
 
-        columns = map(None, *reduce(operator.add, logical_rows))
+        columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
         max_widths = [
             max([len(six.text_type(item)) for item in column])
@@ -363,7 +364,7 @@ def output(ret, **kwargs):
             )
         )
 
-    return '\n'.join(table.display(ret,
+    return '\n'.join(table.display(salt.utils.data.decode(ret),
                                    base_indent,
                                    out,
                                    rows_key=rows_key,
