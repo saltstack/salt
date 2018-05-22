@@ -1386,9 +1386,10 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             ret['out'] = False
             return ret
         try:
-            ret['table'] = yaml.load(open(file_name).read(),
-                                     Loader=yamlordereddictloader.Loader)
-            globals().update(FactoryLoader().load(ret['table']))
+            with salt.utils.fopen(file_name) as fp:
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret['table']))
         except IOError as err:
             ret['message'] = 'Uncaught exception during YAML Load - please ' \
                              'report: {0}'.format(str(err))
