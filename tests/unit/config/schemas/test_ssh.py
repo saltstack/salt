@@ -77,6 +77,7 @@ class RosterEntryConfigTest(TestCase):
                     'type': 'string',
                     'description': 'Passphrase for private key file',
                     'title': 'Private Key passphrase',
+                    'format': 'secret',
                     'minLength': 1,
                 },
                 'sudo': {
