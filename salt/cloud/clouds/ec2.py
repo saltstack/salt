@@ -75,7 +75,6 @@ import time
 import uuid
 import pprint
 import logging
-import random
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -364,15 +363,15 @@ def query(params=None, setname=None, requesturl=None, location=None,
         querystring = querystring.replace('+', '%20')
 
         canonical_request = method + '\n' + canonical_uri + '\n' + \
-                    querystring + '\n' + canonical_headers + '\n' + \
-                    signed_headers + '\n' + payload_hash
+                querystring + '\n' + canonical_headers + '\n' + \
+                signed_headers + '\n' + payload_hash
 
         algorithm = 'AWS4-HMAC-SHA256'
         credential_scope = datestamp + '/' + region + '/' + service + '/' + 'aws4_request'
 
         string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
-                         credential_scope + '\n' + \
-                         salt.utils.hashutils.sha256_digest(canonical_request)
+                credential_scope + '\n' + \
+                salt.utils.hashutils.sha256_digest(canonical_request)
 
         kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
         kRegion = sign(kDate, region)
@@ -381,12 +380,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'),
                              hashlib.sha256).hexdigest()
-        #sig = binascii.b2a_base64(hashed)
 
         authorization_header = algorithm + ' ' + 'Credential=' + \
-                               provider['id'] + '/' + credential_scope + \
-                               ', ' +  'SignedHeaders=' + signed_headers + \
-                               ', ' + 'Signature=' + signature
+                provider['id'] + '/' + credential_scope + \
+                ', ' +  'SignedHeaders=' + signed_headers + \
+                ', ' + 'Signature=' + signature
         headers = {'x-amz-date': amz_date, 'Authorization': authorization_header}
 
         log.debug('EC2 Request: %s', requesturl)
@@ -1578,7 +1576,6 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
         return result
 
 
-
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None, vm_=None):
     '''
     Accept the id of a network interface, and the id of an elastic ip
@@ -1617,7 +1614,6 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None, vm_=None):
     )
 
     return result[2].get('associationId')
-
 
 
 def _update_enis(interfaces, instance, vm_=None):
@@ -1995,7 +1991,8 @@ def request_instance(vm_=None, call=None):
             params[termination_key] = six.text_type(set_del_root_vol_on_destroy).lower()
 
             # Use default volume type if not specified
-            if ex_blockdevicemappings and dev_index < len(ex_blockdevicemappings) and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
+            if ex_blockdevicemappings and dev_index < len(ex_blockdevicemappings) and \
+                   'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
@@ -2198,7 +2195,6 @@ def query_instance(vm_=None, call=None):
 
     def __query_ip_address(params, url):  # pylint: disable=W0613
         data = aws.query(params,
-                         #requesturl=url,
                          location=location,
                          provider=provider,
                          opts=__opts__,
@@ -3927,7 +3923,8 @@ def register_image(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f register_image my-ec2-config ami_name=my_ami description="my description" root_device_name=/dev/xvda snapshot_id=snap-xxxxxxxx
+        salt-cloud -f register_image my-ec2-config ami_name=my_ami description="my description"
+                root_device_name=/dev/xvda snapshot_id=snap-xxxxxxxx
     '''
 
     if call != 'function':
