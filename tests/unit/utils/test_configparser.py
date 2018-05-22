@@ -71,7 +71,7 @@ class TestGitConfigParser(TestCase):
             with salt.utils.files.fopen(self.orig_config, 'wb') as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_bytes(
-                        '\n'.join(ORIG_CONFIG)
+                        os.linesep.join(ORIG_CONFIG)
                     )
                 )
         self.conf = salt.utils.configparser.GitConfigParser()

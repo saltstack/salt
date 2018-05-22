@@ -2,27 +2,34 @@
 '''
 Pass Renderer for Salt
 
-[pass](https://www.passwordstore.org/)
+pass_ is an encrypted on-disk password store.
+
+.. _pass: https://www.passwordstore.org/
 
 .. versionadded:: 2017.7.0
 
-# Setup
-__Note__: `<user>` needs to be replaced with the user salt-master will be
-running as
+Setup
+-----
 
-1. Have private gpg loaded into `user`'s gpg keyring
-   * Example salt code
-        ```
-        load_private_gpg_key:
-          cmd.run:
-            - name: gpg --import <location_of_private_gpg_key>
-            - unless: gpg --list-keys '<gpg_name>'
-        ```
-1. Said private key's public key should have been used when encrypting pass
-entries that are of interest for pillar data
-1. Fetch and keep local pass git repo up-to-date
-   * Example salt code
-        ```
+*Note*: ``<user>`` needs to be replaced with the user salt-master will be
+running as.
+
+Have private gpg loaded into ``user``'s gpg keyring
+
+.. code-block:: yaml
+
+    load_private_gpg_key:
+      cmd.run:
+        - name: gpg --import <location_of_private_gpg_key>
+        - unless: gpg --list-keys '<gpg_name>'
+
+Said private key's public key should have been used when encrypting pass entries
+that are of interest for pillar data.
+
+Fetch and keep local pass git repo up-to-date
+
+.. code-block:: yaml
+
         update_pass:
           git.latest:
             - force_reset: True
@@ -31,13 +38,13 @@ entries that are of interest for pillar data
             - identity: <location_of_ssh_private_key>
             - require:
               - cmd: load_private_gpg_key
-        ```
-1. Install pass binary
-   * Example salt code
-        ```
+
+Install pass binary
+
+.. code-block:: yaml
+
         pass:
           pkg.installed
-        ```
 '''
 
 # Import python libs

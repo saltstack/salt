@@ -10,6 +10,9 @@ functions accept api_opts:
     api_password:  [default to pillar value]
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def present(name=None, data=None, ensure_data=True, **api_opts):
     '''
@@ -101,7 +104,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
                                     addr['ipv4addr'] = ip
                                     found_matches += 1
                             if found_matches > 1:
-                                ret['comment'] = 'infoblox record cant updated because ipaddress {0} matches mutiple func:nextavailableip'.format(ip)
+                                ret['comment'] = 'infoblox record cant updated because ipaddress {0} matches multiple func:nextavailableip'.format(ip)
                                 ret['result'] = False
                                 return ret
 

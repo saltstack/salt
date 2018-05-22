@@ -4,7 +4,7 @@ Utilities for managing YAST
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt._compat import ElementTree as ET
 import salt.utils.xmlutil as xml
 import salt.utils.files

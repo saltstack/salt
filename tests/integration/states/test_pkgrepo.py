@@ -4,7 +4,7 @@ tests for pkgrepo states
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -22,16 +22,16 @@ import salt.utils.platform
 from salt.ext import six
 
 
+@destructiveTest
+@skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''
-    @destructiveTest
-    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         '''
-        This is a destructive test as it adds a repository.
+        Test adding a repo
         '''
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
@@ -56,12 +56,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @destructiveTest
-    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkgrepo_02_absent(self):
         '''
-        This is a destructive test as it removes the repository added in the
-        above test.
+        Test removing the repo from the above test
         '''
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
@@ -78,3 +75,56 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
+
+    @requires_system_grains
+    def test_pkgrepo_03_with_comments(self, grains):
+        '''
+        Test adding a repo with comments
+        '''
+        os_family = grains['os_family'].lower()
+
+        if os_family in ('redhat',):
+            kwargs = {
+                'name': 'examplerepo',
+                'baseurl': 'http://example.com/repo',
+                'enabled': False,
+                'comments': ['This is a comment']
+            }
+        elif os_family in ('debian',):
+            self.skipTest('Debian/Ubuntu test case needed')
+        else:
+            self.skipTest("No test case for os_family '{0}'".format(os_family))
+
+        try:
+            # Run the state to add the repo
+            ret = self.run_state('pkgrepo.managed', **kwargs)
+            self.assertSaltTrueReturn(ret)
+
+            # Run again with modified comments
+            kwargs['comments'].append('This is another comment')
+            ret = self.run_state('pkgrepo.managed', **kwargs)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertEqual(
+                ret['changes'],
+                {
+                    'comments': {
+                        'old': ['This is a comment'],
+                        'new': ['This is a comment',
+                                'This is another comment']
+                    }
+                }
+            )
+
+            # Run a third time, no changes should be made
+            ret = self.run_state('pkgrepo.managed', **kwargs)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret['changes'])
+            self.assertEqual(
+                ret['comment'],
+                "Package repo '{0}' already configured".format(kwargs['name'])
+            )
+        finally:
+            # Clean up
+            self.run_state('pkgrepo.absent', name=kwargs['name'])

@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -41,17 +41,18 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                     ' static, dhcp.'})
         self.assertDictEqual(win_network.managed('salt'), ret)
 
-        mock = MagicMock(return_value=False)
+        mock_false = MagicMock(return_value=False)
+        mock_true = MagicMock(return_value=True)
         mock1 = MagicMock(side_effect=[False, True, True, True, True, True,
                                        True])
         mock2 = MagicMock(side_effect=[False, True, True, {'salt': 'True'},
                                        {'salt': 'True'}])
-        with patch.dict(win_network.__salt__, {"ip.is_enabled": mock,
+        with patch.dict(win_network.__salt__, {"ip.is_enabled": mock_false,
                                                "ip.is_disabled": mock1,
-                                               "ip.enable": mock,
+                                               "ip.enable": mock_false,
                                                "ip.get_interface": mock2,
-                                               "ip.set_dhcp_dns": mock,
-                                               "ip.set_dhcp_ip": mock}):
+                                               "ip.set_dhcp_dns": mock_false,
+                                               "ip.set_dhcp_ip": mock_false}):
             ret.update({'comment': "Interface 'salt' is up to date."
                         " (already disabled)", 'result': True})
             self.assertDictEqual(win_network.managed('salt',
@@ -66,52 +67,54 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                      dns_proto='static',
                                                      ip_proto='static'),
                                      ret)
-            mock = MagicMock(side_effect=['True', False, False, False, False,
+            mock_false = MagicMock(side_effect=['True', False, False, False, False,
                                           False])
-            with patch.object(win_network, '_validate', mock):
-                ret.update({'comment': 'The following SLS configuration'
-                            ' errors were detected: T r u e'})
-                self.assertDictEqual(win_network.managed('salt',
-                                                         dns_proto='static',
-                                                         ip_proto='static'),
-                                     ret)
 
-                ret.update({'comment': "Unable to get current"
-                            " configuration for interface 'salt'",
-                            'result': False})
-                self.assertDictEqual(win_network.managed('salt',
-                                                         dns_proto='dhcp',
-                                                         ip_proto='dhcp'),
-                                     ret)
+            with patch.dict(win_network.__salt__, {"ip.is_enabled": mock_true}):
+                with patch.object(win_network, '_validate', mock_false):
+                    ret.update({'comment': 'The following SLS configuration'
+                                ' errors were detected: T r u e'})
+                    self.assertDictEqual(win_network.managed('salt',
+                                                             dns_proto='static',
+                                                             ip_proto='static'),
+                                         ret)
 
-                mock = MagicMock(side_effect=[False, [''],
-                                              {'dns_proto': 'dhcp',
-                                               'ip_proto': 'dhcp'},
-                                              {'dns_proto': 'dhcp',
-                                               'ip_proto': 'dhcp'}])
-                ret.update({'comment': "Interface 'salt' is up to date.",
-                            'result': True})
-                with patch.object(win_network, '_changes', mock):
+                    ret.update({'comment': "Unable to get current"
+                                " configuration for interface 'salt'",
+                                'result': False})
                     self.assertDictEqual(win_network.managed('salt',
                                                              dns_proto='dhcp',
-                                                             ip_proto='dhcp'
-                                                             ), ret)
+                                                             ip_proto='dhcp'),
+                                         ret)
 
-                    ret.update({'comment': "The following changes will be made"
-                                " to interface 'salt': ", 'result': None})
-                    with patch.dict(win_network.__opts__, {"test": True}):
+                    mock_false = MagicMock(side_effect=[False, [''],
+                                                  {'dns_proto': 'dhcp',
+                                                   'ip_proto': 'dhcp'},
+                                                  {'dns_proto': 'dhcp',
+                                                   'ip_proto': 'dhcp'}])
+                    ret.update({'comment': "Interface 'salt' is up to date.",
+                                'result': True})
+                    with patch.object(win_network, '_changes', mock_false):
                         self.assertDictEqual(win_network.managed('salt',
-                                                                 dns_proto='dh'
-                                                                 'cp',
+                                                                 dns_proto='dhcp',
                                                                  ip_proto='dhcp'
                                                                  ), ret)
 
-                    with patch.dict(win_network.__opts__, {"test": False}):
-                        ret.update({'comment': "Failed to set desired"
-                                    " configuration settings for interface"
-                                    " 'salt'", 'result': False})
-                        self.assertDictEqual(win_network.managed('salt',
-                                                                 dns_proto='dh'
-                                                                 'cp',
-                                                                 ip_proto='dhcp'
-                                                                 ), ret)
+                        ret.update({'comment': "The following changes will be made"
+                                    " to interface 'salt': ", 'result': None})
+                        with patch.dict(win_network.__opts__, {"test": True}):
+                            self.assertDictEqual(win_network.managed('salt',
+                                                                     dns_proto='dh'
+                                                                     'cp',
+                                                                     ip_proto='dhcp'
+                                                                     ), ret)
+
+                        with patch.dict(win_network.__opts__, {"test": False}):
+                            ret.update({'comment': "Failed to set desired"
+                                        " configuration settings for interface"
+                                        " 'salt'", 'result': False})
+                            self.assertDictEqual(win_network.managed('salt',
+                                                                     dns_proto='dh'
+                                                                     'cp',
+                                                                     ip_proto='dhcp'
+                                                                     ), ret)

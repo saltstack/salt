@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -26,6 +26,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         if salt.utils.platform.is_windows():
             self.run_function('pkg.refresh_db')
+
+        os_release = self.run_function('grains.get', ['osrelease'])
+
+        if salt.utils.platform.is_darwin() and int(os_release.split('.')[1]) >= 13:
+            self.pkg = 'wget'
+        elif salt.utils.platform.is_windows():
+            self.pkg = 'putty'
+        else:
+            self.pkg = 'htop'
 
     def test_list(self):
         '''
@@ -133,30 +142,18 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         successfully install and uninstall a package
         '''
-        os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
-
-        pkg = 'htop'
-        if os_grain == 'Windows':
-            pkg = 'putty'
-
-        version = self.run_function('pkg.version', [pkg])
-
-        if os_grain == 'Ubuntu':
-            if os_release.startswith('12.'):
-                self.skipTest('pkg.install and pkg.remove do not work on ubuntu '
-                              '12 when run from the test suite')
+        version = self.run_function('pkg.version', [self.pkg])
 
         def test_install():
-            install_ret = self.run_function('pkg.install', [pkg])
-            self.assertIn(pkg, install_ret)
+            install_ret = self.run_function('pkg.install', [self.pkg])
+            self.assertIn(self.pkg, install_ret)
 
         def test_remove():
-            remove_ret = self.run_function('pkg.remove', [pkg])
-            self.assertIn(pkg, remove_ret)
+            remove_ret = self.run_function('pkg.remove', [self.pkg])
+            self.assertIn(self.pkg, remove_ret)
 
         if version and isinstance(version, dict):
-            version = version[pkg]
+            version = version[self.pkg]
 
         if version:
             test_remove()
@@ -172,33 +169,30 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-        pkg = 'htop'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
         os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
 
-        if os_family == 'RedHat':
-            if os_major_release == '5':
-                self.skipTest('`yum versionlock` does not seem to work on RHEL/CentOS 5')
-
         if available:
+            self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
                 lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
                 versionlock = self.run_function('pkg.version', [lock_pkg])
                 if not versionlock:
                     self.run_function('pkg.install', [lock_pkg])
 
-            hold_ret = self.run_function('pkg.hold', [pkg])
-            self.assertIn(pkg, hold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            hold_ret = self.run_function('pkg.hold', [self.pkg])
+            self.assertIn(self.pkg, hold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
-            unhold_ret = self.run_function('pkg.unhold', [pkg])
-            self.assertIn(pkg, unhold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+            self.assertIn(self.pkg, unhold_ret)
+            self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
                 if not versionlock:
                     self.run_function('pkg.remove', [lock_pkg])
+            self.run_function('pkg.remove', [self.pkg])
 
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
@@ -254,10 +248,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn('bash-completion', keys)
             self.assertIn('dpkg', keys)
         elif os_family == 'RedHat':
-            ret = self.run_function(func, ['rpm', 'yum'])
+            ret = self.run_function(func, ['rpm', 'bash'])
             keys = ret.keys()
             self.assertIn('rpm', keys)
-            self.assertIn('yum', keys)
+            self.assertIn('bash', keys)
         elif os_family == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
@@ -278,51 +272,79 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('pkg.refresh_db')
 
         if os_family == 'Suse':
-            # pkg.latest version returns empty if the latest version is already installed
-            vim_version_dict = self.run_function('pkg.latest_version', ['vim'])
-            vim_info = self.run_function('pkg.info_available', ['vim'])['vim']
-            if vim_version_dict == {}:
-                # Latest version is installed, get its version and construct
-                # a version selector so the immediately previous version is selected
-                vim_version = 'version=<'+vim_info['version']
-            else:
-                # Vim was not installed, so pkg.latest_version returns the latest one.
-                # Construct a version selector so immediately previous version is selected
-                vim_version = 'version=<'+vim_version_dict
+            # This test assumes that there are multiple possible versions of a
+            # package available. That makes it brittle if you pick just one
+            # target, as changes in the available packages will break the test.
+            # Therefore, we'll choose from several packages to make sure we get
+            # one that is suitable for this test.
+            packages = ('hwinfo', 'avrdude', 'diffoscope', 'vim')
 
-            # Only install a new version of vim if vim is up-to-date, otherwise we don't
-            # need this check. (And the test will fail when we check for the empty dict
-            # since vim gets upgraded in the install step.)
-            if 'out-of-date' not in vim_info['status']:
-                # Install a version of vim that should need upgrading
-                ret = self.run_function('pkg.install', ['vim', vim_version])
-                if not isinstance(ret, dict):
-                    if ret.startswith('ERROR'):
-                        self.skipTest('Could not install earlier vim to complete test.')
+            available = self.run_function('pkg.list_repo_pkgs', packages)
+            versions = self.run_function('pkg.version', packages)
+
+            for package in packages:
+                try:
+                    new, old = available[package][:2]
+                except (KeyError, ValueError):
+                    # Package not available, or less than 2 versions
+                    # available. This is not a suitable target.
+                    continue
                 else:
-                    self.assertNotEqual(ret, {})
+                    target = package
+                    current = versions[target]
+                    break
+            else:
+                # None of the packages have more than one version available, so
+                # we need to find new package(s). pkg.list_repo_pkgs can be
+                # used to get an overview of the available packages. We should
+                # try to find packages with few dependencies and small download
+                # sizes, to keep this test from taking longer than necessary.
+                self.fail('No suitable package found for this test')
 
-            # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
+            # Make sure we have the 2nd-oldest available version installed
+            ret = self.run_function('pkg.install', [target], version=old)
+            if not isinstance(ret, dict):
+                if ret.startswith('ERROR'):
+                    self.skipTest(
+                        'Could not install older {0} to complete '
+                        'test.'.format(target)
+                    )
+
+            # Run a system upgrade, which should catch the fact that the
+            # targeted package needs upgrading, and upgrade it.
             ret = self.run_function(func)
 
             # The changes dictionary should not be empty.
             if 'changes' in ret:
-                self.assertIn('vim', ret['changes'])
+                self.assertIn(target, ret['changes'])
             else:
-                self.assertIn('vim', ret)
+                self.assertIn(target, ret)
         else:
             ret = self.run_function('pkg.list_upgrades')
             if ret == '' or ret == {}:
                 self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
             else:
                 ret = self.run_function(func)
-
-                if 'Problem encountered' in ret:
-                    self.skipTest('A problem was encountered when running pkg.upgrade. This test is '
-                                  'meant to catch no-ops or problems with the salt function itself, '
-                                  'not problems with actual package installation. Skipping.')
-
-                # The changes dictionary should not be empty.
                 self.assertNotEqual(ret, {})
-                if 'changes' in ret:
-                    self.assertNotEqual(ret['changes'], {})
+
+    @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
+    def test_pkg_latest_version(self):
+        '''
+        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        '''
+        grains = self.run_function('grains.items')
+        cmd_info = self.run_function('pkg.info_installed', ['htop'])
+        if cmd_info != 'ERROR: package htop is not installed':
+            cmd_remove = self.run_function('pkg.remove', ['htop'])
+        if grains['os_family'] == 'RedHat':
+            cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+        elif grains['os_family'] == 'Debian':
+            cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+        elif grains['os_family'] == 'Arch':
+            cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+        elif grains['os_family'] == 'Suse':
+            cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
+        pkg_latest = self.run_function('pkg.latest_version', ['htop'])
+        self.assertIn(pkg_latest, cmd_htop)

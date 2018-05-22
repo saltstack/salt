@@ -519,8 +519,12 @@ def last_run(ext_source=None,
             log.info('The metadata parameter must be specified as a dictionary')
             return False
 
-    _all_jobs = list_jobs(ext_source, outputter, metadata,
-                          function, target, display_progress)
+    _all_jobs = list_jobs(ext_source=ext_source,
+                          outputter=outputter,
+                          search_metadata=metadata,
+                          search_function=function,
+                          search_target=target,
+                          display_progress=display_progress)
     if _all_jobs:
         last_job = sorted(_all_jobs)[-1]
         return print_job(last_job, ext_source)

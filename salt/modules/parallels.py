@@ -18,7 +18,7 @@ necessary):
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -62,9 +62,9 @@ def _normalize_args(args):
         return shlex.split(args)
 
     if isinstance(args, (tuple, list)):
-        return [str(arg) for arg in args]
+        return [six.text_type(arg) for arg in args]
     else:
-        return [str(args)]
+        return [six.text_type(args)]
 
 
 def _find_guids(guid_string):
@@ -462,7 +462,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     name = salt.utils.locales.sdecode(name)
     if not re.match(GUID_REGEX, snap_id):
         raise SaltInvocationError(
-            u'Snapshot ID "{0}" is not a GUID'.format(salt.utils.locales.sdecode(snap_id))
+            'Snapshot ID "{0}" is not a GUID'.format(salt.utils.locales.sdecode(snap_id))
         )
 
     # Get the snapshot information of the snapshot having the requested ID
@@ -471,7 +471,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     # Parallels desktop returned no information for snap_id
     if not len(info):
         raise SaltInvocationError(
-            u'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
+            'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
         )
 
     # Try to interpret the information
@@ -479,8 +479,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
         data = salt.utils.yaml.safe_load(info)
     except salt.utils.yaml.YAMLError as err:
         log.warning(
-            'Could not interpret snapshot data returned from prlctl: '
-            '{0}'.format(err)
+            'Could not interpret snapshot data returned from prlctl: %s', err
         )
         data = {}
 
@@ -492,16 +491,16 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
             snap_name = ''
     else:
         log.warning(
-            u'Could not interpret snapshot data returned from prlctl: '
-            u'data is not formed as a dictionary: {0}'.format(data)
+            'Could not interpret snapshot data returned from prlctl: '
+            'data is not formed as a dictionary: %s', data
         )
         snap_name = ''
 
     # Raise or return the result
     if not snap_name and strict:
         raise SaltInvocationError(
-            u'Could not find a snapshot name for snapshot ID "{0}" of VM '
-            u'"{1}"'.format(snap_id, name)
+            'Could not find a snapshot name for snapshot ID "{0}" of VM '
+            '"{1}"'.format(snap_id, name)
         )
     return salt.utils.locales.sdecode(snap_name)
 
@@ -550,13 +549,13 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     # non-singular names
     if len(named_ids) == 0:
         raise SaltInvocationError(
-            u'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
+            'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
         )
     elif len(named_ids) == 1:
         return named_ids[0]
     else:
-        multi_msg = (u'Multiple snapshots for VM "{0}" have name '
-                     u'"{1}"'.format(name, snap_name))
+        multi_msg = ('Multiple snapshots for VM "{0}" have name '
+                     '"{1}"'.format(name, snap_name))
         if strict:
             raise SaltInvocationError(multi_msg)
         else:
@@ -643,7 +642,7 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         ret = '{0:<38}  {1}\n'.format('Snapshot ID', 'Snapshot Name')
         for snap_id in snap_ids:
             snap_name = snapshot_id_to_name(name, snap_id, runas=runas)
-            ret += (u'{{{0}}}  {1}\n'.format(snap_id, salt.utils.locales.sdecode(snap_name)))
+            ret += ('{{{0}}}  {1}\n'.format(snap_id, salt.utils.locales.sdecode(snap_name)))
         return ret
 
     # Return information directly from parallels desktop

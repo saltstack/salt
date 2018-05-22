@@ -6,7 +6,7 @@ so we need to repeat a bunch of things that would normally happen
 in proxy/fx2.py--just enough to get data from the chassis to include
 in grains.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import salt.proxy.fx2
 import salt.modules.cmdmod
@@ -24,11 +24,8 @@ GRAINS_CACHE = {}
 
 
 def __virtual__():
-    try:
-        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'fx2':
-            return __virtualname__
-    except KeyError:
-        pass
+    if salt.utils.platform.is_proxy() and 'proxy' in __opts__ and __opts__['proxy'].get('proxytype') == 'fx2':
+        return __virtualname__
     return False
 
 

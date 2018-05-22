@@ -320,7 +320,7 @@
         }
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import inspect
 import textwrap
@@ -731,7 +731,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         '''
         Return the argname value looking up on all possible attributes
         '''
-        # Let's see if there's a private fuction to get the value
+        # Let's see if there's a private function to get the value
         argvalue = getattr(self, '__get_{0}__'.format(argname), None)
         if argvalue is not None and callable(argvalue):
             argvalue = argvalue()

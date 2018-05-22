@@ -7,7 +7,7 @@
 # pylint: disable=W0232
 #         class has no __init__ method
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     from yaml import CDumper as Dumper
     from yaml import CSafeDumper as SafeDumper
@@ -100,7 +100,7 @@ def get_dumper(dumper_name):
 
 def dump(data, stream=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.

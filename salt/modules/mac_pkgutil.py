@@ -6,7 +6,7 @@ Installer is the native .pkg/.mpkg package manager for macOS.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import 3rd-party libs

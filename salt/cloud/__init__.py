@@ -38,6 +38,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.verify
 import salt.utils.yaml
+import salt.utils.user
 import salt.syspaths
 from salt.template import compile_template
 
@@ -188,7 +189,7 @@ class CloudClient(object):
 
         # Check the cache-dir exists. If not, create it.
         v_dirs = [self.opts['cachedir']]
-        salt.utils.verify.verify_env(v_dirs, salt.utils.get_user())
+        salt.utils.verify.verify_env(v_dirs, salt.utils.user.get_user())
 
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
@@ -239,7 +240,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in list(_providers).copy():
+                for provider in _providers.copy():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts
@@ -324,22 +325,22 @@ class CloudClient(object):
 
             >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
             >>> client.profile('do_512_git', names=['minion01',])
-            {'minion01': {u'backups_active': 'False',
-                    u'created_at': '2014-09-04T18:10:15Z',
-                    u'droplet': {u'event_id': 31000502,
-                                 u'id': 2530006,
-                                 u'image_id': 5140006,
-                                 u'name': u'minion01',
-                                 u'size_id': 66},
-                    u'id': '2530006',
-                    u'image_id': '5140006',
-                    u'ip_address': '107.XXX.XXX.XXX',
-                    u'locked': 'True',
-                    u'name': 'minion01',
-                    u'private_ip_address': None,
-                    u'region_id': '4',
-                    u'size_id': '66',
-                    u'status': 'new'}}
+            {'minion01': {'backups_active': 'False',
+                    'created_at': '2014-09-04T18:10:15Z',
+                    'droplet': {'event_id': 31000502,
+                                 'id': 2530006,
+                                 'image_id': 5140006,
+                                 'name': 'minion01',
+                                 'size_id': 66},
+                    'id': '2530006',
+                    'image_id': '5140006',
+                    'ip_address': '107.XXX.XXX.XXX',
+                    'locked': 'True',
+                    'name': 'minion01',
+                    'private_ip_address': None,
+                    'region_id': '4',
+                    'size_id': '66',
+                    'status': 'new'}}
 
 
         '''
@@ -1498,8 +1499,8 @@ class Cloud(object):
                             vm_name = vm_details['id']
                         else:
                             log.debug(
-                                'vm:{0} in provider:{1} is not in name '
-                                'list:\'{2}\''.format(vm_name, driver, names)
+                                'vm:%s in provider:%s is not in name '
+                                'list:\'%s\'', vm_name, driver, names
                             )
                             continue
 
@@ -1785,7 +1786,7 @@ class Map(Cloud):
             else:
                 cached_map = self.opts['map']
             try:
-                renderer = self.opts.get('renderer', 'yaml_jinja')
+                renderer = self.opts.get('renderer', 'jinja|yaml')
                 rend = salt.loader.render(self.opts, {})
                 blacklist = self.opts.get('renderer_blacklist')
                 whitelist = self.opts.get('renderer_whitelist')
@@ -1915,7 +1916,8 @@ class Map(Cloud):
         pmap = self.map_providers_parallel(cached=cached)
         exist = set()
         defined = set()
-        for profile_name, nodes in six.iteritems(self.rendered_map):
+        rendered_map = copy.deepcopy(self.rendered_map)
+        for profile_name, nodes in six.iteritems(rendered_map):
             if profile_name not in self.opts['profiles']:
                 msg = (
                     'The required profile, \'{0}\', defined in the map '
@@ -1933,21 +1935,23 @@ class Map(Cloud):
 
             profile_data = self.opts['profiles'].get(profile_name)
 
-            # Get associated provider data, in case something like size
-            # or image is specified in the provider file. See issue #32510.
-            alias, driver = profile_data.get('provider').split(':')
-            provider_details = self.opts['providers'][alias][driver].copy()
-            del provider_details['profiles']
-
-            # Update the provider details information with profile data
-            # Profile data should override provider data, if defined.
-            # This keeps map file data definitions consistent with -p usage.
-            provider_details.update(profile_data)
-            profile_data = provider_details
-
             for nodename, overrides in six.iteritems(nodes):
-                # Get the VM name
-                nodedata = copy.deepcopy(profile_data)
+                # Get associated provider data, in case something like size
+                # or image is specified in the provider file. See issue #32510.
+                if 'provider' in overrides and overrides['provider'] != profile_data['provider']:
+                    alias, driver = overrides.get('provider').split(':')
+                else:
+                    alias, driver = profile_data.get('provider').split(':')
+
+                provider_details = copy.deepcopy(self.opts['providers'][alias][driver])
+                del provider_details['profiles']
+
+                # Update the provider details information with profile data
+                # Profile data and node overrides should override provider data, if defined.
+                # This keeps map file data definitions consistent with -p usage.
+                salt.utils.dictupdate.update(provider_details, profile_data)
+                nodedata = copy.deepcopy(provider_details)
+
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes',
                                 'requires'):

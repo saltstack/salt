@@ -18,7 +18,7 @@ Module for manageing PagerDuty resource
 For PagerDuty API details, see https://developer.pagerduty.com/documentation/rest
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import requests
 import salt.utils.json

@@ -4,7 +4,7 @@ A simple test engine, not intended for real use but as an example
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

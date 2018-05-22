@@ -5,7 +5,7 @@ Generate marathon proxy minion grains.
 .. versionadded:: 2015.8.2
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.http
 import salt.utils.platform
@@ -14,10 +14,9 @@ __virtualname__ = 'marathon'
 
 
 def __virtual__():
-    if not salt.utils.platform.is_proxy() or 'proxy' not in __opts__:
-        return False
-    else:
+    if salt.utils.platform.is_proxy() and 'proxy' in __opts__ and __opts__['proxy'].get('proxytype') == 'marathon':
         return __virtualname__
+    return False
 
 
 def kernel():

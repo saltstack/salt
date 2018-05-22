@@ -19,12 +19,10 @@ from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.pillar as pillar
 
@@ -191,6 +189,29 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
+class BasePillarTest(ModuleCase):
+    '''
+    Tests for pillar decryption
+    '''
+    def test_pillar_top_compound_match(self, grains=None):
+        '''
+        Test that a compound match topfile that refers to a nodegroup via N@ works
+        as expected.
+        '''
+        if not grains:
+            grains = {}
+        grains['os'] = 'Fedora'
+        pillar_obj = pillar.Pillar(self.get_config('master', from_scratch=True), grains, 'minion', 'base')
+        ret = pillar_obj.compile_pillar()
+        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
+        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+
+        sub_pillar_obj = pillar.Pillar(self.get_config('master', from_scratch=True), grains, 'sub_minion', 'base')
+        sub_ret = sub_pillar_obj.compile_pillar()
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
+
+
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(ModuleCase):
     '''
@@ -223,7 +244,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b(TEST_KEY))[0]
+                                      shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
@@ -245,7 +266,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+                                      shell=False).communicate(input=b'KILLAGENT')[0]
             log.debug('Result:\n%s', output)
         except OSError:
             log.debug('No need to kill: old gnupg doesn\'t start the agent.')

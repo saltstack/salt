@@ -44,7 +44,7 @@ An example Apache virtual host configuration::
     </VirtualHost>
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # pylint: disable=C0103
 
 import os

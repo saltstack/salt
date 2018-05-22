@@ -5,7 +5,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
@@ -36,7 +36,7 @@ class GCETest(ShellCase):
         provider = 'gce'
         providers = self.run_cloud('--list-providers')
         # Create the cloud instance name to be used throughout the tests
-        self.INSTANCE_NAME = generate_random_name('cloud-test-')
+        self.INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 
         if profile_str not in providers:
             self.skipTest(

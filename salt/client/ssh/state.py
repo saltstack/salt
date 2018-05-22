@@ -77,6 +77,12 @@ class SSHHighState(salt.state.BaseHighState):
         self.matcher = salt.minion.Matcher(self.opts)
         self.tops = salt.loader.tops(self.opts)
 
+        self._pydsl_all_decls = {}
+        self._pydsl_render_stack = []
+
+    def push_active(self):
+        salt.state.HighState.stack.append(self)
+
     def load_dynamic(self, matches):
         '''
         Stub out load_dynamic
@@ -129,9 +135,9 @@ def lowstate_file_refs(chunks, extras=''):
             elif state.startswith('__'):
                 continue
             crefs.extend(salt_refs(chunk[state]))
+        if saltenv not in refs:
+            refs[saltenv] = []
         if crefs:
-            if saltenv not in refs:
-                refs[saltenv] = []
             refs[saltenv].append(crefs)
     if extras:
         extra_refs = extras.split(',')
@@ -206,7 +212,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             os.makedirs(env_root)
         for ref in file_refs[saltenv]:
             for name in ref:
-                short = salt.utils.url.parse(name)[0]
+                short = salt.utils.url.parse(name)[0].lstrip('/')
                 cache_dest = os.path.join(cache_dest_root, short)
                 try:
                     path = file_client.cache_file(name, saltenv, cachedir=cachedir)

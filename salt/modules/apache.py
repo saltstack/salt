@@ -10,7 +10,7 @@ Support for Apache
 '''
 
 # Import python libs
-from __future__ import absolute_import, generators, print_function, with_statement
+from __future__ import absolute_import, generators, print_function, with_statement, unicode_literals
 import re
 import logging
 
@@ -29,6 +29,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 
@@ -453,9 +454,9 @@ def config(name, config, edit=True):
         configs.append(_parse_config(entry[key], key))
 
     # Python auto-correct line endings
-    configstext = "\n".join(configs)
+    configstext = '\n'.join(salt.utils.data.decode(configs))
     if edit:
         with salt.utils.files.fopen(name, 'w') as configfile:
             configfile.write('# This file is managed by Salt.\n')
-            configfile.write(configstext)
+            configfile.write(salt.utils.stringutils.to_str(configstext))
     return configstext

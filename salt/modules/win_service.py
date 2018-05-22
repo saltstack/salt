@@ -6,7 +6,7 @@ Windows Service module.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import fnmatch
 import logging
 import re
@@ -537,7 +537,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:
@@ -602,7 +602,8 @@ def modify(name,
            account_name=None,
            account_password=None,
            run_interactive=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Modify a service's parameters. Changes will not be made for parameters that
     are not passed.
 
@@ -664,7 +665,7 @@ def modify(name,
 
         account_name (str): The name of the account under which the service
             should run. For ``own`` type services this should be in the
-            ``domain\username`` format. The following are examples of valid
+            ``domain\\username`` format. The following are examples of valid
             built-in service accounts:
 
             - NT Authority\\LocalService
@@ -688,7 +689,9 @@ def modify(name,
     .. code-block:: bash
 
         salt '*' service.modify spooler start_type=disabled
+
     '''
+    # pylint: enable=anomalous-backslash-in-string
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx
     handle_scm = win32service.OpenSCManager(
@@ -926,7 +929,7 @@ def create(name,
            account_password=None,
            run_interactive=False,
            **kwargs):
-    r'''
+    '''
     Create the named service.
 
     .. versionadded:: 2015.8.0
@@ -988,7 +991,7 @@ def create(name,
 
         account_name (str): The name of the account under which the service
             should run. For ``own`` type services this should be in the
-            ``domain\username`` format. The following are examples of valid
+            ``domain\\username`` format. The following are examples of valid
             built-in service accounts:
 
             - NT Authority\\LocalService

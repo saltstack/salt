@@ -4,7 +4,7 @@
 tests for pkg state
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
@@ -26,6 +26,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -511,7 +512,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         pkgquery = 'version'
 
         ret = self.run_function('pkg.info_installed', [package])
-        self.assertTrue(pkgquery in str(ret))
+        self.assertTrue(pkgquery in six.text_type(ret))
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains

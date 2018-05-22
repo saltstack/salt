@@ -5,18 +5,18 @@ data in a compatible format) via an HTML email or HTML file.
 
 .. versionadded:: 2017.7.0
 
-Similar results can be achieved by using smtp returner with a custom template,
+Similar results can be achieved by using the smtp returner with a custom template,
 except an attempt at writing such a template for the complex data structure
 returned by highstate function had proven to be a challenge, not to mention
-that smtp module doesn't support sending HTML mail at the moment.
+that the smtp module doesn't support sending HTML mail at the moment.
 
-The main goal of this returner was producing an easy to read email similar
+The main goal of this returner was to produce an easy to read email similar
 to the output of highstate outputter used by the CLI.
 
 This returner could be very useful during scheduled executions,
 but could also be useful for communicating the results of a manual execution.
 
-Returner configuration is controlled in a standart fashion either via
+Returner configuration is controlled in a standard fashion either via
 highstate group or an alternatively named group.
 
 .. code-block:: bash
@@ -29,7 +29,7 @@ To use the alternative configuration, append '--return_config config-name'
 
     salt '*' state.highstate --return highstate --return_config simple
 
-Here is an example of what configuration might look like:
+Here is an example of what the configuration might look like:
 
 .. code-block:: yaml
 
@@ -49,18 +49,18 @@ Here is an example of what configuration might look like:
 
 The *report_failures*, *report_changes*, and *report_everything* flags provide
 filtering of the results. If you want an email to be sent every time, then
-*reprot_everything* is your choice. If you want to be notified only when
+*report_everything* is your choice. If you want to be notified only when
 changes were successfully made use *report_changes*. And *report_failures* will
 generate an email if there were failures.
 
-The configuration allows you to run salt module function in case of
+The configuration allows you to run a salt module function in case of
 success (*success_function*) or failure (*failure_function*).
 
-Any salt function, including ones defined in _module folder of your salt
-repo could be used here. Their output will be displayed under the 'extra'
+Any salt function, including ones defined in the _module folder of your salt
+repo, could be used here and its output will be displayed under the 'extra'
 heading of the email.
 
-Supported values for *report_format* are html, json, and yaml. The later two
+Supported values for *report_format* are html, json, and yaml. The latter two
 are typically used for debugging purposes, but could be used for applying
 a template at some later stage.
 
@@ -70,7 +70,7 @@ the only other applicable option is *file_output*.
 In case of smtp delivery, smtp_* options demonstrated by the example above
 could be used to customize the email.
 
-As you might have noticed success and failure subject contain {id} and {host}
+As you might have noticed, the success and failure subjects contain {id} and {host}
 values. Any other grain name could be used. As opposed to using
 {{grains['id']}}, which will be rendered by the master and contain master's
 values at the time of pillar generation, these will contain minion values at
@@ -295,8 +295,7 @@ def _generate_states_report(sorted_data):
     '''
     states = []
     for state, data in sorted_data:
-        module, stateid, name, function = \
-            [x.rstrip('_').lstrip('-') for x in state.split('|')]
+        module, stateid, name, function = state.split('_|-')
         module_function = '.'.join((module, function))
         result = data.get('result', '')
         single = [

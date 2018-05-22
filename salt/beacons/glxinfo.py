@@ -6,7 +6,7 @@ Beacon to emit when a display is available to a linux machine
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Salt libs

@@ -12,6 +12,9 @@ only addition/deletion of licenses is supported.
       powerpath.license_present: []
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def license_present(name):
     '''

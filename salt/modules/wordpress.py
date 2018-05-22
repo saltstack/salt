@@ -6,7 +6,7 @@ This module is used to manage Wordpress installations
 '''
 
 # Import Python Modules
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 # Import Salt Modules

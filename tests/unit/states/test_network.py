@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +18,9 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.network as network
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class MockNetwork(object):
@@ -114,12 +117,6 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                                          'stack',
                                                                          False),
                                                          ret)
-
-                    ret.update({'changes': {'interface':
-                                            '--- \n+++ \n@@ -1 +1 @@\n-A\n+B'},
-                                'result': False,
-                                'comment': "'ip.down'"})
-                    self.assertDictEqual(network.managed('salt', 'stack'), ret)
 
     def test_routes(self):
         '''

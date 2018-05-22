@@ -114,28 +114,27 @@ def _post_processing(kwargs, skip_translate, invalid):
             actual_volumes.sort()
 
     if kwargs.get('port_bindings') is not None \
-            and (skip_translate is True or
-                 all(x not in skip_translate
-                     for x in ('port_bindings', 'expose', 'ports'))):
+            and all(x not in skip_translate
+                    for x in ('port_bindings', 'expose', 'ports')):
         # Make sure that all ports defined in "port_bindings" are included in
         # the "ports" param.
-        auto_ports = list(kwargs['port_bindings'])
-        if auto_ports:
-            actual_ports = []
-            # Sort list to make unit tests more reliable
-            for port in auto_ports:
-                if port in actual_ports:
-                    continue
-                if isinstance(port, six.integer_types):
-                    actual_ports.append((port, 'tcp'))
-                else:
-                    port, proto = port.split('/')
-                    actual_ports.append((int(port), proto))
-            actual_ports.sort()
-            actual_ports = [
-                port if proto == 'tcp' else '{}/{}'.format(port, proto) for (port, proto) in actual_ports
-            ]
-            kwargs.setdefault('ports', actual_ports)
+        ports_to_bind = list(kwargs['port_bindings'])
+        if ports_to_bind:
+            ports_to_open = set(kwargs.get('ports', []))
+            ports_to_open.update([helpers.get_port_def(x) for x in ports_to_bind])
+            kwargs['ports'] = list(ports_to_open)
+
+    if 'ports' in kwargs \
+            and all(x not in skip_translate for x in ('expose', 'ports')):
+        # TCP ports should only be passed as the port number. Normalize the
+        # input so a port definition of 80/tcp becomes just 80 instead of
+        # (80, 'tcp').
+        for index, _ in enumerate(kwargs['ports']):
+            try:
+                if kwargs['ports'][index][1] == 'tcp':
+                    kwargs['ports'][index] = ports_to_open[index][0]
+            except TypeError:
+                continue
 
 
 # Functions below must match names of docker-py arguments
@@ -552,13 +551,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             raise SaltInvocationError(exc.__str__())
         new_ports.update([helpers.get_port_def(x, proto)
                           for x in range(range_start, range_end + 1)])
-    ordered_new_ports = [
-        port if proto == 'tcp' else (port, proto) for (port, proto) in sorted(
-            [(new_port, 'tcp') if isinstance(new_port, six.integer_types) else new_port
-             for new_port in new_ports]
-        )
-    ]
-    return ordered_new_ports
+    return list(new_ports)
 
 
 def privileged(val, **kwargs):  # pylint: disable=unused-argument

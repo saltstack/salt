@@ -143,7 +143,7 @@ Delete also accepts a VPC peering connection id.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
@@ -1519,7 +1519,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
               'Pending VPC peering connection found and can be accepted'})
         return ret
     fun = 'boto_vpc.accept_vpc_peering_connection'
-    log.debug('Calling `{0}()` to accept this VPC peering connection'.format(fun))
+    log.debug('Calling `%s()` to accept this VPC peering connection', fun)
     result = __salt__[fun](conn_id=conn_id, name=conn_name, region=region, key=key,
             keyid=keyid, profile=profile)
 

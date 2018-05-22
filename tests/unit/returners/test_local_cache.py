@@ -10,8 +10,10 @@ Unit tests for the Default Job Cache (local_cache).
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
+import time
 import logging
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -71,12 +73,21 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir without files in it.
         jid_dir, jid_file = self._make_tmp_jid_dirs(create_files=False)
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
 
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.platform.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # Assert that the JID dir was removed
@@ -138,6 +149,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir and jid file
         jid_dir, jid_file = self._make_tmp_jid_dirs()
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there is a jid directory
         jid_dir_name = jid_file.rpartition('/')[2]
         self.assertEqual(jid_dir_name, 'jid')
@@ -145,6 +160,11 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.platform.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # there should be only 1 dir in TMP_JID_DIR

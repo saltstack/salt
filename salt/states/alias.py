@@ -26,6 +26,7 @@ file from the default location, set the following in your minion config:
     aliases.file: /my/alias/file
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name, target):

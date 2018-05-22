@@ -2,7 +2,7 @@
 '''
 Module to manage FreeBSD kernel modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -72,6 +72,7 @@ def _get_persistent_modules():
     mods = set()
     with salt.utils.files.fopen(_LOADER_CONF, 'r') as loader_conf:
         for line in loader_conf:
+            line = salt.utils.stringutils.to_unicode(line)
             line = line.strip()
             mod_name = _get_module_name(line)
             if mod_name:

@@ -3,10 +3,10 @@
 # Import Python libs
 from __future__ import absolute_import
 import copy
+import datetime
 import logging
 import os
 import random
-import time
 
 import dateutil.parser as dateutil_parser
 
@@ -52,6 +52,11 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
 
+        self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
+
+    def tearDown(self):
+        self.schedule.reset()
+
     def test_eval(self):
         '''
         verify that scheduled job runs
@@ -64,8 +69,8 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time1 = run_time2 - 1
+        run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -95,8 +100,8 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time2 = dateutil_parser.parse('11/29/2017 5:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -110,6 +115,28 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time2)
+
+    def test_eval_whens(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'when': 'tea time'
+            }
+          }
+        }
+        run_time = dateutil_parser.parse('11/29/2017 12:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate run time1
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
 
     def test_eval_loop_interval(self):
         '''
@@ -127,16 +154,16 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time2 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time2 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
     def test_eval_multiple_whens_loop_interval(self):
         '''
@@ -157,21 +184,21 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
-        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
+        run_time2 = dateutil_parser.parse('11/29/2017 5:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time1 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time1 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time1)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time2 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time2 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time2)
 
     def test_eval_once(self):
         '''
@@ -185,9 +212,10 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time = int(time.mktime(dateutil_parser.parse('12/13/2017 1:00pm').timetuple()))
+        run_time = dateutil_parser.parse('12/13/2017 1:00pm')
 
         # Add the job to the scheduler
+        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -212,7 +240,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         # Run the job at the right plus LOOP_INTERVAL
-        run_time = int(time.mktime(dateutil_parser.parse('12/13/2017 1:00:{0}pm'.format(LOOP_INTERVAL)).timetuple()))
+        run_time = dateutil_parser.parse('12/13/2017 1:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -239,7 +267,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
@@ -266,9 +294,265 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_until(self):
+        '''
+        verify that scheduled job is skipped once the current
+        time reaches the specified until time
+        '''
+        job = {
+          'schedule': {
+            'job_eval_after': {
+              'function': 'test.ping',
+              'hours': '1',
+              'until': '11/29/2017 5:00pm'
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.delete_job('job_eval_after')
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_after')
+
+        # eval at 3:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_after')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 4:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_after')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 5:00pm, will not run
+        run_time = dateutil_parser.parse('11/29/2017 5:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_after')
+        self.assertEqual(ret['_skip_reason'], 'until_passed')
+        self.assertEqual(ret['_skipped_time'], run_time)
+
+    def test_eval_after(self):
+        '''
+        verify that scheduled job is skipped until after the specified
+        time has been reached.
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'hours': '1',
+              'after': '11/29/2017 5:00pm'
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.delete_job('job1')
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
+        # eval at 3:00pm, will not run.
+        run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
+        self.assertEqual(ret['_skipped_time'], run_time)
+
+        # eval at 4:00pm, will not run.
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
+        self.assertEqual(ret['_skipped_time'], run_time)
+
+        # eval at 5:00pm, will not run
+        run_time = dateutil_parser.parse('11/29/2017 5:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
+        self.assertEqual(ret['_skipped_time'], run_time)
+
+        # eval at 6:00pm, will run
+        run_time = dateutil_parser.parse('11/29/2017 6:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_enabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job = {
+          'schedule': {
+            'enabled': True,
+            'job1': {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time1)
+
+    def test_eval_disabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job = {
+          'schedule': {
+            'enabled': False,
+            'job1': {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status('job1')
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'disabled')
+
+    def test_eval_run_on_start(self):
+        '''
+        verify that scheduled job is run when minion starts
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'hours': '1',
+              'run_on_start': True
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 3:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
+    def test_eval_splay(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+              'splay': '10'
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_splay_range(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+              'splay': {'start': 5, 'end': 10}
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_splay_global(self):
+        '''
+        verify that scheduled job runs with splayed time
+        '''
+        job = {
+          'schedule': {
+            'splay': {'start': 5, 'end': 10},
+            'job_eval_splay': {
+              'function': 'test.ping',
+              'seconds': '30',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=10)):
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+
+            # eval at 2:00:40pm, will run.
+            run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status('job_eval_splay')
+            self.assertEqual(ret['_last_run'], run_time)

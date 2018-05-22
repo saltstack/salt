@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import random
 import string
@@ -168,7 +168,7 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
                          'domain present',
                          **domain_ret)
         self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {u'a': u'b'}}})
+        self.assertEqual(result['changes'], {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {'a': 'b'}}})
 
     def test_present_with_failure(self):
         self.conn.describe_elasticsearch_domain.side_effect = not_found_error

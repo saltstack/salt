@@ -3,6 +3,12 @@
 Management of Open vSwitch ports.
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -29,7 +35,9 @@ def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None,
     tunnel_types = ('vlan', 'vxlan', 'gre')
 
     if tunnel_type and tunnel_type not in tunnel_types:
-        raise TypeError('The optional type argument must be one of these values: {0}.'.format(str(tunnel_types)))
+        raise TypeError('The optional type argument must be one of these values: {0}.'.format(
+            six.text_type(tunnel_types))
+        )
 
     bridge_exists = __salt__['openvswitch.bridge_exists'](bridge)
     port_list = []
@@ -80,7 +88,7 @@ def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None,
                                            }
                                     }
         elif tunnel_type == "vxlan":
-            comments['comment_dstport'] = ' (dst_port' + str(dst_port) + ')' if 0 < dst_port <= 65535 else ''
+            comments['comment_dstport'] = ' (dst_port' + six.text_type(dst_port) + ')' if 0 < dst_port <= 65535 else ''
             comments['comment_vxlan_invalid_id'] = 'Id of VXLAN tunnel must be an unsigned 64-bit integer.'
             comments['comment_vxlan_interface_exists'] = 'VXLAN tunnel interface {0} with rempte ip {1} and key {2} ' \
                                            'already exists on bridge {3}{4}.'.format(name, remote, id, bridge, comments['comment_dstport'])
@@ -124,7 +132,7 @@ def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None,
             ret['result'] = False
             ret['comment'] = comments['comment_invalid_ip']
         elif interface_options and interface_type and name in port_list:
-            interface_attroptions = '{key=\"' + str(id) + '\", remote_ip=\"' + str(remote) + '\"}'
+            interface_attroptions = '{key=\"' + six.text_type(id) + '\", remote_ip=\"' + six.text_type(remote) + '\"}'
             try:
                 if interface_type[0] == 'gre' and interface_options[0] == interface_attroptions:
                     ret['result'] = True
@@ -143,8 +151,8 @@ def present(name, bridge, tunnel_type=None, id=None, remote=None, dst_port=None,
             ret['result'] = False
             ret['comment'] = comments['comment_invalid_ip']
         elif interface_options and interface_type and name in port_list:
-            opt_port = 'dst_port=\"' + str(dst_port) + '\", ' if 0 < dst_port <= 65535 else ''
-            interface_attroptions = '{{{0}key=\"'.format(opt_port) + str(id) + '\", remote_ip=\"' + str(remote) + '\"}'
+            opt_port = 'dst_port=\"' + six.text_type(dst_port) + '\", ' if 0 < dst_port <= 65535 else ''
+            interface_attroptions = '{{{0}key=\"'.format(opt_port) + six.text_type(id) + '\", remote_ip=\"' + six.text_type(remote) + '\"}'
             try:
                 if interface_type[0] == 'vxlan' and interface_options[0] == interface_attroptions:
                     ret['result'] = True

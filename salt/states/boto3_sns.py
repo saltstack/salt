@@ -54,7 +54,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import logging
@@ -277,12 +277,14 @@ def topic_absent(name, unsubscribe=False, region=None, key=None, keyid=None, pro
             for sub in current['Subscriptions']:
                 if sub['SubscriptionArn'] == 'PendingConfirmation':
                     # The API won't let you delete subscriptions in pending status...
-                    log.warning('Ignoring PendingConfirmation subscription {0} {1} on topic '
-                                '{2}'.format(sub['Protocol'], sub['Endpoint'], sub['TopicArn']))
+                    log.warning(
+                        'Ignoring PendingConfirmation subscription %s %s on '
+                        'topic %s', sub['Protocol'], sub['Endpoint'], sub['TopicArn']
+                    )
                     continue
                 if __salt__['boto3_sns.unsubscribe'](sub['SubscriptionArn'], region=region, key=key,
                                                      keyid=keyid, profile=profile):
-                    log.debug('Deleted subscription {0} for SNS topic {1}'.format(sub, TopicArn))
+                    log.debug('Deleted subscription %s for SNS topic %s', sub, TopicArn)
                     something_changed = True
                 else:
                     ret['comment'] = 'Failed to delete subscription {0} for SNS topic {1}'.format(

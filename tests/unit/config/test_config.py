@@ -8,17 +8,17 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-import shutil
-import tempfile
+import textwrap
 
 # Import Salt Testing libs
+from tests.support.helpers import with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
@@ -26,6 +26,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.yaml
+from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -75,483 +76,426 @@ def _salt_configuration_error(filename):
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
-    def test_sha256_is_default_for_master(self):
-        fpath = tempfile.mktemp()
-        try:
-            with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    "root_dir: /\n"
-                    "key_logfile: key\n"
-                )
-            config = sconfig.master_config(fpath)
-            self.assertEqual(config['hash_type'], 'sha256')
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
+    @with_tempfile()
+    def test_sha256_is_default_for_master(self, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+        config = sconfig.master_config(fpath)
+        self.assertEqual(config['hash_type'], 'sha256')
 
-    def test_sha256_is_default_for_minion(self):
-        fpath = tempfile.mktemp()
-        try:
-            with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    "root_dir: /\n"
-                    "key_logfile: key\n"
-                )
-            config = sconfig.minion_config(fpath)
-            self.assertEqual(config['hash_type'], 'sha256')
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
+    @with_tempfile()
+    def test_sha256_is_default_for_minion(self, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+        config = sconfig.minion_config(fpath)
+        self.assertEqual(config['hash_type'], 'sha256')
 
-    def test_proper_path_joining(self):
-        fpath = tempfile.mktemp()
+    @with_tempfile()
+    def test_proper_path_joining(self, fpath):
         temp_config = 'root_dir: /\n'\
                       'key_logfile: key\n'
         if salt.utils.platform.is_windows():
             temp_config = 'root_dir: c:\\\n'\
                           'key_logfile: key\n'
-        try:
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(temp_config)
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(temp_config)
 
+        config = sconfig.master_config(fpath)
+        expect_path_join = os.path.join('/', 'key')
+        expect_sep_join = '//key'
+        if salt.utils.platform.is_windows():
+            expect_path_join = os.path.join('c:\\', 'key')
+            expect_sep_join = 'c:\\\\key'
+
+        # os.path.join behavior
+        self.assertEqual(config['key_logfile'], expect_path_join)
+        # os.sep.join behavior
+        self.assertNotEqual(config['key_logfile'], expect_sep_join)
+
+    @with_tempdir()
+    def test_common_prefix_stripping(self, tempdir):
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+        config = sconfig.master_config(fpath)
+        self.assertEqual(config['log_file'], fpath)
+
+    @with_tempdir()
+    def test_default_root_dir_included_in_config_root_dir(self, tempdir):
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+        with patch('salt.syspaths.ROOT_DIR', TMP):
             config = sconfig.master_config(fpath)
-            expect_path_join = os.path.join('/', 'key')
-            expect_sep_join = '//key'
-            if salt.utils.platform.is_windows():
-                expect_path_join = os.path.join('c:\\', 'key')
-                expect_sep_join = 'c:\\\\key'
-
-            # os.path.join behavior
-            self.assertEqual(config['key_logfile'], expect_path_join)
-            # os.sep.join behavior
-            self.assertNotEqual(config['key_logfile'], expect_sep_join)
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
-
-    def test_common_prefix_stripping(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(root_dir, fpath)
-                )
-            config = sconfig.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
-
-    def test_default_root_dir_included_in_config_root_dir(self):
-        os.makedirs(os.path.join(TMP, 'tmp2'))
-        tempdir = tempfile.mkdtemp(dir=os.path.join(TMP, 'tmp2'))
-        try:
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(root_dir, fpath)
-                )
-            with patch('salt.syspaths.ROOT_DIR', TMP):
-                config = sconfig.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+        self.assertEqual(config['log_file'], fpath)
 
     @skipIf(
         salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
-    def test_load_master_config_from_environ_var(self):
+    @with_tempdir()
+    def test_load_master_config_from_environ_var(self, tempdir):
         original_environ = os.environ.copy()
+        env_root_dir = os.path.join(tempdir, 'foo', 'env')
+        os.makedirs(env_root_dir)
+        env_fpath = os.path.join(env_root_dir, 'config-env')
 
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            env_root_dir = os.path.join(tempdir, 'foo', 'env')
-            os.makedirs(env_root_dir)
-            env_fpath = os.path.join(env_root_dir, 'config-env')
+        with salt.utils.files.fopen(env_fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, env_fpath)
+            )
 
-            with salt.utils.files.fopen(env_fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
-                )
+        os.environ['SALT_MASTER_CONFIG'] = env_fpath
+        # Should load from env variable, not the default configuration file.
+        config = sconfig.master_config('{0}/master'.format(CONFIG_DIR))
+        self.assertEqual(config['log_file'], env_fpath)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
-            os.environ['SALT_MASTER_CONFIG'] = env_fpath
-            # Should load from env variable, not the default configuration file.
-            config = sconfig.master_config('{0}/master'.format(CONFIG_DIR))
-            self.assertEqual(config['log_file'], env_fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
-
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(root_dir, fpath)
-                )
-            # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, i.e., the user has passed an
-            # alternative configuration file form the CLI parser, the
-            # environment variable will be ignored.
-            os.environ['SALT_MASTER_CONFIG'] = env_fpath
-            config = sconfig.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
-
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+        # Let's set the environment variable, yet, since the configuration
+        # file path is not the default one, i.e., the user has passed an
+        # alternative configuration file form the CLI parser, the
+        # environment variable will be ignored.
+        os.environ['SALT_MASTER_CONFIG'] = env_fpath
+        config = sconfig.master_config(fpath)
+        self.assertEqual(config['log_file'], fpath)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
     @skipIf(
         salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
-    def test_load_minion_config_from_environ_var(self):
+    @with_tempdir()
+    def test_load_minion_config_from_environ_var(self, tempdir):
         original_environ = os.environ.copy()
+        env_root_dir = os.path.join(tempdir, 'foo', 'env')
+        os.makedirs(env_root_dir)
+        env_fpath = os.path.join(env_root_dir, 'config-env')
 
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            env_root_dir = os.path.join(tempdir, 'foo', 'env')
-            os.makedirs(env_root_dir)
-            env_fpath = os.path.join(env_root_dir, 'config-env')
+        with salt.utils.files.fopen(env_fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, env_fpath)
+            )
 
-            with salt.utils.files.fopen(env_fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
-                )
+        os.environ['SALT_MINION_CONFIG'] = env_fpath
+        # Should load from env variable, not the default configuration file
+        config = sconfig.minion_config('{0}/minion'.format(CONFIG_DIR))
+        self.assertEqual(config['log_file'], env_fpath)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
-            os.environ['SALT_MINION_CONFIG'] = env_fpath
-            # Should load from env variable, not the default configuration file
-            config = sconfig.minion_config('{0}/minion'.format(CONFIG_DIR))
-            self.assertEqual(config['log_file'], env_fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+        # Let's set the environment variable, yet, since the configuration
+        # file path is not the default one, i.e., the user has passed an
+        # alternative configuration file form the CLI parser, the
+        # environment variable will be ignored.
+        os.environ['SALT_MINION_CONFIG'] = env_fpath
+        config = sconfig.minion_config(fpath)
+        self.assertEqual(config['log_file'], fpath)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(root_dir, fpath)
-                )
-            # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, i.e., the user has passed an
-            # alternative configuration file form the CLI parser, the
-            # environment variable will be ignored.
-            os.environ['SALT_MINION_CONFIG'] = env_fpath
-            config = sconfig.minion_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
-
-    def test_load_client_config_from_environ_var(self):
+    @with_tempdir()
+    def test_load_client_config_from_environ_var(self, tempdir):
         original_environ = os.environ.copy()
-        try:
-            tempdir = tempfile.mkdtemp(dir=TMP)
-            env_root_dir = os.path.join(tempdir, 'foo', 'env')
-            os.makedirs(env_root_dir)
+        env_root_dir = os.path.join(tempdir, 'foo', 'env')
+        os.makedirs(env_root_dir)
 
-            # Let's populate a master configuration file which should not get
-            # picked up since the client configuration tries to load the master
-            # configuration settings using the provided client configuration
-            # file
-            master_config = os.path.join(env_root_dir, 'master')
-            with salt.utils.files.fopen(master_config, 'w') as fp_:
-                fp_.write(
-                    'blah: true\n'
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(env_root_dir, master_config)
-                )
-            os.environ['SALT_MASTER_CONFIG'] = master_config
+        # Let's populate a master configuration file which should not get
+        # picked up since the client configuration tries to load the master
+        # configuration settings using the provided client configuration
+        # file
+        master_config = os.path.join(env_root_dir, 'master')
+        with salt.utils.files.fopen(master_config, 'w') as fp_:
+            fp_.write(
+                'blah: true\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, master_config)
+            )
+        os.environ['SALT_MASTER_CONFIG'] = master_config
 
-            # Now the client configuration file
-            env_fpath = os.path.join(env_root_dir, 'config-env')
-            with salt.utils.files.fopen(env_fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
-                )
+        # Now the client configuration file
+        env_fpath = os.path.join(env_root_dir, 'config-env')
+        with salt.utils.files.fopen(env_fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, env_fpath)
+            )
 
-            os.environ['SALT_CLIENT_CONFIG'] = env_fpath
-            # Should load from env variable, not the default configuration file
-            config = sconfig.client_config(os.path.expanduser('~/.salt'))
-            self.assertEqual(config['log_file'], env_fpath)
-            self.assertTrue('blah' not in config)
-            os.environ.clear()
-            os.environ.update(original_environ)
+        os.environ['SALT_CLIENT_CONFIG'] = env_fpath
+        # Should load from env variable, not the default configuration file
+        config = sconfig.client_config(os.path.expanduser('~/.salt'))
+        self.assertEqual(config['log_file'], env_fpath)
+        self.assertTrue('blah' not in config)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(root_dir, fpath)
-                )
-            # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, i.e., the user has passed an
-            # alternative configuration file form the CLI parser, the
-            # environment variable will be ignored.
-            os.environ['SALT_MASTER_CONFIG'] = env_fpath
-            config = sconfig.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+        # Let's set the environment variable, yet, since the configuration
+        # file path is not the default one, i.e., the user has passed an
+        # alternative configuration file form the CLI parser, the
+        # environment variable will be ignored.
+        os.environ['SALT_MASTER_CONFIG'] = env_fpath
+        config = sconfig.master_config(fpath)
+        self.assertEqual(config['log_file'], fpath)
+        os.environ.clear()
+        os.environ.update(original_environ)
 
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+    @with_tempdir()
+    def test_issue_5970_minion_confd_inclusion(self, tempdir):
+        minion_config = os.path.join(tempdir, 'minion')
+        minion_confd = os.path.join(tempdir, 'minion.d')
+        os.makedirs(minion_confd)
 
-    def test_issue_5970_minion_confd_inclusion(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=TMP)
-            minion_config = os.path.join(tempdir, 'minion')
-            minion_confd = os.path.join(tempdir, 'minion.d')
-            os.makedirs(minion_confd)
+        # Let's populate a minion configuration file with some basic
+        # settings
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(
+                'blah: false\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, minion_config)
+            )
 
-            # Let's populate a minion configuration file with some basic
-            # settings
-            with salt.utils.files.fopen(minion_config, 'w') as fp_:
-                fp_.write(
-                    'blah: false\n'
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(tempdir, minion_config)
-                )
+        # Now, let's populate an extra configuration file under minion.d
+        # Notice that above we've set blah as False and below as True.
+        # Since the minion.d files are loaded after the main configuration
+        # file so overrides can happen, the final value of blah should be
+        # True.
+        extra_config = os.path.join(minion_confd, 'extra.conf')
+        with salt.utils.files.fopen(extra_config, 'w') as fp_:
+            fp_.write('blah: true\n')
 
-            # Now, let's populate an extra configuration file under minion.d
-            # Notice that above we've set blah as False and below as True.
-            # Since the minion.d files are loaded after the main configuration
-            # file so overrides can happen, the final value of blah should be
-            # True.
-            extra_config = os.path.join(minion_confd, 'extra.conf')
-            with salt.utils.files.fopen(extra_config, 'w') as fp_:
-                fp_.write('blah: true\n')
+        # Let's load the configuration
+        config = sconfig.minion_config(minion_config)
 
-            # Let's load the configuration
-            config = sconfig.minion_config(minion_config)
+        self.assertEqual(config['log_file'], minion_config)
+        # As proven by the assertion below, blah is True
+        self.assertTrue(config['blah'])
 
-            self.assertEqual(config['log_file'], minion_config)
-            # As proven by the assertion below, blah is True
-            self.assertTrue(config['blah'])
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+    @with_tempdir()
+    def test_master_confd_inclusion(self, tempdir):
+        master_config = os.path.join(tempdir, 'master')
+        master_confd = os.path.join(tempdir, 'master.d')
+        os.makedirs(master_confd)
 
-    def test_master_confd_inclusion(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=TMP)
-            master_config = os.path.join(tempdir, 'master')
-            master_confd = os.path.join(tempdir, 'master.d')
-            os.makedirs(master_confd)
+        # Let's populate a master configuration file with some basic
+        # settings
+        with salt.utils.files.fopen(master_config, 'w') as fp_:
+            fp_.write(
+                'blah: false\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, master_config)
+            )
 
-            # Let's populate a master configuration file with some basic
-            # settings
-            with salt.utils.files.fopen(master_config, 'w') as fp_:
-                fp_.write(
-                    'blah: false\n'
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(tempdir, master_config)
-                )
+        # Now, let's populate an extra configuration file under master.d
+        # Notice that above we've set blah as False and below as True.
+        # Since the master.d files are loaded after the main configuration
+        # file so overrides can happen, the final value of blah should be
+        # True.
+        extra_config = os.path.join(master_confd, 'extra.conf')
+        with salt.utils.files.fopen(extra_config, 'w') as fp_:
+            fp_.write('blah: true\n')
 
-            # Now, let's populate an extra configuration file under master.d
-            # Notice that above we've set blah as False and below as True.
-            # Since the master.d files are loaded after the main configuration
-            # file so overrides can happen, the final value of blah should be
-            # True.
-            extra_config = os.path.join(master_confd, 'extra.conf')
-            with salt.utils.files.fopen(extra_config, 'w') as fp_:
-                fp_.write('blah: true\n')
+        # Let's load the configuration
+        config = sconfig.master_config(master_config)
 
-            # Let's load the configuration
-            config = sconfig.master_config(master_config)
+        self.assertEqual(config['log_file'], master_config)
+        # As proven by the assertion below, blah is True
+        self.assertTrue(config['blah'])
 
-            self.assertEqual(config['log_file'], master_config)
-            # As proven by the assertion below, blah is True
-            self.assertTrue(config['blah'])
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
-
-    def test_master_file_roots_glob(self):
-        # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            # Create some kown files.
-            for f in 'abc':
-                fpath = os.path.join(tempdir, f)
-                with salt.utils.files.fopen(fpath, 'w') as wfh:
-                    wfh.write(f)
-
+    @with_tempfile()
+    @with_tempdir()
+    def test_master_file_roots_glob(self, tempdir, fpath):
+        # Create some files
+        for f in 'abc':
+            fpath = os.path.join(tempdir, f)
             with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    'file_roots:\n'
-                    '  base:\n'
-                    '    - {0}'.format(os.path.join(tempdir, '*'))
-                )
-            config = sconfig.master_config(fpath)
-            base = config['file_roots']['base']
-            self.assertEqual(set(base), set([
-                os.path.join(tempdir, 'a'),
-                os.path.join(tempdir, 'b'),
-                os.path.join(tempdir, 'c')
-            ]))
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+                wfh.write(f)
 
-    def test_master_pillar_roots_glob(self):
-        # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            # Create some kown files.
-            for f in 'abc':
-                fpath = os.path.join(tempdir, f)
-                with salt.utils.files.fopen(fpath, 'w') as wfh:
-                    wfh.write(f)
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+        config = sconfig.master_config(fpath)
+        base = config['file_roots']['base']
+        self.assertEqual(set(base), set([
+            os.path.join(tempdir, 'a'),
+            os.path.join(tempdir, 'b'),
+            os.path.join(tempdir, 'c')
+        ]))
 
+    @with_tempfile()
+    @with_tempdir()
+    def test_master_pillar_roots_glob(self, tempdir, fpath):
+        # Create some files.
+        for f in 'abc':
+            fpath = os.path.join(tempdir, f)
             with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    'pillar_roots:\n'
-                    '  base:\n'
-                    '    - {0}'.format(os.path.join(tempdir, '*'))
-                )
-            config = sconfig.master_config(fpath)
-            base = config['pillar_roots']['base']
-            self.assertEqual(set(base), set([
-                os.path.join(tempdir, 'a'),
-                os.path.join(tempdir, 'b'),
-                os.path.join(tempdir, 'c')
-            ]))
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+                wfh.write(f)
 
-    def test_master_id_function(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=TMP)
-            master_config = os.path.join(tempdir, 'master')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+        config = sconfig.master_config(fpath)
+        base = config['pillar_roots']['base']
+        self.assertEqual(set(base), set([
+            os.path.join(tempdir, 'a'),
+            os.path.join(tempdir, 'b'),
+            os.path.join(tempdir, 'c')
+        ]))
 
-            with salt.utils.files.fopen(master_config, 'w') as fp_:
-                fp_.write(
-                    'id_function:\n'
-                    '  test.echo:\n'
-                    '    text: hello_world\n'
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(tempdir, master_config)
-                )
+    @with_tempdir()
+    def test_master_id_function(self, tempdir):
+        master_config = os.path.join(tempdir, 'master')
 
-            # Let's load the configuration
-            config = sconfig.master_config(master_config)
+        with salt.utils.files.fopen(master_config, 'w') as fp_:
+            fp_.write(
+                'id_function:\n'
+                '  test.echo:\n'
+                '    text: hello_world\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, master_config)
+            )
 
-            self.assertEqual(config['log_file'], master_config)
-            # 'master_config' appends '_master' to the ID
-            self.assertEqual(config['id'], 'hello_world_master')
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+        # Let's load the configuration
+        config = sconfig.master_config(master_config)
 
-    def test_minion_file_roots_glob(self):
-        # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            # Create some kown files.
-            for f in 'abc':
-                fpath = os.path.join(tempdir, f)
-                with salt.utils.files.fopen(fpath, 'w') as wfh:
-                    wfh.write(f)
+        self.assertEqual(config['log_file'], master_config)
+        # 'master_config' appends '_master' to the ID
+        self.assertEqual(config['id'], 'hello_world_master')
 
+    @with_tempfile()
+    @with_tempdir()
+    def test_minion_file_roots_glob(self, tempdir, fpath):
+        # Create some files.
+        for f in 'abc':
+            fpath = os.path.join(tempdir, f)
             with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    'file_roots:\n'
-                    '  base:\n'
-                    '    - {0}'.format(os.path.join(tempdir, '*'))
-                )
-            config = sconfig.minion_config(fpath)
-            base = config['file_roots']['base']
-            self.assertEqual(set(base), set([
-                os.path.join(tempdir, 'a'),
-                os.path.join(tempdir, 'b'),
-                os.path.join(tempdir, 'c')
-            ]))
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+                wfh.write(f)
 
-    def test_minion_pillar_roots_glob(self):
-        # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            # Create some kown files.
-            for f in 'abc':
-                fpath = os.path.join(tempdir, f)
-                with salt.utils.files.fopen(fpath, 'w') as wfh:
-                    wfh.write(f)
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'file_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+        config = sconfig.minion_config(fpath)
+        base = config['file_roots']['base']
+        self.assertEqual(set(base), set([
+            os.path.join(tempdir, 'a'),
+            os.path.join(tempdir, 'b'),
+            os.path.join(tempdir, 'c')
+        ]))
 
+    @with_tempfile()
+    @with_tempdir()
+    def test_minion_pillar_roots_glob(self, tempdir, fpath):
+        # Create some files.
+        for f in 'abc':
+            fpath = os.path.join(tempdir, f)
             with salt.utils.files.fopen(fpath, 'w') as wfh:
-                wfh.write(
-                    'pillar_roots:\n'
-                    '  base:\n'
-                    '    - {0}'.format(os.path.join(tempdir, '*'))
-                )
-            config = sconfig.minion_config(fpath)
-            base = config['pillar_roots']['base']
-            self.assertEqual(set(base), set([
-                os.path.join(tempdir, 'a'),
-                os.path.join(tempdir, 'b'),
-                os.path.join(tempdir, 'c')
-            ]))
-        finally:
-            if os.path.isfile(fpath):
-                os.unlink(fpath)
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+                wfh.write(f)
 
-    def test_minion_id_function(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=TMP)
-            minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {0}'.format(os.path.join(tempdir, '*'))
+            )
+        config = sconfig.minion_config(fpath)
+        base = config['pillar_roots']['base']
+        self.assertEqual(set(base), set([
+            os.path.join(tempdir, 'a'),
+            os.path.join(tempdir, 'b'),
+            os.path.join(tempdir, 'c')
+        ]))
 
-            with salt.utils.files.fopen(minion_config, 'w') as fp_:
-                fp_.write(
-                    'id_function:\n'
-                    '  test.echo:\n'
-                    '    text: hello_world\n'
-                    'root_dir: {0}\n'
-                    'log_file: {1}\n'.format(tempdir, minion_config)
-                )
+    @with_tempdir()
+    def test_minion_id_function(self, tempdir):
+        minion_config = os.path.join(tempdir, 'minion')
 
-            # Let's load the configuration
-            config = sconfig.minion_config(minion_config)
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(
+                'id_function:\n'
+                '  test.echo:\n'
+                '    text: hello_world\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, minion_config)
+            )
 
-            self.assertEqual(config['log_file'], minion_config)
-            self.assertEqual(config['id'], 'hello_world')
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
+        # Let's load the configuration
+        config = sconfig.minion_config(minion_config)
+
+        self.assertEqual(config['log_file'], minion_config)
+        self.assertEqual(config['id'], 'hello_world')
+
+    @with_tempdir()
+    def test_backend_rename(self, tempdir):
+        '''
+        This tests that we successfully rename git, hg, svn, and minion to
+        gitfs, hgfs, svnfs, and minionfs in the master and minion opts.
+        '''
+        fpath = salt.utils.files.mkstemp(dir=tempdir)
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                fileserver_backend:
+                  - roots
+                  - git
+                  - hg
+                  - svn
+                  - minion
+                '''))
+
+        master_config = sconfig.master_config(fpath)
+        minion_config = sconfig.minion_config(fpath)
+        expected = ['roots', 'gitfs', 'hgfs', 'svnfs', 'minionfs']
+
+        self.assertEqual(master_config['fileserver_backend'], expected)
+        self.assertEqual(minion_config['fileserver_backend'], expected)
 
     def test_syndic_config(self):
         syndic_conf_path = self.get_config_file_path('syndic')
@@ -577,6 +521,87 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
+
+    @with_tempfile()
+    def _get_tally(self, fpath, conf_func):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = {}
+
+        def _count_strings(config):
+            if isinstance(config, dict):
+                for key, val in six.iteritems(config):
+                    log.debug('counting strings in dict key: %s', key)
+                    log.debug('counting strings in dict val: %s', val)
+                    _count_strings(key)
+                    _count_strings(val)
+            elif isinstance(config, list):
+                log.debug('counting strings in list: %s', config)
+                for item in config:
+                    _count_strings(item)
+            else:
+                if isinstance(config, six.string_types):
+                    if isinstance(config, six.text_type):
+                        tally['unicode'] = tally.get('unicode', 0) + 1
+                    else:
+                        # We will never reach this on PY3
+                        tally.setdefault('non_unicode', []).append(config)
+
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(textwrap.dedent('''
+                foo: bar
+                mylist:
+                  - somestring
+                  - 9
+                  - 123.456
+                  - True
+                  - nested:
+                    - key: val
+                    - nestedlist:
+                      - foo
+                      - bar
+                      - baz
+                mydict:
+                  - somestring: 9
+                  - 123.456: 789
+                  - True: False
+                  - nested:
+                    - key: val
+                    - nestedlist:
+                      - foo
+                      - bar
+                      - baz'''))
+            if conf_func is sconfig.master_config:
+                wfh.write('\n\n')
+                wfh.write(textwrap.dedent('''
+                    rest_cherrypy:
+                      port: 8000
+                      disable_ssl: True
+                      app_path: /beacon_demo
+                      app: /srv/web/html/index.html
+                      static: /srv/web/static'''))
+        config = conf_func(fpath)
+        _count_strings(config)
+        return tally
+
+    def test_conf_file_strings_are_unicode_for_master(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.master_config)  # pylint: disable=no-value-for-parameter
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
+
+    def test_conf_file_strings_are_unicode_for_minion(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.minion_config)  # pylint: disable=no-value-for-parameter
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 0, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
@@ -1074,10 +1099,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @skipIf(
         salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
-    def test_load_cloud_config_from_environ_var(self):
+    @with_tempdir()
+    def test_load_cloud_config_from_environ_var(self, tempdir):
         original_environ = os.environ.copy()
-
-        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -1116,39 +1140,32 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.environ.clear()
             os.environ.update(original_environ)
 
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
-
-    def test_deploy_search_path_as_string(self):
-        temp_conf_dir = os.path.join(TMP, 'issue-8863')
+    @with_tempdir()
+    def test_deploy_search_path_as_string(self, temp_conf_dir):
         config_file_path = os.path.join(temp_conf_dir, 'cloud')
         deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
-        try:
-            for directory in (temp_conf_dir, deploy_dir_path):
-                if not os.path.isdir(directory):
-                    os.makedirs(directory)
+        for directory in (temp_conf_dir, deploy_dir_path):
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
 
-            default_config = sconfig.cloud_config(config_file_path)
-            default_config['deploy_scripts_search_path'] = deploy_dir_path
-            with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                salt.utils.yaml.safe_dump(default_config, cfd, default_flow_style=False)
+        default_config = sconfig.cloud_config(config_file_path)
+        default_config['deploy_scripts_search_path'] = deploy_dir_path
+        with salt.utils.files.fopen(config_file_path, 'w') as cfd:
+            salt.utils.yaml.safe_dump(default_config, cfd, default_flow_style=False)
 
-            default_config = sconfig.cloud_config(config_file_path)
+        default_config = sconfig.cloud_config(config_file_path)
 
-            # Our custom deploy scripts path was correctly added to the list
-            self.assertIn(
-                deploy_dir_path,
-                default_config['deploy_scripts_search_path']
-            )
+        # Our custom deploy scripts path was correctly added to the list
+        self.assertIn(
+            deploy_dir_path,
+            default_config['deploy_scripts_search_path']
+        )
 
-            # And it's even the first occurrence as it should
-            self.assertEqual(
-                deploy_dir_path,
-                default_config['deploy_scripts_search_path'][0]
-            )
-        finally:
-            if os.path.isdir(temp_conf_dir):
-                shutil.rmtree(temp_conf_dir)
+        # And it's even the first occurrence as it should
+        self.assertEqual(
+            deploy_dir_path,
+            default_config['deploy_scripts_search_path'][0]
+        )
 
     def test_includes_load(self):
         '''
@@ -1206,3 +1223,92 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                            config_path,
                                            verbose=False,
                                            exit_on_config_errors=True)
+
+    @staticmethod
+    def _get_defaults(**kwargs):
+        ret = {
+            'saltenv': kwargs.pop('saltenv', None),
+            'id': 'test',
+            'cachedir': '/A',
+            'sock_dir': '/B',
+            'root_dir': '/C',
+            'fileserver_backend': 'roots',
+            'open_mode': False,
+            'auto_accept': False,
+            'file_roots': {},
+            'pillar_roots': {},
+            'file_ignore_glob': [],
+            'file_ignore_regex': [],
+            'worker_threads': 5,
+            'hash_type': 'sha256',
+            'log_file': 'foo.log',
+        }
+        ret.update(kwargs)
+        return ret
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_apply_config(self):
+        '''
+        Ensure that the environment and saltenv options work properly
+        '''
+        with patch.object(sconfig, '_adjust_log_file_override', Mock()), \
+                patch.object(sconfig, '_update_ssl_config', Mock()), \
+                patch.object(sconfig, '_update_discovery_config', Mock()):
+
+            # MASTER CONFIG
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'foo')
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo', saltenv='bar')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'bar')
+            self.assertEqual(ret['saltenv'], 'bar')
+
+            # If environment was not explicitly set, it should not be in the
+            # opts at all.
+            defaults = self._get_defaults()
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], None)
+
+            # Same test as above but with saltenv explicitly set
+            defaults = self._get_defaults(saltenv='foo')
+            ret = sconfig.apply_master_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # MINION CONFIG
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'foo')
+            self.assertEqual(ret['saltenv'], 'foo')
+
+            # Ensure that environment overrides saltenv when saltenv not
+            # explicitly passed.
+            defaults = self._get_defaults(environment='foo', saltenv='bar')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertEqual(ret['environment'], 'bar')
+            self.assertEqual(ret['saltenv'], 'bar')
+
+            # If environment was not explicitly set, it should not be in the
+            # opts at all.
+            defaults = self._get_defaults()
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], None)
+
+            # Same test as above but with saltenv explicitly set
+            defaults = self._get_defaults(saltenv='foo')
+            ret = sconfig.apply_minion_config(defaults=defaults)
+            self.assertNotIn('environment', ret)
+            self.assertEqual(ret['saltenv'], 'foo')

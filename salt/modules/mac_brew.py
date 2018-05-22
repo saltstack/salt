@@ -8,7 +8,7 @@ Homebrew for macOS
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -64,7 +64,7 @@ def _tap(tap, runas=None):
     try:
         _call_brew(cmd)
     except CommandExecutionError:
-        log.error('Failed to tap "{0}"'.format(tap))
+        log.error('Failed to tap "%s"', tap)
         return False
 
     return True
@@ -121,19 +121,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'brew list --versions'
     ret = {}
-    out = _call_brew(cmd)['stdout']
-    for line in out.splitlines():
-        try:
-            name_and_versions = line.split(' ')
-            name = name_and_versions[0]
-            installed_versions = name_and_versions[1:]
-            key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
-            newest_version = sorted(installed_versions, key=key_func).pop()
-        except ValueError:
-            continue
-        __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
+    cmd = 'brew info --json=v1 --installed'
+    package_info = salt.utils.json.loads(_call_brew(cmd)['stdout'])
+
+    for package in package_info:
+        # Brew allows multiple versions of the same package to be installed.
+        # Salt allows for this, so it must be accounted for.
+        versions = [v['version'] for v in package['installed']]
+        # Brew allows for aliasing of packages, all of which will be
+        # installable from a Salt call, so all names must be accounted for.
+        names = package['aliases'] + [package['name'], package['full_name']]
+        # Create a list of tuples containing all possible combinations of
+        # names and versions, because all are valid.
+        combinations = [(n, v) for n in names for v in versions]
+
+        for name, version in combinations:
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
+
+    # Grab packages from brew cask, if available.
+    # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
+    try:
+        cask_cmd = 'brew cask list --versions'
+        out = _call_brew(cask_cmd)['stdout']
+
+        for line in out.splitlines():
+            try:
+                name_and_versions = line.split(' ')
+                name = '/'.join(('caskroom/cask', name_and_versions[0]))
+                installed_versions = name_and_versions[1:]
+                key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
+                newest_version = sorted(installed_versions, key=key_func).pop()
+            except ValueError:
+                continue
+            __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
+    except CommandExecutionError:
+        pass
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -289,7 +312,8 @@ def _info(*pkgs):
     cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result['retcode']:
-        log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
+        log.error('Failed to get info about packages: %s',
+                  ' '.join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result['stdout'])
     return dict(zip(pkgs, output))

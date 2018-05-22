@@ -2,22 +2,23 @@
 '''
 Aptly Debian repository manager.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
 
 # Import salt libs
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.json
 import salt.utils.path
-import salt.utils.stringutils as stringutils
+import salt.utils.stringutils
 
 _DEFAULT_CONFIG_PATH = '/etc/aptly.conf'
-_LOG = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'aptly'
@@ -43,7 +44,7 @@ def _cmd_run(cmd):
     cmd_ret = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
 
     if cmd_ret['retcode'] != 0:
-        _LOG.debug('Unable to execute command: %s\nError: %s', cmd,
+        log.debug('Unable to execute command: %s\nError: %s', cmd,
                    cmd_ret['stderr'])
 
     return cmd_ret['stdout']
@@ -72,7 +73,7 @@ def _format_repo_args(comment=None, component=None, distribution=None,
         cached_uploaders_path = __salt__['cp.cache_file'](uploaders_file, saltenv)
 
         if not cached_uploaders_path:
-            _LOG.error('Unable to get cached copy of file: %s', uploaders_file)
+            log.error('Unable to get cached copy of file: %s', uploaders_file)
             return False
 
     for setting in settings:
@@ -94,11 +95,11 @@ def _validate_config(config_path):
     :return: None
     :rtype: None
     '''
-    _LOG.debug('Checking configuration file: %s', config_path)
+    log.debug('Checking configuration file: %s', config_path)
 
     if not os.path.isfile(config_path):
         message = 'Unable to get configuration file: {}'.format(config_path)
-        _LOG.error(message)
+        log.error(message)
         raise SaltInvocationError(message)
 
 
@@ -150,7 +151,7 @@ def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     cmd_ret = _cmd_run(cmd)
     repos = [line.strip() for line in cmd_ret.splitlines()]
 
-    _LOG.debug('Found repositories: %s', len(repos))
+    log.debug('Found repositories: %s', len(repos))
 
     for name in repos:
         ret[name] = get_repo(name=name, config_path=config_path,
@@ -170,11 +171,11 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     :rtype: dict
     '''
     _validate_config(config_path)
+    with_packages = six.text_type(bool(with_packages)).lower()
 
     ret = dict()
     cmd = ['repo', 'show', '-config={}'.format(config_path),
-           '-with-packages={}'.format(str(with_packages).lower()),
-           name]
+           '-with-packages={}'.format(with_packages), name]
 
     cmd_ret = _cmd_run(cmd)
 
@@ -185,15 +186,16 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
             items = line.split(':')
             key = items[0].lower().replace('default', '').strip()
             key = ' '.join(key.split()).replace(' ', '_')
-            ret[key] = stringutils.to_none(stringutils.to_num(items[1].strip()))
+            ret[key] = salt.utils.stringutils.to_none(
+                salt.utils.stringutils.to_num(items[1].strip()))
         except (AttributeError, IndexError):
             # If the line doesn't have the separator or is otherwise invalid, skip it.
-            _LOG.debug('Skipping line: %s', line)
+            log.debug('Skipping line: %s', line)
 
     if ret:
-        _LOG.debug('Found repository: %s', name)
+        log.debug('Found repository: %s', name)
     else:
-        _LOG.debug('Unable to find repository: %s', name)
+        log.debug('Unable to find repository: %s', name)
     return ret
 
 
@@ -226,7 +228,7 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
     current_repo = __salt__['aptly.get_repo'](name=name)
 
     if current_repo:
-        _LOG.debug('Repository already exists: %s', name)
+        log.debug('Repository already exists: %s', name)
         return True
 
     cmd = ['repo', 'create', '-config={}'.format(config_path)]
@@ -243,9 +245,9 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
     repo = __salt__['aptly.get_repo'](name=name)
 
     if repo:
-        _LOG.debug('Created repo: %s', name)
+        log.debug('Created repo: %s', name)
         return True
-    _LOG.error('Unable to create repo: %s', name)
+    log.error('Unable to create repo: %s', name)
     return False
 
 
@@ -287,7 +289,7 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
     current_settings = __salt__['aptly.get_repo'](name=name)
 
     if not current_settings:
-        _LOG.error('Unable to get repo: %s', name)
+        log.error('Unable to get repo: %s', name)
         return False
 
     # Discard any additional settings that get_repo gives
@@ -298,7 +300,7 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
 
     # Check the existing repo settings to see if they already have the desired values.
     if settings == current_settings:
-        _LOG.debug('Settings already have the desired values for repository: %s', name)
+        log.debug('Settings already have the desired values for repository: %s', name)
         return True
 
     cmd = ['repo', 'edit', '-config={}'.format(config_path)]
@@ -318,9 +320,9 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
             failed_settings.update({setting: settings[setting]})
 
     if failed_settings:
-        _LOG.error('Unable to change settings for the repository: %s', name)
+        log.error('Unable to change settings for the repository: %s', name)
         return False
-    _LOG.debug('Settings successfully changed to the desired values for repository: %s', name)
+    log.debug('Settings successfully changed to the desired values for repository: %s', name)
     return True
 
 
@@ -343,23 +345,24 @@ def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
         salt '*' aptly.delete_repo name="test-repo"
     '''
     _validate_config(config_path)
+    force = six.text_type(bool(force)).lower()
 
     current_repo = __salt__['aptly.get_repo'](name=name)
 
     if not current_repo:
-        _LOG.debug('Repository already absent: %s', name)
+        log.debug('Repository already absent: %s', name)
         return True
 
     cmd = ['repo', 'drop', '-config={}'.format(config_path),
-           '-force={}'.format(str(force).lower()), name]
+           '-force={}'.format(force), name]
 
     _cmd_run(cmd)
     repo = __salt__['aptly.get_repo'](name=name)
 
     if repo:
-        _LOG.error('Unable to remove repo: %s', name)
+        log.error('Unable to remove repo: %s', name)
         return False
-    _LOG.debug('Removed repo: %s', name)
+    log.debug('Removed repo: %s', name)
     return True
 
 
@@ -385,7 +388,7 @@ def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
     cmd_ret = _cmd_run(cmd)
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
-    _LOG.debug('Found mirrors: %s', len(ret))
+    log.debug('Found mirrors: %s', len(ret))
     return ret
 
 
@@ -411,7 +414,7 @@ def list_published(config_path=_DEFAULT_CONFIG_PATH):
     cmd_ret = _cmd_run(cmd)
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
-    _LOG.debug('Found published repositories: %s', len(ret))
+    log.debug('Found published repositories: %s', len(ret))
     return ret
 
 
@@ -443,7 +446,7 @@ def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
     cmd_ret = _cmd_run(cmd)
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
-    _LOG.debug('Found snapshots: %s', len(ret))
+    log.debug('Found snapshots: %s', len(ret))
     return ret
 
 
@@ -464,13 +467,13 @@ def cleanup_db(config_path=_DEFAULT_CONFIG_PATH, dry_run=False):
         salt '*' aptly.cleanup_db
     '''
     _validate_config(config_path)
+    dry_run = six.text_type(bool(dry_run)).lower()
 
     ret = {'deleted_keys': list(),
            'deleted_files': list()}
 
     cmd = ['db', 'cleanup', '-config={}'.format(config_path),
-           '-dry-run={}'.format(str(dry_run).lower()),
-           '-verbose=true']
+           '-dry-run={}'.format(dry_run), '-verbose=true']
 
     cmd_ret = _cmd_run(cmd)
 
@@ -493,6 +496,6 @@ def cleanup_db(config_path=_DEFAULT_CONFIG_PATH, dry_run=False):
             if match:
                 current_block = match.group('package_type')
 
-    _LOG.debug('Package keys identified for deletion: %s', len(ret['deleted_keys']))
-    _LOG.debug('Package files identified for deletion: %s', len(ret['deleted_files']))
+    log.debug('Package keys identified for deletion: %s', len(ret['deleted_keys']))
+    log.debug('Package files identified for deletion: %s', len(ret['deleted_files']))
     return ret

@@ -6,11 +6,13 @@ Enforce state for SSL/TLS
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
+import logging
 
 __virtualname__ = 'tls'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -20,14 +22,12 @@ def __virtual__():
     return __virtualname__
 
 
-def valid_certificate(
-        name,
-        weeks=0,
-        days=0,
-        hours=0,
-        minutes=0,
-        seconds=0,
-    ):
+def valid_certificate(name,
+                      weeks=0,
+                      days=0,
+                      hours=0,
+                      minutes=0,
+                      seconds=0):
     '''
     Verify that a TLS certificate is valid now and (optionally) will be valid
     for the time specified through weeks, days, hours, minutes, and seconds.
@@ -38,7 +38,13 @@ def valid_certificate(
            'comment': ''}
 
     now = time.time()
-    cert_info = __salt__['tls.cert_info'](name)
+    try:
+        cert_info = __salt__['tls.cert_info'](name)
+    except IOError as exc:
+        ret['comment'] = '{}'.format(exc)
+        ret['result'] = False
+        log.error(ret['comment'])
+        return ret
 
     # verify that the cert is valid *now*
     if now < cert_info['not_before']:

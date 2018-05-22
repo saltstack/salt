@@ -36,7 +36,7 @@ Module for Sending Messages via XMPP (a.k.a. Jabber)
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

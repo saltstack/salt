@@ -50,7 +50,7 @@ Namespaced tag
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -75,6 +75,7 @@ import salt.payload
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -87,13 +88,10 @@ log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
-SUB_EVENT = set([
-    'state.highstate',
-    'state.sls',
-])
+SUB_EVENT = ('state.highstate', 'state.sls')
 
-TAGEND = '\n\n'  # long tag delimiter
-TAGPARTER = '/'  # name spaced tag delimiter
+TAGEND = str('\n\n')  # long tag delimiter
+TAGPARTER = str('/')  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -171,9 +169,9 @@ def fire_args(opts, jid, tag_data, prefix=''):
     except NameError:
         pass
     else:
+        tag = tagify(tag_suffix, prefix)
         try:
             _event = get_master_event(opts, opts['sock_dir'], listen=False)
-            tag = tagify(tag_suffix, prefix)
             _event.fire_event(tag_data, tag=tag)
         except Exception as exc:
             # Don't let a problem here hold up the rest of the orchestration
@@ -200,6 +198,12 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
+
+    for index, _ in enumerate(parts):
+        try:
+            parts[index] = salt.utils.stringutils.to_str(parts[index])
+        except TypeError:
+            parts[index] = str(parts[index])
     return TAGPARTER.join([part for part in parts if part])
 
 
@@ -432,7 +436,7 @@ class SaltEvent(object):
 
         if six.PY2:
             mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-            data = serial.loads(mdata)
+            data = serial.loads(mdata, encoding='utf-8')
         else:
             mtag, sep, mdata = raw.partition(salt.utils.stringutils.to_bytes(TAGEND))  # split tag from data
             mtag = salt.utils.stringutils.to_str(mtag)
@@ -462,13 +466,13 @@ class SaltEvent(object):
             if match_func(evt['tag'], tag):
                 if ret is None:
                     ret = evt
-                    log.trace('get_event() returning cached event = {0}'.format(ret))
+                    log.trace('get_event() returning cached event = %s', ret)
                 else:
                     self.pending_events.append(evt)
             elif any(pmatch_func(evt['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
                 self.pending_events.append(evt)
             else:
-                log.trace('get_event() discarding cached event that no longer has any subscriptions = {0}'.format(evt))
+                log.trace('get_event() discarding cached event that no longer has any subscriptions = %s', evt)
         return ret
 
     @staticmethod
@@ -556,15 +560,15 @@ class SaltEvent(object):
             if not match_func(ret['tag'], tag):
                 # tag not match
                 if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
-                    log.trace('get_event() caching unwanted event = {0}'.format(ret))
+                    log.trace('get_event() caching unwanted event = %s', ret)
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
                 continue
 
-            log.trace('get_event() received = {0}'.format(ret))
+            log.trace('get_event() received = %s', ret)
             return ret
-        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait))
+        log.trace('_get_event() waited %s seconds and received nothing', wait)
         return None
 
     def get_event(self,
@@ -695,7 +699,7 @@ class SaltEvent(object):
 
         The default is 1000 ms
         '''
-        if not str(tag):  # no empty tags allowed
+        if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
@@ -729,14 +733,11 @@ class SaltEvent(object):
             is_msgpacked=True,
             use_bin_type=six.PY3
         )
-        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
-        if six.PY2:
-            event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
-        else:
-            event = b''.join([
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data])
+        log.debug('Sending event: tag = %s; data = %s', tag, data)
+        event = b''.join([
+            salt.utils.stringutils.to_bytes(tag),
+            salt.utils.stringutils.to_bytes(tagend),
+            serialized_data])
         msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
@@ -1021,12 +1022,9 @@ class AsyncEventPublisher(object):
         )
 
         log.info('Starting pull socket on {0}'.format(epull_uri))
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
-        finally:
-            os.umask(old_umask)
 
     def handle_publish(self, package, _):
         '''
@@ -1059,8 +1057,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts, log_queue=None):
-        super(EventPublisher, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(EventPublisher, self).__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1070,11 +1068,18 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -1109,8 +1114,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             # Start the master event publisher
-            old_umask = os.umask(0o177)
-            try:
+            with salt.utils.files.set_umask(0o177):
                 self.publisher.start()
                 self.puller.start()
                 if (self.opts['ipc_mode'] != 'tcp' and (
@@ -1118,8 +1122,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         self.opts['external_auth'])):
                     os.chmod(os.path.join(
                         self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
-            finally:
-                os.umask(old_umask)
 
             # Make sure the IO loop and respective sockets are closed and
             # destroyed
@@ -1174,13 +1176,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
         return instance
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__(log_queue=log_queue)
+        super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -1195,11 +1197,18 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):
         # Flush and terminate
@@ -1317,7 +1326,7 @@ class StateFire(object):
             'tag': tag,
             'data': data,
             'cmd': '_minion_event',
-            'tok': self.auth.gen_token('salt'),
+            'tok': self.auth.gen_token(b'salt'),
         })
 
         channel = salt.transport.Channel.factory(self.opts)
@@ -1344,7 +1353,7 @@ class StateFire(object):
             if running[stag]['result'] and not running[stag]['changes']:
                 continue
             tag = 'state_{0}_{1}'.format(
-                str(running[stag]['result']),
+                six.text_type(running[stag]['result']),
                 'True' if running[stag]['changes'] else 'False')
             load['events'].append({
                 'tag': tag,

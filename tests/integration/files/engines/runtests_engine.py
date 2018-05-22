@@ -13,7 +13,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import errno
 import socket
@@ -21,6 +21,7 @@ import logging
 
 # Import salt libs
 import salt.utils.event
+import salt.utils.async
 
 # Import 3rd-party libs
 from tornado import gen
@@ -69,11 +70,11 @@ class PyTestEngine(object):
         self.sock.bind(('localhost', port))
         # become a server socket
         self.sock.listen(5)
-        netutil.add_accept_handler(
-            self.sock,
-            self.handle_connection,
-            io_loop=self.io_loop,
-        )
+        with salt.utils.async.current_ioloop(self.io_loop):
+            netutil.add_accept_handler(
+                self.sock,
+                self.handle_connection,
+            )
 
     def handle_connection(self, connection, address):
         log.warning('Accepted connection from %s. Role: %s', address, self.opts['__role'])

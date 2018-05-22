@@ -31,14 +31,14 @@ frontal.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
 
 
-def auth(username, sharedsecret, **kwargs):
+def auth(username, password):
     '''
     Shared secret authentication
     '''
-    return sharedsecret == __opts__.get('sharedsecret')
+    return password == __opts__.get('sharedsecret')

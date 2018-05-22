@@ -4,7 +4,8 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import os
 import tempfile
 
@@ -16,7 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
-import salt.fileserver.roots
+import salt.fileserver.roots as roots
 import salt.fileclient
 import salt.utils.files
 import salt.utils.platform
@@ -25,6 +26,9 @@ try:
     import win32file
 except ImportError:
     pass
+
+UNICODE_FILENAME = 'питон.txt'
+UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -37,7 +41,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         empty_dir = os.path.join(TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)
-        return {salt.fileserver.roots: {'__opts__': self.opts}}
+        return {roots: {'__opts__': self.opts}}
 
     @classmethod
     def setUpClass(cls):
@@ -58,6 +62,14 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             cls.test_symlink_list_file_roots = {'base': [root_dir]}
         else:
             cls.test_symlink_list_file_roots = None
+        cls.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
+        with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
+            with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
+                for line in s_fp:
+                    d_fp.write(
+                        line.rstrip(b'\n').rstrip(b'\r') + os.linesep.encode('utf-8')
+                    )
 
     @classmethod
     def tearDownClass(cls):
@@ -69,30 +81,32 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
                 pass
+        salt.utils.files.rm_rf(cls.tmp_dir)
 
     def tearDown(self):
         del self.opts
 
     def test_file_list(self):
-        ret = salt.fileserver.roots.file_list({'saltenv': 'base'})
+        ret = roots.file_list({'saltenv': 'base'})
         self.assertIn('testfile', ret)
+        self.assertIn(UNICODE_FILENAME, ret)
 
     def test_find_file(self):
-        ret = salt.fileserver.roots.find_file('testfile')
+        ret = roots.find_file('testfile')
         self.assertEqual('testfile', ret['rel'])
 
         full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
         self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
-        with patch.dict(salt.fileserver.roots.__opts__, {'file_buffer_size': 262144}):
+        with patch.dict(roots.__opts__, {'file_buffer_size': 262144}):
             load = {'saltenv': 'base',
-                    'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+                    'path': os.path.join(self.tmp_dir, 'testfile'),
                     'loc': 0
                     }
-            fnd = {'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+            fnd = {'path': os.path.join(self.tmp_dir, 'testfile'),
                    'rel': 'testfile'}
-            ret = salt.fileserver.roots.serve_file(load, fnd)
+            ret = roots.serve_file(load, fnd)
 
             data = 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ' \
                    'ARTHUR:  And this enchanter of whom you speak, he ' \
@@ -128,20 +142,24 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 {'data': data,
                  'dest': 'testfile'})
 
-    @skipIf(True, "Update test not yet implemented")
-    def test_update(self):
-        pass
+    def test_envs(self):
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots'][UNICODE_ENVNAME] = opts['file_roots']['base']
+        with patch.dict(roots.__opts__, opts):
+            ret = roots.envs()
+        self.assertIn('base', ret)
+        self.assertIn(UNICODE_ENVNAME, ret)
 
     def test_file_hash(self):
         load = {
                 'saltenv': 'base',
-                'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+                'path': os.path.join(self.tmp_dir, 'testfile'),
                 }
         fnd = {
-            'path': os.path.join(FILES, 'file', 'base', 'testfile'),
+            'path': os.path.join(self.tmp_dir, 'testfile'),
             'rel': 'testfile'
         }
-        ret = salt.fileserver.roots.file_hash(load, fnd)
+        ret = roots.file_hash(load, fnd)
 
         # Hashes are different in Windows. May be how git translates line
         # endings
@@ -158,17 +176,18 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         )
 
     def test_file_list_emptydirs(self):
-        ret = salt.fileserver.roots.file_list_emptydirs({'saltenv': 'base'})
+        ret = roots.file_list_emptydirs({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
 
     def test_dir_list(self):
-        ret = salt.fileserver.roots.dir_list({'saltenv': 'base'})
+        ret = roots.dir_list({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
+        self.assertIn(UNICODE_DIRNAME, ret)
 
     def test_symlink_list(self):
         if self.test_symlink_list_file_roots:
             self.opts['file_roots'] = self.test_symlink_list_file_roots
-        ret = salt.fileserver.roots.symlink_list({'saltenv': 'base'})
+        ret = roots.symlink_list({'saltenv': 'base'})
         self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
 
 
@@ -177,9 +196,12 @@ class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_limit_traversal(self):
         '''
         1) Set up a deep directory structure
-        2) Enable the configuration option for 'limit_directory_traversal'
-        3) Ensure that we can find SLS files in a directory so long as there is an SLS file in a directory above.
-        4) Ensure that we cannot find an SLS file in a directory that does not have an SLS file in a directory above.
+        2) Enable the configuration option 'fileserver_limit_traversal'
+        3) Ensure that we can find SLS files in a directory so long as there is
+           an SLS file in a directory above.
+        4) Ensure that we cannot find an SLS file in a directory that does not
+           have an SLS file in a directory above.
+
         '''
         file_client_opts = self.get_temp_config('master')
         file_client_opts['fileserver_limit_traversal'] = True

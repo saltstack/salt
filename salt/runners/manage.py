@@ -26,7 +26,6 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.raetevent
-import salt.utils.versions
 import salt.client
 import salt.client.ssh
 import salt.wheel
@@ -70,7 +69,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
-def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
+def status(output=True, tgt='*', tgt_type='glob', timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -86,17 +85,6 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
         salt-run manage.status tgt="webservers" tgt_type="nodegroup"
         salt-run manage.status timeout=5 gather_job_timeout=10
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     ret = {}
 
     if not timeout:
@@ -104,7 +92,8 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     if not gather_job_timeout:
         gather_job_timeout = __opts__['gather_job_timeout']
 
-    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    res = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    ret['up'], ret['down'] = ([], []) if not res else res
     return ret
 
 
@@ -160,7 +149,7 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
+def down(removekeys=False, tgt='*', tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -186,7 +175,7 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     return ret
 
 
-def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -249,7 +238,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
                 minions = [m for m in minions if m in subset]
     else:
         # Always return 'present' for 0MQ for now
-        # TODO: implement other states spport for 0MQ
+        # TODO: implement other states support for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
         minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
@@ -543,7 +532,7 @@ def get_stats(estate=None, stack='road'):
         event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
         stats = event.get_event(wait=60, tag=tag)
     else:
-        #TODO: implement 0MQ analog
+        # TODO: implement 0MQ analog
         stats = 'Not implemented'
 
     return stats
@@ -581,7 +570,7 @@ def lane_stats(estate=None):
     return get_stats(estate=estate, stack='lane')
 
 
-def safe_accept(target, tgt_type='glob', expr_form=None):
+def safe_accept(target, tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier

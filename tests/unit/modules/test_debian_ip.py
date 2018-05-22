@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -165,9 +165,9 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_ip, '_parse_interfaces',
                           MagicMock(return_value=mock_ret)):
             self.assertListEqual(debian_ip.get_interface('lo'),
-                                 [u'auto lo\n',
-                                  u'iface lo inet loopback\n',
-                                  u'\n'])
+                                 ['auto lo\n',
+                                  'iface lo inet loopback\n',
+                                  '\n'])
 
             mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                              ('error'))
@@ -202,9 +202,9 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_ip.__salt__, {'service.available': mock_avai,
                                                  'service.status': mock_avai}):
                 self.assertEqual(debian_ip.get_network_settings(),
-                                 [u'NETWORKING=yes\n',
-                                  u'HOSTNAME=SaltStack\n',
-                                  u'DOMAIN=saltstack.com\n'])
+                                 ['NETWORKING=yes\n',
+                                  'HOSTNAME=SaltStack\n',
+                                  'DOMAIN=saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))
@@ -252,10 +252,10 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                                                      'service.disable': mock,
                                                      'service.enable': mock}):
                     self.assertEqual(debian_ip.build_network_settings(),
-                                     [u'NETWORKING=yes\n',
-                                      u'HOSTNAME=Salt\n',
-                                      u'DOMAIN=saltstack.com\n',
-                                      u'SEARCH=test.saltstack.com\n'])
+                                     ['NETWORKING=yes\n',
+                                      'HOSTNAME=Salt\n',
+                                      'DOMAIN=saltstack.com\n',
+                                      'SEARCH=test.saltstack.com\n'])
 
                     mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                      ('error'))

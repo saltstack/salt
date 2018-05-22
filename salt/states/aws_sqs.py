@@ -15,6 +15,7 @@ information.
         aws_sqs.exists:
             - region: eu-west-1
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

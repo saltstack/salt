@@ -50,7 +50,7 @@ The dependencies listed above can be installed via package or pip.
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 
@@ -58,7 +58,7 @@ import datetime
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.json
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -84,22 +84,13 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.1'
-    required_botocore_version = '1.4.41'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_iot module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_iot module could not be loaded: '
-                'boto3 version {0} or later must be installed.'.format(required_boto3_version))
-    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
-        return (False, 'The boto_iot module could not be loaded: '
-                'botocore version {0} or later must be installed.'.format(required_botocore_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.1',
+        botocore_ver='1.4.41'
+    )
 
 
 def __init__(opts):
@@ -209,7 +200,7 @@ def create_thing_type(thingTypeName, thingTypeDescription,
         )
 
         if thingtype:
-            log.info('The newly created thing type ARN is {0}'.format(thingtype['thingTypeArn']))
+            log.info('The newly created thing type ARN is %s', thingtype['thingTypeArn'])
 
             return {'created': True, 'thingTypeArn': thingtype['thingTypeArn']}
         else:
@@ -333,7 +324,7 @@ def create_policy(policyName, policyDocument,
         policy = conn.create_policy(policyName=policyName,
                                     policyDocument=policyDocument)
         if policy:
-            log.info('The newly created policy version is {0}'.format(policy['policyVersionId']))
+            log.info('The newly created policy version is %s', policy['policyVersionId'])
 
             return {'created': True, 'versionId': policy['policyVersionId']}
         else:
@@ -451,7 +442,7 @@ def create_policy_version(policyName, policyDocument, setAsDefault=False,
                                     policyDocument=policyDocument,
                                     setAsDefault=setAsDefault)
         if policy:
-            log.info('The newly created policy version is {0}'.format(policy['policyVersionId']))
+            log.info('The newly created policy version is %s', policy['policyVersionId'])
 
             return {'created': True, 'name': policy['policyVersionId']}
         else:
@@ -609,7 +600,7 @@ def set_default_policy_version(policyName, policyVersionId,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.set_default_policy_version(policyName=policyName,
-                                 policyVersionId=str(policyVersionId))
+                                 policyVersionId=str(policyVersionId))  # future lint: disable=blacklisted-function
         return {'changed': True}
     except ClientError as e:
         return {'changed': False, 'error': salt.utils.boto3.get_error(e)}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import re
 
@@ -249,7 +249,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     maintenance_db='maint_db',
                     password='foo',
                     createdb=False,
-                    createuser=False,
                     encrypted=False,
                     superuser=False,
                     replication=False,
@@ -299,7 +298,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     maintenance_db='maint_db',
                     password='foo',
                     createdb=False,
-                    createuser=False,
                     encrypted=False,
                     replication=False,
                     rolepassword='test_role_pass',
@@ -331,7 +329,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     login=True,
                     createdb=False,
                     createroles=False,
-                    createuser=False,
                     encrypted=False,
                     superuser=False,
                     replication=False,
@@ -371,6 +368,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'replication': None,
                                    'password': 'test_password',
                                    'connections': '-1',
+                                   'groups': '',
                                    'expiry time': '',
                                    'defaults variables': None
                                    }])):
@@ -402,6 +400,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'can login': 't',
                                    'replication': None,
                                    'connections': '-1',
+                                   'groups': '',
                                    'expiry time': '2017-08-16 08:57:46',
                                    'defaults variables': None
                                }])):
@@ -464,7 +463,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=False,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -503,7 +501,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -538,7 +535,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -574,7 +570,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=True,
                     inherit=True,
                     login=True,

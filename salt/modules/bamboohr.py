@@ -14,7 +14,7 @@ Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -265,7 +265,7 @@ def _query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('BambooHR URL: {0}'.format(path))
+    log.debug('BambooHR URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
@@ -283,10 +283,6 @@ def _query(action=None,
         status=True,
         opts=__opts__,
     )
-    log.debug(
-        'BambooHR Response Status Code: {0}'.format(
-            result['status']
-        )
-    )
+    log.debug('BambooHR Response Status Code: %s', result['status'])
 
     return [result['status'], result['text']]

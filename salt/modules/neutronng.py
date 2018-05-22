@@ -2,17 +2,19 @@
 '''
 Neutron module for interacting with OpenStack Neutron
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 
 Example configuration
 
 .. code-block:: yaml
+
     neutron:
       cloud: default
 
 .. code-block:: yaml
+
     neutron:
       auth:
         username: admin
@@ -24,7 +26,7 @@ Example configuration
       identity_api_version: 3
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:

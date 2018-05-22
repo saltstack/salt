@@ -47,7 +47,7 @@ Example Provider Configuration
 # pylint: disable=invalid-name,function-redefined
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import re
@@ -70,10 +70,11 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    # This work-around for Issue #32743 is no longer needed for libcloud >=
+    # 1.4.0. However, older versions of libcloud must still be supported with
+    # this work-around. This work-around can be removed when the required
+    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
+    # implemented in Salt 2018.3.0).
     if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
@@ -447,10 +448,10 @@ def __get_host(node, vm_):
     '''
     if __get_ssh_interface(vm_) == 'private_ips' or vm_['external_ip'] is None:
         ip_address = node.private_ips[0]
-        log.info('Salt node data. Private_ip: {0}'.format(ip_address))
+        log.info('Salt node data. Private_ip: %s', ip_address)
     else:
         ip_address = node.public_ips[0]
-        log.info('Salt node data. Public_ip: {0}'.format(ip_address))
+        log.info('Salt node data. Public_ip: %s', ip_address)
 
     if len(ip_address) > 0:
         return ip_address
@@ -551,7 +552,7 @@ def _parse_allow(allow):
         if len(seen_protos[k]) > 0:
             d['ports'] = seen_protos[k]
         allow_dict.append(d)
-    log.debug("firewall allowed protocols/ports: {0}".format(allow_dict))
+    log.debug("firewall allowed protocols/ports: %s", allow_dict)
     return allow_dict
 
 
@@ -675,9 +676,8 @@ def delete_network(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Nework {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Nework %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -848,9 +848,8 @@ def delete_subnetwork(kwargs=None, call=None):
         result = conn.ex_destroy_subnetwork(name, region)
     except ResourceNotFoundError as exc:
         log.error(
-            'Subnetwork {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Subnetwork %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1021,9 +1020,8 @@ def delete_fwrule(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Rule {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Rule %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1181,9 +1179,8 @@ def delete_hc(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Health check {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Health check %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1330,9 +1327,8 @@ def delete_address(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Address {0} in region {1} was not found. Exception was: {2}'.format(
-                name, ex_region, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Address %s in region %s was not found. Exception was: %s',
+            name, ex_region, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1506,9 +1502,8 @@ def delete_lb(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Load balancer {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Load balancer %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1642,9 +1637,8 @@ def detach_lb(kwargs=None, call=None):
 
     if not remove_member:
         log.error(
-            'The specified member {0} was not a member of LB {1}.'.format(
-                kwargs['member'], kwargs['name']
-            )
+            'The specified member %s was not a member of LB %s.',
+            kwargs['member'], kwargs['name']
         )
         return False
 
@@ -1711,9 +1705,8 @@ def delete_snapshot(kwargs=None, call=None):
         )
     except ResourceNotFoundError as exc:
         log.error(
-            'Snapshot {0} was not found. Exception was: {1}'.format(
-                name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Snapshot %s was not found. Exception was: %s',
+            name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1772,10 +1765,9 @@ def delete_disk(kwargs=None, call=None):
         result = conn.destroy_volume(disk)
     except ResourceInUseError as exc:
         log.error(
-            'Disk {0} is in use and must be detached before deleting.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
-                disk.name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Disk %s is in use and must be detached before deleting.\n'
+            'The following exception was thrown by libcloud:\n%s',
+            disk.name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1916,9 +1908,8 @@ def create_snapshot(kwargs=None, call=None):
         disk = conn.ex_get_volume(disk_name)
     except ResourceNotFoundError as exc:
         log.error(
-            'Disk {0} was not found. Exception was: {1}'.format(
-                disk_name, exc),
-            exc_info_on_loglevel=logging.DEBUG
+            'Disk %s was not found. Exception was: %s',
+            disk_name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -2287,12 +2278,10 @@ def destroy(vm_name, call=None):
         node = conn.ex_get_node(vm_name)
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Could not locate instance {0}\n\n'
+            'Could not locate instance %s\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_name, exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'run the initial deployment: \n%s',
+            vm_name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not find instance {0}.'.format(vm_name)
@@ -2326,12 +2315,10 @@ def destroy(vm_name, call=None):
         inst_deleted = conn.destroy_node(node)
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Could not destroy instance {0}\n\n'
+            'Could not destroy instance %s\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_name, exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'run the initial deployment: \n%s',
+            vm_name, exc, exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
@@ -2365,12 +2352,10 @@ def destroy(vm_name, call=None):
             # to allow completion of instance deletion.  Just log the error
             # and keep going.
             log.error(
-                'Could not destroy disk {0}\n\n'
+                'Could not destroy disk %s\n\n'
                 'The following exception was thrown by libcloud when trying '
-                'to run the initial deployment: \n{1}'.format(
-                    vm_name, exc
-                ),
-                exc_info_on_loglevel=logging.DEBUG
+                'to run the initial deployment: \n%s',
+                vm_name, exc, exc_info_on_loglevel=logging.DEBUG
             )
         __utils__['cloud.fire_event'](
             'event',
@@ -2513,10 +2498,11 @@ def request_instance(vm_):
                 '\'pd-standard\', \'pd-ssd\''
             )
 
-    log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
-        kwargs['location'].name)
+    log.info(
+        'Creating GCE instance %s in %s',
+        vm_['name'], kwargs['location'].name
     )
-    log.debug('Create instance kwargs {0}'.format(str(kwargs)))
+    log.debug('Create instance kwargs %s', kwargs)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -2531,12 +2517,10 @@ def request_instance(vm_):
         node_data = conn.create_node(**kwargs)
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Error creating {0} on GCE\n\n'
+            'Error creating %s on GCE\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'run the initial deployment: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -2554,7 +2538,7 @@ def request_instance(vm_):
             transport=__opts__['transport']
         )
 
-        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        log.info('Create and attach volumes to node %s', vm_['name'])
         create_attach_volumes(
             vm_['name'],
             {
@@ -2598,11 +2582,10 @@ def create(vm_=None, call=None):
 
     ret.update(node_dict)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.trace(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(node_dict)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(node_dict)
     )
 
     __utils__['cloud.fire_event'](

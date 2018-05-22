@@ -7,15 +7,17 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import Mock, MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
+from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.aptpkg as aptpkg
 
@@ -126,7 +128,7 @@ Reading state information...
 
 UNINSTALL = {
     'tmux': {
-        'new': str(),
+        'new': six.text_type(),
         'old': '1.8-5'
     }
 }
@@ -340,3 +342,125 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
+
+    def test_show(self):
+        '''
+        Test that the pkg.show function properly parses apt-cache show output.
+        This test uses an abridged output per package, for simplicity.
+        '''
+        show_mock_success = MagicMock(return_value={
+            'retcode': 0,
+            'pid': 12345,
+            'stderr': '',
+            'stdout': textwrap.dedent('''\
+                Package: foo1.0
+                Architecture: amd64
+                Version: 1.0.5-3ubuntu4
+                Description: A silly package (1.0 release cycle)
+                Provides: foo
+                Suggests: foo-doc
+
+                Package: foo1.0
+                Architecture: amd64
+                Version: 1.0.4-2ubuntu1
+                Description: A silly package (1.0 release cycle)
+                Provides: foo
+                Suggests: foo-doc
+
+                Package: foo-doc
+                Architecture: all
+                Version: 1.0.5-3ubuntu4
+                Description: Silly documentation for a silly package (1.0 release cycle)
+
+                Package: foo-doc
+                Architecture: all
+                Version: 1.0.4-2ubuntu1
+                Description: Silly documentation for a silly package (1.0 release cycle)
+
+                '''),
+        })
+
+        show_mock_failure = MagicMock(return_value={
+            'retcode': 1,
+            'pid': 12345,
+            'stderr': textwrap.dedent('''\
+                N: Unable to locate package foo*
+                N: Couldn't find any package by glob 'foo*'
+                N: Couldn't find any package by regex 'foo*'
+                E: No packages found
+                '''),
+            'stdout': '',
+        })
+
+        refresh_mock = Mock()
+
+        expected = {
+            'foo1.0': {
+                '1.0.5-3ubuntu4': {
+                    'Architecture': 'amd64',
+                    'Description': 'A silly package (1.0 release cycle)',
+                    'Provides': 'foo',
+                    'Suggests': 'foo-doc',
+                },
+                '1.0.4-2ubuntu1': {
+                    'Architecture': 'amd64',
+                    'Description': 'A silly package (1.0 release cycle)',
+                    'Provides': 'foo',
+                    'Suggests': 'foo-doc',
+                },
+            },
+            'foo-doc': {
+                '1.0.5-3ubuntu4': {
+                    'Architecture': 'all',
+                    'Description': 'Silly documentation for a silly package (1.0 release cycle)',
+                },
+                '1.0.4-2ubuntu1': {
+                    'Architecture': 'all',
+                    'Description': 'Silly documentation for a silly package (1.0 release cycle)',
+                },
+            },
+        }
+
+        # Make a copy of the above dict and strip out some keys to produce the
+        # expected filtered result.
+        filtered = copy.deepcopy(expected)
+        for k1 in filtered:
+            for k2 in filtered[k1]:
+                # Using list() because we will modify the dict during iteration
+                for k3 in list(filtered[k1][k2]):
+                    if k3 not in ('Description', 'Provides'):
+                        filtered[k1][k2].pop(k3)
+
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': show_mock_success}), \
+                patch.object(aptpkg, 'refresh_db', refresh_mock):
+
+            # Test success (no refresh)
+            self.assertEqual(aptpkg.show('foo*'), expected)
+            refresh_mock.assert_not_called()
+            refresh_mock.reset_mock()
+
+            # Test success (with refresh)
+            self.assertEqual(aptpkg.show('foo*', refresh=True), expected)
+            self.assert_called_once(refresh_mock)
+            refresh_mock.reset_mock()
+
+            # Test filtered return
+            self.assertEqual(
+                aptpkg.show('foo*', filter='description,provides'),
+                filtered
+            )
+            refresh_mock.assert_not_called()
+            refresh_mock.reset_mock()
+
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': show_mock_failure}), \
+                patch.object(aptpkg, 'refresh_db', refresh_mock):
+
+            # Test failure (no refresh)
+            self.assertEqual(aptpkg.show('foo*'), {})
+            refresh_mock.assert_not_called()
+            refresh_mock.reset_mock()
+
+            # Test failure (with refresh)
+            self.assertEqual(aptpkg.show('foo*', refresh=True), {})
+            self.assert_called_once(refresh_mock)
+            refresh_mock.reset_mock()

@@ -13,8 +13,8 @@ State modules to interact with Junos devices.
 
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 '''
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger()
@@ -40,7 +40,7 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
           The rpc to be executed. (default = None)
       Optional
         * dest:
-          Destination file where the rpc ouput is stored. (default = None)
+          Destination file where the rpc output is stored. (default = None)
           Note that the file will be stored on the proxy minion. To push the
           files to the master use the salt's following execution module: \
             :py:func:`cp.push <salt.modules.cp.push>`
@@ -319,7 +319,7 @@ def install_config(name, **kwargs):
               the given time unless the commit is confirmed.
             * diffs_file:
               Path to the file where the diff (difference in old configuration
-              and the commited configuration) will be stored.(default = None)
+              and the committed configuration) will be stored.(default = None)
               Note that the file will be stored on the proxy minion. To push the
               files to the master use the salt's following execution module: \
               :py:func:`cp.push <salt.modules.cp.push>`

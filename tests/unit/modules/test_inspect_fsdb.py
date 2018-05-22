@@ -19,7 +19,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import io
 
 # Import Salt Testing Libs
@@ -136,7 +136,7 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb.create_table_from_object(FoobarEntity())
 
             if six.PY2:
-                assert writable.data[0].strip() == "foo:int,bar:str,spam:float"
+                assert writable.data[0].strip() == "foo:int,bar:unicode,spam:float"
             else:
                 # Order in PY3 is not the same for every run
                 writable_data = writable.data[0].strip()

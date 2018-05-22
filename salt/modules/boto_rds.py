@@ -48,7 +48,7 @@ Connection module for Amazon RDS
 
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -56,8 +56,8 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -128,15 +128,9 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.3.1'
-    if not HAS_BOTO:
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.3.1'
+    )
 
 
 def __init__(opts):
@@ -266,8 +260,8 @@ def create(name, allocated_storage, db_instance_class, engine,
     if wait_status:
         wait_stati = ['available', 'modifying', 'backing-up']
         if wait_status not in wait_stati:
-            raise SaltInvocationError('wait_status can be one of: '
-                                      '{0}'.format(wait_stati))
+            raise SaltInvocationError(
+                'wait_status can be one of: {0}'.format(wait_stati))
     if vpc_security_groups:
         v_tmp = __salt__['boto_secgroup.convert_to_group_ids'](
                 groups=vpc_security_groups, region=region, key=key, keyid=keyid,
@@ -320,7 +314,7 @@ def create(name, allocated_storage, db_instance_class, engine,
                         'message': 'RDS instance {0} created (current status '
                         '{1})'.format(name, stat)}
             time.sleep(10)
-            log.info('Instance status after 10 seconds is: {0}'.format(stat))
+            log.info('Instance status after 10 seconds is: %s', stat)
 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -358,7 +352,7 @@ def create_read_replica(name, source_name, db_instance_class=None,
         kwargs = {}
         for key in ('OptionGroupName', 'MonitoringRoleArn'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         for key in ('MonitoringInterval', 'Iops', 'Port'):
             if locals()[key] is not None:
@@ -511,7 +505,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
         if type(value) is bool:
             item.update({'ParameterValue': 'on' if value else 'off'})
         else:
-            item.update({'ParameterValue': str(value)})
+            item.update({'ParameterValue': str(value)})  # future lint: disable=blacklisted-function
         param_list.append(item)
 
     if not len(param_list):
@@ -687,7 +681,7 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
             kwargs['SkipFinalSnapshot'] = bool(locals()['skip_final_snapshot'])
 
         if locals()['final_db_snapshot_identifier'] is not None:
-            kwargs['FinalDBSnapshotIdentifier'] = str(locals()['final_db_snapshot_identifier'])
+            kwargs['FinalDBSnapshotIdentifier'] = str(locals()['final_db_snapshot_identifier'])  # future lint: disable=blacklisted-function
 
         res = conn.delete_db_instance(DBInstanceIdentifier=name, **kwargs)
 
@@ -708,8 +702,8 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                 raise SaltInvocationError('RDS instance {0} has not been '
                                           'deleted completely after {1} '
                                           'seconds'.format(name, timeout))
-            log.info('Waiting up to {0} seconds for RDS instance {1} to be '
-                     'deleted.'.format(timeout, name))
+            log.info('Waiting up to %s seconds for RDS instance %s to be '
+                     'deleted.', timeout, name)
             time.sleep(10)
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -808,7 +802,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
         kwargs = {}
         for key in ('Marker', 'Filters'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         if locals()['MaxRecords'] is not None:
             kwargs['MaxRecords'] = int(locals()['MaxRecords'])
@@ -853,7 +847,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         kwargs.update({'DBParameterGroupName': name})
         for key in ('Marker', 'Source'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         if locals()['MaxRecords'] is not None:
             kwargs['MaxRecords'] = int(locals()['MaxRecords'])
@@ -963,7 +957,7 @@ def _tag_doc(tags):
     taglist = []
     if tags is not None:
         for k, v in six.iteritems(tags):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            taglist.append({'Key': str(k), 'Value': str(v)})
+            taglist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
     return taglist

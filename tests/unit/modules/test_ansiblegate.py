@@ -16,7 +16,8 @@
 # limitations under the License.
 
 # Import Salt Testing Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import os
 try:
     import pytest
 except ImportError as import_error:
@@ -33,18 +34,20 @@ from tests.support.mock import (
 )
 
 import salt.modules.ansiblegate as ansible
+import salt.utils.platform
 from salt.exceptions import LoaderError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_PYTEST, False)
+@skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.resolver = ansible.AnsibleModuleResolver({})
         self.resolver._modules_map = {
-            'one.two.three': '/one/two/three.py',
-            'four.five.six': '/four/five/six.py',
-            'three.six.one': '/three/six/one.py',
+            'one.two.three': os.sep + os.path.join('one', 'two', 'three.py'),
+            'four.five.six': os.sep + os.path.join('four', 'five', 'six.py'),
+            'three.six.one': os.sep + os.path.join('three', 'six', 'one.py'),
         }
 
     def tearDown(self):

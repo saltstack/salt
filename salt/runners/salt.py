@@ -46,7 +46,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def cmd(fun, *args, **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added ``with_pillar`` argument
 
     Execute ``fun`` with the given ``args`` and ``kwargs``.  Parameter ``fun``
@@ -99,7 +99,8 @@ def cmd(fun, *args, **kwargs):
 
     functions = salt.loader.minion_mods(
         opts,
-        utils=salt.loader.utils(opts))
+        utils=salt.loader.utils(opts),
+        context=__context__)
 
     return functions[fun](*args, **kwargs) \
         if fun in functions \

@@ -105,13 +105,14 @@ Example output with no special settings in configuration files:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import pprint
+import re
 import textwrap
 
 # Import salt libs
 import salt.utils.color
+import salt.utils.data
 import salt.utils.stringutils
 import salt.output
-from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -141,8 +142,9 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     if 'data' in data:
         data = data.pop('data')
 
+    indent_level = kwargs.get('indent_level', 1)
     ret = [
-        _format_host(host, hostdata)[0]
+        _format_host(host, hostdata, indent_level=indent_level)[0]
         for host, hostdata in six.iteritems(data)
     ]
     if ret:
@@ -155,8 +157,12 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     return ''
 
 
-def _format_host(host, data):
-    host = sdecode(host)
+def _format_host(host, data, indent_level=1):
+    '''
+    Main highstate formatter. can be called recursively if a nested highstate
+    contains other highstates (ie in an orchestration)
+    '''
+    host = salt.utils.data.decode(host)
 
     colors = salt.utils.color.get_colors(
             __opts__.get('color'),
@@ -183,7 +189,9 @@ def _format_host(host, data):
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
-                err = salt.output.strip_esc_sequence(sdecode(err))
+                err = salt.output.strip_esc_sequence(
+                    salt.utils.data.decode(err)
+                )
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
@@ -215,15 +223,17 @@ def _format_host(host, data):
                 try:
                     rdurations.append(float(rduration))
                 except ValueError:
-                    log.error('Cannot parse a float from duration {0}'
-                              .format(ret.get('duration', 0)))
+                    log.error('Cannot parse a float from duration %s', ret.get('duration', 0))
 
             tcolor = colors['GREEN']
-            orchestration = ret.get('__orchestration__', False)
-            schanged, ctext = _format_changes(ret['changes'], orchestration)
-            if not ctext and 'pchanges' in ret:
-                schanged, ctext = _format_changes(ret['pchanges'], orchestration)
-            nchanges += 1 if schanged else 0
+            if ret.get('name') in ['state.orch', 'state.orchestrate', 'state.sls']:
+                nested = output(ret['changes']['return'], indent_level=indent_level+1)
+                ctext = re.sub('^', ' ' * 14 * indent_level, '\n'+nested, flags=re.MULTILINE)
+                schanged = True
+                nchanges += 1
+            else:
+                schanged, ctext = _format_changes(ret['changes'])
+                nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
@@ -246,7 +256,7 @@ def _format_host(host, data):
                 tcolor = colors['LIGHT_YELLOW']
 
             state_output = __opts__.get('state_output', 'full').lower()
-            comps = [sdecode(comp) for comp in tname.split('_|-')]
+            comps = tname.split('_|-')
 
             if state_output.endswith('_id'):
                 # Swap in the ID for the name. Refs #35137
@@ -315,15 +325,13 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    if six.PY2:
-                        ret['comment'] = six.text_type(ret['comment']).decode('utf-8')
-                    else:
-                        ret['comment'] = salt.utils.stringutils.to_str(ret['comment'])
+                    ret['comment'] = six.text_type(ret['comment'])
             except UnicodeDecodeError:
-                # but try to continue on errors
-                pass
+                # If we got here, we're on Python 2 and ret['comment'] somehow
+                # contained a str type with unicode content.
+                ret['comment'] = salt.utils.stringutils.to_unicode(ret['comment'])
             try:
-                comment = sdecode(ret['comment'])
+                comment = salt.utils.data.decode(ret['comment'])
                 comment = comment.strip().replace(
                         '\n',
                         '\n' + ' ' * 14)
@@ -356,7 +364,7 @@ def _format_host(host, data):
                 'tcolor': tcolor,
                 'comps': comps,
                 'ret': ret,
-                'comment': sdecode(comment),
+                'comment': salt.utils.data.decode(comment),
                 # This nukes any trailing \n and indents the others.
                 'colors': colors
             }
@@ -481,20 +489,12 @@ def _nested_changes(changes):
     '''
     Print the changes data using the nested outputter
     '''
-    global __opts__  # pylint: disable=W0601
-
-    opts = __opts__.copy()
-    # Pass the __opts__ dict. The loader will splat this modules __opts__ dict
-    # anyway so have to restore it after the other outputter is done
-    if __opts__['color']:
-        __opts__['color'] = 'CYAN'
     ret = '\n'
     ret += salt.output.out_format(
             changes,
             'nested',
             __opts__,
             nested_indent=14)
-    __opts__ = opts
     return ret
 
 

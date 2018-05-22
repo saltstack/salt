@@ -8,7 +8,7 @@ Beacon to monitor disk usage.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
@@ -63,8 +63,8 @@ def beacon(config):
         beacons:
           diskusage:
             -  interval: 120
-            - 'c:\': 90%
-            - 'd:\': 50%
+            - 'c:\\': 90%
+            - 'd:\\': 50%
 
     Regular expressions can be used as mount points.
 
@@ -73,13 +73,13 @@ def beacon(config):
         beacons:
           diskusage:
             - '^\/(?!home).*$': 90%
-            - '^[a-zA-Z]:\$': 50%
+            - '^[a-zA-Z]:\\$': 50%
 
     The first one will match all mounted disks beginning with "/", except /home
     The second one will match disks from A:\ to Z:\ on a Windows system
 
     Note that if a regular expression are evaluated after static mount points,
-    which means that if a regular expression matches an other defined mount point,
+    which means that if a regular expression matches another defined mount point,
     it will override the previously defined threshold.
 
     '''
@@ -95,12 +95,12 @@ def beacon(config):
                 try:
                     _current_usage = psutil.disk_usage(mount)
                 except OSError:
-                    log.warning('{0} is not a valid mount point.'.format(mount))
+                    log.warning('%s is not a valid mount point.', mount)
                     continue
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                log.info('current_usage {}'.format(current_usage))
+                log.info('current_usage %s', current_usage)
                 if '%' in monitor_usage:
                     monitor_usage = re.sub('%', '', monitor_usage)
                 monitor_usage = float(monitor_usage)

@@ -84,7 +84,7 @@ the following:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
@@ -160,7 +160,7 @@ def _parse_interval(value):
         m = minute
         s = second
     '''
-    match = _INTERVAL_REGEX.match(str(value))
+    match = _INTERVAL_REGEX.match(six.text_type(value))
     if match is None:
         raise ValueError('invalid time interval: \'{0}\''.format(value))
 
@@ -571,16 +571,16 @@ class ExecOption(Option):
             (out, err) = p.communicate()
             if err:
                 log.error(
-                    'Error running command: {0}\n\n{1}'.format(
+                    'Error running command: %s\n\n%s',
                     command,
-                    salt.utils.stringutils.to_str(err)))
+                    salt.utils.stringutils.to_str(err))
             return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
         except Exception as e:
             log.error(
-                'Exception while executing command "{0}":\n\n{1}'.format(
-                    command,
-                    e))
+                'Exception while executing command "%s":\n\n%s',
+                command,
+                e)
             return '{0}: Failed'.format(fullpath)
 
 

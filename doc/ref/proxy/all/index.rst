@@ -10,7 +10,9 @@ proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cimc
     chronos
+    cimc
     cisconso
     dummy
     esxi
@@ -19,6 +21,7 @@ proxy modules
     marathon
     napalm
     nxos
+    panos
     philips_hue
     rest_sample
     ssh_sample

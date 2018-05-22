@@ -5,7 +5,7 @@ expected to return
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import fnmatch
 import re
@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.roster
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -55,7 +56,7 @@ def parse_target(target_expression):
 
     match = TARGET_REX.match(target_expression)
     if not match:
-        log.warning('Unable to parse target "{0}"'.format(target_expression))
+        log.warning('Unable to parse target "%s"', target_expression)
         ret = {
             'engine': None,
             'delimiter': None,
@@ -102,11 +103,11 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     if skip is None:
         skip = set()
     elif nodegroup in skip:
-        log.error('Failed nodegroup expansion: illegal nested nodegroup "{0}"'.format(nodegroup))
+        log.error('Failed nodegroup expansion: illegal nested nodegroup "%s"', nodegroup)
         return ''
 
     if nodegroup not in nodegroups:
-        log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
+        log.error('Failed nodegroup expansion: unknown nodegroup "%s"', nodegroup)
         return ''
 
     nglookup = nodegroups[nodegroup]
@@ -124,7 +125,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     opers = ['and', 'or', 'not', '(', ')']
     for word in words:
         if not isinstance(word, six.string_types):
-            word = str(word)
+            word = six.text_type(word)
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
@@ -139,7 +140,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
 
     skip.remove(nodegroup)
 
-    log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
+    log.debug('nodegroup_comp(%s) => %s', nodegroup, ret)
     # Only return list form if a nodegroup was expanded. Otherwise return
     # the original string to conserve backwards compat
     if expanded_nodegroup or not first_call:
@@ -391,7 +392,7 @@ class CkMinions(object):
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
                 except:  # pylint: disable=bare-except
-                    log.error('Invalid IP/CIDR target: {0}'.format(tgt))
+                    log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
             proto = 'ipv{0}'.format(tgt.version)
@@ -407,7 +408,7 @@ class CkMinions(object):
                 if grains is None or proto not in grains:
                     match = False
                 elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
-                    match = str(tgt) in grains[proto]
+                    match = six.text_type(tgt) in grains[proto]
                 else:
                     match = salt.utils.network.in_subnet(tgt, grains[proto])
 
@@ -432,7 +433,7 @@ class CkMinions(object):
             return self._range.expand(expr)
         except seco.range.RangeException as exc:
             log.error(
-                'Range exception in compound match: {0}'.format(exc)
+                'Range exception in compound match: %s', exc
             )
             cache_enabled = self.opts.get('minion_data_cache', False)
             if greedy:
@@ -472,7 +473,9 @@ class CkMinions(object):
             log.error('Compound target that is neither string, list nor tuple')
             return {'minions': [], 'missing': []}
         minions = set(self._pki_minions())
-        log.debug('minions: {0}'.format(minions))
+        log.debug('minions: %s', minions)
+
+        nodegroups = self.opts.get('nodegroups', {})
 
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
@@ -496,22 +499,24 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
                 if word in opers:
                     if results:
                         if results[-1] == '(' and word in ('and', 'or'):
-                            log.error('Invalid beginning operator after "(": {0}'.format(word))
+                            log.error('Invalid beginning operator after "(": %s', word)
                             return {'minions': [], 'missing': []}
                         if word == 'not':
                             if not results[-1] in ('&', '|', '('):
                                 results.append('&')
                             results.append('(')
-                            results.append(str(set(minions)))
+                            results.append(six.text_type(set(minions)))
                             results.append('-')
                             unmatched.append('-')
                         elif word == 'and':
@@ -524,8 +529,8 @@ class CkMinions(object):
                         elif word == ')':
                             if not unmatched or unmatched[-1] != '(':
                                 log.error('Invalid compound expr (unexpected '
-                                          'right parenthesis): {0}'
-                                          .format(expr))
+                                          'right parenthesis): %s',
+                                          expr)
                                 return {'minions': [], 'missing': []}
                             results.append(word)
                             unmatched.pop()
@@ -533,14 +538,14 @@ class CkMinions(object):
                                 results.append(')')
                                 unmatched.pop()
                         else:  # Won't get here, unless oper is added
-                            log.error('Unhandled oper in compound expr: {0}'
-                                      .format(expr))
+                            log.error('Unhandled oper in compound expr: %s',
+                                      expr)
                             return {'minions': [], 'missing': []}
                     else:
                         # seq start with oper, fail
                         if word == 'not':
                             results.append('(')
-                            results.append(str(set(minions)))
+                            results.append(six.text_type(set(minions)))
                             results.append('-')
                             unmatched.append('-')
                         elif word == '(':
@@ -549,24 +554,26 @@ class CkMinions(object):
                         else:
                             log.error(
                                 'Expression may begin with'
-                                ' binary operator: {0}'.format(word)
+                                ' binary operator: %s', word
                             )
                             return {'minions': [], 'missing': []}
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
                         log.error(
-                            'Unrecognized target engine "{0}" for'
-                            ' target expression "{1}"'.format(
-                                target_info['engine'],
-                                word,
-                            )
+                            'Unrecognized target engine "%s" for'
+                            ' target expression "%s"',
+                            target_info['engine'],
+                            word,
                         )
                         return {'minions': [], 'missing': []}
 
@@ -576,7 +583,7 @@ class CkMinions(object):
                     engine_args.append(greedy)
 
                     _results = engine(*engine_args)
-                    results.append(str(set(_results['minions'])))
+                    results.append(six.text_type(set(_results['minions'])))
                     missing.extend(_results['missing'])
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
@@ -585,7 +592,7 @@ class CkMinions(object):
                 else:
                     # The match is not explicitly defined, evaluate as a glob
                     _results = self._check_glob_minions(word, True)
-                    results.append(str(set(_results['minions'])))
+                    results.append(six.text_type(set(_results['minions'])))
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
                         unmatched.pop()
@@ -594,13 +601,13 @@ class CkMinions(object):
             results.extend([')' for item in unmatched])
 
             results = ' '.join(results)
-            log.debug('Evaluating final compound matching expr: {0}'
-                      .format(results))
+            log.debug('Evaluating final compound matching expr: %s',
+                      results)
             try:
                 minions = list(eval(results))  # pylint: disable=W0123
                 return {'minions': minions, 'missing': missing}
             except Exception:
-                log.error('Invalid compound target: {0}'.format(expr))
+                log.error('Invalid compound target: %s', expr)
                 return {'minions': [], 'missing': []}
 
         return {'minions': list(minions),
@@ -683,10 +690,17 @@ class CkMinions(object):
                 _res = check_func(expr, delimiter, greedy)
             else:
                 _res = check_func(expr, greedy)
+            _res['ssh_minions'] = False
+            if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
+                roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
+                ssh_minions = roster.targets(expr, tgt_type)
+                if ssh_minions:
+                    _res['minions'].extend(ssh_minions)
+                    _res['ssh_minions'] = True
         except Exception:
             log.exception(
-                    'Failed matching available minions with {0} pattern: {1}'
-                    .format(tgt_type, expr))
+                    'Failed matching available minions with %s pattern: %s',
+                    tgt_type, expr)
             _res = {'minions': [], 'missing': []}
         return _res
 
@@ -703,7 +717,7 @@ class CkMinions(object):
 
         target_info = parse_target(auth_entry)
         if not target_info:
-            log.error('Failed to parse valid target "{0}"'.format(auth_entry))
+            log.error('Failed to parse valid target "%s"', auth_entry)
 
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
@@ -711,21 +725,11 @@ class CkMinions(object):
         _res = self.check_minions(v_expr, v_matcher)
         return set(_res['minions'])
 
-    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = self._expand_matching(valid)
         if minions is None:
@@ -754,7 +758,7 @@ class CkMinions(object):
                 else:
                     vals.append(False)
             except Exception:
-                log.error('Invalid regular expression: {0}'.format(regex))
+                log.error('Invalid regular expression: %s', regex)
         return vals and all(vals)
 
     def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
@@ -863,7 +867,7 @@ class CkMinions(object):
                 continue
             if isinstance(auth_list_entry, dict):
                 if len(auth_list_entry) != 1:
-                    log.info('Malformed ACL: {0}'.format(auth_list_entry))
+                    log.info('Malformed ACL: %s', auth_list_entry)
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
             for key in auth_list_entry:
@@ -1097,7 +1101,7 @@ class CkMinions(object):
                     break
                 if cond_arg is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(cond_arg, str(args[i])):
+                if not self.match_check(cond_arg, six.text_type(args[i])):
                     good = False
                     break
             if not good:
@@ -1110,7 +1114,7 @@ class CkMinions(object):
                     break
                 if v is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(v, str(kwargs[k])):
+                if not self.match_check(v, six.text_type(kwargs[k])):
                     good = False
                     break
             if good:

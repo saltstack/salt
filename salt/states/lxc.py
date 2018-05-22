@@ -4,11 +4,10 @@ Manage Linux Containers
 =======================
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -681,8 +680,10 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         This state is unsuitable for setting parameters that appear more than
         once in an LXC config file, or parameters which must appear in a
         certain order (such as when configuring more than one network
-        interface). It is slated to be replaced, and as of version 2015.5.0 it
-        is deprecated.
+        interface).
+
+        `Issue #35523`_ was opened to track the addition of a suitable replacement
+        or fix.
 
     Edit LXC configuration options
 
@@ -704,18 +705,10 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
                 - network.ipv4.ip: 10.0.3.6
             - lxc_conf_unset:
                 - lxc.utsname
+
+    .. _`Issue #35523`: https://github.com/saltstack/salt/issues/35523
+
     '''
-    # Until a reasonable alternative for this state function is created, we need
-    # to keep this function around and cannot officially remove it. Progress of
-    # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'This state is unsuitable for setting parameters that appear more '
-        'than once in an LXC config file, or parameters which must appear in '
-        'a certain order (such as when configuring more than one network '
-        'interface). It is slated to be replaced, and as of version 2015.5.0 '
-        'it is deprecated.'
-    )
     if __opts__['test']:
         return {'name': name,
                 'comment': '{0} lxc.conf will be edited'.format(name),

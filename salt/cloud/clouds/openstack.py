@@ -72,6 +72,7 @@ Or if you need to use a profile to setup some extra stuff, it can be passed as a
         username: rackusername
         api_key: myapikey
       region_name: ORD
+      auth_type: rackspace_apikey
 
 And this will pull in the profile for rackspace and setup all the correct
 options for the auth_url and different api versions for services.
@@ -100,6 +101,23 @@ The salt specific ones are:
       ssh_key_file: /root/.ssh/id_rsa
 
 This is the minimum setup required.
+
+If metadata is set to make sure that the host has finished setting up the
+`wait_for_metadata` can be set.
+
+.. code-block:: yaml
+
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
+      ssh_key_name: mykey
+      ssh_key_file: /root/.ssh/id_rsa
+      meta:
+        build_config: rack_user_only
+      wait_for_metadata:
+        rax_service_level_automation: Complete
+        rackconnect_automation_status: DEPLOYED
 
 Anything else from the create_server_ docs can be passed through here.
 
@@ -190,7 +208,7 @@ Anything else from the create_server_ docs can be passed through here.
 .. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
 .. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import copy
@@ -202,7 +220,7 @@ import socket
 # Import Salt Libs
 import salt.utils.json
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionTimeout,
@@ -355,7 +373,7 @@ def _get_ips(node, addr_type='public'):
     ret = []
     for _, interface in node.addresses.items():
         for addr in interface:
-            if addr_type in ('floating', 'fixed') and addr_type == addr['OS-EXT-IPS:type']:
+            if addr_type in ('floating', 'fixed') and addr_type == addr.get('OS-EXT-IPS:type'):
                 ret.append(addr['addr'])
             elif addr_type == 'public' and __utils__['cloud.is_public_ip'](addr['addr']):
                 ret.append(addr['addr'])
@@ -585,7 +603,7 @@ def _clean_create_kwargs(**kwargs):
         if key in VALID_OPTS:
             if isinstance(value, VALID_OPTS[key]):
                 continue
-            log.error('Error {0}: {1} is not of type {2}'.format(key, value, VALID_OPTS[key]))
+            log.error('Error %s: %s is not of type %s', key, value, VALID_OPTS[key])
         kwargs.pop(key)
     return __utils__['dictupdate.update'](kwargs, extra)
 
@@ -601,7 +619,7 @@ def request_instance(vm_, conn=None, call=None):
             'The request_instance action must be called with -a or --action.'
         )
     kwargs = copy.deepcopy(vm_)
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     __utils__['cloud.check_name'](vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
     userdata = config.get_cloud_config_value(
@@ -627,7 +645,7 @@ def request_instance(vm_, conn=None, call=None):
     except shade.exc.OpenStackCloudException as exc:
         log.error('Error creating server %s: %s', vm_['name'], exc)
         destroy(vm_['name'], conn=conn, call='action')
-        raise SaltCloudSystemExit(str(exc))
+        raise SaltCloudSystemExit(six.text_type(exc))
 
     return show_instance(vm_['name'], conn=conn, call='action')
 
@@ -663,7 +681,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
+            log.debug('Generating minion keys for \'%s\'', vm_['name'])
             vm_['priv_key'], vm_['pub_key'] = __utils__['cloud.gen_keys'](
                 config.get_cloud_config_value(
                     'keysize',
@@ -671,20 +689,26 @@ def create(vm_):
                     __opts__
                 )
             )
-        data = show_instance(vm_['instance_id'], conn=conn, call='action')
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data = request_instance(conn=conn, call='action', vm_=vm_)
+        request_instance(conn=conn, call='action', vm_=vm_)
+    data = show_instance(vm_.get('instance_id', vm_['name']), conn=conn, call='action')
     log.debug('VM is now running')
 
-    def __query_node_ip(vm_):
+    def __query_node(vm_):
         data = show_instance(vm_['name'], conn=conn, call='action')
+        if 'wait_for_metadata' in vm_:
+            for key, value in six.iteritems(vm_.get('wait_for_metadata', {})):
+                log.debug('Waiting for metadata: {0}={1}'.format(key, value))
+                if data['metadata'].get(key, None) != value:
+                    log.debug('Metadata is not ready: {0}={1}'.format(key, data['metadata'].get(key, None)))
+                    return False
         return preferred_ip(vm_, data[ssh_interface(vm_)])
     try:
-        ip_address = __utils__['cloud.wait_for_ip'](
-            __query_node_ip,
-            update_args=(vm_,)
+        ip_address = __utils__['cloud.wait_for_fun'](
+            __query_node,
+            vm_=vm_
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -693,12 +717,12 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
-    log.debug('Using IP address {0}'.format(ip_address))
+            raise SaltCloudSystemExit(six.text_type(exc))
+    log.debug('Using IP address %s', ip_address)
 
     salt_interface = __utils__['cloud.get_salt_interface'](vm_, __opts__)
     salt_ip_address = preferred_ip(vm_, data[salt_interface])
-    log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    log.debug('Salt interface set to: %s', salt_ip_address)
 
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
@@ -709,11 +733,10 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     event_data = {
@@ -761,10 +784,10 @@ def destroy(name, conn=None, call=None):
     if not conn:
         conn = get_conn()
     node = show_instance(name, conn=conn, call='action')
-    log.info('Destroying VM: {0}'.format(name))
+    log.info('Destroying VM: %s', name)
     ret = conn.delete_server(name)
     if ret:
-        log.info('Destroyed VM: {0}'.format(name))
+        log.info('Destroyed VM: %s', name)
         # Fire destroy action
         __utils__['cloud.fire_event'](
             'event',
@@ -781,7 +804,7 @@ def destroy(name, conn=None, call=None):
         __utils__['cloud.cachedir_index_del'](name)
         return True
 
-    log.error('Failed to Destroy VM: {0}'.format(name))
+    log.error('Failed to Destroy VM: %s', name)
     return False
 
 
@@ -824,4 +847,4 @@ def call(conn=None, call=None, kwargs=None):
         return getattr(conn, func)(**kwargs)
     except shade.exc.OpenStackCloudException as exc:
         log.error('Error running %s: %s', func, exc)
-        raise SaltCloudSystemExit(str(exc))
+        raise SaltCloudSystemExit(six.text_type(exc))

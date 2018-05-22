@@ -373,7 +373,7 @@ def len_gte(name, value):
 
 def len_lt(name, value):
     '''
-    Only succeed if the lenght of the given register location is less than
+    Only succeed if the length of the given register location is less than
     the given value.
 
     USAGE:

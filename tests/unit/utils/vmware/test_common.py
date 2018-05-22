@@ -6,7 +6,7 @@
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt testing libraries
@@ -18,6 +18,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, 
 import salt.exceptions as excs
 import salt.utils.vmware
 # Import Third Party Libs
+from salt.ext import six
 try:
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
@@ -31,7 +32,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class WaitForTaskTestCase(TestCase):
-    '''Tests for salt.utils.vmware.wait_for_task'''
+    '''
+    Tests for salt.utils.vmware.wait_for_task
+    '''
 
     def setUp(self):
         patches = (
@@ -188,7 +191,7 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(str(excinfo.exception), 'error exc')
+        self.assertEqual(six.text_type(excinfo.exception), 'error exc')
 
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -272,7 +275,9 @@ class WaitForTaskTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetMorsWithPropertiesTestCase(TestCase):
-    '''Tests for salt.utils.get_mors_with_properties'''
+    '''
+    Tests for salt.utils.get_mors_with_properties
+    '''
 
     si = None
     obj_type = None
@@ -480,7 +485,9 @@ class GetMorsWithPropertiesTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetPropertiesOfManagedObjectTestCase(TestCase):
-    '''Tests for salt.utils.get_properties_of_managed_object'''
+    '''
+    Tests for salt.utils.get_properties_of_managed_object
+    '''
 
     def setUp(self):
         patches = (
@@ -550,7 +557,9 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetManagedObjectName(TestCase):
-    '''Tests for salt.utils.get_managed_object_name'''
+    '''
+    Tests for salt.utils.get_managed_object_name
+    '''
 
     def setUp(self):
         patches = (
@@ -585,7 +594,9 @@ class GetManagedObjectName(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetContentTestCase(TestCase):
-    '''Tests for salt.utils.get_content'''
+    '''
+    Tests for salt.utils.get_content
+    '''
 
     # Method names to be patched
     traversal_spec_method_name = \
@@ -865,7 +876,9 @@ class GetContentTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetRootFolderTestCase(TestCase):
-    '''Tests for salt.utils.get_root_folder'''
+    '''
+    Tests for salt.utils.get_root_folder
+    '''
 
     def setUp(self):
         self.mock_root_folder = MagicMock()
@@ -907,7 +920,9 @@ class GetRootFolderTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInfoTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_service_info'''
+    '''
+    Tests for salt.utils.vmware.get_service_info
+    '''
     def setUp(self):
         self.mock_about = MagicMock()
         self.mock_si = MagicMock(content=MagicMock())

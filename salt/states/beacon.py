@@ -32,9 +32,7 @@ Management of the Salt beacons
               - 1.0
 
 '''
-from __future__ import absolute_import
-import logging
-log = logging.getLogger(__name__)
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name,

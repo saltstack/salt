@@ -17,6 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.returners.smtp_return as smtp
+from salt.utils.jinja import SaltCacheLoader
 
 try:
     import gnupg  # pylint: disable=unused-import
@@ -54,7 +55,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                    'gpgowner': '',
                    'subject': ''}
 
-        with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)):
+        with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)), \
+             patch.object(SaltCacheLoader, 'file_client', MagicMock()):
             smtp.returner(ret)
             self.assertTrue(mocked_smtplib.return_value.sendmail.called)
 
@@ -64,8 +66,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.gnupg'), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
@@ -77,8 +79,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
                 self._test_returner(mocked_smtplib)

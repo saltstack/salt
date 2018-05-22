@@ -11,11 +11,10 @@ as those returned here
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import socket
 import sys
-import glob
 import re
 import platform
 import logging
@@ -23,6 +22,13 @@ import locale
 import uuid
 from errno import EACCES, EPERM
 import datetime
+
+# pylint: disable=import-error
+try:
+    import dateutil.tz
+    _DATEUTIL_TZ = True
+except ImportError:
+    _DATEUTIL_TZ = False
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -47,6 +53,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -64,7 +71,6 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
-    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
@@ -76,9 +82,8 @@ if salt.utils.platform.is_windows():
         import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         import win32api
-        import salt.modules.reg
+        import salt.utils.win_reg
         HAS_WMI = True
-        __salt__['reg.read_value'] = salt.modules.reg.read_value
     except ImportError:
         log.exception(
             'Unable to import Python wmi module, some core grains '
@@ -103,10 +108,10 @@ def _windows_cpudata():
             grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
         except ValueError:
             grains['num_cpus'] = 1
-    grains['cpu_model'] = __salt__['reg.read_value'](
-                       "HKEY_LOCAL_MACHINE",
-                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                       "ProcessorNameString").get('vdata')
+    grains['cpu_model'] = salt.utils.win_reg.read_value(
+        hive="HKEY_LOCAL_MACHINE",
+        key="HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+        vname="ProcessorNameString").get('vdata')
     return grains
 
 
@@ -210,7 +215,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+                log.debug('Unexpected lspci output: \'%s\'', line)
 
         if error:
             log.warning(
@@ -452,9 +457,13 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] == 'OpenBSD':
+        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
-            swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
+            swap_data = __salt__['cmd.run']('{0} -sk'.format(swapctl))
+            if swap_data == 'no swap devices configured':
+                swap_total = 0
+            else:
+                swap_total = swap_data.split(' ')[1]
         else:
             swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         grains['swap_total'] = int(swap_total) // 1024 // 1024
@@ -766,13 +775,6 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
             break
-        elif command == 'virt-what':
-            # if 'virt-what' returns nothing, it's either an undetected platform
-            # so we default just as virt-what to 'physical', otherwise use the
-            # platform detected/returned by virt-what
-            if output:
-                grains['virtual'] = output.lower()
-            break
         elif command == 'prtdiag':
             model = output.lower().split("\n")[0]
             if 'vmware' in model:
@@ -807,19 +809,6 @@ def _virtual(osdata):
                 if self_root != init_root:
                     grains['virtual_subtype'] = 'chroot'
             except (IOError, OSError):
-                pass
-        if os.path.isfile('/proc/1/cgroup'):
-            try:
-                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
-                    fhr_contents = fhr.read()
-                if ':/lxc/' in fhr_contents:
-                    grains['virtual_subtype'] = 'LXC'
-                else:
-                    if any(x in fhr_contents
-                           for x in (':/system.slice/docker', ':/docker/',
-                                     ':/docker-ce/')):
-                        grains['virtual_subtype'] = 'Docker'
-            except IOError:
                 pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
@@ -870,6 +859,24 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile('/proc/1/cgroup'):
+            try:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
+                    fhr_contents = fhr.read()
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
+                        grains['virtual_subtype'] = 'Docker'
+            except IOError:
+                pass
         if os.path.isfile('/proc/cpuinfo'):
             with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
@@ -970,9 +977,9 @@ def _virtual(osdata):
 
     for command in failed_commands:
         log.info(
-            "Although '{0}' was found in path, the current user "
+            "Although '%s' was found in path, the current user "
             'cannot execute it. Grains output might not be '
-            'accurate.'.format(command)
+            'accurate.', command
         )
     return grains
 
@@ -997,6 +1004,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
@@ -1023,7 +1032,7 @@ def _clean_value(key, val):
                 return val
             except ValueError:
                 continue
-        log.trace('HW {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
+        log.trace('HW %s value %s is an invalid UUID', key, val.replace('\n', ' '))
         return None
     elif re.search('serial|part|version', key):
         # 'To be filled by O.E.M.
@@ -1114,7 +1123,7 @@ def _windows_platform_data():
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
-            service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
+            service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1331,19 +1340,22 @@ def _get_interfaces():
     return _INTERFACES
 
 
-def _parse_os_release():
+def _parse_os_release(os_release_files):
     '''
-    Parse /etc/os-release and return a parameter dictionary
+    Parse os-release and return a parameter dictionary
 
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     '''
 
-    filename = '/etc/os-release'
-    if not os.path.isfile(filename):
-        filename = '/usr/lib/os-release'
-
     data = dict()
+    for filename in os_release_files:
+        if os.path.isfile(filename):
+            break
+    else:
+        # None of the specified os-release files exist
+        return data
+
     with salt.utils.files.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
@@ -1452,7 +1464,7 @@ def os_data():
                             "Unable to fetch data from /proc/1/cmdline"
                         )
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
+                        supported_inits = (b'upstart', b'sysvinit', b'systemd')
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1462,7 +1474,7 @@ def os_data():
                         try:
                             with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = six.b('')
+                                edge = b''
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
@@ -1471,17 +1483,23 @@ def os_data():
                                             if six.PY3:
                                                 item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = six.b('')
+                                            buf = b''
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
                         except (IOError, OSError) as exc:
                             log.error(
-                                'Unable to read from init_bin ({0}): {1}'
-                                .format(init_bin, exc)
+                                'Unable to read from init_bin (%s): %s',
+                                init_bin, exc
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif salt.utils.path.which('dumb-init') in init_cmdline:
+                        # https://github.com/Yelp/dumb-init
+                        grains['init'] = 'dumb-init'
+                    elif salt.utils.path.which('tini') in init_cmdline:
+                        # https://github.com/krallin/tini
+                        grains['init'] = 'tini'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
                     elif '/sbin/my_init' in init_cmdline:
@@ -1489,8 +1507,8 @@ def os_data():
                         grains['init'] = 'runit'
                     else:
                         log.info(
-                            'Could not determine init system from command line: ({0})'
-                            .format(' '.join(init_cmdline))
+                            'Could not determine init system from command line: (%s)',
+                            ' '.join(init_cmdline)
                         )
 
         # Add lsb grains on any distro with lsb-release. Note that this import
@@ -1538,13 +1556,15 @@ def os_data():
                 # to be incorrectly set to "Arch".
                 grains['osfullname'] = 'Antergos Linux'
             elif 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
-                    os_release = _parse_os_release()
+                os_release = _parse_os_release(['/etc/os-release', '/usr/lib/os-release'])
+                if os_release:
                     if 'NAME' in os_release:
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
-                    if 'PRETTY_NAME' in os_release:
+                    if 'VERSION_CODENAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['VERSION_CODENAME']
+                    elif 'PRETTY_NAME' in os_release:
                         codename = os_release['PRETTY_NAME']
                         # https://github.com/saltstack/salt/issues/44108
                         if os_release['ID'] == 'debian':
@@ -1808,7 +1828,7 @@ def os_data():
                 grains['osrelease_info']
             )
         os_name = grains['os' if grains.get('os') in (
-            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(
             os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 
@@ -1838,6 +1858,8 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+    if _DATEUTIL_TZ:
+        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
     return grains
 
 
@@ -1902,18 +1924,23 @@ def fqdns():
     fqdns = set()
 
     addresses = salt.utils.network.ip_addrs(include_loopback=False,
-        interface_data=_INTERFACES)
+                                            interface_data=_INTERFACES)
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-        interface_data=_INTERFACES))
-
+                                                  interface_data=_INTERFACES))
+    err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.gethostbyaddr(ip)[0])
-        except (socket.error, socket.herror,
-            socket.gaierror, socket.timeout) as e:
-            log.error("Exception during resolving address: " + str(e))
+            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+        except socket.herror as err:
+            if err.errno == 0:
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
 
-    grains['fqdns'] = list(fqdns)
+    grains['fqdns'] = sorted(list(fqdns))
     return grains
 
 
@@ -1941,8 +1968,12 @@ def ip_fqdn():
             except socket.error:
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
+                    log.warning(
+                        'Unable to find IPv%s record for "%s" causing a %s '
+                        'second timeout when rendering grains. Set the dns or '
+                        '/etc/hosts for IPv%s to clear this.',
+                        ipv_num, _fqdn, timediff, ipv_num
+                    )
                 ret[key] = []
 
     return ret
@@ -2056,7 +2087,7 @@ def dns():
     for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
                 'sortlist'):
         if key in resolv:
-            resolv[key] = [str(i) for i in resolv[key]]
+            resolv[key] = [six.text_type(i) for i in resolv[key]]
 
     return {'dns': resolv} if resolv else {}
 
@@ -2192,7 +2223,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read()
+                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:
@@ -2417,7 +2448,29 @@ def get_server_id():
 
     if salt.utils.platform.is_proxy():
         return {}
-    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        id_hash = __salt__['cmd.run'](
+            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+            env={'PYTHONHASHSEED': '0'}
+        )
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug(
+                'Failed to hash the ID to get the server_id grain. Result of '
+                'hash command: %s', id_hash
+            )
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return {'server_id': abs(id_hash % (2 ** 31))}
 
 
 def get_master():
@@ -2450,142 +2503,27 @@ def default_gateway():
         ip_gw: True   # True if either of the above is True, False otherwise
     '''
     grains = {}
-    if not salt.utils.path.which('ip'):
+    ip_bin = salt.utils.path.which('ip')
+    if not ip_bin:
         return {}
     grains['ip_gw'] = False
     grains['ip4_gw'] = False
     grains['ip6_gw'] = False
-    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
-        grains['ip_gw'] = True
-        grains['ip4_gw'] = True
+    for ip_version in ('4', '6'):
         try:
-            gateway_ip = __salt__['cmd.run']('ip -4 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
-            grains['ip4_gw'] = gateway_ip if gateway_ip else True
-        except Exception as exc:
-            pass
-    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
-        grains['ip_gw'] = True
-        grains['ip6_gw'] = True
-        try:
-            gateway_ip = __salt__['cmd.run']('ip -6 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
-            grains['ip6_gw'] = gateway_ip if gateway_ip else True
-        except Exception as exc:
-            pass
+            out = __salt__['cmd.run']([ip_bin, '-' + ip_version, 'route', 'show'])
+            for line in out.splitlines():
+                if line.startswith('default'):
+                    grains['ip_gw'] = True
+                    grains['ip{0}_gw'.format(ip_version)] = True
+                    try:
+                        via, gw_ip = line.split()[1:3]
+                    except ValueError:
+                        pass
+                    else:
+                        if via == 'via':
+                            grains['ip{0}_gw'.format(ip_version)] = gw_ip
+                    break
+        except Exception:
+            continue
     return grains
-
-
-def fc_wwn():
-    '''
-    Return list of fiber channel HBA WWNs
-    '''
-    grains = {}
-    grains['fc_wwn'] = False
-    if salt.utils.platform.is_linux():
-        grains['fc_wwn'] = _linux_wwns()
-    elif salt.utils.platform.is_windows():
-        grains['fc_wwn'] = _windows_wwns()
-    return grains
-
-
-def iscsi_iqn():
-    '''
-    Return iSCSI IQN
-    '''
-    grains = {}
-    grains['iscsi_iqn'] = False
-    if salt.utils.platform.is_linux():
-        grains['iscsi_iqn'] = _linux_iqn()
-    elif salt.utils.platform.is_windows():
-        grains['iscsi_iqn'] = _windows_iqn()
-    elif salt.utils.platform.is_aix():
-        grains['iscsi_iqn'] = _aix_iqn()
-    return grains
-
-
-def _linux_iqn():
-    '''
-    Return iSCSI IQN from a Linux host.
-    '''
-    ret = []
-
-    initiator = '/etc/iscsi/initiatorname.iscsi'
-
-    if os.path.isfile(initiator):
-        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
-            for line in _iscsi:
-                line = line.strip()
-                if line.startswith('InitiatorName='):
-                    ret.append(line.split('=', 1)[1])
-    return ret
-
-
-def _aix_iqn():
-    '''
-    Return iSCSI IQN from an AIX host.
-    '''
-    ret = []
-
-    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
-
-    aixret = __salt__['cmd.run'](aixcmd)
-    if aixret[0].isalpha():
-        try:
-            ret.append(aixret.split()[1].rstrip())
-        except IndexError:
-            pass
-    return ret
-
-
-def _linux_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Linux host.
-    '''
-    ret = []
-
-    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
-        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
-            for line in _wwn:
-                ret.append(line.rstrip()[2:])
-    return ret
-
-
-def _windows_iqn():
-    '''
-    Return iSCSI IQN from a Windows host.
-    '''
-    ret = []
-
-    wmic = salt.utils.path.which('wmic')
-
-    if not wmic:
-        return ret
-
-    namespace = r'\\root\WMI'
-    mspath = 'MSiSCSIInitiator_MethodClass'
-    get = 'iSCSINodeName'
-
-    cmdret = __salt__['cmd.run_all'](
-        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
-            wmic, namespace, mspath, get))
-
-    for line in cmdret['stdout'].splitlines():
-        if line.startswith('iqn.'):
-            line = line.rstrip()
-            ret.append(line.rstrip())
-    return ret
-
-
-def _windows_wwns():
-    '''
-    Return Fibre Channel port WWNs from a Windows host.
-    '''
-    ps_cmd = r'Get-WmiObject -ErrorAction Stop -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
-
-    ret = []
-
-    cmdret = __salt__['cmd.run_ps'](ps_cmd)
-
-    for line in cmdret:
-        ret.append(line.rstrip())
-
-    return ret

@@ -30,8 +30,8 @@ from numbers import Number
 # Import salt libs
 import salt.output
 import salt.utils.color
-import salt.utils.locales
 import salt.utils.odict
+import salt.utils.stringutils
 from salt.ext import six
 
 
@@ -63,16 +63,42 @@ class NestDisplay(object):
         fmt = '{0}{1}{2}{3}{4}{5}'
 
         try:
-            return fmt.format(indent, color, prefix, msg, endc, suffix)
+            return fmt.format(
+                indent,
+                color,
+                prefix,
+                msg,
+                endc,
+                suffix)
         except UnicodeDecodeError:
-            return fmt.format(indent, color, prefix, salt.utils.locales.sdecode(msg), endc, suffix)
+            try:
+                return fmt.format(
+                    indent,
+                    color,
+                    prefix,
+                    salt.utils.stringutils.to_unicode(msg),
+                    endc,
+                    suffix)
+            except UnicodeDecodeError:
+                # msg contains binary data that can't be decoded
+                return str(fmt).format(  # future lint: disable=blacklisted-function
+                    indent,
+                    color,
+                    prefix,
+                    msg,
+                    endc,
+                    suffix)
 
     def display(self, ret, indent, prefix, out):
         '''
         Recursively iterate down through data structures to determine output
         '''
         if isinstance(ret, bytes):
-            ret = salt.utils.stringutils.to_unicode(ret)
+            try:
+                ret = salt.utils.stringutils.to_unicode(ret)
+            except UnicodeDecodeError:
+                # ret contains binary data that can't be decoded
+                pass
 
         if ret is None or ret is True or ret is False:
             out.append(
@@ -171,4 +197,11 @@ def output(ret, **kwargs):
     base_indent = kwargs.get('nested_indent', 0) \
         or __opts__.get('nested_indent', 0)
     nest = NestDisplay(retcode=retcode)
-    return '\n'.join(nest.display(ret, base_indent, '', []))
+    lines = nest.display(ret, base_indent, '', [])
+    try:
+        return '\n'.join(lines)
+    except UnicodeDecodeError:
+        # output contains binary data that can't be decoded
+        return str('\n').join(  # future lint: disable=blacklisted-function
+            [salt.utils.stringutils.to_str(x) for x in lines]
+        )

@@ -5,6 +5,9 @@ This state module is used to manage Wordpress installations
 :depends: wp binary from http://wp-cli.org/
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     return 'wordpress.show_plugin' in __salt__

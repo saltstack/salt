@@ -6,7 +6,7 @@ Docker Swarm Module using Docker's Python SDK
 
 :codeauthor: Tyler Jones <jonestyler806@gmail.com>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The Docker Swarm Module is used to manage and create Docker Swarms.
 
@@ -23,7 +23,7 @@ pip install -U docker
 More information: https://docker-py.readthedocs.io/en/stable/
 """
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import salt.utils.json
 
 try:
@@ -45,7 +45,8 @@ def __virtual__():
 
 
 def __init__(self):
-    __context__['client'] = docker.from_env()
+    if HAS_DOCKER:
+        __context__['client'] = docker.from_env()
     __context__['server_name'] = __grains__['id']
 
 

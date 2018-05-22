@@ -133,7 +133,7 @@ def alive(opts):
     '''
     Validate and return the connection status with the remote device.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
 
     dev = conn()

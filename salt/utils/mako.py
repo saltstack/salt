@@ -2,7 +2,7 @@
 '''
 Functions for working with Mako templates
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 try:
     from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error,3rd-party-module-not-gated

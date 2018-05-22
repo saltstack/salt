@@ -44,13 +44,14 @@ Connection module for Amazon SQS
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
 import salt.utils.json
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -78,10 +79,10 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto_sqs module could not be loaded: boto3 libraries not found')
-    __utils__['boto3.assign_funcs'](__name__, 'sqs')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'sqs')
+    return has_boto_reqs
 
 
 def _preprocess_attributes(attributes):

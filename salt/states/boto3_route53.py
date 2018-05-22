@@ -65,7 +65,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 #pylint: disable=E1320
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import uuid
 
 # Import Salt Libs
@@ -129,7 +129,7 @@ def _to_aws_encoding(instring):
             raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
                                       "{1}.  Do you need to punycode it?".format(octal, instring))
     ret = ''.join(outlist)
-    log.debug('Name after massaging is: {}'.format(ret))
+    log.debug('Name after massaging is: %s', ret)
     return ret
 
 
@@ -138,7 +138,7 @@ def _from_aws_encoding(string):  # XXX TODO
 
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,
-                        CallerReference=None, Comment='', VPCs=None,
+                        CallerReference=None, Comment=None, VPCs=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a hosted zone exists with the given attributes.
@@ -247,7 +247,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if len(fixed_vpcs) > 1:
             add_vpcs = fixed_vpcs[1:]
             fixed_vpcs = fixed_vpcs[:1]
-        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())
+        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
     else:
         # Currently the only modifiable traits about a zone are associated VPCs and the comment.
         zone = zone[0]
@@ -595,63 +595,69 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
 
     # Convert any magic RR values to something AWS will understand, and otherwise clean them up.
     fixed_rrs = []
-    for rr in ResourceRecords:
-        if rr.startswith('magic:'):
-            fields = rr.split(':')
-            if fields[1] == 'ec2_instance_tag':
-                if len(fields) != 5:
-                    log.warning("Invalid magic RR value seen: '{}'.  Passing as-is.".format(rr))
-                    fixed_rrs += [rr]
-                    continue
-                tag_name = fields[2]
-                tag_value = fields[3]
-                instance_attr = fields[4]
-                good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-                r = __salt__['boto_ec2.find_instances'](
-                        tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
-                        region=region, key=key, keyid=keyid, profile=profile)
-                if len(r) < 1:
-                    ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
-                            tag_value)
-                    log.error(ret['comment'])
-                    ret['result'] = False
-                    return ret
-                if len(r) > 1:
-                    ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
-                            tag_name, tag_value)
-                    log.error(ret['comment'])
-                    ret['result'] = False
-                    return ret
-                instance = r[0]
-                res = getattr(instance, instance_attr, None)
-                if res:
-                    log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
-                    fixed_rrs += [_to_aws_encoding(res)]
+    if ResourceRecords:
+        for rr in ResourceRecords:
+            if rr.startswith('magic:'):
+                fields = rr.split(':')
+                if fields[1] == 'ec2_instance_tag':
+                    if len(fields) != 5:
+                        log.warning("Invalid magic RR value seen: '%s'.  Passing as-is.", rr)
+                        fixed_rrs += [rr]
+                        continue
+                    tag_name = fields[2]
+                    tag_value = fields[3]
+                    instance_attr = fields[4]
+                    good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+                    r = __salt__['boto_ec2.find_instances'](
+                            tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
+                            region=region, key=key, keyid=keyid, profile=profile)
+                    if len(r) < 1:
+                        ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
+                                tag_value)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
+                    if len(r) > 1:
+                        ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
+                                tag_name, tag_value)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
+                    instance = r[0]
+                    res = getattr(instance, instance_attr, None)
+                    if res:
+                        log.debug('Found %s %s for instance %s', instance_attr, res, instance.id)
+                        fixed_rrs += [_to_aws_encoding(res)]
+                    else:
+                        ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
+                                instance.id)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
                 else:
-                    ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
-                            instance.id)
+                    ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
+                                      'boto3_route53 state module to add support for your preferred '
+                                      'incantation.'.format(fields[1]))
                     log.error(ret['comment'])
                     ret['result'] = False
                     return ret
             else:
-                ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
-                                  'boto3_route53 state module to add support for your preferred '
-                                  'incantation.'.format(fields[1]))
-                log.error(ret['comment'])
-                ret['result'] = False
-                return ret
-        else:
-            fixed_rrs += [rr]
-    ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
+                # for TXT records the entry must be encapsulated in quotes as required by the API
+                # this appears to be incredibly difficult with the jinja templating engine
+                # so inject the quotations here to make a viable ChangeBatch
+                if Type == 'TXT':
+                    rr = '"{}"'.format(rr)
+                fixed_rrs += [rr]
+        ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
 
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
 
     create = False
     update = False
@@ -675,7 +681,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
             update = True
 
     if not create and not update:
@@ -691,9 +697,10 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             return ret
         ResourceRecordSet = {
             'Name': Name,
-            'Type': Type,
-            'ResourceRecords': ResourceRecords
+            'Type': Type
         }
+        if ResourceRecords:
+            ResourceRecordSet['ResourceRecords'] = ResourceRecords
         for u in updatable:
             ResourceRecordSet.update({u: locals().get(u)}) if locals().get(u) else None
 
@@ -791,9 +798,9 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
     if not recordsets:
         ret['comment'] = 'Route 53 resource record {} with type {} already absent.'.format(
                 Name, Type)

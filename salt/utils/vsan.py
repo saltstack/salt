@@ -43,12 +43,13 @@ was developed against.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import logging
 import ssl
 
 # Import Salt Libs
+from salt.ext import six
 from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
         VMwareObjectRetrievalError
 import salt.utils.vmware
@@ -179,7 +180,7 @@ def get_host_vsan_system(service_instance, host_ref, hostname=None):
     if not objs:
         raise VMwareObjectRetrievalError('Host\'s \'{0}\' VSAN system was '
                                          'not retrieved'.format(hostname))
-    log.trace('[{0}] Retrieved VSAN system'.format(hostname))
+    log.trace('[%s] Retrieved VSAN system', hostname)
     return objs[0]['object']
 
 
@@ -209,10 +210,11 @@ def create_diskgroup(service_instance, vsan_disk_mgmt_system,
     '''
     hostname = salt.utils.vmware.get_managed_object_name(host_ref)
     cache_disk_id = cache_disk.canonicalName
-    log.debug('Creating a new disk group with cache disk \'{0}\' on host '
-              '\'{1}\''.format(cache_disk_id, hostname))
-    log.trace('capacity_disk_ids = {0}'.format([c.canonicalName for c in
-                                                capacity_disks]))
+    log.debug(
+        'Creating a new disk group with cache disk \'%s\' on host \'%s\'',
+        cache_disk_id, hostname
+    )
+    log.trace('capacity_disk_ids = %s', [c.canonicalName for c in capacity_disks])
     spec = vim.VimVsanHostDiskMappingCreationSpec()
     spec.cacheDisks = [cache_disk]
     spec.capacityDisks = capacity_disks
@@ -268,10 +270,14 @@ def add_capacity_to_diskgroup(service_instance, vsan_disk_mgmt_system,
     hostname = salt.utils.vmware.get_managed_object_name(host_ref)
     cache_disk = diskgroup.ssd
     cache_disk_id = cache_disk.canonicalName
-    log.debug('Adding capacity to disk group with cache disk \'{0}\' on host '
-              '\'{1}\''.format(cache_disk_id, hostname))
-    log.trace('new_capacity_disk_ids = {0}'.format([c.canonicalName for c in
-                                                    new_capacity_disks]))
+    log.debug(
+        'Adding capacity to disk group with cache disk \'%s\' on host \'%s\'',
+        cache_disk_id, hostname
+    )
+    log.trace(
+        'new_capacity_disk_ids = %s',
+        [c.canonicalName for c in new_capacity_disks]
+    )
     spec = vim.VimVsanHostDiskMappingCreationSpec()
     spec.cacheDisks = [cache_disk]
     spec.capacityDisks = new_capacity_disks
@@ -338,10 +344,12 @@ def remove_capacity_from_diskgroup(service_instance, host_ref, diskgroup,
         hostname = salt.utils.vmware.get_managed_object_name(host_ref)
     cache_disk = diskgroup.ssd
     cache_disk_id = cache_disk.canonicalName
-    log.debug('Removing capacity from disk group with cache disk \'{0}\' on '
-              'host \'{1}\''.format(cache_disk_id, hostname))
-    log.trace('capacity_disk_ids = {0}'.format([c.canonicalName for c in
-                                                capacity_disks]))
+    log.debug(
+        'Removing capacity from disk group with cache disk \'%s\' on host \'%s\'',
+        cache_disk_id, hostname
+    )
+    log.trace('capacity_disk_ids = %s',
+              [c.canonicalName for c in capacity_disks])
     if not host_vsan_system:
         host_vsan_system = get_host_vsan_system(service_instance,
                                                 host_ref, hostname)
@@ -399,8 +407,8 @@ def remove_diskgroup(service_instance, host_ref, diskgroup, hostname=None,
     if not hostname:
         hostname = salt.utils.vmware.get_managed_object_name(host_ref)
     cache_disk_id = diskgroup.ssd.canonicalName
-    log.debug('Removing disk group with cache disk \'{0}\' on '
-              'host \'{1}\''.format(cache_disk_id, hostname))
+    log.debug('Removing disk group with cache disk \'%s\' on '
+              'host \'%s\'', cache_disk_id, hostname)
     if not host_vsan_system:
         host_vsan_system = get_host_vsan_system(
             service_instance, host_ref, hostname)
@@ -427,8 +435,8 @@ def remove_diskgroup(service_instance, host_ref, diskgroup, hostname=None,
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
     salt.utils.vmware.wait_for_task(task, hostname, 'remove_diskgroup')
-    log.debug('Removed disk group with cache disk \'{0}\' '
-              'on host \'{1}\''.format(cache_disk_id, hostname))
+    log.debug('Removed disk group with cache disk \'%s\' on host \'%s\'',
+              cache_disk_id, hostname)
     return True
 
 
@@ -442,8 +450,7 @@ def get_cluster_vsan_info(cluster_ref):
     '''
 
     cluster_name = salt.utils.vmware.get_managed_object_name(cluster_ref)
-    log.trace('Retrieving cluster vsan info of cluster '
-              '\'{0}\''.format(cluster_name))
+    log.trace('Retrieving cluster vsan info of cluster \'%s\'', cluster_name)
     si = salt.utils.vmware.get_service_instance_from_managed_object(
         cluster_ref)
     vsan_cl_conf_sys = get_vsan_cluster_config_system(si)
@@ -472,8 +479,8 @@ def reconfigure_cluster_vsan(cluster_ref, cluster_vsan_spec):
         Cluster VSAN reconfigure spec (vim.vsan.ReconfigSpec).
     '''
     cluster_name = salt.utils.vmware.get_managed_object_name(cluster_ref)
-    log.trace('Reconfiguring vsan on cluster \'{0}\': {1}'
-              ''.format(cluster_name, cluster_vsan_spec))
+    log.trace('Reconfiguring vsan on cluster \'%s\': %s',
+              cluster_name, cluster_vsan_spec)
     si = salt.utils.vmware.get_service_instance_from_managed_object(
         cluster_ref)
     vsan_cl_conf_sys = salt.utils.vsan.get_vsan_cluster_config_system(si)
@@ -497,8 +504,8 @@ def _wait_for_tasks(tasks, service_instance):
     '''
     Wait for tasks created via the VSAN API
     '''
-    log.trace('Waiting for vsan tasks: {0}'
-              ''.format(', '.join([str(t) for t in tasks])))
+    log.trace('Waiting for vsan tasks: {0}',
+              ', '.join([six.text_type(t) for t in tasks]))
     try:
         vsanapiutils.WaitForTasks(tasks, service_instance)
     except vim.fault.NoPermission as exc:
@@ -511,5 +518,5 @@ def _wait_for_tasks(tasks, service_instance):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
-    log.trace('Tasks {0} finished successfully'
-              ''.format(', '.join([str(t) for t in tasks])))
+    log.trace('Tasks %s finished successfully',
+              ', '.join([six.text_type(t) for t in tasks]))

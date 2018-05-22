@@ -10,10 +10,11 @@ require any configuration.
 Expiration values can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import os.path
+import errno
 import shutil
 import tempfile
 
@@ -45,13 +46,14 @@ def store(bank, key, data, cachedir):
     Store information in a file.
     '''
     base = os.path.join(cachedir, os.path.normpath(bank))
-    if not os.path.isdir(base):
-        try:
-            os.makedirs(base)
-        except OSError as exc:
+    try:
+        os.makedirs(base)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
             raise SaltCacheError(
-                'The cache directory, {0}, does not exist and could not be '
-                'created: {1}'.format(base, exc)
+                'The cache directory, {0}, could not be created: {1}'.format(
+                    base, exc
+                )
             )
 
     outfile = os.path.join(base, '{0}.p'.format(key))

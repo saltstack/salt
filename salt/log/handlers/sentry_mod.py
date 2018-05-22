@@ -5,7 +5,12 @@
 
     .. versionadded:: 0.17.0
 
-    This module provides a `Sentry`_ logging handler.
+    This module provides a `Sentry`_ logging handler. Sentry is an open source
+    error tracking platform that provides deep context about exceptions that
+    happen in production. Details about stack traces along with the context
+    variables available at the time of the exeption are easily browsable and
+    filterable from the online interface. For more details please see
+    `Sentry`_.
 
     .. admonition:: Note
 
@@ -41,6 +46,11 @@
             - cpuarch
             - ec2.tags.environment
 
+    .. admonition:: Note
+
+        The ``public_key`` and ``secret_key`` variables are not supported with
+        Sentry > 3.0. The `DSN`_ key should be used instead.
+
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
 
@@ -75,10 +85,11 @@
     .. _`Raven`: https://raven.readthedocs.io
     .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import re
 
 # Import salt libs
 import salt.loader
@@ -125,8 +136,7 @@ def setup_handlers():
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
         except ValueError as exc:
             log.info(
-                'Raven failed to parse the configuration provided '
-                'DSN: {0}'.format(exc)
+                'Raven failed to parse the configuration provided DSN: %s', exc
             )
 
     if not dsn:
@@ -135,8 +145,8 @@ def setup_handlers():
             if config_value is None and key not in options:
                 log.debug(
                     'The required \'sentry_handler\' configuration key, '
-                    '\'{0}\', is not properly configured. Not configuring '
-                    'the sentry logging handler.'.format(key)
+                    '\'%s\', is not properly configured. Not configuring '
+                    'the sentry logging handler.', key
                 )
                 return
             elif config_value is None:
@@ -199,13 +209,23 @@ def setup_handlers():
             client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)
+
+        exclude_patterns = get_config_value('exclude_patterns', None)
+        if exclude_patterns:
+            filter_regexes = [re.compile(pattern) for pattern in exclude_patterns]
+
+            class FilterExcludedMessages(object):
+                @staticmethod
+                def filter(record):
+                    m = record.getMessage()
+                    return not any(regex.search(m) for regex in filter_regexes)
+
+            handler.addFilter(FilterExcludedMessages())
+
         handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])
         return handler
     except ValueError as exc:
-        log.debug(
-            'Failed to setup the sentry logging handler: {0}'.format(exc),
-            exc_info=exc
-        )
+        log.debug('Failed to setup the sentry logging handler', exc_info=True)
 
 
 def get_config_value(name, default=None):

@@ -8,7 +8,7 @@ The service module for FreeBSD
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -108,7 +108,7 @@ def _get_rcvar(name, jail=None):
     Support for jail (representing jid or jail name) keyword argument in kwargs
     '''
     if not available(name, jail):
-        log.error('Service {0} not found'.format(name))
+        log.error('Service %s not found', name)
         return False
 
     cmd = '{0} {1} rcvar'.format(_cmd(jail), name)
@@ -192,7 +192,7 @@ def _switch(name,                   # pylint: disable=C0103
 
     rcvar = _get_rcvar(name, jail)
     if not rcvar:
-        log.error('rcvar for service {0} not found'.format(name))
+        log.error('rcvar for service %s not found', name)
         return False
 
     if jail and not chroot:
@@ -210,7 +210,7 @@ def _switch(name,                   # pylint: disable=C0103
     if not config:
         rcdir = '{0}/etc/rc.conf.d'.format(chroot)
         if not os.path.exists(rcdir) or not os.path.isdir(rcdir):
-            log.error('{0} not exists'.format(rcdir))
+            log.error('%s not exists', rcdir)
             return False
         config = os.path.join(rcdir, rcvar.replace('_enable', ''))
 
@@ -225,6 +225,7 @@ def _switch(name,                   # pylint: disable=C0103
     if os.path.exists(config):
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('{0}='.format(rcvar)):
                     nlines.append(line)
                     continue
@@ -238,6 +239,7 @@ def _switch(name,                   # pylint: disable=C0103
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
     with salt.utils.files.fopen(config, 'w') as ofile:
+        nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
         ofile.writelines(nlines)
 
     return True
@@ -316,7 +318,7 @@ def enabled(name, **kwargs):
     '''
     jail = kwargs.get('jail', '')
     if not available(name, jail):
-        log.error('Service {0} not found'.format(name))
+        log.error('Service %s not found', name)
         return False
 
     cmd = '{0} {1} rcvar'.format(_cmd(jail), name)
@@ -482,7 +484,7 @@ def status(name, sig=None, jail=None):
 
     .. versionchanged:: 2016.3.4
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

@@ -99,3 +99,10 @@ libcloud_dns:
 
 autosign_grains_dir: autosign_grains
 autosign_file: autosign_file
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+
+# enable using ssh minions and regular minions
+enable_ssh_minions: True
+ignore_host_keys: True

@@ -26,6 +26,7 @@ Control the alternatives system
       - path: {{ my_hadoop_conf }}
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {

@@ -13,7 +13,7 @@ Package support for openSUSE via the zypper package manager
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import re
@@ -38,6 +38,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
@@ -295,7 +296,7 @@ class _Zypper(object):
                 log.debug("Collected data about blocking process.")
 
             __salt__['event.fire_master'](data, self.TAG_BLOCKED)
-            log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
+            log.debug("Fired a Zypper blocked event to the master with the data: %s", data)
             log.debug("Waiting 5 seconds for Zypper gets released...")
             time.sleep(5)
             if not was_blocked:
@@ -308,7 +309,11 @@ class _Zypper(object):
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
-        return self._is_xml_mode() and dom.parseString(self.__call_result['stdout']) or self.__call_result['stdout']
+        return (
+            self._is_xml_mode() and
+            dom.parseString(salt.utils.stringutils.to_str(self.__call_result['stdout'])) or
+            self.__call_result['stdout']
+        )
 
 
 __zypper__ = _Zypper()
@@ -430,7 +435,7 @@ def list_upgrades(refresh=True, **kwargs):
     if 'fromrepo' in kwargs:
         repo_name = kwargs['fromrepo']
         if not isinstance(repo_name, six.string_types):
-            repo_name = str(repo_name)
+            repo_name = six.text_type(repo_name)
         cmd.extend(['--repo', repo_name])
     for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
@@ -465,37 +470,37 @@ def info_installed(*names, **kwargs):
         Valid attributes are:
             ignore, report
 
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
-        salt '*' pkg.info_installed <package1> attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
+        salt '*' pkg.info_installed <package1> attr=version,vendor all_versions=True
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in pkg_nfo.items():
-            if isinstance(value, six.string_types):
-                # Check, if string is encoded in a proper UTF-8
-                if six.PY3:
-                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in six.iteritems(_nfo):
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
                 else:
-                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
-                if value != value_:
-                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
-                    log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
             else:
-                t_nfo[key] = value
-        ret[pkg_name] = t_nfo
-
+                ret.setdefault(pkg_name, []).append(t_nfo)
     return ret
 
 
@@ -680,7 +685,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         If ``all`` is specified, all valid attributes will be returned.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     removed:
         not supported
@@ -693,6 +698,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr=version,arch
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.data.is_true(versions_as_list)
@@ -701,30 +707,153 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    attr = kwargs.get("attr")
-    if 'pkg.list_pkgs' in __context__:
-        cached = __context__['pkg.list_pkgs']
-        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
+    attr = kwargs.get('attr')
+    if attr is not None:
+        attr = salt.utils.args.split_input(attr)
 
-    cmd = ['rpm', '-qa', '--queryformat', (
-        "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
-        "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
+    contextkey = 'pkg.list_pkgs'
+
+    if contextkey not in __context__:
+
+        cmd = ['rpm', '-qa', '--queryformat', (
+            "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
+            "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
+        ret = {}
+        for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
+            name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
+            install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+            install_date_time_t = int(install_time)
+
+            all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
+                        'install_date': install_date, 'install_date_time_t': install_date_time_t}
+            __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
+
+        for pkgname in ret:
+            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+        __context__[contextkey] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](
+        __context__[contextkey],
+        versions_as_list,
+        attr)
+
+
+def list_repo_pkgs(*args, **kwargs):
+    '''
+    .. versionadded:: 2017.7.5,2018.3.1
+
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names. This is recommended as it speeds up the function considerably.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. If ``byrepo`` is set to
+    ``True``, then the return dictionary will contain repository names at the
+    top level, and each repository will map packages to lists of version
+    numbers. For example:
+
+    .. code-block:: python
+
+        # With byrepo=False (default)
+        {
+            'bash': ['4.3-83.3.1',
+                     '4.3-82.6'],
+            'vim': ['7.4.326-12.1']
+        }
+        {
+            'OSS': {
+                'bash': ['4.3-82.6'],
+                'vim': ['7.4.326-12.1']
+            },
+            'OSS Update': {
+                'bash': ['4.3-83.3.1']
+            }
+        }
+
+    fromrepo : None
+        Only include results from the specified repo(s). Multiple repos can be
+        specified, comma-separated.
+
+    byrepo : False
+        When ``True``, the return data for each package will be organized by
+        repository.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
+        salt '*' pkg.list_repo_pkgs 'python2-*' fromrepo='OSS Updates'
+    '''
+    byrepo = kwargs.pop('byrepo', False)
+    fromrepo = kwargs.pop('fromrepo', '') or ''
     ret = {}
-    for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-        install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
-        install_date_time_t = int(install_time)
 
-        all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
-                    'install_date': install_date, 'install_date_time_t': install_date_time_t}
-        __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
+    targets = [
+        arg if isinstance(arg, six.string_types) else six.text_type(arg)
+        for arg in args
+    ]
 
-    for pkgname in ret:
-        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+    def _is_match(pkgname):
+        '''
+        When package names are passed to a zypper search, they will be matched
+        anywhere in the package name. This makes sure that only exact or
+        fnmatch matches are identified.
+        '''
+        if not args:
+            # No package names passed, everyone's a winner!
+            return True
+        for target in targets:
+            if fnmatch.fnmatch(pkgname, target):
+                return True
+        return False
 
-    __context__['pkg.list_pkgs'] = ret
+    for node in __zypper__.xml.call('se', '-s', *targets).getElementsByTagName('solvable'):
+        pkginfo = dict(node.attributes.items())
+        try:
+            if pkginfo['kind'] != 'package':
+                continue
+            reponame = pkginfo['repository']
+            if fromrepo and reponame != fromrepo:
+                continue
+            pkgname = pkginfo['name']
+            pkgversion = pkginfo['edition']
+        except KeyError:
+            continue
+        else:
+            if _is_match(pkgname):
+                repo_dict = ret.setdefault(reponame, {})
+                version_list = repo_dict.setdefault(pkgname, set())
+                version_list.add(pkgversion)
 
-    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
+    if byrepo:
+        for reponame in ret:
+            # Sort versions newest to oldest
+            for pkgname in ret[reponame]:
+                sorted_versions = sorted(
+                    [LooseVersion(x) for x in ret[reponame][pkgname]],
+                    reverse=True
+                )
+                ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
+        return ret
+    else:
+        byrepo_ret = {}
+        for reponame in ret:
+            for pkgname in ret[reponame]:
+                byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
+        for pkgname in byrepo_ret:
+            sorted_versions = sorted(
+                [LooseVersion(x) for x in byrepo_ret[pkgname]],
+                reverse=True
+            )
+            byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
+        return byrepo_ret
 
 
 def _get_configured_repos():
@@ -816,30 +945,31 @@ def mod_repo(repo, **kwargs):
     be created, so long as the following values are specified:
 
     repo or alias
-        alias by which the zypper refers to the repo
+        alias by which Zypper refers to the repo
 
     url, mirrorlist or baseurl
-        the URL for zypper to reference
+        the URL for Zypper to reference
 
     enabled
-        enable or disable (True or False) repository,
+        Enable or disable (True or False) repository,
         but do not remove if disabled.
 
     refresh
-        enable or disable (True or False) auto-refresh of the repository.
+        Enable or disable (True or False) auto-refresh of the repository.
 
     cache
         Enable or disable (True or False) RPM files caching.
 
     gpgcheck
-        Enable or disable (True or False) GOG check for this repository.
+        Enable or disable (True or False) GPG check for this repository.
 
-    gpgautoimport
-        Automatically trust and import new repository.
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    url can only be deleted if a mirrorlist is specified (or vice versa).
+    URL can only be deleted if a ``mirrorlist`` is specified (or vice versa).
 
     CLI Examples:
 
@@ -1058,7 +1188,7 @@ def install(name=None,
         This parameter is ignored if ``pkgs`` or ``sources`` is passed.
 
     resolve_capabilities
-        If this option is set to True zypper will take capabilites into
+        If this option is set to True zypper will take capabilities into
         account. In this case names which are just provided by a package
         will get installed. Default is False.
 
@@ -1112,7 +1242,7 @@ def install(name=None,
 
         If ``all`` is specified, all valid attributes will be returned.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     Returns a dict containing the new package names and versions::
@@ -1144,6 +1274,15 @@ def install(name=None,
         return {}
 
     version_num = Wildcard(__zypper__)(name, version)
+
+    if version_num:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version_num}
+        else:
+            log.warning('"version" parameter will be ignored for multiple '
+                        'package targets')
+
     if pkg_type == 'repository':
         targets = []
         for param, version_num in six.iteritems(pkg_params):
@@ -1173,7 +1312,7 @@ def install(name=None,
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
-        log.info('Targeting repo \'{0}\''.format(fromrepo))
+        log.info('Targeting repo \'%s\'', fromrepo)
     else:
         fromrepoopt = ''
     cmd_install = ['install', '--auto-agree-with-licenses']
@@ -1308,7 +1447,7 @@ def upgrade(refresh=True,
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: {0}'.format(fromrepo))
+            log.info('Targeting repos: %s', fromrepo)
 
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
@@ -1364,7 +1503,14 @@ def _uninstall(name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [target for target in pkg_params if target in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and pkg_params[target] in old[target].split(','):
+            targets.append(target + "-" + pkg_params[target])
+        elif target in old and not pkg_params[target]:
+            targets.append(target)
     if not targets:
         return {}
 
@@ -1385,6 +1531,32 @@ def _uninstall(name=None, pkgs=None):
         )
 
     return ret
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+    Circumstances where this would be done include:
+
+    * If the arch is 32 bit and the package name ends in a 32-bit arch.
+    * If the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
+        return name[:-(len(arch) + 1)]
+    return name
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -1495,7 +1667,8 @@ def list_locks():
     locks = {}
     if os.path.exists(LOCKS):
         with salt.utils.files.fopen(LOCKS) as fhr:
-            for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+            items = salt.utils.stringutils.to_unicode(fhr.read()).split('\n\n')
+            for meta in [item.split('\n') for item in items]:
                 lock = {}
                 for element in [el for el in meta if el]:
                     if ':' in element:
@@ -1939,7 +2112,7 @@ def list_products(all=False, refresh=False):
             oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
             if os.path.isfile(oem_file):
                 with salt.utils.files.fopen(oem_file, 'r') as rfile:
-                    oem_release = rfile.readline().strip()
+                    oem_release = salt.utils.stringutils.to_unicode(rfile.readline()).strip()
                     if oem_release:
                         p_nfo['release'] = oem_release
         ret.append(p_nfo)
@@ -2120,7 +2293,7 @@ def list_installed_patches():
 
 def list_provides(**kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     List package provides of installed packages as a dict.
     {'<provided_name>': ['<package_name>', '<package_name>', ...]}
@@ -2151,7 +2324,7 @@ def list_provides(**kwargs):
 
 def resolve_capabilities(pkgs, refresh, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Convert name provides in ``pkgs`` into real package names if
     ``resolve_capabilities`` parameter is set to True. In case of
@@ -2200,10 +2373,10 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                     if len(result) == 1:
                         name = result.keys()[0]
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
+                        log.warn("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
-                    log.debug("Search failed with: {0}".format(exc))
+                    log.debug("Search failed with: %s", exc)
 
         if version:
             ret.append({name: version})

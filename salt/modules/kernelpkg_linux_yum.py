@@ -2,7 +2,7 @@
 '''
 Manage Linux kernel packages on YUM-based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 
@@ -182,7 +182,7 @@ def upgrade(reboot=False, at_time=None):
 def upgrade_available():
     '''
     Detect if a new kernel version is available in the repositories.
-    Returns True if a new kernel is avaliable, False otherwise.
+    Returns True if a new kernel is available, False otherwise.
 
     CLI Example:
 
@@ -215,7 +215,7 @@ def remove(release):
         raise CommandExecutionError('Active kernel cannot be removed')
 
     target = '{0}-{1}'.format(_package_name(), release)
-    log.info('Removing kernel package {0}'.format(target))
+    log.info('Removing kernel package %s', target)
     old = __salt__['pkg.list_pkgs']()
 
     # Build the command string

@@ -5,6 +5,11 @@ Manage Apigateway Rest APIs
 
 .. versionadded:: 2016.11.0
 
+:depends:
+  - boto >= 2.8.0
+  - boto3 >= 1.2.1
+  - botocore >= 1.4.49
+
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
@@ -47,7 +52,7 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import os
@@ -748,7 +753,7 @@ class _Swagger(object):
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in six.iteritems(opobj.get('responses')):
-                    if not self._is_http_error_rescode(str(rescode)):
+                    if not self._is_http_error_rescode(str(rescode)):  # future lint: disable=blacklisted-function
                         continue
 
                     # only check for response code from 400-599
@@ -1598,7 +1603,7 @@ class _Swagger(object):
 
         if 'responses' in method_data:
             for response, response_data in six.iteritems(method_data['responses']):
-                httpStatus = str(response)
+                httpStatus = str(response)  # future lint: disable=blacklisted-function
                 method_response = self._parse_method_response(method_name.lower(),
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 

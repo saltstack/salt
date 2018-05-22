@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import time
@@ -228,7 +228,8 @@ class TestProcess(TestCase):
             ret = salt.utils.process.daemonize_if({})
             self.assertEqual(None, ret)
 
-        with patch('salt.utils.process.daemonize'):
+        with patch('salt.utils.process.daemonize'), \
+                patch('sys.platform', 'linux2'):
             salt.utils.process.daemonize_if({})
             self.assertTrue(salt.utils.process.daemonize.called)
         # pylint: enable=assignment-from-none

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import datetime
@@ -384,7 +384,7 @@ class TempSwaggerFile(object):
             self.swaggerdict['invalid_key'] = 'invalid'
             # remove one of the required keys 'schemes'
             self.swaggerdict.pop('schemes', None)
-            # set swagger version to an unsupported verison 3.0
+            # set swagger version to an unsupported version 3.0
             self.swaggerdict['swagger'] = '3.0'
             # missing info object
             self.swaggerdict.pop('info', None)
@@ -1173,7 +1173,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_present_if_IOError_is_raised(self, *args):
         '''
@@ -1185,7 +1185,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_absent_if_describe_fails(self, *args):
         '''
@@ -1248,7 +1248,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
                 self.assertIn('result', result)
                 self.assertEqual(result['result'], False)
                 self.assertIn('comment', result)
-                self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, {\'error\': \'error\'}')
+                self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, ' + repr({'error': 'error'}))
                 self.assertIn('changes', result)
                 self.assertEqual(result['changes'], {})
 
@@ -1278,7 +1278,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_absent_if_IOError_is_raised(self, *args):
         '''
@@ -1290,7 +1290,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1410,7 +1410,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1424,7 +1424,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1540,7 +1540,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1554,6 +1554,6 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})

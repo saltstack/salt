@@ -185,7 +185,7 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import time
@@ -202,27 +202,30 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
-from zmq.eventloop import ioloop
-from salt.ext import six
 # pylint: enable=import-error
-
-# instantiate the zmq IOLoop (specialized poller)
-ioloop.install()
+import salt.utils
+salt.utils.zeromq.install_zmq()
 
 # salt imports
+import salt.ext.six as six
 import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.yaml
+import salt.utils.minions
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError
+)
 
 json = salt.utils.json.import_json()
-logger = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 def _json_dumps(obj, **kwargs):
@@ -242,28 +245,6 @@ def _json_dumps(obj, **kwargs):
 # # master side
 #  - "runner" (done)
 #  - "wheel" (need async api...)
-
-
-class SaltClientsMixIn(object):
-    '''
-    MixIn class to container all of the salt clients that the API needs
-    '''
-    # TODO: load this proactively, instead of waiting for a request
-    __saltclients = None
-
-    @property
-    def saltclients(self):
-        if SaltClientsMixIn.__saltclients is None:
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
-            # TODO: refreshing clients using cachedict
-            SaltClientsMixIn.__saltclients = {
-                'local': local_client.run_job_async,
-                # not the actual client we'll use.. but its what we'll use to get args
-                'local_async': local_client.run_job_async,
-                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
-                'runner_async': None,  # empty, since we use the same client as `runner`
-                }
-        return SaltClientsMixIn.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -319,15 +300,15 @@ class EventListener(object):
 
         self.event.set_event_handler(self._handle_event_socket_recv)
 
-    def clean_timeout_futures(self, request):
+    def clean_by_request(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
         '''
         if request not in self.request_map:
             return
-        for tag, future in self.request_map[request]:
+        for tag, matcher, future in self.request_map[request]:
             # timeout the future
-            self._timeout_future(tag, future)
+            self._timeout_future(tag, matcher, future)
             # remove the timeout
             if future in self.timeout_map:
                 tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
@@ -335,9 +316,22 @@ class EventListener(object):
 
         del self.request_map[request]
 
+    @staticmethod
+    def prefix_matcher(mtag, tag):
+        if mtag is None or tag is None:
+            raise TypeError('mtag or tag can not be None')
+        return mtag.startswith(tag)
+
+    @staticmethod
+    def exact_matcher(mtag, tag):
+        if mtag is None or tag is None:
+            raise TypeError('mtag or tag can not be None')
+        return mtag == tag
+
     def get_event(self,
                   request,
                   tag='',
+                  matcher=prefix_matcher.__func__,
                   callback=None,
                   timeout=None
                   ):
@@ -357,46 +351,55 @@ class EventListener(object):
                 tornado.ioloop.IOLoop.current().add_callback(callback, future)
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
-        self.tag_map[tag].append(future)
-        self.request_map[request].append((tag, future))
+        self.tag_map[(tag, matcher)].append(future)
+        self.request_map[request].append((tag, matcher, future))
 
         if timeout:
-            timeout_future = tornado.ioloop.IOLoop.current().call_later(timeout, self._timeout_future, tag, future)
+            timeout_future = tornado.ioloop.IOLoop.current().call_later(timeout, self._timeout_future, tag, matcher, future)
             self.timeout_map[future] = timeout_future
 
         return future
 
-    def _timeout_future(self, tag, future):
+    def _timeout_future(self, tag, matcher, future):
         '''
         Timeout a specific future
         '''
-        if tag not in self.tag_map:
+        if (tag, matcher) not in self.tag_map:
             return
         if not future.done():
             future.set_exception(TimeoutException())
-            self.tag_map[tag].remove(future)
-        if len(self.tag_map[tag]) == 0:
-            del self.tag_map[tag]
+            self.tag_map[(tag, matcher)].remove(future)
+        if len(self.tag_map[(tag, matcher)]) == 0:
+            del self.tag_map[(tag, matcher)]
 
     def _handle_event_socket_recv(self, raw):
         '''
         Callback for events on the event sub socket
         '''
         mtag, data = self.event.unpack(raw, self.event.serial)
+
         # see if we have any futures that need this info:
-        for tag_prefix, futures in six.iteritems(self.tag_map):
-            if mtag.startswith(tag_prefix):
-                for future in futures:
-                    if future.done():
-                        continue
-                    future.set_result({'data': data, 'tag': mtag})
-                    self.tag_map[tag_prefix].remove(future)
-                    if future in self.timeout_map:
-                        tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
-                        del self.timeout_map[future]
+        for (tag, matcher), futures in six.iteritems(self.tag_map):
+            try:
+                is_matched = matcher(mtag, tag)
+            except Exception:
+                log.error('Failed to run a matcher.', exc_info=True)
+                is_matched = False
+
+            if not is_matched:
+                continue
+
+            for future in futures:
+                if future.done():
+                    continue
+                future.set_result({'data': data, 'tag': mtag})
+                self.tag_map[(tag, matcher)].remove(future)
+                if future in self.timeout_map:
+                    tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                    del self.timeout_map[future]
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', _json_dumps),
         ('application/x-yaml', salt.utils.yaml.safe_dump),
@@ -418,11 +421,24 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Initialize the handler before requests are called
         '''
         if not hasattr(self.application, 'event_listener'):
-            logger.critical('init a listener')
+            log.debug('init a listener')
             self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
             )
+
+        if not hasattr(self, 'saltclients'):
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
+            self.saltclients = {
+                'local': local_client.run_job_async,
+                # not the actual client we'll use.. but its what we'll use to get args
+                'local_async': local_client.run_job_async,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
+                }
+
+        if not hasattr(self, 'ckminions'):
+            self.ckminions = salt.utils.minions.CkMinions(self.application.opts)
 
     @property
     def token(self):
@@ -479,7 +495,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         timeout a session
         '''
         # TODO: set a header or something??? so we know it was a timeout
-        self.application.event_listener.clean_timeout_futures(self)
+        self.application.event_listener.clean_by_request(self)
 
     def on_finish(self):
         '''
@@ -726,17 +742,30 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # Grab eauth config for the current backend for the current user
         try:
-            perms = self.application.opts['external_auth'][token['eauth']][token['name']]
+            eauth = self.application.opts['external_auth'][token['eauth']]
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
 
+            if 'groups' in token and token['groups']:
+                user_groups = set(token['groups'])
+                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+
+                for group in user_groups & eauth_groups:
+                    perms.extend(eauth['{0}%'.format(group)])
+
+            perms = sorted(list(set(perms)))
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
             return
 
         except (AttributeError, IndexError):
-            logging.debug("Configuration for external_auth malformed for "
-                          "eauth '{0}', and user '{1}'."
-                          .format(token.get('eauth'), token.get('name')), exc_info=True)
+            log.debug(
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.", token.get('eauth'), token.get('name'),
+                exc_info=True
+            )
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
             return
@@ -753,7 +782,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
 
-class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
@@ -897,12 +926,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
-            except EauthAuthenticationError as exc:
+            except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
             except Exception as ex:
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
-                logger.error('Unexpected exception while handling request:', exc_info=True)
+                log.error('Unexpected exception while handling request:', exc_info=True)
 
         self.write(self.serialize({'return': ret}))
         self.finish()
@@ -912,7 +941,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         Dispatch local client commands
         '''
-        chunk_ret = {}
+        # Generate jid before triggering a job to subscribe all returns from minions
+        chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts)
+
+        # Subscribe returns from minions before firing a job
+        minions = self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')).get('minions', list())
+        future_minion_map = self.subscribe_minion_returns(chunk['jid'], minions)
 
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
@@ -921,80 +955,92 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         # if the job didn't publish, lets not wait around for nothing
         # TODO: set header??
         if 'jid' not in pub_data:
+            for future in future_minion_map:
+                try:
+                    future.set_result(None)
+                except Exception:
+                    pass
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
-        # seed minions_remaining with the pub_data
-        minions_remaining = pub_data['minions']
-
-        syndic_min_wait = None
+        # wait syndic a while to avoid missing published events
         if self.application.opts['order_masters']:
-            syndic_min_wait = tornado.gen.sleep(self.application.opts['syndic_wait'])
+            yield tornado.gen.sleep(self.application.opts['syndic_wait'])
 
-        job_not_running = self.job_not_running(pub_data['jid'],
-                                               chunk['tgt'],
-                                               f_call['kwargs']['tgt_type'],
-                                               minions_remaining=minions_remaining
-                                               )
+        # To ensure job_not_running and all_return are terminated by each other, communicate using a future
+        is_finished = Future()
 
-        # if we have a min_wait, do that
-        if syndic_min_wait is not None:
-            yield syndic_min_wait
-        # we are completed when either all minions return or the job isn't running anywhere
-        chunk_ret = yield self.all_returns(pub_data['jid'],
-                                           finish_futures=[job_not_running],
-                                           minions_remaining=minions_remaining,
-                                           )
+        job_not_running_future = self.job_not_running(pub_data['jid'],
+                                                      chunk['tgt'],
+                                                      f_call['kwargs']['tgt_type'],
+                                                      is_finished)
 
-        raise tornado.gen.Return(chunk_ret)
+        minion_returns_future = self.sanitize_minion_returns(future_minion_map, pub_data['minions'], is_finished)
+
+        yield job_not_running_future
+        raise tornado.gen.Return((yield minion_returns_future))
+
+    def subscribe_minion_returns(self, jid, minions):
+        # Subscribe each minion event
+        future_minion_map = {}
+        for minion in minions:
+            tag = tagify([jid, 'ret', minion], 'job')
+            minion_future = self.application.event_listener.get_event(self,
+                                                                      tag=tag,
+                                                                      matcher=EventListener.exact_matcher)
+            future_minion_map[minion_future] = minion
+        return future_minion_map
 
     @tornado.gen.coroutine
-    def all_returns(self,
-                    jid,
-                    finish_futures=None,
-                    minions_remaining=None,
-                    ):
+    def sanitize_minion_returns(self, future_minion_map, minions, is_finished):
         '''
         Return a future which will complete once all returns are completed
-        (according to minions_remaining), or one of the passed in "finish_futures" completes
+        (according to minions), or one of the passed in "finish_chunk_ret_future" completes
         '''
-        if finish_futures is None:
-            finish_futures = []
-        if minions_remaining is None:
-            minions_remaining = []
+        if minions is None:
+            minions = []
 
-        ret_tag = tagify([jid, 'ret'], 'job')
+        # Remove redundant minions
+        redundant_minion_futures = [future for future in future_minion_map.keys() if future_minion_map[future] not in minions]
+        for redundant_minion_future in redundant_minion_futures:
+            try:
+                redundant_minion_future.set_result(None)
+            except Exception:
+                pass
+            del future_minion_map[redundant_minion_future]
+
         chunk_ret = {}
         while True:
-            ret_event = self.application.event_listener.get_event(self,
-                                                      tag=ret_tag,
-                                                      )
-            f = yield Any([ret_event] + finish_futures)
-            if f in finish_futures:
-                raise tornado.gen.Return(chunk_ret)
-            event = f.result()
-            chunk_ret[event['data']['id']] = event['data']['return']
-            # its possible to get a return that wasn't in the minion_remaining list
+            f = yield Any(list(future_minion_map.keys()) + [is_finished])
             try:
-                minions_remaining.remove(event['data']['id'])
+                # When finished entire routine, cleanup other futures and return result
+                if f is is_finished:
+                    for event in future_minion_map.keys():
+                        if not event.done():
+                            event.set_result(None)
+                    raise tornado.gen.Return(chunk_ret)
+                f_result = f.result()
+                chunk_ret[f_result['data']['id']] = f_result['data']['return']
+            except TimeoutException:
+                pass
+
+            # clear finished event future
+            try:
+                minions.remove(future_minion_map[f])
+                del future_minion_map[f]
             except ValueError:
                 pass
-            if len(minions_remaining) == 0:
+
+            if not minions:
+                if not is_finished.done():
+                    is_finished.set_result(True)
                 raise tornado.gen.Return(chunk_ret)
 
     @tornado.gen.coroutine
-    def job_not_running(self,
-                  jid,
-                  tgt,
-                  tgt_type,
-                  minions_remaining=None,
-                  ):
+    def job_not_running(self, jid, tgt, tgt_type, is_finished):
         '''
         Return a future which will complete once jid (passed in) is no longer
         running on tgt
         '''
-        if minions_remaining is None:
-            minions_remaining = []
-
         ping_pub_data = yield self.saltclients['local'](tgt,
                                                         'saltutil.find_job',
                                                         [jid],
@@ -1004,12 +1050,20 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         minion_running = False
         while True:
             try:
-                event = yield self.application.event_listener.get_event(self,
-                                                                        tag=ping_tag,
-                                                                        timeout=self.application.opts['gather_job_timeout'],
-                                                                        )
+                event = self.application.event_listener.get_event(self,
+                                                                  tag=ping_tag,
+                                                                  timeout=self.application.opts['gather_job_timeout'])
+                f = yield Any([event, is_finished])
+                # When finished entire routine, cleanup other futures and return result
+                if f is is_finished:
+                    if not event.done():
+                        event.set_result(None)
+                    raise tornado.gen.Return(True)
+                event = f.result()
             except TimeoutException:
                 if not minion_running:
+                    if not is_finished.done():
+                        is_finished.set_result(True)
                     raise tornado.gen.Return(True)
                 else:
                     ping_pub_data = yield self.saltclients['local'](tgt,
@@ -1019,13 +1073,11 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
+
             # Minions can return, we want to see if the job is running...
             if event['data'].get('return', {}) == {}:
                 continue
             minion_running = True
-            id_ = event['data']['id']
-            if id_ not in minions_remaining:
-                minions_remaining.append(event['data']['id'])
 
     @tornado.gen.coroutine
     def _disbatch_local_async(self, chunk):
@@ -1486,7 +1538,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header('Cache-Control', 'no-cache')
         self.set_header('Connection', 'keep-alive')
 
-        self.write(u'retry: {0}\n'.format(400))
+        self.write('retry: {0}\n'.format(400))
         self.flush()
 
         while True:

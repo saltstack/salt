@@ -42,9 +42,12 @@ Connection module for Amazon SNS
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -65,10 +68,10 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto3_sns module could not be loaded: boto3 libraries not found')
-    __utils__['boto3.assign_funcs'](__name__, 'sns')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'sns')
+    return has_boto_reqs
 
 
 def list_topics(region=None, key=None, keyid=None, profile=None):
@@ -135,13 +138,13 @@ def create_topic(Name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         ret = conn.create_topic(Name=Name)
-        log.info('SNS topic {0} created with ARN {1}'.format(Name, ret['TopicArn']))
+        log.info('SNS topic %s created with ARN %s', Name, ret['TopicArn'])
         return ret['TopicArn']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to create SNS topic {0}: {1}'.format(Name, e))
+        log.error('Failed to create SNS topic %s: %s', Name, e)
         return None
     except KeyError:
-        log.error('Failed to create SNS topic {0}'.format(Name))
+        log.error('Failed to create SNS topic %s', Name)
         return None
 
 
@@ -156,10 +159,10 @@ def delete_topic(TopicArn, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_topic(TopicArn=TopicArn)
-        log.info('SNS topic {0} deleted'.format(TopicArn))
+        log.info('SNS topic %s deleted', TopicArn)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to delete SNS topic {0}: {1}'.format(name, e))
+        log.error('Failed to delete SNS topic %s: %s', name, e)
         return False
 
 
@@ -176,7 +179,7 @@ def get_topic_attributes(TopicArn, region=None, key=None, keyid=None, profile=No
     try:
         return conn.get_topic_attributes(TopicArn=TopicArn).get('Attributes')
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to garner attributes for SNS topic {0}: {1}'.format(TopicArn, e))
+        log.error('Failed to garner attributes for SNS topic %s: %s', TopicArn, e)
         return None
 
 
@@ -193,13 +196,12 @@ def set_topic_attributes(TopicArn, AttributeName, AttributeValue, region=None, k
     try:
         conn.set_topic_attributes(TopicArn=TopicArn, AttributeName=AttributeName,
                                   AttributeValue=AttributeValue)
-        log.debug('Set attribute {0}={1} on SNS topic {2}'.format(AttributeName, AttributeValue,
-                                                                  TopicArn))
+        log.debug('Set attribute %s=%s on SNS topic %s',
+                  AttributeName, AttributeValue, TopicArn)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to set attribute {0}={1} for SNS topic {2}: {3}'.format(AttributeName,
-                                                                                  AttributeValue,
-                                                                                  TopicArn, e))
+        log.error('Failed to set attribute %s=%s for SNS topic %s: %s',
+                  AttributeName, AttributeValue, TopicArn, e)
         return False
 
 
@@ -221,7 +223,7 @@ def list_subscriptions_by_topic(TopicArn, region=None, key=None, keyid=None, pro
             subs = ret.get('Subscriptions', [])
             res += subs
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to list subscriptions for SNS topic {0}: {1}'.format(TopicArn, e))
+        log.error('Failed to list subscriptions for SNS topic %s: %s', TopicArn, e)
         return None
     return res
 
@@ -244,7 +246,7 @@ def list_subscriptions(region=None, key=None, keyid=None, profile=None):
             subs = ret.get('Subscriptions', [])
             res += subs
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to list SNS subscriptions: {0}'.format(e))
+        log.error('Failed to list SNS subscriptions: %s', e)
         return None
     return res
 
@@ -262,11 +264,12 @@ def get_subscription_attributes(SubscriptionArn, region=None, key=None, keyid=No
         ret = conn.get_subscription_attributes(SubscriptionArn=SubscriptionArn)
         return ret['Attributes']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to list attributes for SNS subscription {0}: {1}'.format(SubscriptionArn,
-                                                                                   e))
+        log.error('Failed to list attributes for SNS subscription %s: %s',
+                  SubscriptionArn, e)
         return None
     except KeyError:
-        log.error('Failed to list attributes for SNS subscription {0}'.format(SubscriptionArn))
+        log.error('Failed to list attributes for SNS subscription %s',
+                  SubscriptionArn)
         return None
 
 
@@ -283,13 +286,12 @@ def set_subscription_attributes(SubscriptionArn, AttributeName, AttributeValue, 
     try:
         conn.set_subscription_attributes(SubscriptionArn=SubscriptionArn,
                                          AttributeName=AttributeName, AttributeValue=AttributeValue)
-        log.debug('Set attribute {0}={1} on SNS subscription {2}'.format(AttributeName,
-                                                                         AttributeValue,
-                                                                         SubscriptionArn))
+        log.debug('Set attribute %s=%s on SNS subscription %s',
+                  AttributeName, AttributeValue, SubscriptionArn)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to set attribute {0}={1} for SNS subscription {2}: {3}'.format(
-                  AttributeName, AttributeValue, SubscriptionArn, e))
+        log.error('Failed to set attribute %s=%s for SNS subscription %s: %s',
+                  AttributeName, AttributeValue, SubscriptionArn, e)
         return False
 
 
@@ -304,14 +306,14 @@ def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, p
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         ret = conn.subscribe(TopicArn=TopicArn, Protocol=Protocol, Endpoint=Endpoint)
-        log.info('Subscribed {0} {1} to topic {2} with SubscriptionArn {3}'.format(
-                 Protocol, Endpoint, TopicArn, ret['SubscriptionArn']))
+        log.info('Subscribed %s %s to topic %s with SubscriptionArn %s',
+                 Protocol, Endpoint, TopicArn, ret['SubscriptionArn'])
         return ret['SubscriptionArn']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to create subscription to SNS topic {0}: {1}'.format(TopicArn, e))
+        log.error('Failed to create subscription to SNS topic %s: %s', TopicArn, e)
         return None
     except KeyError:
-        log.error('Failed to create subscription to SNS topic {0}'.format(TopicArn))
+        log.error('Failed to create subscription to SNS topic %s', TopicArn)
         return None
 
 
@@ -328,14 +330,15 @@ def unsubscribe(SubscriptionArn, region=None, key=None, keyid=None, profile=None
     subs = list_subscriptions(region=region, key=key, keyid=keyid, profile=profile)
     sub = [s for s in subs if s.get('SubscriptionArn') == SubscriptionArn]
     if not sub:
-        log.error('Subscription ARN {0} not found'.format(SubscriptionArn))
+        log.error('Subscription ARN %s not found', SubscriptionArn)
         return False
     TopicArn = sub[0]['TopicArn']
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.unsubscribe(SubscriptionArn=SubscriptionArn)
-        log.info('Deleted subscription {0} from SNS topic {1}'.format(SubscriptionArn, TopicArn))
+        log.info('Deleted subscription %s from SNS topic %s',
+                 SubscriptionArn, TopicArn)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to delete subscription {0}: {1}'.format(SubscriptionArn, e))
+        log.error('Failed to delete subscription %s: %s', SubscriptionArn, e)
         return False

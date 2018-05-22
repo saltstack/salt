@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -136,7 +136,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
-                patch('salt.utils.files.fopen', mock_open(read_data='content')), \
+                patch('salt.utils.files.fopen', mock_open(read_data=b'content')), \
                 patch('salt.transport.Channel.factory', MagicMock()):
             response = cp.push('/saltines/test.file')
             self.assertEqual(response, True)

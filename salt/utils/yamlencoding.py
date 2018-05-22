@@ -4,7 +4,7 @@ Functions for adding yaml encoding to the jinja context
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import io
 
 # Import 3rd-party libs

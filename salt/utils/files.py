@@ -3,7 +3,7 @@
 Functions for working with files
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import contextlib
@@ -16,7 +16,6 @@ import stat
 import subprocess
 import tempfile
 import time
-import urllib
 
 # Import Salt libs
 import salt.utils.path
@@ -29,6 +28,7 @@ from salt.utils.decorators.jinja import jinja_filter
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 try:
     import fcntl
     HAS_FCNTL = True
@@ -299,20 +299,29 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace('Write lock for %s (%s) released', path, lock_fn)
 
 
+def get_umask():
+    '''
+    Returns the current umask
+    '''
+    ret = os.umask(0)  # pylint: disable=blacklisted-function
+    os.umask(ret)  # pylint: disable=blacklisted-function
+    return ret
+
+
 @contextlib.contextmanager
 def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.platform.is_windows():
-        # Don't attempt on Windows
+    if mask is None or salt.utils.platform.is_windows():
+        # Don't attempt on Windows, or if no mask was passed
         yield
     else:
         try:
-            orig_mask = os.umask(mask)
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
-            os.umask(orig_mask)
+            os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):
@@ -328,6 +337,17 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     '''
+    if six.PY3:
+        try:
+            # Don't permit stdin/stdout/stderr to be opened. The boolean False
+            # and True are treated by Python 3's open() as file descriptors 0
+            # and 1, respectively.
+            if args[0] in (0, 1, 2):
+                raise TypeError(
+                    '{0} is not a permitted file descriptor'.format(args[0])
+                )
+        except IndexError:
+            pass
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
@@ -563,7 +583,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe='')
+        return quote(re_obj.group(0), safe='')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',
@@ -705,7 +725,7 @@ def normalize_mode(mode):
     if mode is None:
         return None
     if not isinstance(mode, six.string_types):
-        mode = str(mode)
+        mode = six.text_type(mode)
     if six.PY3:
         mode = mode.replace('0o', '0')
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
@@ -718,7 +738,7 @@ def human_size_to_bytes(human_size):
     Convert human-readable units to bytes
     '''
     size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
-    human_size_str = str(human_size)
+    human_size_str = six.text_type(human_size)
     match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
     if not match:
         raise ValueError(
@@ -741,7 +761,7 @@ def backup_minion(path, bkroot):
         src_dir = dname[1:]
     if not salt.utils.platform.is_windows():
         fstat = os.stat(path)
-    msecs = str(int(time.time() * 1000000))[-6:]
+    msecs = six.text_type(int(time.time() * 1000000))[-6:]
     if salt.utils.platform.is_windows():
         # ':' is an illegal filesystem path character on Windows
         stamp = time.strftime('%a_%b_%d_%H-%M-%S_%Y')

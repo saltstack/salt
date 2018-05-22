@@ -11,7 +11,7 @@ Provides the service module for systemd
     <module-provider-override>`.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import glob
 import logging
@@ -24,6 +24,7 @@ import shlex
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
 
@@ -70,7 +71,7 @@ def _canonical_unit_name(name):
     of the valid suffixes as a service.
     '''
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
         return name
     return '%s.service' % name
@@ -158,6 +159,7 @@ def _default_runlevel():
     try:
         with salt.utils.files.fopen('/etc/init/rc-sysinit.conf') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
     except Exception:
@@ -167,6 +169,7 @@ def _default_runlevel():
     try:
         with salt.utils.files.fopen('/etc/inittab') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
     except Exception:
@@ -179,6 +182,7 @@ def _default_runlevel():
             ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
         with salt.utils.files.fopen('/proc/cmdline') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 for arg in line.strip().split():
                     if arg in valid_strings:
                         runlevel = arg
@@ -1026,7 +1030,7 @@ def status(name, sig=None):  # pylint: disable=unused-argument
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

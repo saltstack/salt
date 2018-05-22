@@ -19,11 +19,10 @@ Module for managing BTRFS file systems.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import uuid
-import logging
 
 
 # Import Salt libs
@@ -33,8 +32,6 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
