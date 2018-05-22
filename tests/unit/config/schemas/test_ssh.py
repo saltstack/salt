@@ -73,6 +73,12 @@ class RosterEntryConfigTest(TestCase):
                     'title': 'Private Key',
                     'minLength': 1
                 },
+                'priv_passwd': {
+                    'type': 'string',
+                    'description': 'Passphrase for private key file',
+                    'title': 'Private Key passphrase',
+                    'minLength': 1,
+                },
                 'sudo': {
                     'default': False,
                     'type': 'boolean',
@@ -116,6 +122,7 @@ class RosterEntryConfigTest(TestCase):
                 'user',
                 'passwd',
                 'priv',
+                'priv_passwd',
                 'sudo',
                 'timeout',
                 'thin_dir',
