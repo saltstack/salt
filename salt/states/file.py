@@ -267,7 +267,6 @@ For example:
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import difflib
-import fnmatch
 import itertools
 import logging
 import os
@@ -1680,17 +1679,18 @@ def absent(name,
     return ret
 
 
-# Helper to match a given name against one or more glob patterns
-def _matches(name, patterns=[]):
-    for pattern in patterns:
-        if fnmatch.fnmatch(name, pattern):
+# Helper to match a given name against one or more pre-compiled regular
+# expressions
+def _matches(name, reprogs=[]):
+    for prog in reprogs:
+        if prog.match(name):
             return True
     return False
 
 
 def tidied(name,
            age=0,
-           matches=['*'],
+           matches=['.*'],
            rmdirs=False,
            size=0,
            **kwargs):
@@ -1709,7 +1709,7 @@ def tidied(name,
         Maximum age in days after which files are considered for removal
 
     matches
-        Array of glob patterns to restrict what gets removed
+        Array of regular expressions to restrict what gets removed
 
     rmdirs
         Whether or not it's allowed to remove directories
@@ -1726,7 +1726,7 @@ def tidied(name,
             - rmdirs: True
             - matches:
               - foo
-              - b*r
+              - b.*r
     '''
     name = os.path.expanduser(name)
 
@@ -1748,6 +1748,11 @@ def tidied(name,
     todelete = []
     today = date.today()
 
+    # Compile regular expressions
+    progs = []
+    for regex in matches:
+        progs.append(re.compile(regex))
+
     # Iterate over given directory tree, depth-first
     for root, dirs, files in os.walk(top=name, topdown=False):
         # Check criteria for the found files and directories
@@ -1768,7 +1773,7 @@ def tidied(name,
                 myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
                 mysize = os.path.getsize(path)
             # Verify against given criteria, collect all elements that should be removed
-            if (mysize >= size or myage.days >= age) and _matches(name=elem, patterns=matches) and deleteme:
+            if (mysize >= size or myage.days >= age) and _matches(name=elem, reprogs=progs) and deleteme:
                 todelete.append(path)
 
     # Now delete the stuff
