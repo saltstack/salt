@@ -538,6 +538,10 @@
 # targeted with the normal -N argument to salt-ssh.
 #ssh_list_nodegroups: {}
 
+# salt-ssh has the ability to update the flat roster file if a minion is not
+# found in the roster.  Set this to True to enable it.
+#ssh_update_roster: False
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded.
