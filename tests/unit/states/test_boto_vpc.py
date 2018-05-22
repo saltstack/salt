@@ -14,6 +14,7 @@ from tests.support.paths import TESTS_DIR
 
 
 # Import Salt libs
+import salt.config
 import salt.utils.botomod as botomod
 from salt.ext import six
 from salt.utils.versions import LooseVersion
