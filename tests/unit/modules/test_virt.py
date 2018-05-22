@@ -629,6 +629,258 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_remove.assert_called_once()
         mock_remove.assert_any_call('/disks/test.qcow2')
 
+    def test_capabilities(self):
+        xml = '''
+<capabilities>
+  <host>
+    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <model>Nehalem</model>
+      <vendor>Intel</vendor>
+      <microcode version='25'/>
+      <topology sockets='1' cores='4' threads='2'/>
+      <feature name='vme'/>
+      <feature name='ds'/>
+      <feature name='acpi'/>
+      <pages unit='KiB' size='4'/>
+      <pages unit='KiB' size='2048'/>
+    </cpu>
+    <power_management>
+      <suspend_mem/>
+      <suspend_disk/>
+      <suspend_hybrid/>
+    </power_management>
+    <migration_features>
+      <live/>
+      <uri_transports>
+        <uri_transport>tcp</uri_transport>
+        <uri_transport>rdma</uri_transport>
+      </uri_transports>
+    </migration_features>
+    <topology>
+      <cells num='1'>
+        <cell id='0'>
+          <memory unit='KiB'>12367120</memory>
+          <pages unit='KiB' size='4'>3091780</pages>
+          <pages unit='KiB' size='2048'>0</pages>
+          <distances>
+            <sibling id='0' value='10'/>
+          </distances>
+          <cpus num='8'>
+            <cpu id='0' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='1' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='2' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='3' socket_id='0' core_id='3' siblings='3,7'/>
+            <cpu id='4' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='5' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='6' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='7' socket_id='0' core_id='3' siblings='3,7'/>
+          </cpus>
+        </cell>
+      </cells>
+    </topology>
+    <cache>
+      <bank id='0' level='3' type='both' size='8' unit='MiB' cpus='0-7'/>
+    </cache>
+    <secmodel>
+      <model>apparmor</model>
+      <doi>0</doi>
+    </secmodel>
+    <secmodel>
+      <model>dac</model>
+      <doi>0</doi>
+      <baselabel type='kvm'>+487:+486</baselabel>
+      <baselabel type='qemu'>+487:+486</baselabel>
+    </secmodel>
+  </host>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='i686'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-i386</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+      <pae/>
+      <nonpae/>
+    </features>
+  </guest>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+    </features>
+  </guest>
+
+</capabilities>
+        '''
+        self.mock_conn.getCapabilities.return_value = xml
+        caps = virt.capabilities()
+
+        expected = {
+            'host': {
+                'uuid': '44454c4c-3400-105a-8033-b3c04f4b344a',
+                'cpu': {
+                    'arch': 'x86_64',
+                    'model': 'Nehalem',
+                    'vendor': 'Intel',
+                    'microcode': '25',
+                    'sockets': 1,
+                    'cores': 4,
+                    'threads': 2,
+                    'features': ['vme', 'ds', 'acpi'],
+                    'pages': [{'size': '4 KiB'}, {'size': '2048 KiB'}]
+                },
+                'power_management': ['suspend_mem', 'suspend_disk', 'suspend_hybrid'],
+                'migration': {
+                    'live': True,
+                    'transports': ['tcp', 'rdma']
+                },
+                'topology': {
+                    'cells': [
+                        {
+                            'id': 0,
+                            'memory': '12367120 KiB',
+                            'pages': [
+                                {'size': '4 KiB', 'available': 3091780},
+                                {'size': '2048 KiB', 'available': 0}
+                            ],
+                            'distances': {
+                                0: 10,
+                            },
+                            'cpus': [
+                                {'id': 0, 'socket_id': 0, 'core_id': 0, 'siblings': '0,4'},
+                                {'id': 1, 'socket_id': 0, 'core_id': 1, 'siblings': '1,5'},
+                                {'id': 2, 'socket_id': 0, 'core_id': 2, 'siblings': '2,6'},
+                                {'id': 3, 'socket_id': 0, 'core_id': 3, 'siblings': '3,7'},
+                                {'id': 4, 'socket_id': 0, 'core_id': 0, 'siblings': '0,4'},
+                                {'id': 5, 'socket_id': 0, 'core_id': 1, 'siblings': '1,5'},
+                                {'id': 6, 'socket_id': 0, 'core_id': 2, 'siblings': '2,6'},
+                                {'id': 7, 'socket_id': 0, 'core_id': 3, 'siblings': '3,7'}
+                            ]
+                        }
+                    ]
+                },
+                'cache': {
+                    'banks': [
+                        {'id': 0, 'level': 3, 'type': 'both', 'size': '8 MiB', 'cpus': '0-7'}
+                    ]
+                },
+                'security': [
+                    {'model': 'apparmor', 'doi': '0', 'baselabels': []},
+                    {'model': 'dac', 'doi': '0', 'baselabels': [
+                        {'type': 'kvm', 'label': '+487:+486'},
+                        {'type': 'qemu', 'label': '+487:+486'}
+                    ]}
+                ]
+            },
+            'guests': [
+                {
+                    'os_type': 'hvm',
+                    'arch': {
+                        'name': 'i686',
+                        'wordsize': 32,
+                        'emulator': '/usr/bin/qemu-system-i386',
+                        'machines': {
+                            'pc-i440fx-2.6': {'maxcpus': 255, 'alternate_names': ['pc']},
+                            'pc-0.12': {'maxcpus': 255, 'alternate_names': []}
+                        },
+                        'domains': {
+                            'qemu': {
+                                'emulator': None,
+                                'machines': {}
+                            },
+                            'kvm': {
+                                'emulator': '/usr/bin/qemu-kvm',
+                                'machines': {
+                                    'pc-i440fx-2.6': {'maxcpus': 255, 'alternate_names': ['pc']},
+                                    'pc-0.12': {'maxcpus': 255, 'alternate_names': []}
+                                }
+                            }
+                        }
+                    },
+                    'features': {
+                        'cpuselection': {'default': True, 'toggle': False},
+                        'deviceboot': {'default': True, 'toggle': False},
+                        'disksnapshot': {'default': True, 'toggle': False},
+                        'acpi': {'default': True, 'toggle': True},
+                        'apic': {'default': True, 'toggle': False},
+                        'pae': {'default': True, 'toggle': False},
+                        'nonpae': {'default': True, 'toggle': False}
+                    }
+                },
+                {
+                    'os_type': 'hvm',
+                    'arch': {
+                        'name': 'x86_64',
+                        'wordsize': 64,
+                        'emulator': '/usr/bin/qemu-system-x86_64',
+                        'machines': {
+                            'pc-i440fx-2.6': {'maxcpus': 255, 'alternate_names': ['pc']},
+                            'pc-0.12': {'maxcpus': 255, 'alternate_names': []}
+                        },
+                        'domains': {
+                            'qemu': {
+                                'emulator': None,
+                                'machines': {}
+                            },
+                            'kvm': {
+                                'emulator': '/usr/bin/qemu-kvm',
+                                'machines': {
+                                    'pc-i440fx-2.6': {'maxcpus': 255, 'alternate_names': ['pc']},
+                                    'pc-0.12': {'maxcpus': 255, 'alternate_names': []}
+                                }
+                            }
+                        }
+                    },
+                    'features': {
+                        'cpuselection': {'default': True, 'toggle': False},
+                        'deviceboot': {'default': True, 'toggle': False},
+                        'disksnapshot': {'default': True, 'toggle': False},
+                        'acpi': {'default': True, 'toggle': True},
+                        'apic': {'default': True, 'toggle': False}
+                    }
+                }
+            ]
+        }
+
+        self.assertEqual(expected, caps)
+
     def test_network(self):
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
         root = ET.fromstring(xml_data)
