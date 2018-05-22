@@ -39,6 +39,7 @@ def __random_name(size=6):
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
+TIMEOUT = 1000
 
 
 class EC2Test(ShellCase):
@@ -150,7 +151,7 @@ class EC2Test(ShellCase):
                 dfp.write(sfp.read())
         return dst
 
-    def _test_instance(self, profile='ec2-test', debug=False, timeout=1000):
+    def _test_instance(self, profile='ec2-test', debug=False, timeout=TIMEOUT):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
@@ -186,17 +187,17 @@ class EC2Test(ShellCase):
         '''
         # create the instance
         rename = INSTANCE_NAME + '-rename'
-        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=1000)
+        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=1000)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=500)
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=TIMEOUT)
 
         check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
         exp_results = ['        {0}:'.format(rename), '            size:',
@@ -205,11 +206,11 @@ class EC2Test(ShellCase):
             for result in exp_results:
                 self.assertIn(result, check_rename[0])
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=1000)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=1000)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=TIMEOUT)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -237,7 +238,7 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=1000)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
@@ -255,7 +256,7 @@ class EC2Test(ShellCase):
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=1000)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
     @expectedFailure
     def test_win2016_winexe(self):
@@ -273,7 +274,7 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=1000)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
@@ -291,7 +292,7 @@ class EC2Test(ShellCase):
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=1000)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
     def tearDown(self):
         '''
@@ -302,4 +303,4 @@ class EC2Test(ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=1000)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
