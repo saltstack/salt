@@ -1914,6 +1914,8 @@ def line(path, content=None, match=None, mode=None, location=None,
     with salt.utils.files.fopen(path, mode='r') as fp_:
         body = salt.utils.data.decode_list(fp_.readlines())
     body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
+    # Add empty line at the end if last line ends with eol.
+    # Allows simpler code
     if body and _get_eol(body[-1]):
         body.append('')
 
@@ -2009,6 +2011,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             if not _get_eol(line) and idx+1 < len(body):
                 prev = idx and idx-1 or 1
                 body[idx] = _set_line_eol(body[prev], line)
+        # We do not need empty line at the end anymore
         if '' == body[-1]:
             body.pop()
 
