@@ -336,7 +336,11 @@ def _persist_accummulators(accumulators, accumulators_deps):
 
     serial = salt.payload.Serial(__opts__)
     try:
-        with salt.utils.fopen(_get_accumulator_filepath(), 'w+b') as f:
+        # This creates the file with a restricted permission set so that only
+        # the salt user can access it
+        with salt.utils.fopen(
+                os.open(_get_accumulator_filepath(), os.O_CREAT | os.O_RDWR, 0o600),
+                'w+b') as f:
             serial.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
