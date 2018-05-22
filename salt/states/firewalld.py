@@ -235,7 +235,7 @@ def present(name,
         salt.utils.versions.warn_until(
             'Neon',
             'The \'prune_services\' argument default is currently True, '
-            'but will be changed to True in future releases.')
+            'but will be changed to False in the Neon release.')
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
