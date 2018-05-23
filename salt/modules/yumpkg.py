@@ -92,6 +92,7 @@ def _strip_headers(output, *args):
     if not args:
         args_lc = ('installed packages',
                    'available packages',
+                   'available upgrades',
                    'updated packages',
                    'upgraded packages')
     else:
