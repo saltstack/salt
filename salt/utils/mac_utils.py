@@ -37,6 +37,11 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
 
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+}
+
 
 def __virtual__():
     '''
@@ -268,7 +273,8 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Run command
     kwargs['python_shell'] = False
-    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
 
     # Raise an error or return successful result
     if ret['retcode']:
@@ -331,7 +337,7 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
+                    plist_xml = __salt__['cmd.run'](cmd)
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
