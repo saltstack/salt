@@ -29,10 +29,10 @@ import os
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
-from salt.utils.locales import sdecode, sdecode_if_string
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -155,8 +155,8 @@ def _changes(name,
             change['expire'] = expire
 
     # GECOS fields
-    fullname = sdecode_if_string(fullname)
-    lusr['fullname'] = sdecode_if_string(lusr['fullname'])
+    fullname = salt.utils.data.decode(fullname)
+    lusr['fullname'] = salt.utils.data.decode(lusr['fullname'])
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
@@ -172,20 +172,20 @@ def _changes(name,
     # and ignore these parameters if these functions do not exist.
     if 'user.chroomnumber' in __salt__ \
             and roomnumber is not None:
-        roomnumber = sdecode_if_string(roomnumber)
-        lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
+        roomnumber = salt.utils.data.decode(roomnumber)
+        lusr['roomnumber'] = salt.utils.data.decode(lusr['roomnumber'])
         if lusr['roomnumber'] != roomnumber:
             change['roomnumber'] = roomnumber
     if 'user.chworkphone' in __salt__ \
             and workphone is not None:
-        workphone = sdecode_if_string(workphone)
-        lusr['workphone'] = sdecode_if_string(lusr['workphone'])
+        workphone = salt.utils.data.decode(workphone)
+        lusr['workphone'] = salt.utils.data.decode(lusr['workphone'])
         if lusr['workphone'] != workphone:
             change['workphone'] = workphone
     if 'user.chhomephone' in __salt__ \
             and homephone is not None:
-        homephone = sdecode_if_string(homephone)
-        lusr['homephone'] = sdecode_if_string(lusr['homephone'])
+        homephone = salt.utils.data.decode(homephone)
+        lusr['homephone'] = salt.utils.data.decode(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
     # OpenBSD/FreeBSD login class
@@ -441,13 +441,13 @@ def present(name,
         password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
-        fullname = sdecode(fullname)
+        fullname = salt.utils.data.decode(fullname)
     if roomnumber is not None:
-        roomnumber = sdecode(roomnumber)
+        roomnumber = salt.utils.data.decode(roomnumber)
     if workphone is not None:
-        workphone = sdecode(workphone)
+        workphone = salt.utils.data.decode(workphone)
     if homephone is not None:
-        homephone = sdecode(homephone)
+        homephone = salt.utils.data.decode(homephone)
 
     # createhome not supported on Windows or Mac
     if __grains__['kernel'] in ('Darwin', 'Windows'):
