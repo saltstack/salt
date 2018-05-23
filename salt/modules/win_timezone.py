@@ -183,9 +183,11 @@ def __virtual__():
     '''
     Only load on windows
     '''
-    if __utils__['platform.is_windows']() and __utils__['path.which']('tzutil'):
-        return __virtualname__
-    return (False, "Module win_timezone: tzutil not found or is not on Windows client")
+    if not __utils__['platform.is_windows']():
+        return False, "Module win_timezone: Not on Windows client"
+    if not __utils__['path.which']('tzutil'):
+        return False, "Module win_timezone: tzutil not found"
+    return __virtualname__
 
 
 def get_zone():
