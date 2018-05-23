@@ -35,7 +35,6 @@ import salt.utils.yaml
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
-from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
 
 try:
@@ -2157,7 +2156,7 @@ def _read_conf_file(path):
             if not isinstance(conf_opts['id'], six.string_types):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
-                conf_opts['id'] = sdecode(conf_opts['id'])
+                conf_opts['id'] = salt.utils.data.decode(conf_opts['id'])
         return conf_opts
 
 
@@ -3336,7 +3335,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if isinstance(vm_[name], types.GeneratorType):
             value = next(vm_[name], '')
         else:
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(vm_[name], dict):
                 value.update(vm_[name].copy())
             else:
                 value = deepcopy(vm_[name])

@@ -33,7 +33,6 @@ import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yamlencoding
-import salt.utils.locales
 import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -381,7 +380,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 "Failed to decode using default encoding (%s), trying system encoding",
                 SLS_ENCODING,
             )
-            decoded_context[key] = salt.utils.locales.sdecode(value)
+            decoded_context[key] = salt.utils.data.decode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
