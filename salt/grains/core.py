@@ -399,6 +399,73 @@ def _sunos_cpudata():
     return grains
 
 
+def _aix_cpudata():
+    '''
+    Return CPU information for AIX systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    #   cpu_flags
+    grains = {}
+    cmd = '/usr/sbin/prtconf'
+    data = ""
+    if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
+        data += __salt__['cmd.run']('{0}'.format(cmd))
+        data += '\n'
+
+    cpuarch_regexes = [
+        re.compile(r) for r in [
+            r'(?im)^\s*Processor\s+Type:\s+(\S+)',  # prtconf
+        ]
+    ]
+
+    cpuflags_regexes = [
+        re.compile(r) for r in [
+            r'(?im)^\s*Processor\s+Version:\s+(\S+)',  # prtconf
+        ]
+    ]
+
+    cpumodel_regexes = [
+        re.compile(r) for r in [
+            r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)',  # prtconf
+        ]
+    ]
+
+    numcpus_regexes = [
+        re.compile(r) for r in [
+            r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)',  # prtconf
+        ]
+    ]
+
+    for regex in cpuarch_regexes:
+        res = regex.search(data)
+        if res and len(res.groups()) >= 1:
+            grains['cpuarch'] = res.group(1).strip().replace("'", "")
+            break
+
+    for regex in cpuflags_regexes:
+        res = regex.search(data)
+        if res and len(res.groups()) >= 1:
+            grains['cpu_flags'] = res.group(1).strip().replace("'", "")
+            break
+
+    for regex in cpumodel_regexes:
+        res = regex.search(data)
+        if res and len(res.groups()) >= 1:
+            grains['cpu_model'] = res.group(1).strip().replace("'", "")
+            break
+
+    for regex in numcpus_regexes:
+        res = regex.search(data)
+        if res and len(res.groups()) >= 1:
+            grains['num_cpus'] = res.group(1).strip().replace("'", "")
+            break
+
+    return grains
+
+
 def _linux_memdata():
     '''
     Return the memory information for Linux-like systems
@@ -494,6 +561,33 @@ def _sunos_memdata():
     return grains
 
 
+def _aix_memdata():
+    '''
+    Return the memory information for AIX systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    prtconf = '/usr/sbin/prtconf 2>/dev/null'
+    for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+        comps = line.split(' ')
+        if comps[0].strip() == 'Memory' and comps[1].strip() == 'Size:':
+            grains['mem_total'] = int(comps[2].strip())
+            break
+
+    swap_cmd = salt.utils.path.which('swap')
+    swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()  # 4k blocks
+    try:
+        swap_avail = int(swap_data[-2])  * 4
+        swap_used = int(swap_data[-6]) * 4
+        swap_total = (swap_avail + swap_used)
+
+        # above to be * 4 
+    except ValueError:
+        swap_total = None
+    grains['swap_total'] = swap_total
+    return grains
+
+
 def _windows_memdata():
     '''
     Return the memory information for Windows systems
@@ -522,6 +616,8 @@ def _memdata(osdata):
         grains.update(_osx_memdata())
     elif osdata['kernel'] == 'SunOS':
         grains.update(_sunos_memdata())
+    elif osdata['kernel'] == 'AIX':
+        grains.update(_aix_memdata())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
         grains.update(_windows_memdata())
     return grains
@@ -1798,13 +1894,23 @@ def os_data():
         osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
         grains['os'] = 'MacOS'
         grains['os_family'] = 'MacOS'
-        grains['osfullname'] = "{0} {1}".format(osname, osrelease)
+        grains['osfullname'] = "{0} {1}".format(osname, osrelease_techlevel)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
         grains['init'] = 'launchd'
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
+    elif grains['kernel'] == 'AIX':
+        osrelease = __salt__['cmd.run']('oslevel')
+        osrelease_techlevel = __salt__['cmd.run']('oslevel -r')
+        osname = __salt__['cmd.run']('uname')
+        grains['os'] = 'AIX'
+        grains['os_family'] = 'AIX'
+        grains['osfullname'] = osname
+        grains['osrelease'] = osrelease
+        grains['osrelease_techlevel'] = osrelease_techlevel
+        grains.update(_aix_cpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
