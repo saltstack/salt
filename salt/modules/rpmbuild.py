@@ -29,11 +29,12 @@ import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
 
-# Import 3rd-party libs
+# Import third party libs
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 HAS_LIBS = False
+SIGN_PROMPT_RE = re.compile(r'Enter pass phrase: ', re.M)
 
 try:
     import gnupg    # pylint: disable=unused-import
@@ -61,11 +62,12 @@ def __virtual__():
     if HAS_LIBS and not missing_util:
         if __grains__.get('os_family', False) in ('RedHat', 'Suse'):
             return __virtualname__
-        else:
-            # The module will be exposed as `rpmbuild` on non-RPM based systems
-            return 'rpmbuild'
+        # The module will be exposed as `rpmbuild` on non-RPM based systems
+        return 'rpmbuild'
     else:
-        return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
+        return False, ('The rpmbuild module could not be loaded: requires '
+                       'python-gnupg, gpg, rpm, rpmbuild, mock and createrepo '
+                       'utilities to be installed')
 
 
 def _create_rpmmacros():
@@ -104,7 +106,7 @@ def _mk_tree():
     return basedir
 
 
-def _get_spec(tree_base, spec, template, saltenv='base'):
+def _get_spec(tree_base, spec, saltenv='base'):
     '''
     Get the spec file and place it in the SPECS dir
     '''
@@ -124,7 +126,7 @@ def _get_src(tree_base, source, saltenv='base'):
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, 'SOURCES', sbase)
     if parsed.scheme:
-        lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
+        __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
 
@@ -171,7 +173,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
     return deps_list
 
 
-def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base'):
     '''
     Create a source rpm from the given spec file and sources
 
@@ -193,7 +195,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     '''
     _create_rpmmacros()
     tree_base = _mk_tree()
-    spec_path = _get_spec(tree_base, spec, template, saltenv)
+    spec_path = _get_spec(tree_base, spec, saltenv)
     if isinstance(sources, six.string_types):
         sources = sources.split(',')
     for src in sources:
@@ -201,7 +203,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     # make source rpms for dist el6 with SHA256, usable with mock on other dists
     cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(tree_base, spec_path)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, env=env)
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
     if not os.path.isdir(dest_dir):
@@ -246,8 +248,7 @@ def build(runas,
     srpm_dir = os.path.join(dest_dir, 'SRPMS')
     srpm_build_dir = tempfile.mkdtemp()
     try:
-        srpms = make_src_pkg(srpm_build_dir, spec, sources,
-                             env, template, saltenv)
+        srpms = make_src_pkg(srpm_build_dir, spec, sources, env, saltenv)
     except Exception as exc:
         shutil.rmtree(srpm_build_dir)
         log.error('Failed to make src package')
@@ -335,46 +336,22 @@ def make_repo(repodir,
         The directory to find packages that will be in the repository.
 
     keyid
-        .. versionchanged:: 2016.3.0
+        .. versionchanged:: fluorine
 
         Optional Key ID to use in signing packages and repository.
+        This consists of the last 8 hex digits of the GPG key ID.
+
         Utilizes Public and Private keys associated with keyid which have
         been loaded into the minion's Pillar data.
+        These pillar values are assumed to be filenames which are present
+        in ``gnupghome``. The pillar keys shown below have to match exactly.
 
         For example, contents from a Pillar data file with named Public
         and Private keys as follows:
 
         .. code-block:: yaml
 
-            gpg_pkg_priv_key: |
-              -----BEGIN PGP PRIVATE KEY BLOCK-----
-              Version: GnuPG v1
-
-              lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-              .
-              .
-              Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
-              R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
-              =JvW8
-              -----END PGP PRIVATE KEY BLOCK-----
-
             gpg_pkg_priv_keyname: gpg_pkg_key.pem
-
-            gpg_pkg_pub_key: |
-              -----BEGIN PGP PUBLIC KEY BLOCK-----
-              Version: GnuPG v1
-
-              mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-              .
-              .
-              bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
-              4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
-              inNqW9c=
-              =s1CX
-              -----END PGP PUBLIC KEY BLOCK-----
-
             gpg_pkg_pub_keyname: gpg_pkg_key.pub
 
     env
@@ -425,15 +402,17 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html/
 
     '''
-    SIGN_PROMPT_RE = re.compile(r'Enter pass phrase: ', re.M)
-
     define_gpg_name = ''
     local_keyid = None
     local_uids = None
     phrase = ''
+    if gnupghome:
+        if env is None:
+            env = {}
+        env['GNUPGHOME'] = gnupghome
 
     if keyid is not None:
-        ## import_keys
+        # import_keys
         pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
         pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
 
@@ -477,54 +456,56 @@ def make_repo(repodir,
 
         # need to update rpm with public key
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)
-        __salt__['cmd.run'](cmd, runas=runas, use_vt=True)
+        __salt__['cmd.run'](cmd, runas=runas, use_vt=True, env=env)
 
-        ## sign_it_here
+        # sign_it_here
         # interval of 0.125 is really too fast on some systems
         interval = 0.5
-        for file in os.listdir(repodir):
-            if file.endswith('.rpm'):
-                abs_file = os.path.join(repodir, file)
-                number_retries = timeout / interval
-                times_looped = 0
-                error_msg = 'Failed to sign file {0}'.format(abs_file)
-                cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
-                preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
-                try:
-                    stdout, stderr = None, None
-                    proc = salt.utils.vt.Terminal(
-                        cmd,
-                        shell=True,
-                        preexec_fn=preexec_fn,
-                        stream_stdout=True,
-                        stream_stderr=True
-                    )
-                    while proc.has_unread_data:
-                        stdout, stderr = proc.recv()
-                        if stdout and SIGN_PROMPT_RE.search(stdout):
-                            # have the prompt for inputting the passphrase
-                            proc.sendline(phrase)
-                        else:
-                            times_looped += 1
-
-                        if times_looped > number_retries:
-                            raise SaltInvocationError(
-                                'Attemping to sign file {0} failed, timed out after {1} seconds'
-                                .format(abs_file, int(times_looped * interval))
-                            )
-                        time.sleep(interval)
-
-                    proc_exitstatus = proc.exitstatus
-                    if proc_exitstatus != 0:
-                        raise SaltInvocationError(
-                            'Signing file {0} failed with proc.status {1}'
-                            .format(abs_file, proc_exitstatus)
+        for (dirpath, _, filenames) in os.walk(repodir):
+            for filename in filenames:
+                if filename.endswith('.rpm'):
+                    abs_file = os.path.join(dirpath, filename)
+                    number_retries = timeout / interval
+                    times_looped = 0
+                    error_msg = 'Failed to sign file {0}'.format(abs_file)
+                    cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
+                    preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
+                    try:
+                        stdout = None
+                        proc = salt.utils.vt.Terminal(
+                            cmd,
+                            env=env,
+                            shell=True,
+                            preexec_fn=preexec_fn,
+                            stream_stdout=True,
+                            stream_stderr=True
                         )
-                except salt.utils.vt.TerminalException as err:
-                    trace = traceback.format_exc()
-                    log.error(error_msg, err, trace)
-                finally:
-                    proc.close(terminate=True, kill=True)
+                        while proc.has_unread_data:
+                            stdout, _ = proc.recv()
+                            if stdout and SIGN_PROMPT_RE.search(stdout):
+                                # have the prompt for inputting the passphrase
+                                proc.sendline(phrase)
+                            else:
+                                times_looped += 1
+
+                            if times_looped > number_retries:
+                                raise SaltInvocationError(
+                                    'Attemping to sign file {0} failed, timed out after {1} seconds'
+                                    .format(abs_file, int(times_looped * interval))
+                                )
+                            time.sleep(interval)
+
+                        proc_exitstatus = proc.exitstatus
+                        if proc_exitstatus != 0:
+                            raise SaltInvocationError(
+                                'Signing file {0} failed with proc.status {1}'
+                                .format(abs_file, proc_exitstatus)
+                            )
+                    except salt.utils.vt.TerminalException as err:
+                        trace = traceback.format_exc()
+                        log.error(error_msg, err, trace)
+                    finally:
+                        proc.close(terminate=True, kill=True)
 
     cmd = 'createrepo --update {0}'.format(repodir)
-    return __salt__['cmd.run_all'](cmd, runas=runas)
+    return __salt__['cmd.run_all'](cmd, runas=runas, env=env)
