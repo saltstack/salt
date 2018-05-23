@@ -1,0 +1,16 @@
+classes:
+  - L0.B.otherclass
+
+states:
+  - state_B
+
+pillars:
+  same_plaintext_pillar: from_L0B
+  same_list_pillar:
+    - L0B-1
+    - L0B-2
+  L0B:
+    plaintext: plaintext_from_L0B
+    list: 
+      - L0B-1
+      - L0B-2

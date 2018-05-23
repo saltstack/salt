@@ -1,0 +1,12 @@
+environment: test
+
+classes:
+  - L1.B
+  - L1.C
+
+pillars:
+  L0C:
+    versions:
+      - ^
+      - 1
+      - 9999

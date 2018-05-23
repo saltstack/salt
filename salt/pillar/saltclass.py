@@ -48,7 +48,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         if 'path' not in i:
             path = '/srv/saltclass'
             args[i]['path'] = path
-            log.warning('path variable unset, using default: %s', path)
+            log.info('path variable unset, using default: %s', path)
         else:
             path = i['path']
 

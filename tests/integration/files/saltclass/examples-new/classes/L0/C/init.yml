@@ -1,0 +1,23 @@
+states:
+{% for version in __pillar__.get('L0C', {}).get('versions', ['default_version']) %}
+  - state_C.{{ version }}
+{% endfor %}
+
+pillars:
+  same_plaintext_pillar: from_L0C
+  same_list_pillar:
+    - ^
+    - L0C-1
+    - L0C-2
+  L0C:
+    plaintext: plaintext_from_L0C
+    list: 
+      - L0C-1
+      - L0C-2
+    dict: 
+      k1: L0C-1
+      k2: L0C-2
+  expansion:
+    plaintext: ${L0C:plaintext}
+    list: ${L0C:list}
+    dict: ${L0C:dict}

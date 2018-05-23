@@ -1,0 +1,16 @@
+states:
+  - state_A
+
+pillars:
+  same_plaintext_pillar: from_L0A
+  same_list_pillar:
+    - L0A-1
+    - L0A-2
+  L0A:
+    plaintext: plaintext_from_L0A
+    list: 
+      - L0A-1
+      - L0A-2
+    dict: 
+      k1: L0A-1
+      k2: L0A-2

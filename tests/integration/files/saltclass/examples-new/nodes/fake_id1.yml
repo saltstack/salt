@@ -1,0 +1,6 @@
+classes:
+  - L2.A
+
+pillars:
+  fake_id1_list_pillar: 
+    - from_fake_id1

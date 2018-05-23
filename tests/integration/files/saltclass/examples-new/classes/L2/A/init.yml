@@ -1,0 +1,12 @@
+environment: customenv
+
+classes:
+  - L1.A
+  - L1.B
+
+# watch L0.B pillars - it was included in the tree twice,
+# but it's pillars must not be doubled!
+
+pillars:
+  fake_id1_list_pillar: 
+    - from_L2A

@@ -1,0 +1,8 @@
+pillars:
+  plaintext_with_override: saltclass
+  list: 
+    - 3
+  dict:
+    b: 2
+    c: 1
+    

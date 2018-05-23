@@ -1,0 +1,9 @@
+classes:
+  - L0.A
+  - L0.B
+
+pillars:
+  single-list-override:
+    - ^
+    - 1
+    - 2
