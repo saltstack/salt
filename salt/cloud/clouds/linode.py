@@ -1021,40 +1021,36 @@ def decode_linode_plan_label(label):
     """
     sizes = avail_sizes()
 
-    if label not in sizes:
-        # Linode plan labels have changed from e.g. Linode 1024 to Linode 1GB
-        if "GB" not in label:
-            plan = label.split()
+    if label not in sizes and "GB" not in label:
+        plan = label.split()
 
-            # label is invalid if it isn't a space-separated string
-            if len(plan) != 2:
-                raise SaltCloudException(
-                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
-                )
+        if len(plan) != 2:
+            raise SaltCloudException(
+                'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
+            )
 
-            plan_type = plan[0]
-            try:
-                plan_size = int(plan[1])
-            except:
-                plan_size = 0
+        plan_type = plan[0]
+        try:
+            plan_size = int(plan[1])
+        except Exception as e:
+            plan_size = 0
 
-            if plan_type == "Linode" and plan_size == 1024:
-                plan_type = "Nanode"
+        if plan_type == "Linode" and plan_size == 1024:
+            plan_type = "Nanode"
 
-            # translate from MB to GB
-            plan_size = plan_size/1024
-            new_label = "{} {}GB".format(plan_type, plan_size)
+        plan_size = plan_size/1024
+        new_label = "{} {}GB".format(plan_type, plan_size)
 
-            if new_label not in sizes:
-                raise SaltCloudException(
-                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
-                )
+        if new_label not in sizes:
+            raise SaltCloudException(
+                'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
+            )
 
-            log.warning("An outdated Linode plan label was detected in your Cloud profile ({})."
-                        " Please update the profile to use"
-                        " the new label format ({}) for the requested Linode plan size.".format(label, new_label))
+        log.warning("An outdated Linode plan label was detected in your Cloud profile ({})."
+                    " Please update the profile to use"
+                    " the new label format ({}) for the requested Linode plan size.".format(label, new_label))
 
-            label = new_label
+        label = new_label
 
     return sizes[label]['PLANID']
 
