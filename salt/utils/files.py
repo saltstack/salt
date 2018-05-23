@@ -826,7 +826,7 @@ def get_encoding(path):
         ]
         for _encoding, bom in boms:
             if _data.startswith(bom):
-                log.debug('Found BOM for {0}'.format(_encoding))
+                log.debug('Found BOM for %s', _encoding)
                 return _encoding
         return False
 

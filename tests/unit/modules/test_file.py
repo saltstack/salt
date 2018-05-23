@@ -237,7 +237,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 '__grains__': {'kernel': 'Linux'},
                 '__utils__': {
                     'files.is_binary': MagicMock(return_value=False),
-                    'files.get_encoding': MagicMock(return_value=None)
+                    'files.get_encoding': MagicMock(return_value='utf-8')
                 },
             }
         }
