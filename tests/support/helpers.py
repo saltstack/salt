@@ -54,7 +54,7 @@ from tests.support.unit import skip, _id
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 if salt.utils.is_windows():
-    import win32api
+    import salt.utils.win_functions
 else:
     import pwd
 
@@ -1143,7 +1143,6 @@ def skip_if_not_root(func):
             func.__unittest_skip__ = True
             func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
     else:
-        import salt.utils.win_functions
         current_user = salt.utils.win_functions.get_current_user()
         if current_user != 'SYSTEM':
             if not salt.utils.win_functions.is_admin(current_user):
@@ -1558,10 +1557,11 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
                                     callback=on_terminate)
     return (gone, alive)
 
+
 def this_user():
+    '''
+    Get the user associated with the current process.
+    '''
     if salt.utils.is_windows():
-        full_username = win32api.GetUserNameEx(win32api.NameSamCompatible)
-        if '\\' in full_username:
-            return full_username.split('\\', 1)[1]
-        return full_username
+        return salt.utils.win_functions.get_current_user()
     return pwd.getpwuid(os.getuid())[0]
