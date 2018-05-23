@@ -336,7 +336,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         grains = self.run_function('grains.items')
         remove = False
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             cmd_info = self.run_function('pkg.version', [self.pkg])
             remove = False if cmd_info == '' else True
         else:
@@ -350,7 +350,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         if grains['os_family'] == 'RedHat':
             cmd_pkg = self.run_function('cmd.run', ['yum list {0}'.format(self.pkg)])
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             cmd_pkg = self.run_function('pkg.list_available', [self.pkg])
         elif grains['os_family'] == 'Debian':
             cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
