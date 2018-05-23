@@ -311,15 +311,20 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
         ## NOTE: build list of properties to update
         properties_update = []
-        for prop in properties:
-            ## NOTE: skip unexisting properties
-            if prop not in properties_current:
-                log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
-                continue
+        if properties:
+            for prop in properties:
+                ## NOTE: skip unexisting properties
+                if prop not in properties_current:
+                    log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
+                    continue
 
-            ## NOTE: compare current and wanted value
-            if properties_current[prop] != properties[prop]:
-                properties_update.append(prop)
+                value = properties[prop]
+                if isinstance(value, bool):
+                    value = 'on' if value else 'off'
+
+                ## NOTE: compare current and wanted value
+                if properties_current[prop] != value:
+                    properties_update.append(prop)
 
         ## NOTE: update pool properties
         for prop in properties_update:
