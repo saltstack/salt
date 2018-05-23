@@ -39,7 +39,7 @@ def __random_name(size=6):
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
-TIMEOUT = 1000
+TIMEOUT = 1200
 
 
 class EC2Test(ShellCase):
