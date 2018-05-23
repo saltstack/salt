@@ -52,6 +52,7 @@ Execution module for Amazon Route53 written against Boto 3
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
+import re
 
 # Import Salt libs
 import salt.utils.boto3
@@ -126,7 +127,6 @@ def _wait_for_sync(change, conn, tries=10, sleep=20):
         time.sleep(sleep)
     log.error('Timed out waiting for Route53 INSYNC status.')
     return False
-
 
 def find_hosted_zone(Id=None, Name=None, PrivateZone=None,
                      region=None, key=None, keyid=None, profile=None):
@@ -714,6 +714,74 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
     Id = zone[0]['HostedZone']['Id']
     return delete_hosted_zone(Id=Id, region=region, key=key, keyid=keyid, profile=profile)
 
+def _to_aws_encoding(instring):
+    '''
+    A partial implememtation of the `AWS domain encoding`__ rules. The punycode section is
+    ignored for now, so you'll have to input any unicode characters already punycoded.
+
+    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+
+    The only breakage is that we don't permit ASCII 92 ('backslash') in domain names, even though
+    AWS seems to allow it, becuase it's used to introduce octal escapes, and I can't think of a
+    good way to allow it while still parsing those escapes.  Imagine a domain name containing the
+    literal string '\134' - pathological to be sure, but allowed by AWS's rules.  If someone
+    dislikes this restriction, feel free to update this function to correctly handle such madness.
+
+    Oh, and the idea of allowing '.' (period) within a domain component (e.g. not as a separator,
+    but as part of a field) is as stupid it sounds, and is also not supported by these functions.
+    Again, if you can figure out a sensible way to make it work, more power too you.  If you
+    REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
+    your DNS out in the real world though.
+    '''
+    instring = instring.lower()                                           # Always lowercase
+    send_as_is = list(range(97, 123))                   # a-z is 97-122 inclusive
+    send_as_is += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
+                                    '9', '-', '_', '.']]
+    send_as_octal = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
+                                      '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
+                                      '@', '[', ']', '^', '`', '{', '|', '}']]
+    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
+    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
+    # "Extended ASCII" stuff
+    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
+    # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
+    # with ASCII for the first 127 code-points...  Oh well.
+    outlist = []
+    for char in instring:
+        point = ord(char)
+        octal = '\\{:03o}'.format(point)
+        if point in send_as_is:
+            outlist += [char]
+        elif point in send_as_octal:
+            outlist += [octal]
+        elif point in acceptable_points_which_must_be_octalized:
+            outlist += [octal]
+        else:
+            raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
+                                      "{1}.  Do you need to punycode it?".format(octal, instring))
+    ret = ''.join(outlist)
+    log.debug('Name after massaging is: {}'.format(ret))
+    return ret
+
+def _octalReplace(x):
+    '''
+    https://github.com/boto/boto/pull/1216
+    '''
+    c = int(x.group(1), 8)
+    if c > 0x20 and c < 0x2e or c > 0x2e and c < 0x7f:
+        return chr(c)
+    else:
+        return x.group(0)
+
+def _from_aws_encoding(value):
+    '''
+    Similar to _to_aws_encoding except in reverse
+    ResourceRecords can come back with octal representations of the actual
+    characters.
+    This converts them back to ASCII for proper comparison against the original
+    strings which are input into the get_resource_records method
+    '''
+    return re.sub(r'\\(\d{3})', _octalReplace, value)
 
 def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                          StartRecordType=None, PrivateZone=None,
@@ -746,13 +814,13 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
         args.update({'PrivateZone': PrivateZone}) if PrivateZone is not None else None
         zone = find_hosted_zone(**args)
         if not zone:
-            log.error("Couldn't resolve domain name %s to a hosted zone ID.", Name)
+            log.error("Couldn't resolve domain name {} to a hosted zone ID.".format(Name))
             return []
         HostedZoneId = zone[0]['HostedZone']['Id']
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = []
-    next_rr_name = StartRecordName
+    next_rr_name = _to_aws_encoding(StartRecordName)
     next_rr_type = StartRecordType
     next_rr_id = None
     done = False
@@ -771,6 +839,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
             next_rr_type = r.get('NextRecordType')
             next_rr_id = r.get('NextRecordIdentifier')
             for rr in rrs:
+                rr['Name'] = _from_aws_encoding(rr['Name'])  # fix the character set
                 if StartRecordName and rr['Name'] != StartRecordName:
                     done = True
                     break
