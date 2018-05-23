@@ -2251,6 +2251,10 @@ def get_machine_id():
     '''
     # Provides:
     #   machine-id
+
+    if platform.system() == 'AIX':
+        return {'machine_id': platform.machine()}
+
     locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
     existing_locations = [loc for loc in locations if os.path.exists(loc)]
     if not existing_locations:
