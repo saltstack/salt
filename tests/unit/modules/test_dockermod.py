@@ -1053,3 +1053,104 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
             ]
         )
+
+    def test_port(self):
+        '''
+        Test docker.port function. Note that this test case does not test what
+        happens when a specific container name is passed and that container
+        does not exist. When that happens, the Docker API will just raise a 404
+        error. Since we're using as side_effect to mock
+        docker.inspect_container, it would be meaningless to code raising an
+        exception into it and then test that we raised that exception.
+        '''
+        ports = {
+            'foo': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'bar': {
+                '4444/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32767'}
+                ],
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'baz': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+        }
+        list_mock = MagicMock(return_value=['bar', 'baz', 'foo'])
+        inspect_mock = MagicMock(
+            side_effect=lambda x: {'NetworkSettings': {'Ports': ports.get(x)}}
+        )
+        with patch.object(docker_mod, 'list_containers', list_mock), \
+                patch.object(docker_mod, 'inspect_container', inspect_mock):
+
+            # Test with specific container name
+            ret = docker_mod.port('foo')
+            self.assertEqual(ret, ports['foo'])
+
+            # Test with specific container name and filtering on port
+            ret = docker_mod.port('foo', private_port='5555/tcp')
+            self.assertEqual(ret, {'5555/tcp': ports['foo']['5555/tcp']})
+
+            # Test using pattern expression
+            ret = docker_mod.port('ba*')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba?')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba[rz]')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+
+            # Test using pattern expression and port filtering
+            ret = docker_mod.port('ba*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba?', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba[rz]', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('*')
+            self.assertEqual(ret, ports)
+            ret = docker_mod.port('*', private_port='5555/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'5555/tcp': ports['foo']['5555/tcp']},
+                 'bar': {'5555/tcp': ports['bar']['5555/tcp']},
+                 'baz': {'5555/tcp': ports['baz']['5555/tcp']}}
+            )
+            ret = docker_mod.port('*', private_port=6666)
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {'6666/udp': ports['baz']['6666/udp']}}
+            )
+            ret = docker_mod.port('*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {}}
+            )
