@@ -577,11 +577,9 @@ def _aix_memdata():
     swap_cmd = salt.utils.path.which('swap')
     swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()  # 4k blocks
     try:
-        swap_avail = int(swap_data[-2])  * 4
+        swap_avail = int(swap_data[-2]) * 4
         swap_used = int(swap_data[-6]) * 4
         swap_total = (swap_avail + swap_used)
-
-        # above to be * 4 
     except ValueError:
         swap_total = None
     grains['swap_total'] = swap_total
@@ -1894,7 +1892,7 @@ def os_data():
         osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
         grains['os'] = 'MacOS'
         grains['os_family'] = 'MacOS'
-        grains['osfullname'] = "{0} {1}".format(osname, osrelease_techlevel)
+        grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
         grains['init'] = 'launchd'
