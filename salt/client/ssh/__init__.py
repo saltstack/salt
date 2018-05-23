@@ -407,7 +407,7 @@ class SSH(object):
                 'host': hostname,
                 'user': user,
             }
-            if not self.opts.get('ssh_skip_roster'):
+            if self.opts.get('ssh_update_roster'):
                 self._update_roster()
 
     def get_pubkey(self):
