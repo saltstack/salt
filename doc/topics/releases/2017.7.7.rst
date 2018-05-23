@@ -1,0 +1,17 @@
+===========================
+In Progress: Salt 2017.7.7 Release Notes
+===========================
+
+Version 2017.7.7 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+This release is still in progress and has not been released yet.
+
+New win_snmp behavior
+---------------------
+
+`win_snmp.get_community_names` now returns the SNMP settings actually in effect
+on the box. If settings are managed via GroupPolicy, those settings will be
+returned. Otherwise, normal settings are returned.
+
+`win_snmp.set_community_names` now raises a CommandExecutionError when SNMP
+settings are being managed by GroupPolicy
+
