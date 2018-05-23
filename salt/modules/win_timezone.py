@@ -11,9 +11,6 @@ from datetime import datetime
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils.path
-import salt.utils.platform
-import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 
@@ -186,7 +183,7 @@ def __virtual__():
     '''
     Only load on windows
     '''
-    if salt.utils.platform.is_windows() and salt.utils.path.which('tzutil'):
+    if __utils__['platform.is_windows']() and __utils__['path.which']('tzutil'):
         return __virtualname__
     return (False, "Module win_timezone: tzutil not found or is not on Windows client")
 
@@ -204,7 +201,7 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    win_zone = salt.utils.win_reg.read_value(
+    win_zone = __utils__['reg.read_value'](
         hive='HKLM',
         key='SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation',
         vname='TimeZoneKeyName')['vdata']
@@ -283,7 +280,11 @@ def set_zone(timezone):
 
     # Set the value
     cmd = ['tzutil', '/s', win_zone]
-    __salt__['cmd.run'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode']:
+        raise CommandExecutionError('tzutil encountered an error setting '
+                                    'timezone: {0}'.format(timezone),
+                                    info=res)
     return zone_compare(timezone)
 
 
