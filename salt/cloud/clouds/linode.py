@@ -1008,33 +1008,17 @@ def get_password(vm_):
     )
 
 
-def get_plan_id(kwargs=None, call=None):
-    '''
-    Returns the Linode Plan ID.
+def decode_linode_plan_label(label):
+    """
+    Attempts to decode a user-supplied Linode plan label
+    into the format in Linode API output
 
     label
-        The label, or name, of the plan to get the ID from.
+        The label, or name, of the plan to decode.
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -f get_plan_id linode label="Linode 1024"
-    '''
-    if call == 'action':
-        raise SaltCloudException(
-            'The show_instance action must be called with -f or --function.'
-        )
-
-    if kwargs is None:
-        kwargs = {}
-
-    label = kwargs.get('label', None)
-    if label is None:
-        raise SaltCloudException(
-            'The get_plan_id function requires a \'label\'.'
-        )
-
+    Example:
+        `Linode 2048` will decode to `Linode 2GB`
+    """
     sizes = avail_sizes()
 
     if label not in sizes:
@@ -1069,6 +1053,38 @@ def get_plan_id(kwargs=None, call=None):
             label = new_label
 
     return sizes[label]['PLANID']
+
+
+def get_plan_id(kwargs=None, call=None):
+    '''
+    Returns the Linode Plan ID.
+
+    label
+        The label, or name, of the plan to get the ID from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_plan_id linode label="Linode 1024"
+    '''
+    if call == 'action':
+        raise SaltCloudException(
+            'The show_instance action must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    label = kwargs.get('label', None)
+    if label is None:
+        raise SaltCloudException(
+            'The get_plan_id function requires a \'label\'.'
+        )
+
+    label = decode_linode_plan_label(label)
+
+    return label
 
 
 def get_private_ip(vm_):
