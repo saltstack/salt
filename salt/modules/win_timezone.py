@@ -39,6 +39,12 @@ class TzMapper(object):
     def get_unix(self, key, default=None):
         return self.win_to_unix.get(key.lower(), default)
 
+    def list_win(self):
+        return sorted(self.unix_to_win.values())
+
+    def list_unix(self):
+        return sorted(self.win_to_unix.values())
+
 
 mapper = TzMapper({
     'AUS Central Standard Time': 'Australia/Darwin',
@@ -288,7 +294,9 @@ def zone_compare(timezone):
     running state checks.
 
     Args:
-        timezone (str): The timezone to compare
+        timezone (str):
+            The timezone to compare. This can be in Windows or Unix format. Can
+            be any of the values returned by the ``timezone.list`` function
 
     Returns:
         bool: ``True`` if they match, otherwise ``False``
@@ -313,6 +321,37 @@ def zone_compare(timezone):
                                     ''.format(timezone))
 
     return get_zone() == mapper.get_unix(check_zone, 'Unknown')
+
+
+def list(unix_style=True):
+    '''
+    Return a list of Timezones that this module supports. These can be in either
+    Unix or Windows format.
+
+    .. version-added:: 2018.3.2
+
+    Args:
+        unix_style (bool):
+            ``True`` returns Unix-style timezones. ``False`` returns
+            Windows-style timezones. Default is ``True``
+
+    Returns:
+        list: A list of supported timezones
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Unix-style timezones
+        salt '*' timezone.list
+
+        # Windows-style timezones
+        salt '*' timezone.list unix_style=False
+    '''
+    if unix_style:
+        return mapper.list_unix()
+    else:
+        return mapper.list_win()
 
 
 def get_hwclock():
