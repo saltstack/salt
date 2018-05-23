@@ -627,7 +627,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     '''
     if 'no_chown' in kwargs:
         salt.utils.versions.warn_until(
-            'Flourine',
+            'Fluorine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')
         kwargs.pop('no_chown')
