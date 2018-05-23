@@ -1020,7 +1020,40 @@ def get_plan_id(kwargs=None, call=None):
             'The get_plan_id function requires a \'label\'.'
         )
 
-    return avail_sizes()[label]['PLANID']
+    sizes = avail_sizes()
+
+    if label not in sizes:
+        # Linode plan labels have changed from e.g. Linode 1024 to Linode 1GB
+        if "GB" not in label:
+            plan = label.split()
+
+            # label is invalid if it isn't a space-separated string
+            if len(plan) != 2:
+                raise SaltCloudException(
+                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
+                )
+
+            plan_type = plan[0]
+            try:
+                plan_size = int(plan[1])
+            except:
+                plan_size = 0
+
+            if plan_type == "Linode" and plan_size == 1024:
+                plan_type = "Nanode"
+
+            # translate from MB to GB
+            plan_size = plan_size/1024
+            new_label = "{} {}GB".format(plan_type, plan_size)
+
+            if new_label not in sizes:
+                raise SaltCloudException(
+                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
+                )
+
+            label = new_label
+
+    return sizes[label]['PLANID']
 
 
 def get_private_ip(vm_):
