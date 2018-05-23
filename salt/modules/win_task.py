@@ -1625,12 +1625,12 @@ def add_trigger(name=None,
                 start_time=None,
                 end_date=None,
                 end_time=None,
-                delay=None,
                 random_delay=None,
                 repeat_interval=None,
                 repeat_duration=None,
                 repeat_stop_at_duration_end=False,
                 execution_time_limit=None,
+                delay=None,
                 **kwargs):
     r'''
 
@@ -1692,16 +1692,6 @@ def add_trigger(name=None,
     - %H:%M:%S
     - %H:%M
 
-    :param str delay: The time the trigger waits after its activation to start the task.
-    Valid values are:
-    - 15 seconds
-    - 30 seconds
-    - 1 minute
-    - 30 minutes
-    - 1 hour
-    - 8 hours
-    - 1 day
-
     :param str random_delay: The delay time that is randomly added to the start
     time of the trigger. Valid values are:
     - 30 seconds
@@ -1742,6 +1732,16 @@ def add_trigger(name=None,
     - 12 hours
     - 1 day
     - 3 days (default)
+
+    :param str delay: The time the trigger waits after its activation to start the task.
+    Valid values are:
+    - 15 seconds
+    - 30 seconds
+    - 1 minute
+    - 30 minutes
+    - 1 hour
+    - 8 hours
+    - 1 day
 
     **kwargs**
 
