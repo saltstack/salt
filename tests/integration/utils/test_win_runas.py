@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, unicode_literals
 import textwrap
 import subprocess
 import socket
@@ -39,12 +41,11 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
     A windows service manager
     '''
 
-    _svc_name_         = "Service Manager"
+    _svc_name_ = "Service Manager"
     _svc_display_name_ = "Service Manager"
-    _svc_description_  = "A Service Manager"
+    _svc_description_ = "A Service Manager"
     run_in_foreground = False
     target = default_target
-
 
     def __init__(self, args, target=None, timeout=60, active=True):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -57,18 +58,18 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
     @classmethod
     def log_error(cls, msg):
         if cls.run_in_foreground:
-            log.error(msg)
+            logger.error(msg)
         servicemanager.LogErrorMsg(msg)
     @classmethod
     def log_info(cls, msg):
         if cls.run_in_foreground:
-            log.info(msg)
+            logger.info(msg)
         servicemanager.LogInfoMsg(msg)
 
     @classmethod
     def log_exception(cls, msg):
         if cls.run_in_foreground:
-            log.exception(msg)
+            logger.exception(msg)
         exc_info = sys.exc_info()
         tb = traceback.format_tb(exc_info[2])
         servicemanager.LogErrorMsg("{} {} {}".format(msg, exc_info[1], tb))
@@ -125,7 +126,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
     @classmethod
     def install(cls, username=None, password=None, start_type=None):
         if hasattr(cls, '_svc_reg_class_'):
-            svc_class = cls._svc_reg_class_ 
+            svc_class = cls._svc_reg_class_
         else:
             svc_class = win32serviceutil.GetServiceClassString(cls)
         win32serviceutil.InstallService(
@@ -333,7 +334,7 @@ class RunAsTest(ModuleCase):
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
     def test_runas_winrs(self, username):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
@@ -341,7 +342,7 @@ class RunAsTest(ModuleCase):
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
@@ -350,14 +351,14 @@ class RunAsTest(ModuleCase):
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
     def test_runas_winrs_no_pass(self, username):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
@@ -366,7 +367,7 @@ class RunAsTest(ModuleCase):
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
     def test_runas_winrs_admin(self, username):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
@@ -374,7 +375,7 @@ class RunAsTest(ModuleCase):
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
@@ -383,53 +384,53 @@ class RunAsTest(ModuleCase):
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
     def test_runas_winrs_admin_no_pass(self, username):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
         self.assertEqual(ret, 0)
 
     def test_runas_winrs_system_user(self):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'SYSTEM')['retcode'])
         ''')
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
         self.assertEqual(ret, 0)
 
     def test_runas_winrs_network_service_user(self):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'NETWORK SERVICE')['retcode'])
         ''')
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
         self.assertEqual(ret, 1)
 
     def test_runas_winrs_local_service_user(self):
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'LOCAL SERVICE')['retcode'])
         ''')
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, path), shell=True)
@@ -441,7 +442,7 @@ class RunAsTest(ModuleCase):
         psrp_wrap = (
             'powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}'
         )
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
@@ -449,7 +450,7 @@ class RunAsTest(ModuleCase):
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(path)
         ret = subprocess.call(
@@ -464,14 +465,14 @@ class RunAsTest(ModuleCase):
         psrp_wrap = (
             'powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}'
         )
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(path)
         ret = subprocess.call(
@@ -486,7 +487,7 @@ class RunAsTest(ModuleCase):
         psrp_wrap = (
             'powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE'
         )
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
@@ -495,7 +496,7 @@ class RunAsTest(ModuleCase):
         sys.exit(ret['retcode'])
         '''.format(username, PASSWORD))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}; exit $LASTEXITCODE'.format(path)
         ret = subprocess.call(
@@ -510,14 +511,14 @@ class RunAsTest(ModuleCase):
         psrp_wrap = (
             'powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE'
         )
-        runaspy=textwrap.dedent('''
+        runaspy = textwrap.dedent('''
         import sys
         import salt.utils.win_runas
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}; exit $LASTEXITCODE'.format(path)
         ret = subprocess.call(
@@ -535,7 +536,7 @@ class RunAsTest(ModuleCase):
         assert not os.path.exists(out)
         runaspy = SERVICE_SOURCE.format(out, username, PASSWORD)
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(path)
         ret = subprocess.call(
@@ -545,7 +546,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with open(out, 'r') as fp:
+        with salt.utils.fopen(out, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 1, ret
 
@@ -559,7 +560,7 @@ class RunAsTest(ModuleCase):
         assert not os.path.exists(out)
         runaspy = SERVICE_SOURCE.format(out, username, '')
         path = r'C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\runas.py'
-        with open(path, 'w') as fp:
+        with salt.utils.fopen(out, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(path)
         ret = subprocess.call(
@@ -569,7 +570,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with open(out, 'r') as fp:
+        with salt.utils.fopen(out, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 1, ret
 
@@ -592,7 +593,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with open(out, 'r') as fp:
+        with salt.utils.fopen(out, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret
 
@@ -615,7 +616,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with open(out, 'r') as fp:
+        with salt.utils.fopen(out, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret
 
@@ -636,6 +637,6 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with open(out, 'r') as fp:
+        with salt.utils.fopen(out, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret

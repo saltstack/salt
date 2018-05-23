@@ -19,12 +19,11 @@ try:
     import win32event
     import win32profile
     import msvcrt
-    import salt.winutil
+    import salt.win
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 
@@ -52,8 +51,8 @@ def split_username(username):
 
 def runas(cmdLine, username, password=None, cwd=None, elevated=True):
 
-    impersonation_token = salt.utils.winutil.impersonate_sid(
-        salt.utils.winutil.SYSTEM_SID,
+    impersonation_token = salt.win.impersonate_sid(
+        salt.win.SYSTEM_SID,
         session_id=0,
         privs=['SeTcbPrivilege'],
     )
@@ -72,9 +71,6 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
         )
     elif password:
         log.warn("Logon user with password: %s")
-        #user_token = salt.utils.winutil.logon_msv1(
-        #    username, password, domain=domain,
-        #).Token
         user_token = win32security.LogonUser(
             username,
             domain,
@@ -84,8 +80,7 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
         )
     else:
         log.warn("Logon user without password: %s")
-        user_token = salt.utils.winutil.logon_msv1_s4u(username).Token
-
+        user_token = salt.win.logon_msv1_s4u(username).Token
 
     elevation_type = win32security.GetTokenInformation(
         user_token, win32security.TokenElevationType
@@ -95,22 +90,22 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             user_token,
             win32security.TokenLinkedToken
         )
-        salt.utils.winutil.elevate_token(user_token)
+        salt.win.elevate_token(user_token)
 
     handle_reg = win32profile.LoadUserProfile(user_token, {'UserName': username})
-    salt.utils.winutil.grant_winsta_and_desktop(user_token)
+    salt.win.grant_winsta_and_desktop(user_token)
 
     security_attributes = win32security.SECURITY_ATTRIBUTES()
     security_attributes.bInheritHandle = 1
 
     stdin_read, stdin_write = win32pipe.CreatePipe(security_attributes, 0)
-    stdin_read = salt.utils.winutil.make_inheritable(stdin_read)
+    stdin_read = salt.win.make_inheritable(stdin_read)
 
     stdout_read, stdout_write = win32pipe.CreatePipe(security_attributes, 0)
-    stdout_write = salt.utils.winutil.make_inheritable(stdout_write)
+    stdout_write = salt.win.make_inheritable(stdout_write)
 
     stderr_read, stderr_write = win32pipe.CreatePipe(security_attributes, 0)
-    stderr_write = salt.utils.winutil.make_inheritable(stderr_write)
+    stderr_write = salt.win.make_inheritable(stderr_write)
 
     creationflags = (
         win32process.CREATE_NO_WINDOW |
@@ -118,16 +113,16 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
         win32process.CREATE_SUSPENDED
     )
 
-    startup_info = salt.utils.winutil.STARTUPINFO(
+    startup_info = salt.win.STARTUPINFO(
         dwFlags=win32con.STARTF_USESTDHANDLES,
-        hStdInput = stdin_read.handle,
-        hStdOutput = stdout_write.handle,
-        hStdError = stderr_write.handle,
+        hStdInput=stdin_read.handle,
+        hStdOutput=stdout_write.handle,
+        hStdError=stderr_write.handle,
     )
 
     env = win32profile.CreateEnvironmentBlock(user_token, False)
 
-    process_info = salt.utils.winutil.CreateProcessWithTokenW(
+    process_info = salt.win.CreateProcessWithTokenW(
         int(user_token),
         logonflags=1,
         applicationname=None,
@@ -143,9 +138,9 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     dwProcessId = process_info.dwProcessId
     dwThreadId = process_info.dwThreadId
 
-    salt.utils.winutil.kernel32.CloseHandle(stdin_write.handle)
-    salt.utils.winutil.kernel32.CloseHandle(stdout_write.handle)
-    salt.utils.winutil.kernel32.CloseHandle(stderr_write.handle)
+    salt.win.kernel32.CloseHandle(stdin_write.handle)
+    salt.win.kernel32.CloseHandle(stdout_write.handle)
+    salt.win.kernel32.CloseHandle(stderr_write.handle)
 
     ret = {'pid': dwProcessId}
     psutil.Process(dwProcessId).resume()
@@ -165,11 +160,13 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
         ret['stderr'] = stderr
 
     win32profile.UnloadUserProfile(user_token, handle_reg)
-#    salt.utils.winutil.kernel32.CloseHandle(handle_reg)
-    salt.utils.winutil.kernel32.CloseHandle(hProcess)
-#    salt.utils.winutil.kernel32.CloseHandle(user_token)
+
+    # TODO: verify all handles are closed properly
+    # salt.win.kernel32.CloseHandle(handle_reg)
+    salt.win.kernel32.CloseHandle(hProcess)
+    # salt.win.kernel32.CloseHandle(user_token)
     if impersonation_token:
         win32security.RevertToSelf()
-#    salt.utils.winutil.kernel32.CloseHandle(impersonation_token)
+    # salt.win.kernel32.CloseHandle(impersonation_token)
 
     return ret
