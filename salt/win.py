@@ -304,7 +304,7 @@ class TOKEN_SOURCE(ctypes.Structure):
     )
 
     def __init__(self, SourceName=None, SourceIdentifier=None):
-        super(TOKEN_SOURCE, self).__init__(SourceName, SourceIdentifier)
+        super(TOKEN_SOURCE, self).__init__()
         if SourceName is not None:
             if not isinstance(SourceName, bytes):
                 SourceName = SourceName.encode('mbcs')
@@ -896,7 +896,7 @@ def lsa_logon_user(auth_info, local_groups=None, origin_name=py_origin_name,
                 ctypes.byref(profile_buffer_length), ctypes.byref(logonid),
                 ctypes.byref(htoken), ctypes.byref(quotas),
                 ctypes.byref(substatus))
-        except WindowsError as e:  # pytest: disable:undefined-variable
+        except WindowsError as e:  # pylint: disable=undefined-variable
             if substatus.value:
                 raise ctypes.WinError(substatus.to_error())
             raise
@@ -1050,7 +1050,7 @@ def CreateProcessWithTokenW(token,
     )
     if ret == 0:
         winerr = win32api.GetLastError()
-        exc = WindowsError(win32api.FormatMessage(winerr))  # pytest: disable:undefined-variable
+        exc = WindowsError(win32api.FormatMessage(winerr))  # pylint: disable=undefined-variable
         exc.winerror = winerr
         raise exc
     return process_info
@@ -1120,9 +1120,9 @@ def impersonate_sid(sid, session_id=None, privs=None):
         tok = dup_token(tok)
         elevate_token(tok)
         if win32security.ImpersonateLoggedOnUser(tok) == 0:
-            raise WindowsError("Impersonation failure")  # pytest: disable:undefined-variable
+            raise WindowsError("Impersonation failure")  # pylint: disable=undefined-variable
         return tok
-    raise WindowsError("Impersonation failure")  # pytest: disable:undefined-variable
+    raise WindowsError("Impersonation failure")  # pylint: disable=undefined-variable
 
 
 def dup_token(th):
@@ -1156,7 +1156,7 @@ def elevate_token(th):
 
     # Enable the privileges
     if win32security.AdjustTokenPrivileges(th, 0, enable_privs) == 0:
-        raise WindowsError(win32api.FormatMessage(win32api.GetLastError()))  # pytest: disable:undefined-variable
+        raise WindowsError(win32api.FormatMessage(win32api.GetLastError()))  # pylint: disable=undefined-variable
 
 
 def make_inheritable(token):

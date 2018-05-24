@@ -60,7 +60,6 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     username, domain = split_username(username)
     sid, domain, sidType = win32security.LookupAccountName(domain, username)
     if domain == 'NT AUTHORITY':
-        log.warn("Logon system account: %s", username)
         logonType = win32con.LOGON32_LOGON_SERVICE
         user_token = win32security.LogonUser(
             username,
@@ -70,7 +69,6 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     elif password:
-        log.warn("Logon user with password: %s")
         user_token = win32security.LogonUser(
             username,
             domain,
@@ -79,7 +77,6 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     else:
-        log.warn("Logon user without password: %s")
         user_token = salt.win.logon_msv1_s4u(username).Token
 
     elevation_type = win32security.GetTokenInformation(
