@@ -132,7 +132,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('struct.unpack',
                            MagicMock(return_value=pack)):
                     config = [{'users': {'garet': {'time_range': {'end': '09-22-2017 5pm',
-                                                                  'start': '09-2-2017 3pm'}}}}
+                                                                  'start': '09-22-2017 3pm'}}}}
                               ]
 
                     ret = btmp.validate(config)
