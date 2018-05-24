@@ -35,7 +35,7 @@ In case both are provided the `file` entry is preferred.
 
 .. warning::
 
-    Configuration options will change in Flourine. All options above will be replaced by:
+    Configuration options will change in Fluorine. All options above will be replaced by:
 
     - kubernetes.kubeconfig or kubernetes.kubeconfig-data
     - kubernetes.context
