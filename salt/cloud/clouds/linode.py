@@ -1009,7 +1009,7 @@ def get_password(vm_):
 
 
 def _decode_linode_plan_label(label):
-    """
+    '''
     Attempts to decode a user-supplied Linode plan label
     into the format in Linode API output
 
@@ -1018,7 +1018,7 @@ def _decode_linode_plan_label(label):
 
     Example:
         `Linode 2048` will decode to `Linode 2GB`
-    """
+    '''
     sizes = avail_sizes()
 
     if label not in sizes:
@@ -1037,8 +1037,9 @@ def _decode_linode_plan_label(label):
             plan_type = plan[0]
             try:
                 plan_size = int(plan[1])
-            except Exception as e:
+            except TypeError:
                 plan_size = 0
+                log.debug('Failed to decode user-supplied Linode plan label: %s', label)
 
             if plan_type == "Linode" and plan_size == 1024:
                 plan_type = "Nanode"
@@ -1087,7 +1088,7 @@ def get_plan_id(kwargs=None, call=None):
             'The get_plan_id function requires a \'label\'.'
         )
 
-    label = decode_linode_plan_label(label)
+    label = _decode_linode_plan_label(label)
 
     return label
 
