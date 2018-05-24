@@ -1158,11 +1158,11 @@ def request_instance(vm_):
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
 
         if 'image' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.from_image
+            volume['create_option'] = 'from_image'
         elif 'attach' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.attach
+            volume['create_option'] = 'attach'
         else:
-            volume['create_option'] = DiskCreateOptionTypes.empty
+            volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':

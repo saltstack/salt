@@ -11,6 +11,7 @@ import subprocess
 import os
 import plistlib
 import time
+import pwd
 
 # Import Salt Libs
 import salt.modules.cmdmod
@@ -35,6 +36,11 @@ DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
+
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+}
 
 
 def __virtual__():
@@ -267,7 +273,8 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Run command
     kwargs['python_shell'] = False
-    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
 
     # Raise an error or return successful result
     if ret['retcode']:
@@ -294,6 +301,15 @@ def _available_services():
         '/System/Library/LaunchAgents',
         '/System/Library/LaunchDaemons',
     ]
+
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents/'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
+
     _available_services = dict()
     for launch_dir in launchd_paths:
         for root, dirs, files in salt.utils.path.os_walk(launch_dir):
@@ -321,7 +337,7 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
+                    plist_xml = __salt__['cmd.run'](cmd)
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
@@ -359,3 +375,37 @@ def available_services():
         salt.utils.mac_service.available_services()
     '''
     return _available_services()
+
+
+def console_user(username=False):
+    '''
+    Gets the UID or Username of the current console user.
+
+    :return: The uid or username of the console user.
+
+    :param bool username: Whether to return the username of the console
+    user instead of the UID. Defaults to False
+
+    :rtype: Interger of the UID, or a string of the username.
+
+    Raises:
+        CommandExecutionError: If we fail to get the UID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.console_user()
+    '''
+    try:
+        # returns the 'st_uid' stat from the /dev/console file.
+        uid = os.stat('/dev/console')[4]
+    except (OSError, IndexError):
+        # we should never get here but raise an error if so
+        raise CommandExecutionError('Failed to get a UID for the console user.')
+
+    if username:
+        return pwd.getpwuid(uid)[0]
+
+    return uid

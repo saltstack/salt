@@ -845,7 +845,7 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
 
 def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
                   availability_zone=None, subnet_name=None, tags=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None, auto_assign_public_ipv4=False):
     '''
     Given a valid VPC ID or Name and a CIDR block, create a subnet for the VPC.
 
@@ -873,10 +873,15 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+    subnet_object_dict = _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
                             availability_zone=availability_zone,
                             cidr_block=cidr_block, region=region, key=key,
                             keyid=keyid, profile=profile)
+    # if auto_assign_public_ipv4 is requested set that to true using boto3
+    if auto_assign_public_ipv4:
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+        conn3.modify_subnet_attribute(MapPublicIpOnLaunch={'Value': True}, SubnetId=subnet_object_dict['id'])
+    return subnet_object_dict
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,

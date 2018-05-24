@@ -294,7 +294,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
@@ -486,7 +485,7 @@ def _gen_recurse_managed_files(
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = sdecode(posixpath.relpath(fn_, srcpath))
+        relname = salt.utils.data.decode(posixpath.relpath(fn_, srcpath))
         if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
 
@@ -1269,6 +1268,9 @@ def symlink(
         renamed to the backupname. If the backupname already
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
+        An absolute path OR a basename file/directory name must be provided.
+        The latter will be placed relative to the symlink destination's parent
+        directory.
 
     makedirs
         If the location of the symlink does not already have a parent directory
@@ -1400,15 +1402,32 @@ def symlink(
     elif os.path.isfile(name) or os.path.isdir(name):
         # It is not a link, but a file or dir
         if backupname is not None:
+            if not os.path.isabs(backupname):
+                if backupname == os.path.basename(backupname):
+                    backupname = os.path.join(
+                        os.path.dirname(os.path.normpath(name)),
+                        backupname)
+                else:
+                    return _error(ret, (('Backupname must be an absolute path '
+                                         'or a file name: {0}').format(backupname)))
             # Make a backup first
             if os.path.lexists(backupname):
                 if not force:
-                    return _error(ret, ((
-                                            'File exists where the backup target {0} should go'
-                                        ).format(backupname)))
+                    return _error(ret, (('Symlink & backup dest exists and Force not set.'
+                                         ' {0} -> {1} - backup: {2}').format(
+                                             name, target, backupname)))
                 else:
                     __salt__['file.remove'](backupname)
-            os.rename(name, backupname)
+            try:
+                __salt__['file.move'](name, backupname)
+            except Exception as exc:
+                ret['changes'] = {}
+                log.debug(
+                    'Encountered error renaming %s to %s',
+                    name, backupname, exc_info=True
+                )
+                return _error(ret, ('Unable to rename {0} to backup {1} -> '
+                                    ': {2}'.format(name, backupname, exc)))
         elif force:
             # Remove whatever is in the way
             if __salt__['file.is_link'](name):
@@ -3371,7 +3390,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = os.path.expanduser(sdecode(name))
+    name = salt.utils.data.decode(os.path.expanduser(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
