@@ -51,8 +51,8 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
     def test_no_match(self):
-        config = [{'users': {'gareth': {'time': {'end': '5pm',
-                                                 'start': '3pm'}}}}
+        config = [{'users': {'gareth': {'time_range': {'end': '09-22-2017 5pm',
+                                                       'start': '09-22-2017 3pm'}}}}
                   ]
 
         ret = btmp.validate(config)
@@ -63,6 +63,41 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = btmp.beacon(config)
             m_open.assert_called_with(btmp.BTMP, 'rb')
             self.assertEqual(ret, [])
+
+    def test_invalid_users(self):
+        config = [{'users': ['gareth']}]
+
+        ret = btmp.validate(config)
+
+        self.assertEqual(ret, (False, 'User configuration for btmp beacon must be a dictionary.'))
+
+    def test_invalid_groups(self):
+        config = [{'groups': ['docker']}]
+
+        ret = btmp.validate(config)
+
+        self.assertEqual(ret, (False, 'Group configuration for btmp beacon must be a dictionary.'))
+
+    def test_default_invalid_time_range(self):
+        config = [{'defaults': {'time_range': {'start': '3pm'}}}]
+
+        ret = btmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
+
+    def test_users_invalid_time_range(self):
+        config = [{'users': {'gareth': {'time_range': {'start': '3pm'}}}}]
+
+        ret = btmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
+
+    def test_groups_invalid_time_range(self):
+        config = [{'groups': {'docker': {'time_range': {'start': '3pm'}}}}]
+
+        ret = btmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
 
     def test_match(self):
         with patch('salt.utils.files.fopen',
@@ -96,8 +131,8 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value=1506121200)):
                 with patch('struct.unpack',
                            MagicMock(return_value=pack)):
-                    config = [{'users': {'garet': {'time': {'end': '5pm',
-                                                            'start': '3pm'}}}}
+                    config = [{'users': {'garet': {'time_range': {'end': '09-22-2017 5pm',
+                                                                  'start': '09-2-2017 3pm'}}}}
                               ]
 
                     ret = btmp.validate(config)
@@ -138,8 +173,8 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                MagicMock(return_value=pack)):
                         with patch('{0}.info'.format(groupadd),
                                    new=MagicMock(return_value=mock_group_info)):
-                            config = [{'group': {'users': {'time': {'end': '5pm',
-                                                                    'start': '3pm'}}}}
+                            config = [{'group': {'users': {'time_range': {'end': '5pm',
+                                                                          'start': '3pm'}}}}
                                       ]
 
                             ret = btmp.validate(config)
