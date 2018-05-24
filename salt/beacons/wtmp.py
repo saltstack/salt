@@ -90,10 +90,11 @@ def _gather_group_members(group, groups, users):
 
     if not _group:
         log.warning('Group %s does not exist, ignoring.', group)
-    else:
-        for member in _group['members']:
-            if member not in users:
-                users[member] = groups[group]
+        return
+
+    for member in _group['members']:
+        if member not in users:
+            users[member] = groups[group]
 
 
 def _check_time_range(time_range, now):
