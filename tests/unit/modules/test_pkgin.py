@@ -114,6 +114,26 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(pkgin.latest_version('somepkg'), '1.1')
 
         '''
+        Test getting the latest version of an installed package that is the latest version
+        '''
+        pkgin_out = [
+            'somepkg-1.2;=;Some package description here',
+            '',
+            '=: package is installed and up-to-date',
+            '<: package is installed but newer version is available',
+            '>: installed package has a greater version than available package'
+        ]
+
+        pkgin_refresh_db_mock = MagicMock(return_value=True)
+        pkgin_search_cmd = MagicMock(return_value=os.linesep.join(pkgin_out))
+
+        with patch('salt.modules.pkgin.refresh_db', pkgin_refresh_db_mock), \
+             patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
+             patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
+             patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
+            self.assertEqual(pkgin.latest_version('somepkg'), '1.2')
+
+        '''
         Test getting the latest version of a bogus package
         '''
         pkgin_out = 'No results found for ^boguspkg$'
