@@ -1620,7 +1620,7 @@ def start(name, **kwargs):
         salt '*' virt.start <domain>
     '''
     conn = __get_conn(**kwargs)
-    ret = _get_domain(conn, name).create == 0
+    ret = _get_domain(conn, name).create() == 0
     conn.close()
     return ret
 
