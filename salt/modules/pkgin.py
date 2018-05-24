@@ -181,7 +181,9 @@ def latest_version(*names, **kwargs):
 
         out = __salt__['cmd.run'](cmd, output_loglevel='trace')
         for line in out.splitlines():
-            p = line.split(',' if _supports_parsing() else None)
+            if line.startswith('No results found for'):
+                return pkglist
+            p = line.split(';' if _supports_parsing() else None)
 
             if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
@@ -190,7 +192,7 @@ def latest_version(*names, **kwargs):
                 s = _splitpkg(p[0])
                 if s:
                     if not s[0] in pkglist:
-                        if len(p) > 1 and p[1] == '<':
+                        if len(p) > 1 and p[1] == '<' or p[1] == '':
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
@@ -669,7 +671,6 @@ def file_dict(*packages):
     for package in packages:
         cmd = ['pkg_info', '-qL', package]
         ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
         files[package] = []
         for line in ret['stderr'].splitlines():
             errors.append(line)
@@ -681,7 +682,7 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret:
+    for field in list(ret):
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret
