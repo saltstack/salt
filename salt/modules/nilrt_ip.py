@@ -40,7 +40,6 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'ip'
 
 SERVICE_PATH = '/net/connman/service/'
-NIRTCFG_PATH = '/usr/local/natinst/bin/nirtcfg'
 INTERFACES_CONFIG = '/var/lib/connman/interfaces.config'
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 IFF_LOOPBACK = 0x8
