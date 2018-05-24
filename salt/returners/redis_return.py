@@ -11,6 +11,7 @@ config, these are the defaults:
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
+    redis.password: ''
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -21,7 +22,8 @@ the default location:
     alternative.redis.db: '0'
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
-
+    alternative.redis.password: ''
+    
 To use the redis returner, append '--return redis' to the salt command.
 
 .. code-block:: bash
@@ -80,13 +82,15 @@ def _get_options(ret=None):
     '''
     attrs = {'host': 'host',
              'port': 'port',
-             'db': 'db'}
+             'db': 'db',
+             'password': 'password'}
 
     if salt.utils.is_proxy():
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
-            'db': __opts__.get('redis.db', '0')
+            'db': __opts__.get('redis.db', '0'),
+            'password': __opts__.get('redis.password', '')
         }
 
     _options = salt.returners.get_returner_options(__virtualname__,
@@ -105,11 +109,13 @@ def _get_serv(ret=None):
     host = _options.get('host')
     port = _options.get('port')
     db = _options.get('db')
+    password = _options.get('password')
 
     return redis.Redis(
             host=host,
             port=port,
-            db=db)
+            db=db,
+            password=password)
 
 
 def _get_ttl():
