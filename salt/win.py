@@ -4,7 +4,7 @@ Windows specific utility functions, this module should be imported in a try,
 except block because it is only applicable on Windows platforms.
 
 
-Much of what is here was adappted from the following:
+Much of what is here was adapted from the following:
 
     https://stackoverflow.com/a/43233332
     http://stackoverflow.com/questions/29566330
