@@ -1008,7 +1008,7 @@ def get_password(vm_):
     )
 
 
-def decode_linode_plan_label(label):
+def _decode_linode_plan_label(label):
     """
     Attempts to decode a user-supplied Linode plan label
     into the format in Linode API output
