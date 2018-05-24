@@ -23,7 +23,7 @@ the default location:
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
     alternative.redis.password: ''
-    
+
 To use the redis returner, append '--return redis' to the salt command.
 
 .. code-block:: bash
