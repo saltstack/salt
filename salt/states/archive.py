@@ -72,14 +72,17 @@ def _checksum_file_path(path):
                 os.path.splitdrive(path)[-1].lstrip('/\\'),
             )
     except ValueError as exc:
-        # The path is on a network drive (Windows)
+        # The path is on a different drive (Windows)
         if 'path is on drive' in exc.message:
+            drive, path = os.path.splitdrive(path)
             relpath = salt.utils.path_join(
-                'network',
-                os.path.splitdrive(path)[-1].lstrip('/\\'),
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
             )
         else:
             raise
+    log.debug('Found path: %s', relpath)
     return salt.utils.path_join(__opts__['cachedir'], 'archive_hash', relpath)
 
 
