@@ -1,8 +1,9 @@
 ===========================
-Salt 2018.3.1 Release Notes
+In Progress: Salt 2018.3.1 Release Notes
 ===========================
 
-Version 2018.3.1 is a bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
+Version 2018.3.1 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
+This release is still in progress and has not been released yet.
 
 Changes to Slack Engine pillars
 -------------------------------
@@ -12,3 +13,13 @@ used as part of a salt-minion process running on the master.  This will allow
 the minion to have pillars assigned to it, and will still allow the engine to
 create a LocalClient connection to the master ipc sockets to control
 environments.
+
+Changes to Automatically Updating the Roster File
+-------------------------------------------------
+
+In ``2018.3.0`` salt-ssh was configured to automatically update the flat roster
+file if a minion was not found for salt-ssh. This was decided to be
+undesireable as a default.  The ``--skip-roster`` flag has been removed and
+replaced  with ``--update-roster``, which will enable salt-ssh to add minions
+to the flat roster file.  This behavior can also be enabled by setting
+``ssh_update_roster: True`` in the master config file.

@@ -34,8 +34,8 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 
 # pylint: enable=no-name-in-module,redefined-builtin
+import tornado
 
-# Import third party libs
 HAS_RANGE = False
 try:
     import seco.range
@@ -1172,7 +1172,7 @@ class Minion(MinionBase):
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
-        future_exception = self._connect_master_future.exc_info()
+        future_exception = self._connect_master_future.exception()
         if future_exception:
             # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
@@ -3370,6 +3370,8 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
+        nodegroups = self.opts.get('nodegroups', {})
+
         if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
             log.error('Compound target received that is neither string, list nor tuple')
             return False
@@ -3391,9 +3393,11 @@ class Matcher(object):
         if isinstance(tgt, six.string_types):
             words = tgt.split()
         else:
-            words = tgt
+            # we make a shallow copy in order to not affect the passed in arg
+            words = tgt[:]
 
-        for word in words:
+        while words:
+            word = words.pop(0)
             target_info = salt.utils.minions.parse_target(word)
 
             # Easy check first
@@ -3415,10 +3419,12 @@ class Matcher(object):
 
             elif target_info and target_info['engine']:
                 if 'N' == target_info['engine']:
-                    # Nodegroups should already be expanded/resolved to other engines
-                    log.error(
-                        'Detected nodegroup expansion failure of "%s"', word)
-                    return False
+                    # if we encounter a node group, just evaluate it in-place
+                    decomposed = salt.utils.minions.nodegroup_comp(target_info['pattern'], nodegroups)
+                    if decomposed:
+                        words = decomposed + words
+                    continue
+
                 engine = ref.get(target_info['engine'])
                 if not engine:
                     # If an unknown engine is called at any time, fail out

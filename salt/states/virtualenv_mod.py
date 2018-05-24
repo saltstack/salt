@@ -42,7 +42,6 @@ def managed(name,
             never_download=None,
             prompt=None,
             user=None,
-            no_chown=False,
             cwd=None,
             index_url=None,
             extra_index_url=None,
@@ -61,7 +60,8 @@ def managed(name,
             pip_no_cache_dir=False,
             pip_cache_dir=None,
             process_dependency_links=False,
-            no_binary=None):
+            no_binary=None,
+            **kwargs):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -84,11 +84,6 @@ def managed(name,
 
     user: None
         The user under which to run virtualenv and pip.
-
-    no_chown: False
-        When user is given, do not attempt to copy and chown a requirements file
-        (needed if the requirements file refers to other files via relative
-        paths, as the copy-and-chown procedure does not account for such files)
 
     cwd: None
         Path to the working directory where `pip install` is executed.
@@ -140,6 +135,13 @@ def managed(name,
             - env_vars:
                 PATH_VAR: '/usr/local/bin/'
     '''
+    if 'no_chown' in kwargs:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'The no_chown argument has been deprecated and is no longer used. '
+            'Its functionality was removed in Boron.')
+        kwargs.pop('no_chown')
+
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if 'virtualenv.create' not in __salt__:
@@ -211,6 +213,7 @@ def managed(name,
                 prompt=prompt,
                 user=user,
                 use_vt=use_vt,
+                **kwargs
             )
         except CommandNotFoundError as err:
             ret['result'] = False
@@ -311,7 +314,6 @@ def managed(name,
             extra_index_url=extra_index_url,
             download=pip_download,
             download_cache=pip_download_cache,
-            no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
             ignore_installed=pip_ignore_installed,
@@ -321,7 +323,8 @@ def managed(name,
             use_vt=use_vt,
             env_vars=env_vars,
             no_cache_dir=pip_no_cache_dir,
-            cache_dir=pip_cache_dir
+            cache_dir=pip_cache_dir,
+            **kwargs
         )
         ret['result'] &= pip_ret['retcode'] == 0
         if pip_ret['retcode'] > 0:

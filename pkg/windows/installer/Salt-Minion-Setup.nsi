@@ -740,7 +740,7 @@ Function ${un}uninstallSalt
 
     # Remove files
     Delete "$INSTDIR\uninst.exe"
-    Delete "$INSTDIR\nssm.exe"
+    Delete "$INSTDIR\ssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
     RMDir /r "$INSTDIR\bin"

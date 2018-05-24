@@ -731,6 +731,7 @@ class Schedule(object):
                     for global_key, value in six.iteritems(func_globals):
                         self.functions[mod_name].__globals__[global_key] = value
 
+            self.functions.pack['__context__']['retcode'] = 0
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -782,11 +783,13 @@ class Schedule(object):
                 else:
                     # Send back to master so the job is included in the job list
                     mret = ret.copy()
-                    mret['jid'] = 'req'
-                    if data.get('return_job') == 'nocache':
-                        # overwrite 'req' to signal to master that
-                        # this job shouldn't be stored
-                        mret['jid'] = 'nocache'
+                    # No returners defined, so we're only sending back to the master
+                    if not data_returner and not self.schedule_returner:
+                        mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that
+                            # this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                     load = {'cmd': '_return', 'id': self.opts['id']}
                     for key, value in six.iteritems(mret):
                         load[key] = value
