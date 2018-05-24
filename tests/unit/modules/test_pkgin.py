@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.pkgin as pkgin
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PkginTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -33,8 +34,10 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_search(self):
         '''
-        Test searching for an available and uninstalled package
+        Test searching for a package
         '''
+
+        # Test searching for an available and uninstalled package
         pkgin_out = [
             'somepkg-1.0          Some package description here',
             '',
@@ -52,9 +55,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
             self.assertDictEqual(pkgin.search('somepkg'), {'somepkg': '1.0'})
 
-        '''
-        Test searching for an available and installed package
-        '''
+        # Test searching for an available and installed package
         pkgin_out = [
             'somepkg-1.0 =          Some package description here',
             '',
@@ -72,8 +73,10 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_latest_version(self):
         '''
-        Test getting the latest version of an uninstalled package
+        Test getting the latest version of a package
         '''
+
+        # Test getting the latest version of an uninstalled package
         pkgin_out = [
             'somepkg-1.0;;Some package description here',
             '',
@@ -93,9 +96,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
             self.assertEqual(pkgin.latest_version('somepkg'), '1.0')
 
-        '''
-        Test getting the latest version of an ininstalled package
-        '''
+        # Test getting the latest version of an installed package
         pkgin_out = [
             'somepkg-1.1;<;Some package description here',
             '',
@@ -113,9 +114,8 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
             self.assertEqual(pkgin.latest_version('somepkg'), '1.1')
 
-        '''
-        Test getting the latest version of an installed package that is the latest version
-        '''
+        # Test getting the latest version of a package that is already installed
+        # and is already at the latest version
         pkgin_out = [
             'somepkg-1.2;=;Some package description here',
             '',
@@ -133,9 +133,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
             self.assertEqual(pkgin.latest_version('somepkg'), '1.2')
 
-        '''
-        Test getting the latest version of a bogus package
-        '''
+        # Test getting the latest version of a bogus package
         pkgin_out = 'No results found for ^boguspkg$'
 
         pkgin_refresh_db_mock = MagicMock(return_value=True)
