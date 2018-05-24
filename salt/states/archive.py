@@ -63,13 +63,23 @@ def _gen_checksum(path):
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path_join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path_join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a network drive (Windows)
+        if 'path is on drive' in exc.message:
+            relpath = salt.utils.path_join(
+                'network',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+        else:
+            raise
     return salt.utils.path_join(__opts__['cachedir'], 'archive_hash', relpath)
 
 
