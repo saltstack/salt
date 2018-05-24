@@ -408,7 +408,6 @@ def _aix_cpudata():
     #   num_cpus
     #   cpu_model
     #   cpu_flags
-
     grains = {}
     data = ""
     cmd = salt.utils.path.which('prtconf')
@@ -463,6 +462,8 @@ def _aix_cpudata():
             if res and len(res.groups()) >= 1:
                 grains['num_cpus'] = res.group(1).strip().replace("'", "")
                 break
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
 
     return grains
 
@@ -567,29 +568,26 @@ def _aix_memdata():
     Return the memory information for AIX systems
     '''
     grains = {'mem_total': 0, 'swap_total': 0}
-
     prtconf = salt.utils.path.which('prtconf')
     if prtconf:
         for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
             comps = line.split(' ')
-            if comps[0].strip() == 'Memory' and comps[1].strip() == 'Size:':
+            if 'Memory' == comps[0].strip() and 'Size:' == comps[1].strip():
                 grains['mem_total'] = int(comps[2].strip())
                 break
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
 
     swap_cmd = salt.utils.path.which('swap')
     if swap_cmd:
         swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
         try:
-            swap_avail = int(swap_data[-2])
-            swap_used = int(swap_data[-6])
-
-            swap_avail = swap_avail * 4
-            swap_used = swap_used * 4
-
-            swap_total = (swap_avail + swap_used)
+            swap_total = int(swap_data[-2]) * 4 + int(swap_data[-6]) * 4
         except ValueError:
             swap_total = None
         grains['swap_total'] = swap_total
+    else:
+        log.error('The \'swap\' binary was not found in $PATH.')
 
     return grains
 
@@ -1454,6 +1452,7 @@ _OS_FAMILY_MAP = {
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
+    'AIX': 'AIX',
 }
 
 
@@ -1912,7 +1911,6 @@ def os_data():
         osrelease_techlevel = __salt__['cmd.run']('oslevel -r')
         osname = __salt__['cmd.run']('uname')
         grains['os'] = 'AIX'
-        grains['os_family'] = 'AIX'
         grains['osfullname'] = osname
         grains['osrelease'] = osrelease
         grains['osrelease_techlevel'] = osrelease_techlevel
@@ -2602,8 +2600,7 @@ def _hw_data(osdata):
         data = ""
         cmd = salt.utils.path.which('prtconf')
         if cmd:
-            data += __salt__['cmd.run']('{0}'.format(cmd))
-            data += '\n'
+            data += __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
 
             sn_regexes = [
                 re.compile(r) for r in [
@@ -2642,6 +2639,8 @@ def _hw_data(osdata):
                     sn_string = res.group(1).strip().replace("'", "")
                     grains['manufacturer'], grains['productname'] = sn_string.split(",")
                     break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
 
     return grains
 
