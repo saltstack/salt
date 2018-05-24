@@ -39,6 +39,7 @@ integration.sdb.test_env
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_renderers
+integration.states.test_user
 integration.utils.testprogram
 integration.wheel.test_client
 integration.wheel.test_key
