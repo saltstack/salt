@@ -324,7 +324,7 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     '''
     nics = {}
-    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
     for node in doc.getElementsByTagName('devices'):
         i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
@@ -366,7 +366,7 @@ def _get_graphics(dom):
            'listen': 'None',
            'port': 'None',
            'type': 'None'}
-    xml = dom.getXMLDesc(0)
+    xml = dom.XMLDesc(0)
     ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName('domain'):
@@ -382,7 +382,7 @@ def _get_disks(dom):
     Get domain disks from a libvirt domain object.
     '''
     disks = {}
-    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -2266,7 +2266,7 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         Extract the disk devices names from the domain XML definition
         '''
-        doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+        doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
         disks = []
         for elem in doc.getElementsByTagName('disk'):
             targets = elem.getElementsByTagName('target')
