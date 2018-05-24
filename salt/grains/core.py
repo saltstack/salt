@@ -408,60 +408,61 @@ def _aix_cpudata():
     #   num_cpus
     #   cpu_model
     #   cpu_flags
+
     grains = {}
-    cmd = '/usr/sbin/prtconf'
     data = ""
-    if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
+    cmd = salt.utils.path.which('prtconf')
+    if cmd:
         data += __salt__['cmd.run']('{0}'.format(cmd))
         data += '\n'
 
-    cpuarch_regexes = [
-        re.compile(r) for r in [
-            r'(?im)^\s*Processor\s+Type:\s+(\S+)',  # prtconf
+        cpuarch_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Processor\s+Type:\s+(\S+)',  # prtconf
+            ]
         ]
-    ]
 
-    cpuflags_regexes = [
-        re.compile(r) for r in [
-            r'(?im)^\s*Processor\s+Version:\s+(\S+)',  # prtconf
+        cpuflags_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Processor\s+Version:\s+(\S+)',  # prtconf
+            ]
         ]
-    ]
 
-    cpumodel_regexes = [
-        re.compile(r) for r in [
-            r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)',  # prtconf
+        cpumodel_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)',  # prtconf
+            ]
         ]
-    ]
 
-    numcpus_regexes = [
-        re.compile(r) for r in [
-            r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)',  # prtconf
+        numcpus_regexes = [
+            re.compile(r) for r in [
+                r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)',  # prtconf
+            ]
         ]
-    ]
 
-    for regex in cpuarch_regexes:
-        res = regex.search(data)
-        if res and len(res.groups()) >= 1:
-            grains['cpuarch'] = res.group(1).strip().replace("'", "")
-            break
+        for regex in cpuarch_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['cpuarch'] = res.group(1).strip().replace("'", "")
+                break
 
-    for regex in cpuflags_regexes:
-        res = regex.search(data)
-        if res and len(res.groups()) >= 1:
-            grains['cpu_flags'] = res.group(1).strip().replace("'", "")
-            break
+        for regex in cpuflags_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['cpu_flags'] = res.group(1).strip().replace("'", "")
+                break
 
-    for regex in cpumodel_regexes:
-        res = regex.search(data)
-        if res and len(res.groups()) >= 1:
-            grains['cpu_model'] = res.group(1).strip().replace("'", "")
-            break
+        for regex in cpumodel_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['cpu_model'] = res.group(1).strip().replace("'", "")
+                break
 
-    for regex in numcpus_regexes:
-        res = regex.search(data)
-        if res and len(res.groups()) >= 1:
-            grains['num_cpus'] = res.group(1).strip().replace("'", "")
-            break
+        for regex in numcpus_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['num_cpus'] = res.group(1).strip().replace("'", "")
+                break
 
     return grains
 
@@ -567,22 +568,29 @@ def _aix_memdata():
     '''
     grains = {'mem_total': 0, 'swap_total': 0}
 
-    prtconf = '/usr/sbin/prtconf 2>/dev/null'
-    for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
-        comps = line.split(' ')
-        if comps[0].strip() == 'Memory' and comps[1].strip() == 'Size:':
-            grains['mem_total'] = int(comps[2].strip())
-            break
+    prtconf = salt.utils.path.which('prtconf')
+    if prtconf:
+        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+            comps = line.split(' ')
+            if comps[0].strip() == 'Memory' and comps[1].strip() == 'Size:':
+                grains['mem_total'] = int(comps[2].strip())
+                break
 
     swap_cmd = salt.utils.path.which('swap')
-    swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()  # 4k blocks
-    try:
-        swap_avail = int(swap_data[-2]) * 4
-        swap_used = int(swap_data[-6]) * 4
-        swap_total = (swap_avail + swap_used)
-    except ValueError:
-        swap_total = None
-    grains['swap_total'] = swap_total
+    if swap_cmd:
+        swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
+        try:
+            swap_avail = int(swap_data[-2])
+            swap_used = int(swap_data[-6])
+
+            swap_avail = swap_avail * 4
+            swap_used = swap_used * 4
+
+            swap_total = (swap_avail + swap_used)
+        except ValueError:
+            swap_total = None
+        grains['swap_total'] = swap_total
+
     return grains
 
 
@@ -2592,48 +2600,48 @@ def _hw_data(osdata):
 
     elif osdata['kernel'] == 'AIX':
         data = ""
-        cmd = '/usr/sbin/prtconf'
-        if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
+        cmd = salt.utils.path.which('prtconf')
+        if cmd:
             data += __salt__['cmd.run']('{0}'.format(cmd))
             data += '\n'
 
-        sn_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)',  # prtconf
+            sn_regexes = [
+                re.compile(r) for r in [
+                    r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)',  # prtconf
+                ]
             ]
-        ]
 
-        fw_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Firmware\s+Version:\s+(.*)',  # prtconf
+            fw_regexes = [
+                re.compile(r) for r in [
+                    r'(?im)^\s*Firmware\s+Version:\s+(.*)',  # prtconf
+                ]
             ]
-        ]
 
-        product_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*System\s+Model:\s+(\S+)',  # prtconf
+            product_regexes = [
+                re.compile(r) for r in [
+                    r'(?im)^\s*System\s+Model:\s+(\S+)',  # prtconf
+                ]
             ]
-        ]
 
-        for regex in sn_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                grains['serialnumber'] = res.group(1).strip().replace("'", "")
-                break
+            for regex in sn_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['serialnumber'] = res.group(1).strip().replace("'", "")
+                    break
 
-        for regex in fw_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                fw_string = res.group(1).strip().replace("'", "")
-                _, grains['systemfirmware'] = fw_string.split(",")
-                break
+            for regex in fw_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    fw_string = res.group(1).strip().replace("'", "")
+                    _, grains['systemfirmware'] = fw_string.split(",")
+                    break
 
-        for regex in product_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                sn_string = res.group(1).strip().replace("'", "")
-                grains['manufacturer'], grains['product'] = sn_string.split(",")
-                break
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    sn_string = res.group(1).strip().replace("'", "")
+                    grains['manufacturer'], grains['productname'] = sn_string.split(",")
+                    break
 
     return grains
 
