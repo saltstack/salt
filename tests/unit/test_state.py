@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 import copy
 import os
+import shutil
 import tempfile
 
 # Import Salt Testing libs
@@ -14,6 +15,7 @@ import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.state
@@ -66,9 +68,9 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         root_dir = tempfile.mkdtemp(dir=integration.TMP)
-        state_tree_dir = os.path.join(root_dir, 'state_tree')
+        self.state_tree_dir = os.path.join(root_dir, 'state_tree')
         cache_dir = os.path.join(root_dir, 'cachedir')
-        for dpath in (root_dir, state_tree_dir, cache_dir):
+        for dpath in (root_dir, self.state_tree_dir, cache_dir):
             if not os.path.isdir(dpath):
                 os.makedirs(dpath)
 
@@ -77,7 +79,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides['state_events'] = False
         overrides['id'] = 'match'
         overrides['file_client'] = 'local'
-        overrides['file_roots'] = dict(base=[state_tree_dir])
+        overrides['file_roots'] = dict(base=[self.state_tree_dir])
         overrides['cachedir'] = cache_dir
         overrides['test'] = False
         self.config = self.get_temp_config('minion', **overrides)
@@ -137,6 +139,28 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(state_usage_dict['base']['count_all'], 3)
         self.assertEqual(state_usage_dict['base']['used'], ['state.a', 'state.b'])
         self.assertEqual(state_usage_dict['base']['unused'], ['state.c'])
+
+    def test_find_sls_ids_with_exclude(self):
+        '''
+        See https://github.com/saltstack/salt/issues/47182
+        '''
+        sls_dir = 'issue-47182'
+        shutil.copytree(
+            os.path.join(BASE_FILES, sls_dir),
+            os.path.join(self.state_tree_dir, sls_dir)
+        )
+        shutil.move(
+            os.path.join(self.state_tree_dir, sls_dir, 'top.sls'),
+            self.state_tree_dir
+        )
+        # Manually compile the high data. We don't have to worry about all of
+        # the normal error checking we do here since we know that all the SLS
+        # files exist and there is no whitelist/blacklist being used.
+        top = self.highstate.get_top()  # pylint: disable=assignment-from-none
+        matches = self.highstate.top_matches(top)
+        high, _ = self.highstate.render_highstate(matches)
+        ret = salt.state.find_sls_ids('issue-47182.stateA.newer', high)
+        self.assertEqual(ret, [('somestuff', 'cmd')])
 
 
 class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
