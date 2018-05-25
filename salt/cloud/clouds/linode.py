@@ -1007,7 +1007,7 @@ def _decode_linode_plan_label(label):
     sizes = avail_sizes()
 
     if label not in sizes:
-        if "GB" in label:
+        if 'GB' in label:
             raise SaltCloudException(
                 'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
             )
@@ -1024,10 +1024,10 @@ def _decode_linode_plan_label(label):
                 plan_size = int(plan[1])
             except TypeError:
                 plan_size = 0
-                log.debug('Failed to decode user-supplied Linode plan label: %s', label)
+                log.debug('Failed to decode Linode plan label in Cloud Profile: %s', label)
 
-            if plan_type == "Linode" and plan_size == 1024:
-                plan_type = "Nanode"
+            if plan_type == 'Linode' and plan_size == 1024:
+                plan_type = 'Nanode'
 
             plan_size = plan_size/1024
             new_label = "{} {}GB".format(plan_type, plan_size)
@@ -1037,9 +1037,9 @@ def _decode_linode_plan_label(label):
                     'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
                 )
 
-            log.warning("An outdated Linode plan label was detected in your Cloud profile ({})."
-                        " Please update the profile to use"
-                        " the new label format ({}) for the requested Linode plan size.".format(label, new_label))
+            log.warning('An outdated Linode plan label was detected in your Cloud Profile ({}).'
+                        ' Please update the profile to use'
+                        ' the new label format ({}) for the requested Linode plan size.'.format(label, new_label))
 
             label = new_label
 
