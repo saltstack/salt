@@ -153,3 +153,40 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             f_timeout=50
         )
         self.assertEqual(ret, {})
+
+
+class PublishWheelModuleTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    Validate the publish.wheel module
+    '''
+
+    def test_publish_wheel(self):
+        '''
+        test accepting key
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.accept', 'arg=minion'],
+        )
+        self.assertEqual(ret, {'minions': ['minion']})
+
+    def test_publish_wheel_not_allowed(self):
+        '''
+        test accepting key
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.list_all'],
+        )
+        self.assertEqual(ret, {'minions': ['minion']})
+
+    def test_publish_wheel_rejected(self):
+        '''
+        test accepting key
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.accept', 'arg=minion'],
+            minion_tgt='subminion',
+        )
+        self.assertEqual(ret, {'minions': ['minion']})
