@@ -172,21 +172,21 @@ class PublishWheelModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_publish_wheel_not_allowed(self):
         '''
-        test accepting key
+        test running a wheel function that is not allowed
         '''
         ret = self.run_function(
             'publish.wheel',
             ['key.list_all'],
         )
-        self.assertEqual(ret, {'minions': ['minion']})
+        self.assertEqual(ret, {})
 
     def test_publish_wheel_rejected(self):
         '''
-        test accepting key
+        test accepting key from a minion that isn't approved
         '''
         ret = self.run_function(
             'publish.wheel',
             ['key.accept', 'arg=minion'],
             minion_tgt='subminion',
         )
-        self.assertEqual(ret, {'minions': ['minion']})
+        self.assertEqual(ret, {})
