@@ -349,9 +349,9 @@ def _call_function(name, returner=None, **kwargs):
             if arg not in func_kw:
                 missing.append(arg)
     if missing:
-        raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
+        raise SaltInvocationError('Missing keyword arguments: {0}'.format(', '.join(missing)))
     elif _exp_prm > _passed_prm:
-        raise SaltInvocationError('Function expects {0} parameters, got only {1}'.format(
+        raise SaltInvocationError('Function expects {0} positional parameters, got only {1}'.format(
             _exp_prm, _passed_prm))
 
     mret = __salt__[name](*arg_type, **func_kw)
