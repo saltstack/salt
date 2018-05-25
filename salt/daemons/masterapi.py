@@ -865,7 +865,6 @@ class RemoteFuncs(object):
         opts = {}
         opts.update(self.opts)
         client = salt.wheel.WheelClient(opts)
-        arg, kwarg = salt.utils.args.parse_input(load['arg'], no_parse=load.get('no_parse', []))
         arg = kwarg = None
         if load['arg']:
             args = salt.utils.args.parse_input(load['arg'], no_parse=load.get('no_parse', []))
