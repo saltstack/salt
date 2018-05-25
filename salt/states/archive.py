@@ -73,7 +73,7 @@ def _checksum_file_path(path):
             )
     except ValueError as exc:
         # The path is on a different drive (Windows)
-        if 'path is on drive' in exc.message:
+        if str(exc).startswith('path is on'):
             drive, path = os.path.splitdrive(path)
             relpath = salt.utils.path_join(
                 'local',
