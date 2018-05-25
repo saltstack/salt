@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
@@ -155,6 +156,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret, {})
 
 
+@flaky
 class PublishWheelModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the publish.wheel module
