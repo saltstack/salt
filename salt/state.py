@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
@@ -49,7 +50,6 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
@@ -596,7 +596,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -2050,8 +2050,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
@@ -3443,43 +3444,45 @@ class BaseHighState(object):
                     'Specified SLS {0} on local filesystem cannot '
                     'be found.'.format(sls)
                 )
+        state = None
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master or through a configured '
                 'fileserver'.format(sls, saltenv)
             )
-        state = None
-        try:
-            state = compile_template(fn_,
-                                     self.state.rend,
-                                     self.state.opts['renderer'],
-                                     self.state.opts['renderer_blacklist'],
-                                     self.state.opts['renderer_whitelist'],
-                                     saltenv,
-                                     sls,
-                                     rendered_sls=mods
-                                     )
-        except SaltRenderError as exc:
-            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
-                saltenv, sls, exc
-            )
-            log.critical(msg)
-            errors.append(msg)
-        except Exception as exc:
-            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
-                sls, exc
-            )
-            log.critical(
-                msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        try:
-            mods.add('{0}:{1}'.format(saltenv, sls))
-        except AttributeError:
-            pass
+        else:
+            try:
+                state = compile_template(fn_,
+                                         self.state.rend,
+                                         self.state.opts['renderer'],
+                                         self.state.opts['renderer_blacklist'],
+                                         self.state.opts['renderer_whitelist'],
+                                         saltenv,
+                                         sls,
+                                         rendered_sls=mods
+                                         )
+            except SaltRenderError as exc:
+                msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
+                    saltenv, sls, exc
+                )
+                log.critical(msg)
+                errors.append(msg)
+            except Exception as exc:
+                msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                    sls, exc
+                )
+                log.critical(
+                    msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
+            try:
+                mods.add('{0}:{1}'.format(saltenv, sls))
+            except AttributeError:
+                pass
+
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -3902,7 +3905,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)

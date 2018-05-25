@@ -1088,7 +1088,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, take a comma or space delimited list of '
+                  'servers, take a comma or whitespace delimited list of '
                   'servers.')
         )
         group.add_option(
@@ -3087,11 +3087,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Run command via sudo.'
         )
         auth_group.add_option(
-            '--skip-roster',
-            dest='ssh_skip_roster',
+            '--update-roster',
+            dest='ssh_update_roster',
             default=False,
             action='store_true',
-            help='If hostname is not found in the roster, do not store the information'
+            help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)
