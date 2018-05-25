@@ -861,6 +861,17 @@ Reload
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
 
+.. code-block:: yaml
+
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+
+    grains_read:
+      module.run: 
+       - name: grains.items
+
 .. _unless-requisite:
 
 Unless
