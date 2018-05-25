@@ -180,6 +180,16 @@ The syntax is as follows:
     - :py:mod:`yumpkg <salt.modules.yumpkg>`
     - :py:mod:`zypper <salt.modules.zypper>`
 
+Wheel Peering Options
+=====================
+
+A ``publish.wheel`` module has been added, allowing access to the wheel
+functions on the master.
+
+The peer configuration can be found :ref:`here <peer-wheel>`.
+>>>>>>> add docs
+
+
 "Virtual Package" Support Dropped for APT
 =========================================
 
