@@ -74,7 +74,7 @@ def options_present(name, sections=None, separator='=', strict=False):
             if __opts__['test']:
                 for option in options:
                     if option in original_top_level_opts:
-                        if original_top_level_opts[option] == options[option]:
+                        if six.text_type(original_top_level_opts[option]) == six.text_type(options[option]):
                             ret['comment'] += 'Unchanged key {0}.\n'.format(option)
                         else:
                             ret['comment'] += 'Changed key {0}.\n'.format(option)
@@ -111,7 +111,8 @@ def options_present(name, sections=None, separator='=', strict=False):
                                                                           'after': None}})
                 if __opts__['test']:
                     for option in section_body:
-                        if section_body[option] == original_sections.get(section_name, {}).get(option, '#-#-'):
+                        if six.text_type(section_body[option]) == \
+                                six.text_type(original_sections.get(section_name, {}).get(option, '#-#-')):
                             ret['comment'] += 'Unchanged key {0} in section {1}.\n'.format(option, section_name)
                         else:
                             ret['comment'] += 'Changed key {0} in section {1}.\n'.format(option, section_name)
