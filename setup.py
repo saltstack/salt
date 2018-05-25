@@ -1121,6 +1121,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 'wmi',
                 'site',
                 'psutil',
+                'pytz',
             ])
         elif IS_SMARTOS_PLATFORM:
             # we have them as requirements in pkg/smartos/esky/requirements.txt

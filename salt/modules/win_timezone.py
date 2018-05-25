@@ -6,11 +6,17 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
-import pytz
 from datetime import datetime
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd party libs
+try:
+    import pytz
+    HAS_PYTZ = True
+except ImportError:
+    HAS_PYTZ = False
 
 log = logging.getLogger(__name__)
 
@@ -185,6 +191,8 @@ def __virtual__():
     '''
     if not __utils__['platform.is_windows']():
         return False, "Module win_timezone: Not on Windows client"
+    if not HAS_PYTZ:
+        return False, "Module win_timezone: pytz not found"
     if not __utils__['path.which']('tzutil'):
         return False, "Module win_timezone: tzutil not found"
     return __virtualname__
