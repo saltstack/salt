@@ -106,7 +106,7 @@ def _read_dict(cp, dictionary):
             cp.add_section(section)
 
         for key, value in keys.items():
-            key = cp.optionxform(six.test_type(key))
+            key = cp.optionxform(six.text_type(key))
             if value is not None:
                 value = six.text_type(value)
             cp.set(section, key, value)
