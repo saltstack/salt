@@ -3,6 +3,7 @@ Description=The Salt Syndic daemon
 After=network.target
 
 [Service]
+EnvironmentFile=-/etc/default/salt-syndic
 Type=notify
 NotifyAccess=all
 LimitNOFILE=8192

@@ -4,6 +4,7 @@ Documentation=man:salt-proxy(1) file:///usr/share/doc/salt/html/contents.html ht
 After=network.target
 
 [Service]
+EnvironmentFile=-/etc/default/salt-proxy
 ExecStart=/usr/bin/salt-proxy --proxyid=%i
 Type=simple
 Restart=on-failure
