@@ -39,6 +39,7 @@ integration.runners.test_salt
 integration.sdb.test_env
 integration.states.test_host
 integration.states.test_pip_state
+integration.states.test_pkg
 integration.states.test_renderers
 integration.utils.testprogram
 integration.wheel.test_client
