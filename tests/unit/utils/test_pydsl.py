@@ -10,6 +10,7 @@ import textwrap
 import copy
 
 # Import Salt Testing libs
+from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase
 from tests.support.paths import TMP
 
@@ -34,6 +35,7 @@ class CommonTestCaseBoilerplate(TestCase):
 
     def setUp(self):
         self.root_dir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, self.root_dir, ignore_errors=True)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):
@@ -291,167 +293,130 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result['C']['cmd'][1]['require'][0]['cmd'], 'A')
         self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
 
-    def test_pipe_through_stateconf(self):
-        dirpath = tempfile.mkdtemp(dir=TMP)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
-                    dirpath
-                )
-            )
+    @with_tempdir()
+    def test_pipe_through_stateconf(self, dirpath):
         output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent(
-                '''#!stateconf -os yaml . jinja
-                .X:
-                  cmd.run:
-                    - name: echo X >> {0}
-                    - cwd: /
-                .Y:
-                  cmd.run:
-                    - name: echo Y >> {0}
-                    - cwd: /
-                .Z:
-                  cmd.run:
-                    - name: echo Z >> {0}
-                    - cwd: /
-                '''.format(output.replace('\\', '/'))))
-            write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
+        write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent(
+            '''#!stateconf -os yaml . jinja
+            .X:
+              cmd.run:
+                - name: echo X >> {0}
+                - cwd: /
+            .Y:
+              cmd.run:
+                - name: echo Y >> {0}
+                - cwd: /
+            .Z:
+              cmd.run:
+                - name: echo Z >> {0}
+                - cwd: /
+            '''.format(output.replace('\\', '/'))))
+        write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
+            #!pydsl|stateconf -ps
 
-                __pydsl__.set(ordered=True)
-                state('.D').cmd.run('echo D >> {0}', cwd='/')
-                state('.E').cmd.run('echo E >> {0}', cwd='/')
-                state('.F').cmd.run('echo F >> {0}', cwd='/')
-                '''.format(output.replace('\\', '/'))))
+            __pydsl__.set(ordered=True)
+            state('.D').cmd.run('echo D >> {0}', cwd='/')
+            state('.E').cmd.run('echo E >> {0}', cwd='/')
+            state('.F').cmd.run('echo F >> {0}', cwd='/')
+            '''.format(output.replace('\\', '/'))))
 
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
+        write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
+            #!pydsl|stateconf -ps
 
-                include('xxx', 'yyy')
+            include('xxx', 'yyy')
 
-                # make all states in xxx run BEFORE states in this sls.
-                extend(state('.start').stateconf.require(stateconf='xxx::goal'))
+            # make all states in xxx run BEFORE states in this sls.
+            extend(state('.start').stateconf.require(stateconf='xxx::goal'))
 
-                # make all states in yyy run AFTER this sls.
-                extend(state('.goal').stateconf.require_in(stateconf='yyy::start'))
+            # make all states in yyy run AFTER this sls.
+            extend(state('.goal').stateconf.require_in(stateconf='yyy::start'))
 
-                __pydsl__.set(ordered=True)
+            __pydsl__.set(ordered=True)
 
-                state('.A').cmd.run('echo A >> {0}', cwd='/')
-                state('.B').cmd.run('echo B >> {0}', cwd='/')
-                state('.C').cmd.run('echo C >> {0}', cwd='/')
-                '''.format(output.replace('\\', '/'))))
+            state('.A').cmd.run('echo A >> {0}', cwd='/')
+            state('.B').cmd.run('echo B >> {0}', cwd='/')
+            state('.C').cmd.run('echo C >> {0}', cwd='/')
+            '''.format(output.replace('\\', '/'))))
 
-            self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.files.fopen(output, 'r') as f:
-                self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
+        self.state_highstate({'base': ['aaa']}, dirpath)
+        with salt.utils.files.fopen(output, 'r') as f:
+            self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
-
-    def test_compile_time_state_execution(self):
+    @with_tempdir()
+    def test_compile_time_state_execution(self, dirpath):
         if not sys.stdin.isatty():
             self.skipTest('Not attached to a TTY')
-        dirpath = tempfile.mkdtemp(dir=TMP)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
-                    dirpath
-                )
-            )
-        try:
-            # The Windows shell will include any spaces before the redirect
-            # in the text that is redirected.
-            # For example: echo hello > test.txt will contain "hello "
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl
+        # The Windows shell will include any spaces before the redirect
+        # in the text that is redirected.
+        # For example: echo hello > test.txt will contain "hello "
+        write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
+            #!pydsl
 
-                __pydsl__.set(ordered=True)
-                A = state('A')
-                A.cmd.run('echo hehe>{0}/zzz.txt', cwd='/')
-                A.file.managed('{0}/yyy.txt', source='salt://zzz.txt')
-                A()
-                A()
+            __pydsl__.set(ordered=True)
+            A = state('A')
+            A.cmd.run('echo hehe>{0}/zzz.txt', cwd='/')
+            A.file.managed('{0}/yyy.txt', source='salt://zzz.txt')
+            A()
+            A()
 
-                state().cmd.run('echo hoho>>{0}/yyy.txt', cwd='/')
+            state().cmd.run('echo hoho>>{0}/yyy.txt', cwd='/')
 
-                A.file.managed('{0}/xxx.txt', source='salt://zzz.txt')
-                A()
-                '''.format(dirpath.replace('\\', '/'))))
-            self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
-                self.assertEqual(f.read(), 'hehe' + os.linesep + 'hoho' + os.linesep)
-            with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
-                self.assertEqual(f.read(), 'hehe' + os.linesep)
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
+            A.file.managed('{0}/xxx.txt', source='salt://zzz.txt')
+            A()
+            '''.format(dirpath.replace('\\', '/'))))
+        self.state_highstate({'base': ['aaa']}, dirpath)
+        with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
+            self.assertEqual(f.read(), 'hehe' + os.linesep + 'hoho' + os.linesep)
+        with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
+            self.assertEqual(f.read(), 'hehe' + os.linesep)
 
-    def test_nested_high_state_execution(self):
-        dirpath = tempfile.mkdtemp(dir=TMP)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
-                    dirpath
-                )
-            )
+    @with_tempdir()
+    def test_nested_high_state_execution(self, dirpath):
         output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl
-                __salt__['state.sls']('bbb')
-                state().cmd.run('echo bbbbbb', cwd='/')
-                '''))
-            write_to(os.path.join(dirpath, 'bbb.sls'), textwrap.dedent(
-                '''
-                # {{ salt['state.sls']('ccc') }}
-                test:
-                  cmd.run:
-                    - name: echo bbbbbbb
-                    - cwd: /
-                '''))
-            write_to(os.path.join(dirpath, 'ccc.sls'), textwrap.dedent(
-                '''
-                #!pydsl
-                state().cmd.run('echo ccccc', cwd='/')
-                '''))
-            self.state_highstate({'base': ['aaa']}, dirpath)
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
+        write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
+            #!pydsl
+            __salt__['state.sls']('bbb')
+            state().cmd.run('echo bbbbbb', cwd='/')
+            '''))
+        write_to(os.path.join(dirpath, 'bbb.sls'), textwrap.dedent(
+            '''
+            # {{ salt['state.sls']('ccc') }}
+            test:
+              cmd.run:
+                - name: echo bbbbbbb
+                - cwd: /
+            '''))
+        write_to(os.path.join(dirpath, 'ccc.sls'), textwrap.dedent(
+            '''
+            #!pydsl
+            state().cmd.run('echo ccccc', cwd='/')
+            '''))
+        self.state_highstate({'base': ['aaa']}, dirpath)
 
-    def test_repeat_includes(self):
-        dirpath = tempfile.mkdtemp(dir=TMP)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
-                    dirpath
-                )
-            )
+    @with_tempdir()
+    def test_repeat_includes(self, dirpath):
         output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'b.sls'), textwrap.dedent('''\
-                #!pydsl
-                include('c')
-                include('d')
-                '''))
-            write_to(os.path.join(dirpath, 'c.sls'), textwrap.dedent('''\
-                #!pydsl
-                modtest = include('e')
-                modtest.success
-                '''))
-            write_to(os.path.join(dirpath, 'd.sls'), textwrap.dedent('''\
-                #!pydsl
-                modtest = include('e')
-                modtest.success
-                '''))
-            write_to(os.path.join(dirpath, 'e.sls'), textwrap.dedent('''\
-                #!pydsl
-                success = True
-                '''))
-            self.state_highstate({'base': ['b']}, dirpath)
-            self.state_highstate({'base': ['c', 'd']}, dirpath)
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
+        write_to(os.path.join(dirpath, 'b.sls'), textwrap.dedent('''\
+            #!pydsl
+            include('c')
+            include('d')
+            '''))
+        write_to(os.path.join(dirpath, 'c.sls'), textwrap.dedent('''\
+            #!pydsl
+            modtest = include('e')
+            modtest.success
+            '''))
+        write_to(os.path.join(dirpath, 'd.sls'), textwrap.dedent('''\
+            #!pydsl
+            modtest = include('e')
+            modtest.success
+            '''))
+        write_to(os.path.join(dirpath, 'e.sls'), textwrap.dedent('''\
+            #!pydsl
+            success = True
+            '''))
+        self.state_highstate({'base': ['b']}, dirpath)
+        self.state_highstate({'base': ['c', 'd']}, dirpath)
 
 
 def write_to(fpath, content):

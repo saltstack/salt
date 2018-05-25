@@ -57,7 +57,8 @@ def create(path,
            upgrade=None,
            user=None,
            use_vt=False,
-           saltenv='base'):
+           saltenv='base',
+           **kwargs):
     '''
     Create a virtualenv
 
@@ -102,6 +103,11 @@ def create(path,
 
     user : None
         Set ownership for the virtualenv
+
+        .. note::
+            On Windows you must also pass a ``password`` parameter. Additionally,
+            the user must have permissions to the location where the virtual
+            environment is being created
 
     runas : None
         Set ownership for the virtualenv
@@ -162,7 +168,7 @@ def create(path,
             # Unable to import?? Let's parse the version from the console
             version_cmd = [venv_bin, '--version']
             ret = __salt__['cmd.run_all'](
-                    version_cmd, runas=user, python_shell=False
+                    version_cmd, runas=user, python_shell=False, **kwargs
                 )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise CommandExecutionError(
@@ -252,7 +258,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False, **kwargs)
     if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret

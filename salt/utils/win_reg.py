@@ -6,21 +6,23 @@ Manage the Windows registry
 Hives
 -----
 Hives are the main sections of the registry and all begin with the word HKEY.
-- HKEY_LOCAL_MACHINE
-- HKEY_CURRENT_USER
-- HKEY_USER
+
+    - HKEY_LOCAL_MACHINE
+    - HKEY_CURRENT_USER
+    - HKEY_USER
 
 ----
 Keys
 ----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
-can have a value assigned to them under the (Default)
+can have a value assigned to them under the (Default) value name
 
 -----------------
 Values or Entries
 -----------------
 Values/Entries are name/data pairs. There can be many values in a key. The
-(Default) value corresponds to the Key, the rest are their own value pairs.
+(Default) value corresponds to the Key itself, the rest are their own name/value
+pairs.
 
 :depends:   - PyWin32
 '''
@@ -45,6 +47,7 @@ except ImportError:
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 PY2 = sys.version_info[0] == 2
 log = logging.getLogger(__name__)
@@ -90,7 +93,8 @@ def _to_unicode(vdata):
 
 class Registry(object):  # pylint: disable=R0903
     '''
-    Delay usage until this module is used
+    This was put in a class to delay usage until this module is actually used
+    This class contains all the lookup dicts for working with the registry
     '''
     def __init__(self):
         self.hkeys = {
@@ -156,20 +160,35 @@ class Registry(object):  # pylint: disable=R0903
 
 def key_exists(hive, key, use_32bit_registry=False):
     '''
-    Check that the key is found in the registry
+    Check that the key is found in the registry. This refers to keys and not
+    value/data pairs.
 
-    :param str hive: The hive to connect to.
-    :param str key: The key to check
-    :param bool use_32bit_registry: Look in the 32bit portion of the registry
+    Args:
 
-    :return: Returns True if found, False if not found
-    :rtype: bool
+        hive (str): The hive to connect to
+
+        key (str): The key to check
+
+        use_32bit_registry (bool): Look in the 32bit portion of the registry
+
+    Returns:
+        bool: True if exists, otherwise False
+
+    Usage:
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
@@ -184,13 +203,19 @@ def broadcast_change():
     '''
     Refresh the windows environment.
 
-    Returns (bool): True if successful, otherwise False
+    .. note::
+        This will only effect new processes and windows. Services will not see
+        the change until the system restarts.
 
-    CLI Example:
+    Returns:
+        bool: True if successful, otherwise False
 
-    .. code-block:: bash
+    Usage:
 
-        salt '*' reg.broadcast_change
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.broadcast_change()
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
     _, res = win32gui.SendMessageTimeout(
@@ -203,35 +228,44 @@ def list_keys(hive, key=None, use_32bit_registry=False):
     '''
     Enumerates the subkeys in a registry key or hive.
 
-    :param str hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+       hive (str):
+            The name of the hive. Can be one of the following:
 
-    :param str key: The key (looks like a path) to the value name. If a key is
-        not passed, the keys under the hive will be returned.
+                - HKEY_LOCAL_MACHINE or HKLM
+                - HKEY_CURRENT_USER or HKCU
+                - HKEY_USER or HKU
+                - HKEY_CLASSES_ROOT or HKCR
+                - HKEY_CURRENT_CONFIG or HKCC
 
-    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-        on 64 bit installations. On 32bit machines this is ignored.
+        key (str):
+            The key (looks like a path) to the value name. If a key is not
+            passed, the keys under the hive will be returned.
 
-    :return: A list of keys/subkeys under the hive or key.
-    :rtype: list
+        use_32bit_registry (bool):
+            Accesses the 32bit portion of the registry on 64 bit installations.
+            On 32bit machines this is ignored.
 
-    CLI Example:
+    Returns:
+        list: A list of keys/subkeys under the hive or key.
 
-    .. code-block:: bash
+    Usage:
 
-        salt '*' reg.list_keys HKLM 'SOFTWARE'
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.list_keys(hive='HKLM', key='SOFTWARE\\Microsoft')
     '''
 
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     subkeys = []
@@ -258,36 +292,46 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
     '''
     Enumerates the values in a registry key or hive.
 
-    :param str hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+        hive (str):
+            The name of the hive. Can be one of the following:
 
-    :param str key: The key (looks like a path) to the value name. If a key is
-        not passed, the values under the hive will be returned.
+                - HKEY_LOCAL_MACHINE or HKLM
+                - HKEY_CURRENT_USER or HKCU
+                - HKEY_USER or HKU
+                - HKEY_CLASSES_ROOT or HKCR
+                - HKEY_CURRENT_CONFIG or HKCC
 
-    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-        on 64 bit installations. On 32bit machines this is ignored.
+        key (str):
+            The key (looks like a path) to the value name. If a key is not
+            passed, the values under the hive will be returned.
 
-    :param bool include_default: Toggle whether to include the '(Default)' value.
+        use_32bit_registry (bool):
+            Accesses the 32bit portion of the registry on 64 bit installations.
+            On 32bit machines this is ignored.
 
-    :return: A list of values under the hive or key.
-    :rtype: list
+        include_default (bool):
+            Toggle whether to include the '(Default)' value.
 
-    CLI Example:
+    Returns:
+        list: A list of values under the hive or key.
 
-    .. code-block:: bash
+    Usage:
 
-        salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.list_values(hive='HKLM', key='SYSTEM\\CurrentControlSet\\Services\\Tcpip')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
     handle = None
     values = list()
@@ -325,40 +369,60 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
-    Reads a registry value entry or the default value for a key.
+    Reads a registry value entry or the default value for a key. To read the
+    default value, don't pass ``vname``
 
-    :param str hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+        hive (str): The name of the hive. Can be one of the following:
 
-    :param str key: The key (looks like a path) to the value name.
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_USER or HKU
+            - HKEY_CLASSES_ROOT or HKCR
+            - HKEY_CURRENT_CONFIG or HKCC
 
-    :param str vname: The value name. These are the individual name/data pairs
-       under the key. If not passed, the key (Default) value will be returned
+        key (str):
+            The key (looks like a path) to the value name.
 
-    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-       on 64bit installations. On 32bit machines this is ignored.
+        vname (str):
+            The value name. These are the individual name/data pairs under the
+            key. If not passed, the key (Default) value will be returned.
 
-    :return: A dictionary containing the passed settings as well as the
-       value_data if successful. If unsuccessful, sets success to False.
+        use_32bit_registry (bool):
+            Accesses the 32bit portion of the registry on 64bit installations.
+            On 32bit machines this is ignored.
 
-    :rtype: dict
+    Returns:
+        dict: A dictionary containing the passed settings as well as the
+            value_data if successful. If unsuccessful, sets success to False.
 
-    If vname is not passed:
+        bool: Returns False if the key is not found
 
-    - Returns the first unnamed value (Default) as a string.
-    - Returns none if first unnamed value is empty.
-    - Returns False if key not found.
+        If vname is not passed:
 
-    CLI Example:
+            - Returns the first unnamed value (Default) as a string.
+            - Returns none if first unnamed value is empty.
 
-    .. code-block:: bash
+    Usage:
 
-        salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
+        The following will get the value of the ``version`` value name in the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
+
+    Usage:
+
+        The following will get the default value of the
+        ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt`` key
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
     '''
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
@@ -378,7 +442,10 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         ret['vname'] = '(Default)'
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
@@ -425,98 +492,125 @@ def set_value(hive,
               use_32bit_registry=False,
               volatile=False):
     '''
-    Sets a registry value entry or the default value for a key.
+    Sets a value in the registry. If ``vname`` is passed, it will be the value
+    for that value name, otherwise it will be the default value for the
+    specified key
 
-    :param str hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+        hive (str):
+            The name of the hive. Can be one of the following
 
-    :param str key: The key (looks like a path) to the value name.
+                - HKEY_LOCAL_MACHINE or HKLM
+                - HKEY_CURRENT_USER or HKCU
+                - HKEY_USER or HKU
+                - HKEY_CLASSES_ROOT or HKCR
+                - HKEY_CURRENT_CONFIG or HKCC
 
-    :param str vname: The value name. These are the individual name/data pairs
-        under the key. If not passed, the key (Default) value will be set.
+        key (str):
+            The key (looks like a path) to the value name.
 
-    :param object vdata: The value data to be set.
-        What the type of this parameter
-        should be is determined by the value of the vtype
-        parameter. The correspondence
-        is as follows:
+        vname (str):
+            The value name. These are the individual name/data pairs under the
+            key. If not passed, the key (Default) value will be set.
 
-        .. glossary::
+        vdata (str, int, list, bytes):
+            The value you'd like to set. If a value name (vname) is passed, this
+            will be the data for that value name. If not, this will be the
+            (Default) value for the key.
 
-           REG_BINARY
-               binary data (i.e. str in python version < 3 and bytes in version >=3)
-           REG_DWORD
-               int
-           REG_EXPAND_SZ
-               str
-           REG_MULTI_SZ
-               list of objects of type str
-           REG_SZ
-               str
+            The type of data this parameter expects is determined by the value
+            type specified in ``vtype``. The correspondence is as follows:
 
-    :param str vtype: The value type.
-        The possible values of the vtype parameter are indicated
-        above in the description of the vdata parameter.
+                - REG_BINARY: Binary data (str in Py2, bytes in Py3)
+                - REG_DWORD: int
+                - REG_EXPAND_SZ: str
+                - REG_MULTI_SZ: list of str
+                - REG_QWORD: int
+                - REG_SZ: str
 
-    :param bool use_32bit_registry: Sets the 32bit portion of the registry on
-       64bit installations. On 32bit machines this is ignored.
+                .. note::
+                    When setting REG_BINARY, string data will be converted to
+                    binary. You can pass base64 encoded using the ``binascii``
+                    built-in module. Use ``binascii.b2a_base64('your data')``
 
-    :param bool volatile: When this parameter has a value of True, the registry key will be
-       made volatile (i.e. it will not persist beyond a system reset or shutdown).
-       This parameter only has an effect when a key is being created and at no
-       other time.
+            .. note::
+                The type for the (Default) value is always REG_SZ and cannot be
+                changed.
 
-    :return: Returns True if successful, False if not
-    :rtype: bool
+            .. note::
+                This parameter is optional. If not passed, the Key will be
+                created with no associated item/value pairs.
 
-    CLI Example:
+        vtype (str):
+            The value type. The possible values of the vtype parameter are
+            indicated above in the description of the vdata parameter.
 
-    .. code-block:: bash
+        use_32bit_registry (bool):
+            Sets the 32bit portion of the registry on 64bit installations. On
+            32bit machines this is ignored.
 
-        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
+        volatile (bool):
+            When this parameter has a value of True, the registry key will be
+            made volatile (i.e. it will not persist beyond a system reset or
+            shutdown). This parameter only has an effect when a key is being
+            created and at no other time.
 
-    This function is strict about the type of vdata. For instance the
-    the next example will fail because vtype has a value of REG_SZ and vdata
-    has a type of int (as opposed to str as expected).
+    Returns:
+        bool: True if successful, otherwise False
 
-    CLI Example:
+    Usage:
 
-    .. code-block:: bash
+        This will set the version value to 2015.5.2 in the SOFTWARE\\Salt key in
+        the HKEY_LOCAL_MACHINE hive
 
-        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
-        vtype=REG_SZ vdata=0
+        .. code-block:: python
 
-    However, this next example where vdata is properly quoted should succeed.
+            import salt.utils.win_reg
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version', vdata='2015.5.2')
 
-    CLI Example:
+    Usage:
 
-    .. code-block:: bash
+        This function is strict about the type of vdata. For instance this
+        example will fail because vtype has a value of REG_SZ and vdata has a
+        type of int (as opposed to str as expected).
 
-        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
-        vtype=REG_SZ vdata="'0'"
+        .. code-block:: python
 
-    An example of using vtype REG_BINARY is as follows:
+            import salt.utils.win_reg
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='str_data', vdata=1.2)
 
-    CLI Example:
+    Usage:
 
-    .. code-block:: bash
+        In this next example vdata is properly quoted and should succeed.
 
-        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
-        vtype=REG_BINARY vdata='!!binary d2hhdCdzIHRoZSBwb2ludA=='
+        .. code-block:: python
 
-    An example of using vtype REG_LIST is as follows:
+            import salt.utils.win_reg
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='str_data', vdata='1.2')
 
-    CLI Example:
+    Usage:
 
-    .. code-block:: bash
+        This is an example of using vtype REG_BINARY. Both ``set_value``
+        commands will set the same value ``Salty Test``
 
-        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
-        vtype=REG_LIST vdata='[a,b,c]'
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='bin_data', vdata='Salty Test', vtype='REG_BINARY')
+
+            import binascii
+            bin_data = binascii.b2a_base64('Salty Test')
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='bin_data_encoded', vdata=bin_data, vtype='REG_BINARY')
+
+    Usage:
+
+        An example using vtype REG_MULTI_SZ is as follows:
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.set_value(hive='HKLM', key='SOFTWARE\\Salt', vname='list_data', vdata=['Salt', 'is', 'great'], vtype='REG_MULTI_SZ')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
@@ -524,26 +618,14 @@ def set_value(hive,
     local_vtype = _to_unicode(vtype)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     vtype_value = registry.vtype[local_vtype]
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
-    # Check data type and cast to expected type
-    # int will automatically become long on 64bit numbers
-    # https://www.python.org/dev/peps/pep-0237/
-
-    # String Types to Unicode
-    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-        local_vdata = _to_unicode(vdata)
-    # Don't touch binary...
-    elif vtype_value == win32con.REG_BINARY:
-        local_vdata = vdata
-    # Make sure REG_MULTI_SZ is a list of strings
-    elif vtype_value == win32con.REG_MULTI_SZ:
-        local_vdata = [_to_unicode(i) for i in vdata]
-    # Everything else is int
-    else:
-        local_vdata = int(vdata)
+    local_vdata = cast_vdata(vdata=vdata, vtype=local_vtype)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
@@ -563,37 +645,98 @@ def set_value(hive,
         return False
 
 
+def cast_vdata(vdata=None, vtype='REG_SZ'):
+    '''
+    Cast the ``vdata` value to the appropriate data type for the registry type
+    specified in ``vtype``
+
+    Args:
+
+        vdata (str, int, list, bytes): The data to cast
+
+        vtype (str):
+            The type of data to be written to the registry. Must be one of the
+            following:
+
+                - REG_BINARY
+                - REG_DWORD
+                - REG_EXPAND_SZ
+                - REG_MULTI_SZ
+                - REG_QWORD
+                - REG_SZ
+
+    Returns:
+        The vdata cast to the appropriate type. Will be unicode string, binary,
+        list of unicode strings, or int
+
+    Usage:
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.cast_vdata(vdata='This is the string', vtype='REG_SZ')
+    '''
+    # Check data type and cast to expected type
+    # int will automatically become long on 64bit numbers
+    # https://www.python.org/dev/peps/pep-0237/
+
+    registry = Registry()
+    vtype_value = registry.vtype[vtype]
+
+    # String Types to Unicode
+    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+        return _to_unicode(vdata)
+    # Don't touch binary... if it's binary
+    elif vtype_value == win32con.REG_BINARY:
+        if isinstance(vdata, six.text_type):
+            # Unicode data must be encoded
+            return vdata.encode('utf-8')
+        return vdata
+    # Make sure REG_MULTI_SZ is a list of strings
+    elif vtype_value == win32con.REG_MULTI_SZ:
+        return [_to_unicode(i) for i in vdata]
+    # Everything else is int
+    else:
+        return int(vdata)
+
+
 def delete_key_recursive(hive, key, use_32bit_registry=False):
     '''
     .. versionadded:: 2015.5.4
 
-    Delete a registry key to include all subkeys.
+    Delete a registry key to include all subkeys and value/data pairs.
 
-    :param hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+        hive (str):
+            The name of the hive. Can be one of the following
 
-    :param key: The key to remove (looks like a path)
+                - HKEY_LOCAL_MACHINE or HKLM
+                - HKEY_CURRENT_USER or HKCU
+                - HKEY_USER or HKU
+                - HKEY_CLASSES_ROOT or HKCR
+                - HKEY_CURRENT_CONFIG or HKCC
 
-    :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
-        64bit installations. On 32bit machines this is ignored.
+            key (str):
+                The key to remove (looks like a path)
 
-    :return: A dictionary listing the keys that deleted successfully as well as
-        those that failed to delete.
-    :rtype: dict
+            use_32bit_registry (bool):
+                Deletes the 32bit portion of the registry on 64bit
+                installations. On 32bit machines this is ignored.
 
-    The following example will remove ``salt`` and all its subkeys from the
-    ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
+    Returns:
+        dict: A dictionary listing the keys that deleted successfully as well as
+            those that failed to delete.
 
-    CLI Example:
+    Usage:
 
-    .. code-block:: bash
+        The following example will remove ``salt`` and all its subkeys from the
+        ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
 
-        salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.delete_key_recursive(hive='HKLM', key='SOFTWARE\\DeleteMe')
     '''
 
     local_hive = _to_unicode(hive)
@@ -601,7 +744,10 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
     # Instantiate the registry object
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     key_path = local_key
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
@@ -668,38 +814,47 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
     '''
     Delete a registry value entry or the default value for a key.
 
-    :param str hive: The name of the hive. Can be one of the following
+    Args:
 
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
-        - HKEY_CLASSES_ROOT or HKCR
-        - HKEY_CURRENT_CONFIG or HKCC
+        hive (str):
+            The name of the hive. Can be one of the following
 
-    :param str key: The key (looks like a path) to the value name.
+                - HKEY_LOCAL_MACHINE or HKLM
+                - HKEY_CURRENT_USER or HKCU
+                - HKEY_USER or HKU
+                - HKEY_CLASSES_ROOT or HKCR
+                - HKEY_CURRENT_CONFIG or HKCC
 
-    :param str vname: The value name. These are the individual name/data pairs
-        under the key. If not passed, the key (Default) value will be deleted.
+        key (str):
+            The key (looks like a path) to the value name.
 
-    :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
-        64bit installations. On 32bit machines this is ignored.
+        vname (str):
+            The value name. These are the individual name/data pairs under the
+            key. If not passed, the key (Default) value will be deleted.
 
-    :return: Returns True if successful, None if the value didn't exist, and
-        False if unsuccessful
-    :rtype: bool
+        use_32bit_registry (bool):
+            Deletes the 32bit portion of the registry on 64bit installations. On
+            32bit machines this is ignored.
 
-    CLI Example:
+    Return:
+        bool: True if successful, otherwise False
 
-    .. code-block:: bash
+    Usage:
 
-        salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.delete_value(hive='HKLM', key='SOFTWARE\\SaltTest', vname='version')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
     local_vname = _to_unicode(vname)
 
     registry = Registry()
-    hkey = registry.hkeys[local_hive]
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
     try:

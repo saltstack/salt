@@ -5,7 +5,6 @@ Tests for the Git state
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import errno
 import functools
 import inspect
 import os
@@ -16,8 +15,9 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
+from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -98,174 +98,151 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Reset the dns timeout after the test is over
         socket.setdefaulttimeout(None)
 
-    def test_latest(self):
+    @with_tempdir(create=False)
+    def test_latest(self, target):
         '''
         git.latest
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                target=name
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            target=target
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_latest_with_rev_and_submodules(self):
+    @with_tempdir(create=False)
+    def test_latest_with_rev_and_submodules(self, target):
         '''
         git.latest
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev='develop',
-                target=name,
-                submodules=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev='develop',
+            target=target,
+            submodules=True
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_latest_failure(self):
+    @with_tempdir(create=False)
+    def test_latest_failure(self, target):
         '''
         git.latest
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://youSpelledGitHubWrong.com/saltstack/salt-test-repo.git',
-                rev='develop',
-                target=name,
-                submodules=True
-            )
-            self.assertSaltFalseReturn(ret)
-            self.assertFalse(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://youSpelledGitHubWrong.com/saltstack/salt-test-repo.git',
+            rev='develop',
+            target=target,
+            submodules=True
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertFalse(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_latest_empty_dir(self):
+    @with_tempdir()
+    def test_latest_empty_dir(self, target):
         '''
         git.latest
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        if not os.path.isdir(name):
-            os.mkdir(name)
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev='develop',
-                target=name,
-                submodules=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev='develop',
+            target=target,
+            submodules=True
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_latest_unless_no_cwd_issue_6800(self):
+    @with_tempdir(create=False)
+    def test_latest_unless_no_cwd_issue_6800(self, target):
         '''
         cwd=target was being passed to _run_check which blew up if
         target dir did not already exist.
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        if os.path.isdir(name):
-            shutil.rmtree(name)
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev='develop',
-                target=name,
-                unless='test -e {0}'.format(name),
-                submodules=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev='develop',
+            target=target,
+            unless='test -e {0}'.format(target),
+            submodules=True
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_numeric_rev(self):
+    @with_tempdir(create=False)
+    def test_numeric_rev(self, target):
         '''
         git.latest with numeric revision
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev=0.11,
-                target=name,
-                submodules=True,
-                timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev=0.11,
+            target=target,
+            submodules=True,
+            timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_latest_with_local_changes(self):
+    @with_tempdir(create=False)
+    def test_latest_with_local_changes(self, target):
         '''
         Ensure that we fail the state when there are local changes and succeed
         when force_reset is True.
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            # Clone repo
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                target=name
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
+        # Clone repo
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            target=target
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-            # Make change to LICENSE file.
-            with salt.utils.files.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
-                fp_.write('Lorem ipsum dolor blah blah blah....\n')
+        # Make change to LICENSE file.
+        with salt.utils.files.fopen(os.path.join(target, 'LICENSE'), 'a') as fp_:
+            fp_.write('Lorem ipsum dolor blah blah blah....\n')
 
-            # Make sure that we now have uncommitted changes
-            self.assertTrue(self.run_function('git.diff', [name, 'HEAD']))
+        # Make sure that we now have uncommitted changes
+        self.assertTrue(self.run_function('git.diff', [target, 'HEAD']))
 
-            # Re-run state with force_reset=False
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                target=name,
-                force_reset=False
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertEqual(
-                ret[next(iter(ret))]['comment'],
-                ('Repository {0} is up-to-date, but with uncommitted changes. '
-                 'Set \'force_reset\' to True to purge uncommitted changes.'
-                 .format(name))
-            )
+        # Re-run state with force_reset=False
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            target=target,
+            force_reset=False
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(
+            ret[next(iter(ret))]['comment'],
+            ('Repository {0} is up-to-date, but with uncommitted changes. '
+             'Set \'force_reset\' to True to purge uncommitted changes.'
+             .format(target))
+        )
 
-            # Now run the state with force_reset=True
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                target=name,
-                force_reset=True
-            )
-            self.assertSaltTrueReturn(ret)
+        # Now run the state with force_reset=True
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            target=target,
+            force_reset=True
+        )
+        self.assertSaltTrueReturn(ret)
 
-            # Make sure that we no longer have uncommitted changes
-            self.assertFalse(self.run_function('git.diff', [name, 'HEAD']))
-
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        # Make sure that we no longer have uncommitted changes
+        self.assertFalse(self.run_function('git.diff', [target, 'HEAD']))
 
     @uses_git_opts
-    def test_latest_fast_forward(self):
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    @with_tempdir(create=False)
+    def test_latest_fast_forward(self, mirror_dir, admin_dir, clone_dir):
         '''
         Test running git.latest state a second time after changes have been
         made to the remote repo.
@@ -274,98 +251,87 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             return self.run_function('git.rev_parse', [cwd, 'HEAD'])
 
         repo_url = 'https://{0}/saltstack/salt-test-repo.git'.format(self.__domain)
-        mirror_dir = os.path.join(TMP, 'salt_repo_mirror')
         mirror_url = 'file://' + mirror_dir
-        admin_dir = os.path.join(TMP, 'salt_repo_admin')
-        clone_dir = os.path.join(TMP, 'salt_repo')
 
-        try:
-            # Mirror the repo
-            self.run_function(
-                'git.clone', [mirror_dir], url=repo_url, opts='--mirror')
+        # Mirror the repo
+        self.run_function(
+            'git.clone', [mirror_dir], url=repo_url, opts='--mirror')
 
-            # Make sure the directory for the mirror now exists
-            self.assertTrue(os.path.exists(mirror_dir))
+        # Make sure the directory for the mirror now exists
+        self.assertTrue(os.path.exists(mirror_dir))
 
-            # Clone the mirror twice, once to the admin location and once to
-            # the clone_dir
-            ret = self.run_state('git.latest', name=mirror_url, target=admin_dir)
-            self.assertSaltTrueReturn(ret)
-            ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
-            self.assertSaltTrueReturn(ret)
+        # Clone the mirror twice, once to the admin location and once to
+        # the clone_dir
+        ret = self.run_state('git.latest', name=mirror_url, target=admin_dir)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+        self.assertSaltTrueReturn(ret)
 
-            # Make a change to the repo by editing the file in the admin copy
-            # of the repo and committing.
-            head_pre = _head(admin_dir)
-            with salt.utils.files.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
-                fp_.write('Hello world!')
-            self.run_function(
-                'git.commit', [admin_dir, 'added a line'],
-                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
-                opts='-a',
-            )
-            # Make sure HEAD is pointing to a new SHA so we know we properly
-            # committed our change.
-            head_post = _head(admin_dir)
-            self.assertNotEqual(head_pre, head_post)
+        # Make a change to the repo by editing the file in the admin copy
+        # of the repo and committing.
+        head_pre = _head(admin_dir)
+        with salt.utils.files.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
+            fp_.write('Hello world!')
+        self.run_function(
+            'git.commit', [admin_dir, 'added a line'],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+            opts='-a',
+        )
+        # Make sure HEAD is pointing to a new SHA so we know we properly
+        # committed our change.
+        head_post = _head(admin_dir)
+        self.assertNotEqual(head_pre, head_post)
 
-            # Push the change to the mirror
-            # NOTE: the test will fail if the salt-test-repo's default branch
-            # is changed.
-            self.run_function('git.push', [admin_dir, 'origin', 'develop'])
+        # Push the change to the mirror
+        # NOTE: the test will fail if the salt-test-repo's default branch
+        # is changed.
+        self.run_function('git.push', [admin_dir, 'origin', 'develop'])
 
-            # Re-run the git.latest state on the clone_dir
-            ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
-            self.assertSaltTrueReturn(ret)
+        # Re-run the git.latest state on the clone_dir
+        ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+        self.assertSaltTrueReturn(ret)
 
-            # Make sure that the clone_dir now has the correct SHA
-            self.assertEqual(head_post, _head(clone_dir))
+        # Make sure that the clone_dir now has the correct SHA
+        self.assertEqual(head_post, _head(clone_dir))
 
-        finally:
-            for path in (mirror_dir, admin_dir, clone_dir):
-                shutil.rmtree(path, ignore_errors=True)
-
-    def _changed_local_branch_helper(self, rev, hint):
+    @with_tempdir(create=False)
+    def _changed_local_branch_helper(self, target, rev, hint):
         '''
         We're testing two almost identical cases, the only thing that differs
         is the rev used for the git.latest state.
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            # Clone repo
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev=rev,
-                target=name
-            )
-            self.assertSaltTrueReturn(ret)
+        # Clone repo
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev=rev,
+            target=target
+        )
+        self.assertSaltTrueReturn(ret)
 
-            # Check out a new branch in the clone and make a commit, to ensure
-            # that when we re-run the state, it is not a fast-forward change
-            self.run_function('git.checkout', [name, 'new_branch'], opts='-b')
-            with salt.utils.files.fopen(os.path.join(name, 'foo'), 'w'):
-                pass
-            self.run_function('git.add', [name, '.'])
-            self.run_function(
-                'git.commit', [name, 'add file'],
-                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
-            )
+        # Check out a new branch in the clone and make a commit, to ensure
+        # that when we re-run the state, it is not a fast-forward change
+        self.run_function('git.checkout', [target, 'new_branch'], opts='-b')
+        with salt.utils.files.fopen(os.path.join(target, 'foo'), 'w'):
+            pass
+        self.run_function('git.add', [target, '.'])
+        self.run_function(
+            'git.commit', [target, 'add file'],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+        )
 
-            # Re-run the state, this should fail with a specific hint in the
-            # comment field.
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev=rev,
-                target=name
-            )
-            self.assertSaltFalseReturn(ret)
+        # Re-run the state, this should fail with a specific hint in the
+        # comment field.
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev=rev,
+            target=target
+        )
+        self.assertSaltFalseReturn(ret)
 
-            comment = ret[next(iter(ret))]['comment']
-            self.assertTrue(hint in comment)
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        comment = ret[next(iter(ret))]['comment']
+        self.assertTrue(hint in comment)
 
     @uses_git_opts
     def test_latest_changed_local_branch_rev_head(self):
@@ -376,7 +342,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         This test will fail if the default branch for the salt-test-repo is
         ever changed.
         '''
-        self._changed_local_branch_helper(
+        self._changed_local_branch_helper(  # pylint: disable=no-value-for-parameter
             'HEAD',
             'The default remote branch (develop) differs from the local '
             'branch (new_branch)'
@@ -388,162 +354,136 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         Test for presence of hint in failure message when the local branch has
         been changed and a non-HEAD rev is specified
         '''
-        self._changed_local_branch_helper(
+        self._changed_local_branch_helper(  # pylint: disable=no-value-for-parameter
             'develop',
             'The desired rev (develop) differs from the name of the local '
             'branch (new_branch)'
         )
 
     @uses_git_opts
-    def test_latest_updated_remote_rev(self):
+    @with_tempdir(create=False)
+    @with_tempdir()
+    def test_latest_updated_remote_rev(self, name, target):
         '''
         Ensure that we don't exit early when checking for a fast-forward
         '''
-        name = tempfile.mkdtemp(dir=TMP)
-        target = os.path.join(TMP, 'test_latest_updated_remote_rev')
-
         # Initialize a new git repository
         self.run_function('git.init', [name])
 
-        try:
-            # Add and commit a file
-            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
-                fp_.write('Hello world\n')
-            self.run_function('git.add', [name, '.'])
-            self.run_function(
-                'git.commit', [name, 'initial commit'],
-                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
-            )
+        # Add and commit a file
+        with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
+            fp_.write('Hello world\n')
+        self.run_function('git.add', [name, '.'])
+        self.run_function(
+            'git.commit', [name, 'initial commit'],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+        )
 
-            # Run the state to clone the repo we just created
-            ret = self.run_state(
-                'git.latest',
-                name=name,
-                target=target,
-            )
-            self.assertSaltTrueReturn(ret)
+        # Run the state to clone the repo we just created
+        ret = self.run_state(
+            'git.latest',
+            name=name,
+            target=target,
+        )
+        self.assertSaltTrueReturn(ret)
 
-            # Add another commit
-            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
-                fp_.write('Added a line\n')
-            self.run_function(
-                'git.commit', [name, 'added a line'],
-                git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
-                opts='-a',
-            )
+        # Add another commit
+        with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
+            fp_.write('Added a line\n')
+        self.run_function(
+            'git.commit', [name, 'added a line'],
+            git_opts='-c user.name="Foo Bar" -c user.email=foo@bar.com',
+            opts='-a',
+        )
 
-            # Run the state again. It should pass, if it doesn't then there was
-            # a problem checking whether or not the change is a fast-forward.
-            ret = self.run_state(
-                'git.latest',
-                name=name,
-                target=target,
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            for path in (name, target):
-                try:
-                    shutil.rmtree(path)
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        raise exc
+        # Run the state again. It should pass, if it doesn't then there was
+        # a problem checking whether or not the change is a fast-forward.
+        ret = self.run_state(
+            'git.latest',
+            name=name,
+            target=target,
+        )
+        self.assertSaltTrueReturn(ret)
 
-    def test_latest_depth(self):
+    @with_tempdir(create=False)
+    def test_latest_depth(self, target):
         '''
         Test running git.latest state using the "depth" argument to limit the
         history. See #45394.
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev='HEAD',
-                target=name,
-                depth=1
-            )
-            # HEAD is not a branch, this should fail
-            self.assertSaltFalseReturn(ret)
-            self.assertIn(
-                'must be set to the name of a branch',
-                ret[next(iter(ret))]['comment']
-            )
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev='HEAD',
+            target=target,
+            depth=1
+        )
+        # HEAD is not a branch, this should fail
+        self.assertSaltFalseReturn(ret)
+        self.assertIn(
+            'must be set to the name of a branch',
+            ret[next(iter(ret))]['comment']
+        )
 
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
-                rev='non-default-branch',
-                target=name,
-                depth=1
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.latest',
+            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            rev='non-default-branch',
+            target=target,
+            depth=1
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
 
-    def test_present(self):
+    @with_tempdir(create=False)
+    def test_present(self, name):
         '''
         git.present
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.present',
-                name=name,
-                bare=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.present',
+            name=name,
+            bare=True
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
 
-    def test_present_failure(self):
+    @with_tempdir()
+    def test_present_failure(self, name):
         '''
         git.present
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        if not os.path.isdir(name):
-            os.mkdir(name)
-        try:
-            fname = os.path.join(name, 'stoptheprocess')
+        fname = os.path.join(name, 'stoptheprocess')
 
-            with salt.utils.files.fopen(fname, 'a'):
-                pass
+        with salt.utils.files.fopen(fname, 'a'):
+            pass
 
-            ret = self.run_state(
-                'git.present',
-                name=name,
-                bare=True
-            )
-            self.assertSaltFalseReturn(ret)
-            self.assertFalse(os.path.isfile(os.path.join(name, 'HEAD')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.present',
+            name=name,
+            bare=True
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertFalse(os.path.isfile(os.path.join(name, 'HEAD')))
 
-    def test_present_empty_dir(self):
+    @with_tempdir()
+    def test_present_empty_dir(self, name):
         '''
         git.present
         '''
-        name = os.path.join(TMP, 'salt_repo')
-        if not os.path.isdir(name):
-            os.mkdir(name)
-        try:
-            ret = self.run_state(
-                'git.present',
-                name=name,
-                bare=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
+        ret = self.run_state(
+            'git.present',
+            name=name,
+            bare=True
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
 
-    def test_config_set_value_with_space_character(self):
+    @with_tempdir()
+    def test_config_set_value_with_space_character(self, name):
         '''
         git.config
         '''
-        name = tempfile.mkdtemp(dir=TMP)
-        self.addCleanup(shutil.rmtree, name, ignore_errors=True)
         self.run_function('git.init', [name])
 
         ret = self.run_state(

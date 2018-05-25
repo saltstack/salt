@@ -176,6 +176,14 @@
 # master event bus. The value is expressed in bytes.
 #max_event_size: 1048576
 
+# Windows platforms lack posix IPC and must rely on slower TCP based inter-
+# process communications. Set ipc_mode to 'tcp' on such systems
+#ipc_mode: ipc
+
+# Overwrite the default tcp ports used by the minion when ipc_mode is set to 'tcp'
+#tcp_master_pub_port: 4510
+#tcp_master_pull_port: 4511
+
 # By default, the master AES key rotates every 24 hours. The next command
 # following a key rotation will trigger a key refresh from the minion which may
 # result in minions which do not respond to the first command after a key refresh.
@@ -537,6 +545,10 @@
 # into easy-to-target groups when using salt-ssh. These groups can then be
 # targeted with the normal -N argument to salt-ssh.
 #ssh_list_nodegroups: {}
+
+# salt-ssh has the ability to update the flat roster file if a minion is not
+# found in the roster.  Set this to True to enable it.
+#ssh_update_roster: False
 
 #####    Master Module Management    #####
 ##########################################

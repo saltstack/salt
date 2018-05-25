@@ -217,7 +217,8 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception:
+    except Exception as exc:
+        log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
 
@@ -1782,7 +1783,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), h[1]))
+                    s.connect((candidate_addr.strip('[]'), h[4][1]))
                     s.close()
 
                     resolved = candidate_addr

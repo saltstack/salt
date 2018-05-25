@@ -664,21 +664,6 @@ def extracted(name,
         # Neither was passed, default is True
         keep_source = True
 
-    if 'keep_source' in kwargs and 'keep' in kwargs:
-        ret.setdefault('warnings', []).append(
-            'Both \'keep_source\' and \'keep\' were used. Since these both '
-            'do the same thing, \'keep\' was ignored.'
-        )
-        keep_source = bool(kwargs.pop('keep_source'))
-        kwargs.pop('keep')
-    elif 'keep_source' in kwargs:
-        keep_source = bool(kwargs.pop('keep_source'))
-    elif 'keep' in kwargs:
-        keep_source = bool(kwargs.pop('keep'))
-    else:
-        # Neither was passed, default is True
-        keep_source = True
-
     if not _path_is_abs(name):
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
@@ -1105,7 +1090,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1274,7 +1259,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]

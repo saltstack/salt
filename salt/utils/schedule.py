@@ -81,7 +81,8 @@ class Schedule(object):
                 cleanup=None,
                 proxy=None,
                 standalone=False,
-                new_instance=False):
+                new_instance=False,
+                utils=None):
         '''
         Only create one instance of Schedule
         '''
@@ -96,7 +97,8 @@ class Schedule(object):
                                         intervals=intervals,
                                         cleanup=cleanup,
                                         proxy=proxy,
-                                        standalone=standalone)
+                                        standalone=standalone,
+                                        utils=utils)
             if new_instance is True:
                 return instance
             cls.instance = instance
@@ -111,14 +113,23 @@ class Schedule(object):
                  cleanup=None,
                  proxy=None,
                  standalone=False,
-                 new_instance=False):
+                 new_instance=False,
+                 utils=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
+    def __singleton_init__(self, opts,
+                           functions,
+                           returners=None,
+                           intervals=None,
+                           cleanup=None,
+                           proxy=None,
+                           standalone=False,
+                           utils=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.utils = utils or salt.loader.utils(opts)
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
@@ -603,9 +614,9 @@ class Schedule(object):
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts)
+                self.functions = salt.loader.runner(self.opts, utils=self.utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=self.utils)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
@@ -720,6 +731,7 @@ class Schedule(object):
                     for global_key, value in six.iteritems(func_globals):
                         self.functions[mod_name].__globals__[global_key] = value
 
+            self.functions.pack['__context__']['retcode'] = 0
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -771,11 +783,13 @@ class Schedule(object):
                 else:
                     # Send back to master so the job is included in the job list
                     mret = ret.copy()
-                    mret['jid'] = 'req'
-                    if data.get('return_job') == 'nocache':
-                        # overwrite 'req' to signal to master that
-                        # this job shouldn't be stored
-                        mret['jid'] = 'nocache'
+                    # No returners defined, so we're only sending back to the master
+                    if not data_returner and not self.schedule_returner:
+                        mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that
+                            # this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                     load = {'cmd': '_return', 'id': self.opts['id']}
                     for key, value in six.iteritems(mret):
                         load[key] = value
@@ -1612,6 +1626,8 @@ class Schedule(object):
             self.functions = {}
             returners = self.returners
             self.returners = {}
+            utils = self.utils
+            self.utils = {}
 
         try:
             if multiprocessing_enabled:
@@ -1634,6 +1650,7 @@ class Schedule(object):
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
+                self.utils = utils
 
 
 def clean_proc_dir(opts):

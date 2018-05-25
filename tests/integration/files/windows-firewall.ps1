@@ -10,24 +10,24 @@ winrm set winrm/config/service/auth '@{Basic="true"}'
 $SourceStoreScope = 'LocalMachine'
 $SourceStorename = 'Remote Desktop'
 
-$SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+$SourceStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $SourceStorename, $SourceStoreScope
 $SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
 
-$cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+$cert = $SourceStore.Certificates | Where-Object -FilterScript {
     $_.subject -like '*'
 }
 
 $DestStoreScope = 'LocalMachine'
 $DestStoreName = 'My'
 
-$DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+$DestStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $DestStoreName, $DestStoreScope
 $DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
 $DestStore.Add($cert)
 
 $SourceStore.Close()
 $DestStore.Close()
 
-winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+winrm create winrm/config/listener?Address=*+Transport=HTTPS `@`{CertificateThumbprint=`"($cert.Thumbprint)`"`}
 
 Restart-Service winrm
 </powershell>
