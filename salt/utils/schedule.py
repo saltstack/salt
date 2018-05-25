@@ -783,11 +783,13 @@ class Schedule(object):
                 else:
                     # Send back to master so the job is included in the job list
                     mret = ret.copy()
-                    mret['jid'] = 'req'
-                    if data.get('return_job') == 'nocache':
-                        # overwrite 'req' to signal to master that
-                        # this job shouldn't be stored
-                        mret['jid'] = 'nocache'
+                    # No returners defined, so we're only sending back to the master
+                    if not data_returner and not self.schedule_returner:
+                        mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that
+                            # this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                     load = {'cmd': '_return', 'id': self.opts['id']}
                     for key, value in six.iteritems(mret):
                         load[key] = value
