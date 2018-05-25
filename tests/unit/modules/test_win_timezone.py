@@ -7,7 +7,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch
@@ -17,6 +17,7 @@ from tests.support.mock import (
 import salt.modules.win_timezone as win_timezone
 
 
+@skipIf(not win_timezone.HAS_PYTZ, 'This test requires pytz')
 class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_timezone
