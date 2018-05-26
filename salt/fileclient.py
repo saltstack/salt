@@ -47,6 +47,7 @@ from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
+MAX_FILENAME_LENGTH = 255
 
 
 def get_file_client(opts, pillar=False):
@@ -830,6 +831,9 @@ class Client(object):
             file_name = '-'.join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
+
+        if len(file_name) > MAX_FILENAME_LENGTH:
+            file_name = salt.utils.hashutils.sha256_digest(file_name)
 
         return salt.utils.path.join(
             cachedir,
