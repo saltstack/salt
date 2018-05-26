@@ -3,6 +3,7 @@ Description=The Salt Minion daemon
 After=network.target salt-master.service
 
 [Service]
+EnvironmentFile=-/etc/default/salt-minion
 Type=notify
 KillMode=process
 NotifyAccess=all
