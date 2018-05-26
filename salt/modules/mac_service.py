@@ -32,7 +32,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -274,13 +273,11 @@ def list_(name=None, runas=None):
         return launchctl('list',
                          label,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
                      return_stdout=True,
-                     output_loglevel='trace',
                      runas=runas)
 
 
