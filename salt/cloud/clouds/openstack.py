@@ -597,6 +597,7 @@ def _clean_create_kwargs(**kwargs):
         'volume_size': int,
         'nat_destination': six.string_types,
         'group': six.string_types,
+        'userdata': six.string_types,
     }
     extra = kwargs.pop('extra', {})
     for key, value in six.iteritems(kwargs.copy()):

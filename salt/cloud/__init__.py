@@ -1916,7 +1916,8 @@ class Map(Cloud):
         pmap = self.map_providers_parallel(cached=cached)
         exist = set()
         defined = set()
-        for profile_name, nodes in six.iteritems(self.rendered_map):
+        rendered_map = copy.deepcopy(self.rendered_map)
+        for profile_name, nodes in six.iteritems(rendered_map):
             if profile_name not in self.opts['profiles']:
                 msg = (
                     'The required profile, \'{0}\', defined in the map '
@@ -1934,21 +1935,23 @@ class Map(Cloud):
 
             profile_data = self.opts['profiles'].get(profile_name)
 
-            # Get associated provider data, in case something like size
-            # or image is specified in the provider file. See issue #32510.
-            alias, driver = profile_data.get('provider').split(':')
-            provider_details = self.opts['providers'][alias][driver].copy()
-            del provider_details['profiles']
-
-            # Update the provider details information with profile data
-            # Profile data should override provider data, if defined.
-            # This keeps map file data definitions consistent with -p usage.
-            provider_details.update(profile_data)
-            profile_data = provider_details
-
             for nodename, overrides in six.iteritems(nodes):
-                # Get the VM name
-                nodedata = copy.deepcopy(profile_data)
+                # Get associated provider data, in case something like size
+                # or image is specified in the provider file. See issue #32510.
+                if 'provider' in overrides and overrides['provider'] != profile_data['provider']:
+                    alias, driver = overrides.get('provider').split(':')
+                else:
+                    alias, driver = profile_data.get('provider').split(':')
+
+                provider_details = copy.deepcopy(self.opts['providers'][alias][driver])
+                del provider_details['profiles']
+
+                # Update the provider details information with profile data
+                # Profile data and node overrides should override provider data, if defined.
+                # This keeps map file data definitions consistent with -p usage.
+                salt.utils.dictupdate.update(provider_details, profile_data)
+                nodedata = copy.deepcopy(provider_details)
+
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes',
                                 'requires'):
