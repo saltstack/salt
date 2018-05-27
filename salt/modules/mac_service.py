@@ -2,6 +2,24 @@
 '''
 The service module for macOS
 .. versionadded:: 2016.3.0
+
+This module has support for services in the following locations.
+
+.. code-block:: bash
+    /System/Library/LaunchDaemons/
+    /System/Library/LaunchAgents/
+    /Library/LaunchDaemons/
+    /Library/LaunchAgents/
+
+    # As of version "Fluorine" support for user-specific services were added.
+    /Users/foo/Library/LaunchAgents/
+
+.. note::
+
+    As of version "Fluorine", if a service is located in a ``LaunchAgent`` path
+    and a ``runas`` user is NOT specified the current console user will be used
+    to properly interact with the service.
+
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -14,7 +32,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -62,7 +79,7 @@ def _get_service(name):
     :return: The service information for the service, otherwise an Error
     :rtype: dict
     '''
-    services = salt.utils.mac_utils.available_services()
+    services = __utils__['mac_utils.available_services']()
     name = name.lower()
 
     if name in services:
@@ -113,6 +130,68 @@ def _always_running_service(name):
     return False
 
 
+def _get_domain_target(name, service_target=False):
+    '''
+    Returns the domain/service target and path for a service. This is used to
+    determine whether or not a service should be loaded in a user space or
+    system space.
+
+    :param str name: Service label, file name, or full path
+
+    :param bool service_target: Whether to return a full
+    service target. This is needed for the enable and disable
+    subcommands of /bin/launchctl. Defaults to False
+
+    :return: Tuple of the domain/service target and the path to the service.
+
+    :rtype: tuple
+
+    .. versionadded:: Fluorine
+    '''
+
+    # Get service information
+    service = _get_service(name)
+
+    # get the path to the service
+    path = service['file_path']
+
+    # most of the time we'll be at the system level.
+    domain_target = 'system'
+
+    # check if a LaunchAgent as we should treat these differently.
+    if 'LaunchAgents' in path:
+        # Get the console user so we can service in the correct session
+        uid = __utils__['mac_utils.console_user']()
+        domain_target = 'gui/{}'.format(uid)
+
+    # check to see if we need to make it a full service target.
+    if service_target is True:
+        domain_target = '{}/{}'.format(domain_target, service['plist']['Label'])
+
+    return (domain_target, path)
+
+
+def _launch_agent(name):
+    '''
+    Checks to see if the provided service is a LaunchAgent
+
+    :param str name: Service label, file name, or full path
+
+    :return: True if a LaunchAgent, False if not.
+
+    :rtype: bool
+
+    .. versionadded:: Fluorine
+    '''
+
+    # Get the path to the service.
+    path = _get_service(name)['file_path']
+
+    if 'LaunchAgents' not in path:
+        return False
+    return True
+
+
 def show(name):
     '''
     Show properties of a launchctl service
@@ -158,7 +237,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    return salt.utils.mac_utils.launchctl(sub_cmd, *args, **kwargs)
+    return __utils__['mac_utils.launchctl'](sub_cmd, *args, **kwargs)
 
 
 def list_(name=None, runas=None):
@@ -185,17 +264,20 @@ def list_(name=None, runas=None):
         service = _get_service(name)
         label = service['plist']['Label']
 
+        # we can assume if we are trying to list a LaunchAgent we need
+        # to run as a user, if not provided, we'll use the console user.
+        if not runas and _launch_agent(name):
+            runas = __utils__['mac_utils.console_user'](username=True)
+
         # Collect information on service: will raise an error if it fails
         return launchctl('list',
                          label,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
                      return_stdout=True,
-                     output_loglevel='trace',
                      runas=runas)
 
 
@@ -216,12 +298,11 @@ def enable(name, runas=None):
 
         salt '*' service.enable org.cups.cupsd
     '''
-    # Get service information and label
-    service = _get_service(name)
-    label = service['plist']['Label']
+    # Get the domain target. enable requires a full <service-target>
+    service_target = _get_domain_target(name, service_target=True)[0]
 
     # Enable the service: will raise an error if it fails
-    return launchctl('enable', 'system/{0}'.format(label), runas=runas)
+    return launchctl('enable', service_target, runas=runas)
 
 
 def disable(name, runas=None):
@@ -242,12 +323,11 @@ def disable(name, runas=None):
 
         salt '*' service.disable org.cups.cupsd
     '''
-    # Get service information and label
-    service = _get_service(name)
-    label = service['plist']['Label']
+    # Get the service target. enable requires a full <service-target>
+    service_target = _get_domain_target(name, service_target=True)[0]
 
     # disable the service: will raise an error if it fails
-    return launchctl('disable', 'system/{0}'.format(label), runas=runas)
+    return launchctl('disable', service_target, runas=runas)
 
 
 def start(name, runas=None):
@@ -271,12 +351,11 @@ def start(name, runas=None):
 
         salt '*' service.start org.cups.cupsd
     '''
-    # Get service information and file path
-    service = _get_service(name)
-    path = service['file_path']
+    # Get the domain target.
+    domain_target, path = _get_domain_target(name)
 
-    # Load the service: will raise an error if it fails
-    return launchctl('load', path, runas=runas)
+    # Load (bootstrap) the service: will raise an error if it fails
+    return launchctl('bootstrap', domain_target, path, runas=runas)
 
 
 def stop(name, runas=None):
@@ -301,12 +380,11 @@ def stop(name, runas=None):
 
         salt '*' service.stop org.cups.cupsd
     '''
-    # Get service information and file path
-    service = _get_service(name)
-    path = service['file_path']
+    # Get the domain target.
+    domain_target, path = _get_domain_target(name)
 
-    # Disable the Launch Daemon: will raise an error if it fails
-    return launchctl('unload', path, runas=runas)
+    # Stop (bootout) the service: will raise an error if it fails
+    return launchctl('bootout', domain_target, path, runas=runas)
 
 
 def restart(name, runas=None):
@@ -367,6 +445,9 @@ def status(name, sig=None, runas=None):
     # return a string 'loaded' if it shouldn't always be running and is enabled.
     if not _always_running_service(name) and enabled(name):
         return 'loaded'
+
+    if not runas and _launch_agent(name):
+        runas = __utils__['mac_utils.console_user'](username=True)
 
     output = list_(runas=runas)
 
@@ -493,7 +574,7 @@ def get_all(runas=None):
     enabled = get_enabled(runas=runas)
 
     # Get list of all services
-    available = list(salt.utils.mac_utils.available_services().keys())
+    available = list(__utils__['mac_utils.available_services']().keys())
 
     # Return composite list
     return sorted(set(enabled + available))
@@ -514,7 +595,6 @@ def get_enabled(runas=None):
     .. code-block:: bash
 
         salt '*' service.get_enabled
-        salt '*' service.get_enabled running=True
     '''
     # Collect list of enabled services
     stdout = list_(runas=runas)

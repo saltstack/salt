@@ -3291,3 +3291,31 @@ URL of the repository:
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the
 event that an error is introduced in the latest revision of the repo.
+
+``ssh_merge_pillar``
+--------------------
+
+.. versionadded:: 2018.3.2
+
+Default: ``True``
+
+Merges the compiled pillar data with the pillar data already available globally.
+This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
+data in a state file:
+
+.. code-block:: yaml
+
+    apply_showpillar:
+      module.run:
+        - name: state.apply
+        - mods:
+          - showpillar
+        - kwargs:
+              pillar:
+                  test: "foo bar"
+
+If set to ``True`` the ``showpillar`` state will have access to the
+global pillar data.
+
+If set to ``False`` only the overriding pillar data will be available
+to the ``showpillar`` state.

@@ -135,9 +135,9 @@ def lowstate_file_refs(chunks, extras=''):
             elif state.startswith('__'):
                 continue
             crefs.extend(salt_refs(chunk[state]))
+        if saltenv not in refs:
+            refs[saltenv] = []
         if crefs:
-            if saltenv not in refs:
-                refs[saltenv] = []
             refs[saltenv].append(crefs)
     if extras:
         extra_refs = extras.split(',')

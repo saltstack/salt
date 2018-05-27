@@ -35,7 +35,6 @@ import salt.utils.yaml
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
-from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
 
 try:
@@ -992,6 +991,7 @@ VALID_OPTS = {
     'ssh_identities_only': bool,
     'ssh_log_file': six.string_types,
     'ssh_config_file': six.string_types,
+    'ssh_merge_pillar': bool,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -1504,6 +1504,7 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
+    'ssh_merge_pillar': True
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1917,15 +1918,15 @@ DEFAULT_API_OPTS = {
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
     'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
-    'formula_path': '/srv/spm/salt',
-    'pillar_path': '/srv/spm/pillar',
-    'reactor_path': '/srv/spm/reactor',
+    'formula_path': salt.syspaths.SPM_FORMULA_PATH,
+    'pillar_path': salt.syspaths.SPM_PILLAR_PATH,
+    'reactor_path': salt.syspaths.SPM_REACTOR_PATH,
     'spm_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'spm'),
     'spm_default_include': 'spm.d/*.conf',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
-    'spm_build_dir': '/srv/spm_build',
+    'spm_build_dir': os.path.join(salt.syspaths.SRV_ROOT_DIR, 'spm_build'),
     'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     'cache': 'localfs',
@@ -2111,7 +2112,7 @@ def _validate_ssh_minion_opts(opts):
 
     for opt_name in list(ssh_minion_opts):
         if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
-                or 'pillar' in opt_name \
+                or ('pillar' in opt_name and not 'ssh_merge_pillar' == opt_name) \
                 or opt_name in ('fileserver_backend',):
             log.warning(
                 '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
@@ -2159,7 +2160,7 @@ def _read_conf_file(path):
             if not isinstance(conf_opts['id'], six.string_types):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
-                conf_opts['id'] = sdecode(conf_opts['id'])
+                conf_opts['id'] = salt.utils.data.decode(conf_opts['id'])
         return conf_opts
 
 
@@ -3338,7 +3339,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if isinstance(vm_[name], types.GeneratorType):
             value = next(vm_[name], '')
         else:
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(vm_[name], dict):
                 value.update(vm_[name].copy())
             else:
                 value = deepcopy(vm_[name])
@@ -3423,7 +3424,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'libvirt', 'oneandone']
+                        'virtualbox', 'libvirt', 'oneandone', 'profitbricks']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
