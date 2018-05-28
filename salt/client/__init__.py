@@ -77,16 +77,15 @@ def get_local_client(
         c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
         mopts=None,
         skip_perm_errors=False,
-        io_loop=None,
-        auto_reconnect=False):
+        auto_reconnect=False,
+        sync=True):
     '''
     .. versionadded:: 2014.7.0
 
     Read in the config and return the correct LocalClient object based on
     the configured transport
 
-    :param IOLoop io_loop: io_loop used for events.
-                           Pass in an io_loop if you want asynchronous
+    :param Bool sync:      Pass in False if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
@@ -102,7 +101,6 @@ def get_local_client(
     return LocalClient(
         mopts=opts,
         skip_perm_errors=skip_perm_errors,
-        io_loop=io_loop,
         auto_reconnect=auto_reconnect)
 
 
@@ -137,10 +135,9 @@ class LocalClient(object):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None, skip_perm_errors=False,
-                 io_loop=None, keep_loop=False, auto_reconnect=False):
+                 keep_loop=False, auto_reconnect=False, sync=True):
         '''
-        :param IOLoop io_loop: io_loop used for events.
-                               Pass in an io_loop if you want asynchronous
+        :param Bool sync:      Pass in False if you want asynchronous
                                operation for obtaining events. Eg use of
                                set_event_handler() API. Otherwise,
                                operation will be synchronous.
@@ -166,8 +163,8 @@ class LocalClient(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False,
-                io_loop=io_loop,
-                keep_loop=keep_loop)
+                keep_loop=keep_loop,
+                sync=sync)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -363,7 +360,6 @@ class LocalClient(object):
             jid='',
             kwarg=None,
             listen=True,
-            io_loop=None,
             **kwargs):
         '''
         Asynchronously send a command to connected minions
@@ -390,7 +386,6 @@ class LocalClient(object):
                   ret,
                   jid=jid,
                   timeout=self._get_timeout(timeout),
-                  io_loop=io_loop,
                   listen=listen,
                   **kwargs)
         except SaltClientError:
@@ -1812,7 +1807,6 @@ class LocalClient(object):
                   ret='',
                   jid='',
                   timeout=5,
-                  io_loop=None,
                   listen=True,
                   **kwargs):
         '''
@@ -1859,7 +1853,6 @@ class LocalClient(object):
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                io_loop=io_loop,
                                                                 crypt='clear',
                                                                 master_uri=master_uri)
 

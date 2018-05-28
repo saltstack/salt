@@ -88,7 +88,7 @@ class AESReqServerMixin(object):
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 
-    def post_fork(self, _, __):
+    def post_fork(self, _):
         self.serial = salt.payload.Serial(self.opts)
         self.crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
 

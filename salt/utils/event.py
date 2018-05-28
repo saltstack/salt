@@ -117,11 +117,11 @@ TAGS = {
 
 def get_event(
         node, sock_dir=None, transport='zeromq',
-        opts=None, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
+        opts=None, listen=True, keep_loop=False, raise_errors=False, sync=True):
     '''
     Return an event object suitable for the named transport
 
-    :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
+    :param Bool sync:      Pass in an io_loop if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
@@ -132,25 +132,25 @@ def get_event(
         return MasterEvent(sock_dir,
                            opts,
                            listen=listen,
-                           io_loop=io_loop,
                            keep_loop=keep_loop,
-                           raise_errors=raise_errors)
+                           raise_errors=raise_errors,
+                           sync=sync)
     return SaltEvent(node,
                      sock_dir,
                      opts,
                      listen=listen,
-                     io_loop=io_loop,
                      keep_loop=keep_loop,
-                     raise_errors=raise_errors)
+                     raise_errors=raise_errors,
+                     sync=sync)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
+def get_master_event(opts, sock_dir, listen=True, raise_errors=False, sync=False):
     '''
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
-        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
+        return MasterEvent(sock_dir, opts, listen=listen, raise_errors=raise_errors, sync=sync)
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -234,10 +234,10 @@ class SaltEvent(object):
     '''
     def __init__(
             self, node, sock_dir=None,
-            opts=None, listen=True, io_loop=None,
-            keep_loop=False, raise_errors=False):
+            opts=None, listen=True,
+            keep_loop=False, raise_errors=False, sync=True):
         '''
-        :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
+        :param Bool sync:      Pass in False if you want asynchronous
                                operation for obtaining events. Eg use of
                                set_event_handler() API. Otherwise, operation
                                will be synchronous.
@@ -248,12 +248,7 @@ class SaltEvent(object):
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.keep_loop = keep_loop
-        if io_loop is not None:
-            self.io_loop = io_loop
-            self._run_io_loop_sync = False
-        else:
-            self.io_loop = tornado.ioloop.IOLoop()
-            self._run_io_loop_sync = True
+        self._run_io_loop_sync = sync
         self.cpub = False
         self.cpush = False
         self.subscriber = None
@@ -380,23 +375,20 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.subscriber is None:
-                    self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi,
-                    io_loop=self.io_loop
-                )
-                try:
-                    self.io_loop.run_sync(
-                        lambda: self.subscriber.connect(timeout=timeout))
-                    self.cpub = True
-                except Exception:
-                    pass
+            if self.subscriber is None:
+                self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
+                self.puburi,
+            )
+            try:
+                tornado.ioloop.IOLoop.current().run_sync(
+                    lambda: self.subscriber.connect(timeout=timeout))
+                self.cpub = True
+            except Exception:
+                pass
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                 self.puburi,
-                io_loop=self.io_loop
             )
 
             # For the asynchronous case, the connect will be defered to when
@@ -425,25 +417,19 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.pusher is None:
-                    self.pusher = salt.transport.ipc.IPCMessageClient(
-                        self.pulluri,
-                        io_loop=self.io_loop
-                    )
-                try:
-                    self.io_loop.run_sync(
-                        lambda: self.pusher.connect(timeout=timeout))
-                    self.cpush = True
-                except Exception:
-                    pass
+            if self.pusher is None:
+                self.pusher = salt.transport.ipc.IPCMessageClient(self.pulluri)
+            try:
+                tornado.ioloop.IOLoop.current().run_sync(
+                    lambda: self.pusher.connect(timeout=timeout))
+                self.cpush = True
+            except Exception as exc:
+                log.error('Failed to connect IPCMessageClient to the bus %s: %s',
+                          self.pulluri, exc)
         else:
             if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(
-                    self.pulluri,
-                    io_loop=self.io_loop
-                )
-            # For the asynchronous case, the connect will be deferred to when
+                self.pusher = salt.transport.ipc.IPCMessageClient(self.pulluri)
+            # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -648,21 +634,20 @@ class SaltEvent(object):
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if auto_reconnect:
-                    raise_errors = self.raise_errors
-                    self.raise_errors = True
-                    while True:
-                        try:
-                            ret = self._get_event(wait, tag, match_func, no_block)
-                            break
-                        except tornado.iostream.StreamClosedError:
-                            self.close_pub()
-                            self.connect_pub(timeout=wait)
-                            continue
-                    self.raise_errors = raise_errors
-                else:
-                    ret = self._get_event(wait, tag, match_func, no_block)
+            if auto_reconnect:
+                raise_errors = self.raise_errors
+                self.raise_errors = True
+                while True:
+                    try:
+                        ret = self._get_event(wait, tag, match_func, no_block)
+                        break
+                    except tornado.iostream.StreamClosedError:
+                        self.close_pub()
+                        self.connect_pub(timeout=wait)
+                        continue
+                self.raise_errors = raise_errors
+            else:
+                ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret
@@ -759,14 +744,13 @@ class SaltEvent(object):
             serialized_data])
         msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                try:
-                    self.io_loop.run_sync(lambda: self.pusher.send(msg))
-                except Exception as ex:
-                    log.debug(ex)
-                    raise
+            try:
+                tornado.ioloop.IOLoop.current().run_sync(lambda: self.pusher.send(msg))
+            except Exception as ex:
+                log.debug(ex)
+                raise
         else:
-            self.io_loop.spawn_callback(self.pusher.send, msg)
+            tornado.ioloop.IOLoop.current().spawn_callback(self.pusher.send, msg)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -907,17 +891,17 @@ class MasterEvent(SaltEvent):
             sock_dir,
             opts=None,
             listen=True,
-            io_loop=None,
             keep_loop=False,
-            raise_errors=False):
+            raise_errors=False,
+            sync=True):
         super(MasterEvent, self).__init__(
             'master',
             sock_dir,
             opts,
             listen=listen,
-            io_loop=io_loop,
             keep_loop=keep_loop,
-            raise_errors=raise_errors)
+            raise_errors=raise_errors,
+            sync=sync)
 
 
 class LocalClientEvent(MasterEvent):
@@ -950,11 +934,11 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
+    def __init__(self, opts, listen=True, keep_loop=False, raise_errors=False, sync=True):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop,
-            raise_errors=raise_errors)
+            opts=opts, listen=listen, keep_loop=keep_loop,
+            raise_errors=raise_errors, sync=sync)
 
 
 class AsyncEventPublisher(object):
@@ -963,12 +947,11 @@ class AsyncEventPublisher(object):
 
     TODO: remove references to "minion_event" whenever we need to use this for other things
     '''
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts):
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self._closing = False
 
         hash_type = getattr(hashlib, self.opts['hash_type'])
@@ -1031,12 +1014,10 @@ class AsyncEventPublisher(object):
         self.publisher = salt.transport.ipc.IPCMessagePublisher(
             self.opts,
             epub_uri,
-            io_loop=self.io_loop
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
             epull_uri,
-            io_loop=self.io_loop,
             payload_handler=self.handle_publish
         )
 
@@ -1105,48 +1086,45 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Bind the pub and pull sockets for events
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
-        self.io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            if self.opts['ipc_mode'] == 'tcp':
-                epub_uri = int(self.opts['tcp_master_pub_port'])
-                epull_uri = int(self.opts['tcp_master_pull_port'])
-            else:
-                epub_uri = os.path.join(
-                    self.opts['sock_dir'],
-                    'master_event_pub.ipc'
-                )
-                epull_uri = os.path.join(
-                    self.opts['sock_dir'],
-                    'master_event_pull.ipc'
-                )
-
-            self.publisher = salt.transport.ipc.IPCMessagePublisher(
-                self.opts,
-                epub_uri,
-                io_loop=self.io_loop
+        io_loop = tornado.ioloop.IOLoop.current()
+        if self.opts['ipc_mode'] == 'tcp':
+            epub_uri = int(self.opts['tcp_master_pub_port'])
+            epull_uri = int(self.opts['tcp_master_pull_port'])
+        else:
+            epub_uri = os.path.join(
+                self.opts['sock_dir'],
+                'master_event_pub.ipc'
+            )
+            epull_uri = os.path.join(
+                self.opts['sock_dir'],
+                'master_event_pull.ipc'
             )
 
-            self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri,
-                io_loop=self.io_loop,
-                payload_handler=self.handle_publish,
-            )
+        self.publisher = salt.transport.ipc.IPCMessagePublisher(
+            self.opts,
+            epub_uri,
+        )
 
-            # Start the master event publisher
-            with salt.utils.files.set_umask(0o177):
-                self.publisher.start()
-                self.puller.start()
-                if (self.opts['ipc_mode'] != 'tcp' and (
-                        self.opts['publisher_acl'] or
-                        self.opts['external_auth'])):
-                    os.chmod(os.path.join(
-                        self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
+        self.puller = salt.transport.ipc.IPCMessageServer(
+            epull_uri,
+            payload_handler=self.handle_publish,
+        )
 
-            # Make sure the IO loop and respective sockets are closed and
-            # destroyed
-            Finalize(self, self.close, exitpriority=15)
+        # Start the master event publisher
+        with salt.utils.files.set_umask(0o177):
+            self.publisher.start()
+            self.puller.start()
+            if (self.opts['ipc_mode'] != 'tcp' and (
+                    self.opts['publisher_acl'] or
+                    self.opts['external_auth'])):
+                os.chmod(os.path.join(
+                    self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
 
-            self.io_loop.start()
+        # Make sure the IO loop and respective sockets are closed and
+        # destroyed
+        Finalize(self, self.close, exitpriority=15)
+
+        io_loop.start()
 
     def handle_publish(self, package, _):
         '''
@@ -1169,8 +1147,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.publisher.close()
         if hasattr(self, 'puller'):
             self.puller.close()
-        if hasattr(self, 'io_loop'):
-            self.io_loop.close()
+        tornado.ioloop.IOLoop.current().close()
 
     def _handle_signals(self, signum, sigframe):
         self.close()

@@ -39,15 +39,15 @@ def future_with_timeout_callback(future):
 
 
 class FutureWithTimeout(tornado.concurrent.Future):
-    def __init__(self, io_loop, future, timeout):
+    def __init__(self, future, timeout):
         super(FutureWithTimeout, self).__init__()
-        self.io_loop = io_loop
         self._future = future
         if timeout is not None:
             if timeout < 0.1:
                 timeout = 0.1
-            self._timeout_handle = self.io_loop.add_timeout(
-                self.io_loop.time() + timeout, self._timeout_callback)
+            io_loop = IOLoop.current()
+            self._timeout_handle = io_loop.add_timeout(
+                io_loop.time() + timeout, self._timeout_callback)
         else:
             self._timeout_handle = None
 
@@ -74,7 +74,7 @@ class FutureWithTimeout(tornado.concurrent.Future):
     def _done_callback(self, future):
         try:
             if self._timeout_handle is not None:
-                self.io_loop.remove_timeout(self._timeout_handle)
+                IOLoop.current().remove_timeout(self._timeout_handle)
                 self._timeout_handle = None
 
             self.set_result(future.result())
@@ -87,7 +87,7 @@ class IPCServer(object):
     A Tornado IPC server very similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(self, socket_path, payload_handler=None):
         '''
         Create a new Tornado IPC server
 
@@ -99,7 +99,6 @@ class IPCServer(object):
                                     It may also be of type 'int', in
                                     which case it is used as the port
                                     for a tcp localhost connection.
-        :param IOLoop io_loop: A Tornado ioloop to handle scheduling
         :param func payload_handler: A function to customize handling of
                                      incoming data.
         '''
@@ -109,7 +108,6 @@ class IPCServer(object):
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or IOLoop.current()
         self._closing = False
 
     def start(self):
@@ -130,11 +128,10 @@ class IPCServer(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
-                self.sock,
-                self.handle_connection,
-            )
+        tornado.netutil.add_accept_handler(
+            self.sock,
+            self.handle_connection,
+        )
         self._started = True
 
     @tornado.gen.coroutine
@@ -175,7 +172,9 @@ class IPCServer(object):
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     body = framed_msg['body']
-                    self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                    IOLoop.current().spawn_callback(self.payload_handler,
+                                                    body,
+                                                    write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
                 log.trace('Client disconnected from IPC %s', self.socket_path)
                 break
@@ -196,11 +195,8 @@ class IPCServer(object):
         log.trace('IPCServer: Handling connection '
                   'to address: %s', address)
         try:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                stream = IOStream(
-                    connection,
-                )
-            self.io_loop.spawn_callback(self.handle_stream, stream)
+            stream = IOStream(connection)
+            IOLoop.current().spawn_callback(self.handle_stream, stream)
         except Exception as exc:
             log.error('IPC streaming error: %s', exc)
 
@@ -228,7 +224,6 @@ class IPCClient(object):
     This was written because Tornado does not have its own IPC
     server/client implementation.
 
-    :param IOLoop io_loop: A Tornado ioloop to handle scheduling
     :param str/int socket_path: A path on the filesystem where a socket
                                 belonging to a running IPCServer can be
                                 found.
@@ -238,29 +233,24 @@ class IPCClient(object):
     '''
 
     # Create singleton map between two sockets
-    instance_map = weakref.WeakKeyDictionary()
+    instance_map = weakref.WeakValueDictionary()
 
-    def __new__(cls, socket_path, io_loop=None):
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in IPCClient.instance_map:
-            IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = IPCClient.instance_map[io_loop]
-
+    def __new__(cls, socket_path):
         # FIXME
         key = six.text_type(socket_path)
 
-        client = loop_instance_map.get(key)
+        client = IPCClient.instance_map.get(key)
         if client is None:
             log.debug('Initializing new IPCClient for path: %s', key)
             client = object.__new__(cls)
             # FIXME
-            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
-            loop_instance_map[key] = client
+            client.__singleton_init__(socket_path=socket_path)
+            IPCClient.instance_map[key] = client
         else:
             log.debug('Re-using IPCClient for %s', key)
         return client
 
-    def __singleton_init__(self, socket_path, io_loop=None):
+    def __singleton_init__(self, socket_path):
         '''
         Create a new IPC client
 
@@ -269,7 +259,6 @@ class IPCClient(object):
         to the server.
 
         '''
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
@@ -279,7 +268,7 @@ class IPCClient(object):
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
 
-    def __init__(self, socket_path, io_loop=None):
+    def __init__(self, socket_path):
         # Handled by singleton __new__
         pass
 
@@ -303,7 +292,7 @@ class IPCClient(object):
         if callback is not None:
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                IOLoop.current().add_callback(callback, response)
             future.add_done_callback(handle_future)
 
         return future
@@ -329,10 +318,7 @@ class IPCClient(object):
                 break
 
             if self.stream is None:
-                with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                    self.stream = IOStream(
-                        socket.socket(sock_type, socket.SOCK_STREAM),
-                    )
+                self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
 
             try:
                 log.trace('IPCClient: Connecting to socket: %s', self.socket_path)
@@ -371,11 +357,9 @@ class IPCClient(object):
         # that a closed entry may not be reused.
         # This forces this operation even if the reference
         # count of the entry has not yet gone to zero.
-        if self.io_loop in IPCClient.instance_map:
-            loop_instance_map = IPCClient.instance_map[self.io_loop]
-            key = six.text_type(self.socket_path)
-            if key in loop_instance_map:
-                del loop_instance_map[key]
+        key = six.text_type(self.socket_path)
+        if key in IPCClient.instance_map:
+            del IPCClient.instance_map[key]
 
 
 class IPCMessageClient(IPCClient):
@@ -400,7 +384,7 @@ class IPCMessageClient(IPCClient):
 
     ipc_server_socket_path = '/var/run/ipc_server.ipc'
 
-    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_socket_path, io_loop=io_loop)
+    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_socket_path)
 
     # Connect to the server
     ipc_client.connect()
@@ -444,7 +428,7 @@ class IPCMessageServer(IPCServer):
 
         io_loop = tornado.ioloop.IOLoop.current()
         ipc_server_socket_path = '/var/run/ipc_server.ipc'
-        ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path, io_loop=io_loop,
+        ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path,
                                                          payload_handler=print_to_console)
         # Bind to the socket and prepare to run
         ipc_server.start()
@@ -465,7 +449,7 @@ class IPCMessagePublisher(object):
     A Tornado IPC Publisher similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, opts, socket_path, io_loop=None):
+    def __init__(self, opts, socket_path):
         '''
         Create a new Tornado IPC server
         :param dict opts: Salt options
@@ -477,7 +461,6 @@ class IPCMessagePublisher(object):
                                     It may also be of type 'int', in
                                     which case it is used as the port
                                     for a tcp localhost connection.
-        :param IOLoop io_loop: A Tornado ioloop to handle scheduling
         '''
         self.opts = opts
         self.socket_path = socket_path
@@ -485,7 +468,6 @@ class IPCMessagePublisher(object):
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or IOLoop.current()
         self._closing = False
         self.streams = set()
 
@@ -507,11 +489,10 @@ class IPCMessagePublisher(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
-                self.sock,
-                self.handle_connection,
-            )
+        tornado.netutil.add_accept_handler(
+            self.sock,
+            self.handle_connection,
+        )
         self._started = True
 
     @tornado.gen.coroutine
@@ -537,7 +518,7 @@ class IPCMessagePublisher(object):
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
 
         for stream in self.streams:
-            self.io_loop.spawn_callback(self._write, stream, pack)
+            IOLoop.current().spawn_callback(self._write, stream, pack)
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: %s', address)
@@ -546,11 +527,10 @@ class IPCMessagePublisher(object):
             if self.opts['ipc_write_buffer'] > 0:
                 kwargs['max_write_buffer_size'] = self.opts['ipc_write_buffer']
                 log.trace('Setting IPC connection write buffer: %s', (self.opts['ipc_write_buffer']))
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                stream = IOStream(
-                    connection,
-                    **kwargs
-                )
+            stream = IOStream(
+                connection,
+                **kwargs
+            )
             self.streams.add(stream)
 
             def discard_after_closed():
@@ -597,24 +577,20 @@ class IPCMessageSubscriber(IPCClient):
     import salt.config
     import salt.transport.ipc
 
-    # Create a new IO Loop.
-    # We know that this new IO Loop is not currently running.
-    io_loop = tornado.ioloop.IOLoop()
-
     ipc_publisher_socket_path = '/var/run/ipc_publisher.ipc'
 
-    ipc_subscriber = salt.transport.ipc.IPCMessageSubscriber(ipc_server_socket_path, io_loop=io_loop)
+    ipc_subscriber = salt.transport.ipc.IPCMessageSubscriber(ipc_server_socket_path)
 
     # Connect to the server
     # Use the associated IO Loop that isn't running.
-    io_loop.run_sync(ipc_subscriber.connect)
+    tornado.ioloop.IOLoop.current().run_sync(ipc_subscriber.connect)
 
     # Wait for some data
     package = ipc_subscriber.read_sync()
     '''
-    def __singleton_init__(self, socket_path, io_loop=None):
+    def __singleton_init__(self, socket_path):
         super(IPCMessageSubscriber, self).__singleton_init__(
-            socket_path, io_loop=io_loop)
+            socket_path)
         self._read_sync_future = None
         self._read_stream_future = None
         self._sync_ioloop_running = False
@@ -636,7 +612,7 @@ class IPCMessageSubscriber(IPCClient):
                     wire_bytes = yield self._read_stream_future
                 else:
                     future_with_timeout = FutureWithTimeout(
-                        self.io_loop, self._read_stream_future, timeout)
+                            self._read_stream_future, timeout)
                     wire_bytes = yield future_with_timeout
 
                 self._read_stream_future = None
@@ -671,9 +647,9 @@ class IPCMessageSubscriber(IPCClient):
             exc_to_raise = exc
 
         if self._sync_ioloop_running:
-            # Stop the IO Loop so that self.io_loop.start() will return in
+            # Stop the IO Loop so that IOLoop.current().start() will return in
             # read_sync().
-            self.io_loop.spawn_callback(self.io_loop.stop)
+            IOLoop.current().spawn_callback(IOLoop.current().stop)
 
         if exc_to_raise is not None:
             raise exc_to_raise  # pylint: disable=E0702
@@ -695,7 +671,7 @@ class IPCMessageSubscriber(IPCClient):
 
         self._sync_ioloop_running = True
         self._read_sync_future = self._read_sync(timeout)
-        self.io_loop.start()
+        IOLoop.current().start()
         self._sync_ioloop_running = False
 
         ret_future = self._read_sync_future
@@ -712,7 +688,7 @@ class IPCMessageSubscriber(IPCClient):
                 self.unpacker.feed(wire_bytes)
                 for framed_msg in self.unpacker:
                     body = framed_msg['body']
-                    self.io_loop.spawn_callback(callback, body)
+                    IOLoop.current().spawn_callback(callback, body)
             except tornado.iostream.StreamClosedError:
                 log.trace('Subscriber disconnected from IPC %s', self.socket_path)
                 break

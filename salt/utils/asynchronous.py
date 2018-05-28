@@ -5,23 +5,14 @@ Helpers/utils for working with tornado asynchronous stuff
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import asyncio
 import tornado.ioloop
 import tornado.concurrent
 import contextlib
 from salt.utils import zeromq
 
-
-@contextlib.contextmanager
-def current_ioloop(io_loop):
-    '''
-    A context manager that will set the current ioloop to io_loop for the context
-    '''
-    orig_loop = tornado.ioloop.IOLoop.current()
-    io_loop.make_current()
-    try:
-        yield
-    finally:
-        orig_loop.make_current()
+import logging
+log = logging.getLogger(__name__)
 
 
 class SyncWrapper(object):
@@ -41,12 +32,7 @@ class SyncWrapper(object):
     def __init__(self, method, args=tuple(), kwargs=None):
         if kwargs is None:
             kwargs = {}
-
-        self.io_loop = zeromq.ZMQDefaultLoop()
-        kwargs['io_loop'] = self.io_loop
-
-        with current_ioloop(self.io_loop):
-            self.asynchronous = method(*args, **kwargs)
+        self.asynchronous = method(*args, **kwargs)
 
     def __getattribute__(self, key):
         try:
@@ -57,20 +43,18 @@ class SyncWrapper(object):
         attr = getattr(self.asynchronous, key)
         if hasattr(attr, '__call__'):
             def wrap(*args, **kwargs):
-                # Overload the ioloop for the func call-- since it might call .current()
-                with current_ioloop(self.io_loop):
-                    ret = attr(*args, **kwargs)
-                    if isinstance(ret, tornado.concurrent.Future):
-                        ret = self._block_future(ret)
-                    return ret
+                ret = attr(*args, **kwargs)
+                if isinstance(ret, tornado.concurrent.Future):
+                    ret = self._block_future(ret)
+                return ret
             return wrap
-
         else:
             return attr
 
     def _block_future(self, future):
-        self.io_loop.add_future(future, lambda future: self.io_loop.stop())
-        self.io_loop.start()
+        io_loop = tornado.ioloop.IOLoop.current()
+        io_loop.add_future(future, lambda future: io_loop.stop())
+        io_loop.start()
         return future.result()
 
     def __del__(self):
@@ -84,8 +68,3 @@ class SyncWrapper(object):
                 # cleanup.
                 self.asynchronous.close()
             del self.asynchronous
-            self.io_loop.close()
-            del self.io_loop
-        elif hasattr(self, 'io_loop'):
-            self.io_loop.close()
-            del self.io_loop

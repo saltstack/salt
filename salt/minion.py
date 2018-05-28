@@ -575,13 +575,6 @@ class MinionBase(object):
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-        # FIXME: if SMinion don't define io_loop, it can't switch master see #29088
-        # Specify kwargs for the channel factory so that SMinion doesn't need to define an io_loop
-        # (The channel factories will set a default if the kwarg isn't passed)
-        factory_kwargs = {'timeout': timeout, 'safe': safe}
-        if getattr(self, 'io_loop', None):
-            factory_kwargs['io_loop'] = self.io_loop  # pylint: disable=no-member
-
         tries = opts.get('master_tries', 1)
         attempts = 0
 
@@ -641,7 +634,9 @@ class MinionBase(object):
                     self.opts = opts
 
                     try:
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
+                        pub_channel = salt.transport.client.AsyncPubChannel.factory(opts,
+                                                                                    timeout=timeout,
+                                                                                    safe=safe)
                         yield pub_channel.connect()
                         conn = True
                         break
@@ -705,14 +700,20 @@ class MinionBase(object):
                             if trans == 'zeromq' and not zmq:
                                 continue
                             self.opts['transport'] = trans
-                            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                            pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                                    self.opts,
+                                    timeout=timeout,
+                                    safe=safe)
                             yield pub_channel.connect()
                             if not pub_channel.auth.authenticated:
                                 continue
                             del self.opts['detect_mode']
                             break
                     else:
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                        pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                                self.opts,
+                                timeout=timeout,
+                                safe=safe)
                         yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
@@ -951,20 +952,17 @@ class MinionManager(MinionBase):
         self.jid_queue = []
 
         install_zmq()
-        self.io_loop = ZMQDefaultLoop.current()
+        io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
+        io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
     def __del__(self):
         self.destroy()
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts,
-            io_loop=self.io_loop,
-        )
-        self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
+        self.event_publisher = salt.utils.event.AsyncEventPublisher(self.opts)
+        self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
         self.event.subscribe('')
         self.event.set_event_handler(self.handle_event)
 
@@ -973,7 +971,7 @@ class MinionManager(MinionBase):
         yield [minion.handle_event(package) for minion in self.minions]
 
     def _create_minion_object(self, opts, timeout, safe,
-                              io_loop=None, loaded_base_name=None,
+                              loaded_base_name=None,
                               jid_queue=None):
         '''
         Helper function to return the correct type of object
@@ -981,7 +979,6 @@ class MinionManager(MinionBase):
         return Minion(opts,
                       timeout,
                       safe,
-                      io_loop=io_loop,
                       loaded_base_name=loaded_base_name,
                       jid_queue=jid_queue)
 
@@ -1017,13 +1014,12 @@ class MinionManager(MinionBase):
             minion = self._create_minion_object(s_opts,
                                                 s_opts['auth_timeout'],
                                                 False,
-                                                io_loop=self.io_loop,
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
                                                 jid_queue=self.jid_queue,
                                                )
 
             self._connect_minion(minion)
-        self.io_loop.call_later(timeout, self._check_minions)
+        ZMQDefaultLoop.current().call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
     def _connect_minion(self, minion):
@@ -1085,7 +1081,7 @@ class MinionManager(MinionBase):
         self._spawn_minions()
 
         # serve forever!
-        self.io_loop.start()
+        ZMQDefaultLoop.current().start()
 
     @property
     def restart(self):
@@ -1112,7 +1108,7 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, jid_queue=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -1132,11 +1128,8 @@ class Minion(MinionBase):
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
 
-        if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
-        else:
-            self.io_loop = io_loop
+        install_zmq()
+        io_loop = ZMQDefaultLoop.current()
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1179,11 +1172,11 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name='MinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
+        io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
-            self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
+            io_loop.spawn_callback(salt.engines.start_engines, self.opts,
                                         self.process_manager)
 
         # Install the SIGINT/SIGTERM handlers if not done so far
@@ -1211,18 +1204,19 @@ class Minion(MinionBase):
         '''
         self._sync_connect_master_success = False
         log.debug("sync_connect_master")
+        io_loop = ZMQDefaultLoop.current()
 
         def on_connect_master_future_done(future):
             self._sync_connect_master_success = True
-            self.io_loop.stop()
+            io_loop.stop()
 
         self._connect_master_future = self.connect_master(failed=failed)
         # finish connecting to master
         self._connect_master_future.add_done_callback(on_connect_master_future_done)
         if timeout:
-            self.io_loop.call_later(timeout, self.io_loop.stop)
+            io_loop.call_later(timeout, io_loop.stop)
         try:
-            self.io_loop.start()
+            io_loop.start()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -1602,16 +1596,11 @@ class Minion(MinionBase):
                     get_proc_dir(opts['cachedir'], uid=uid)
                     )
 
-        def run_func(minion_instance, opts, data):
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                return Minion._thread_multi_return(minion_instance, opts, data)
-            else:
-                return Minion._thread_return(minion_instance, opts, data)
-
         with tornado.stack_context.StackContext(functools.partial(RequestContext,
                                                                   {'data': data, 'opts': opts})):
             with tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+                ZMQDefaultLoop.current().spawn_callback(
+                        Minion._thread_return, minion_instance, opts, data)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -1799,9 +1788,10 @@ class Minion(MinionBase):
             else:
                 log.warning('The metadata parameter must be a dictionary. Ignoring.')
         if minion_instance.connected:
-            minion_instance._return_pub(
+            yield minion_instance._return_pub(
                 ret,
-                timeout=minion_instance._return_retry_timer()
+                timeout=minion_instance._return_retry_timer(),
+                sync=False
             )
 
         # Add default returners from minion config
@@ -1935,7 +1925,7 @@ class Minion(MinionBase):
         if 'metadata' in data:
             ret['metadata'] = data['metadata']
         if minion_instance.connected:
-            minion_instance._return_pub(
+            yield minion_instance._return_pub(
                 ret,
                 timeout=minion_instance._return_retry_timer()
             )
@@ -2122,7 +2112,7 @@ class Minion(MinionBase):
                 return ''
         else:
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
-                ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
+                ret_val = yield self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
 
         log.trace('ret_val = %s', ret_val)  # pylint: disable=no-member
         return ret_val
@@ -2179,7 +2169,8 @@ class Minion(MinionBase):
                 self.opts['id'],
                 time.asctime()
                 ),
-                'minion_start'
+                'minion_start',
+                sync=False,
             )
         # send name spaced event
         self._fire_master(
@@ -2188,6 +2179,7 @@ class Minion(MinionBase):
             time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
+            sync=False,
         )
 
     def module_refresh(self, force_refresh=False, notify=False):
@@ -2552,7 +2544,7 @@ class Minion(MinionBase):
                                 self.schedule.delete_job(name=master_event(type='failback'), persist=True)
                 else:
                     self.restart = True
-                    self.io_loop.stop()
+                    ZMQDefaultLoop.current().stop()
 
     def _handle_tag_master_connected(self, tag, data):
         '''
@@ -2595,7 +2587,7 @@ class Minion(MinionBase):
                     'Connected to master %s',
                     data['schedule'].split(master_event(type='alive', master=''))[1]
                 )
-        self._return_pub(data, ret_cmd='_return', sync=False)
+        yield self._return_pub(data, ret_cmd='_return', sync=False)
 
     def _handle_tag_salt_error(self, tag, data):
         '''
@@ -2858,7 +2850,7 @@ class Minion(MinionBase):
 
         if start:
             try:
-                self.io_loop.start()
+                ZMQDefaultLoop.current().start()
                 if self.restart:
                     self.destroy()
             except (KeyboardInterrupt, RuntimeError):  # A RuntimeError can be re-raised by Tornado on shutdown
@@ -2984,7 +2976,6 @@ class Syndic(Minion):
                                  data['ret'],
                                  data['jid'],
                                  data['to'],
-                                 io_loop=self.io_loop,
                                  callback=lambda _: None,
                                  **kwargs)
 
@@ -3018,7 +3009,7 @@ class Syndic(Minion):
         '''
         # Instantiate the local client
         self.local = salt.client.get_local_client(
-                self.opts['_minion_conf_file'], io_loop=self.io_loop)
+                self.opts['_minion_conf_file'])
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
@@ -3088,7 +3079,7 @@ class SyndicManager(MinionBase):
     SYNDIC_CONNECT_TIMEOUT = 5
     SYNDIC_EVENT_TIMEOUT = 5
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts):
         opts['loop_interval'] = 1
         super(SyndicManager, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
@@ -3102,11 +3093,8 @@ class SyndicManager(MinionBase):
         self._has_master = threading.Event()
         self.jid_forward_cache = set()
 
-        if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
-        else:
-            self.io_loop = io_loop
+        install_zmq()
+        ZMQDefaultLoop.current()
 
         # List of events
         self.raw_events = []
@@ -3157,7 +3145,6 @@ class SyndicManager(MinionBase):
                 syndic = Syndic(opts,
                                 timeout=self.SYNDIC_CONNECT_TIMEOUT,
                                 safe=False,
-                                io_loop=self.io_loop,
                                 )
                 yield syndic.connect_master(failed=failed)
                 # set up the syndic to handle publishes (specifically not event forwarding)
@@ -3297,7 +3284,7 @@ class SyndicManager(MinionBase):
 
     def reconnect_event_bus(self, something):
         future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
+        ZMQDefaultLoop.current().add_future(future, self.reconnect_event_bus)
 
     # Syndic Tune In
     def tune_in(self):
@@ -3307,7 +3294,7 @@ class SyndicManager(MinionBase):
         self._spawn_syndics()
         # Instantiate the local client
         self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'], io_loop=self.io_loop)
+            self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
 
         log.debug('SyndicManager \'%s\' trying to tune in', self.opts['id'])
@@ -3317,7 +3304,8 @@ class SyndicManager(MinionBase):
         self.raw_events = []
         self._reset_event_aggregation()
         future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
+        io_loop = ZMQDefaultLoop.current()
+        io_loop.add_future(future, self.reconnect_event_bus)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -3328,7 +3316,7 @@ class SyndicManager(MinionBase):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        self.io_loop.start()
+        io_loop.start()
 
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
@@ -3409,8 +3397,11 @@ class ProxyMinionManager(MinionManager):
     '''
     Create the multi-minion interface but for proxy minions
     '''
-    def _create_minion_object(self, opts, timeout, safe,
-                              io_loop=None, loaded_base_name=None,
+    def _create_minion_object(self,
+                              opts,
+                              timeout,
+                              safe,
+                              loaded_base_name=None,
                               jid_queue=None):
         '''
         Helper function to return the correct type of object
@@ -3418,7 +3409,6 @@ class ProxyMinionManager(MinionManager):
         return ProxyMinion(opts,
                            timeout,
                            safe,
-                           io_loop=io_loop,
                            loaded_base_name=loaded_base_name,
                            jid_queue=jid_queue)
 

@@ -48,11 +48,10 @@ class ReqServerChannel(object):
         '''
         pass
 
-    def post_fork(self, payload_handler, io_loop):
+    def post_fork(self, payload_handler):
         '''
         Do anything you need post-fork. This should handle all incoming payloads
-        and call payload_handler. You will also be passed io_loop, for all of your
-        asynchronous needs
+        and call payload_handler.
         '''
         pass
 
