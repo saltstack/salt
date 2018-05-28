@@ -284,6 +284,7 @@ class StateRunnerTest(ShellCase):
             {'out': 'highstate', 'ret': {'minion': False}}
         )
 
+
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
     '''
