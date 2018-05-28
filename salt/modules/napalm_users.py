@@ -104,21 +104,27 @@ def set_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unus
     Configures users on network devices.
 
     :param users: Dictionary formatted as the output of the function config()
-    :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify commit=False and will not discard the config.
+
+    :param test: Dry run? If set as True, will apply the config, discard and
+        return the changes. Default: False
+
+    :param commit: Commit? (default: True) Sometimes it is not needed to commit
+        the config immediately after loading the changes. E.g.: a state loads a
+        couple of parts (add / remove / update) and would not be optimal to
+        commit after each operation.  Also, from the CLI when the user needs to
+        apply the similar changes before committing, can specify commit=False
+        and will not discard the config.
+
     :raise MergeConfigException: If there is an error on the configuration sent.
     :return a dictionary having the following keys:
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+
+    - result (bool): if the config was applied successfully. It is `False` only
+      in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still `True` and so will be
+      the `already_configured` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - diff (str): returns the config changes applied
 
     CLI Example:
 
@@ -142,7 +148,6 @@ def delete_users(users, test=False, commit=True, **kwargs):  # pylint: disable=u
 
     :param users: Dictionary formatted as the output of the function config()
     :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
     :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
         after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
         and would not be optimal to commit after each operation.
@@ -150,12 +155,13 @@ def delete_users(users, test=False, commit=True, **kwargs):  # pylint: disable=u
         can specify commit=False and will not discard the config.
     :raise MergeConfigException: If there is an error on the configuration sent.
     :return a dictionary having the following keys:
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+        - result (bool): if the config was applied successfully. It is `False`
+          only in case of failure. In case there are no changes to be applied
+          and successfully performs all operations it is still `True` and so
+          will be the `already_configured` flag (example below)
+        - comment (str): a message for the user
+        - already_configured (bool): flag to check if there were no changes applied
+        - diff (str): returns the config changes applied
 
     CLI Example:
 

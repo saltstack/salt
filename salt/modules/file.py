@@ -1921,8 +1921,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to

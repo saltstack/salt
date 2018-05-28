@@ -115,7 +115,7 @@ Usage examples
 
         {"return": [{"ms--4": true, "ms--3": true, "ms--2": true, "ms--1": true, "ms--0": true}]}
 
-:form lowstate: A list of :term:`lowstate` data appropriate for the
+:form lowstate: A list of lowstate data appropriate for the
     :ref:`client <client-apis>` interface you are calling.
 :status 200: success
 :status 401: authentication required

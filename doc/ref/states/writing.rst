@@ -97,11 +97,12 @@ functions available in other state modules.
 The variable ``__states__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__states__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
-containing all of the state modules. Dictionary keys are strings representing the
-names of the modules and the values are the functions themselves.
+The ``__states__`` variable is a :ref:`Python dictionary <typesmapping>`
+containing all of the state modules. Dictionary keys are strings representing
+the names of the modules and the values are the functions themselves.
 
-Salt state modules can be cross-called by accessing the value in the ``__states__`` dict:
+Salt state modules can be cross-called by accessing the value in the
+``__states__`` dict:
 
 .. code-block:: python
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
+    :codeauthor: Rajvi Dhimar <rajvidhimar95@gmail.com>
 '''
 # Import python libs
 from __future__ import absolute_import, print_function

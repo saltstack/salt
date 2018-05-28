@@ -443,22 +443,24 @@ def set_value(hive,
     :param str vname: The value name. These are the individual name/data pairs
         under the key. If not passed, the key (Default) value will be set.
 
-    :param object vdata: The value data to be set.
-        What the type of this parameter
-        should be is determined by the value of the vtype
-        parameter. The correspondence
-        is as follows:
+    :param object vdata: The value data to be set. Which type this parameter
+        should be is determined by the value of the vtype parameter. The
+        correspondence is as follows:
 
         .. glossary::
 
            REG_BINARY
                binary data (i.e. str in python version < 3 and bytes in version >=3)
+
            REG_DWORD
                int
+
            REG_EXPAND_SZ
                str
+
            REG_MULTI_SZ
                list of objects of type str
+
            REG_SZ
                str
 

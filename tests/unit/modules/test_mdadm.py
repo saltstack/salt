@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Ted Strzalkowski (tedski@gmail.com)`
+    :codeauthor: Ted Strzalkowski (tedski@gmail.com)
 
 
     tests.unit.modules.mdadm_test

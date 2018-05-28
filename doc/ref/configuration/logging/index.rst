@@ -74,11 +74,14 @@ The log records can be sent to a regular file, local path name, or network
 location.  Remote logging works best when configured to use rsyslogd(8) (e.g.:
 ``file:///dev/log``), with rsyslogd(8) configured for network logging.  The
 format for remote addresses is:
-``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``. Where
-``log-facility`` is the symbolic name of a syslog facility as defined in the
-:ref:`SysLogHandler documentation
-<python2:logging.handlers.SysLogHandler.encodePriority>` . It defaults to
-``LOG_USER``.
+
+.. code-block:: text
+
+    <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+
+Where ``log-facility`` is the symbolic name of a syslog facility as defined in
+the :py:obj:`SysLogHandler documentation
+<logging.handlers.SysLogHandler.encodePriority>`. It defaults to ``LOG_USER``.
 
 Default: Dependent of the binary being executed, for example, for
 ``salt-master``, ``/var/log/salt/master``.
@@ -148,7 +151,7 @@ The level of messages to send to the log file. One of ``all``, ``garbage``,
 Default: ``%H:%M:%S``
 
 The date and time format used in console log messages. Allowed date/time
-formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
+formatting matches those used in :py:func:`time.strftime`.
 
 .. code-block:: yaml
 
@@ -162,7 +165,7 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 Default: ``%Y-%m-%d %H:%M:%S``
 
 The date and time format used in log file messages. Allowed date/time
-formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
+formatting matches those used in :py:func:`time.strftime`.
 
 .. code-block:: yaml
 
@@ -176,8 +179,8 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. All standard python logging
-:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
-also provides these custom LogRecord attributes to colorize console log output:
+:py:class:`~logging.LogRecord` attributes can be used. Salt also provides these
+custom LogRecord attributes to colorize console log output:
 
 .. code-block:: python
 
@@ -204,9 +207,9 @@ also provides these custom LogRecord attributes to colorize console log output:
 Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. All standard python logging
-:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
-also provides these custom LogRecord attributes that include padding and
-enclosing brackets ``[`` and ``]``:
+:py:class:`~logging.LogRecord` attributes can be used.  Salt also provides
+these custom LogRecord attributes that include padding and enclosing brackets
+``[`` and ``]``:
 
 .. code-block:: python
 
