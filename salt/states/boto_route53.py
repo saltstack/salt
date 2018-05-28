@@ -366,12 +366,13 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
     Ensure a hosted zone exists with the given attributes.  Note that most
     things cannot be modified once a zone is created - it must be deleted and
     re-spun to update these attributes:
-        - private_zone (AWS API limitation).
-        - comment (the appropriate call exists in the AWS API and in boto3, but
-                   has not, as of this writing, been added to boto2).
-        - vpc_id (same story - we really need to rewrite this module with boto3)
-        - vpc_name (really just a pointer to vpc_id anyway).
-        - vpc_region (again, supported in boto3 but not boto2).
+
+    - private_zone (AWS API limitation).
+    - comment (the appropriate call exists in the AWS API and in boto3, but has
+      not, as of this writing, been added to boto2).
+    - vpc_id (same story - we really need to rewrite this module with boto3)
+    - vpc_name (really just a pointer to vpc_id anyway).
+    - vpc_region (again, supported in boto3 but not boto2).
 
     name
         The name of the state definition.  This will be used as the 'caller_ref'
