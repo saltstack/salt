@@ -50,6 +50,99 @@ directly define the user interface.
     .. _here: https://github.com/saltstack/salt/blob/v0.16.2/salt/states/pkgrepo.py#L163-183
 
 
+Best Practices
+==============
+
+A well-written state function will follow these steps:
+
+.. note::
+    This is an extremely simplified example. Feel free to browse the `source
+    code`_ for Salt's state modules to see other examples.
+
+    .. _`source code`: https://github.com/saltstack/salt/tree/develop/salt/states
+
+1. Set up the return dictionary and perform any necessary input validation
+   (type checking, looking for use of mutually-exclusive arguments, etc.).
+
+   .. code-block:: python
+
+       ret = {'name': name,
+              'result': False,
+              'changes': {},
+              'comment': ''}
+
+       if foo and bar:
+           ret['comment'] = 'Only one of foo and bar is permitted'
+           return ret
+
+2. Check if changes need to be made. This is best done with an
+   information-gathering function in an accompanying :ref:`execution module
+   <writing-execution-modules>`. The state should be able to use the return
+   from this function to tell whether or not the minion is already in the
+   desired state.
+
+   .. code-block:: python
+
+       result = __salt__['modname.check'](name)
+
+3. If step 2 found that the minion is already in the desired state, then exit
+   immediately with a ``True`` result and without making any changes.
+
+   .. code-block:: python
+
+       if result:
+           ret['result'] = True
+           ret['comment'] = '{0} is already installed'.format(name)
+           return ret
+
+4. If step 2 found that changes *do* need to be made, then check to see if the
+   state was being run in test mode (i.e. with ``test=True``). If so, then exit
+   with a ``None`` result, a relevant comment, and (if possible) a ``changes``
+   entry describing what changes would be made.
+
+   .. code-block:: python
+
+       if __opts__['test']:
+           ret['result'] = None
+           ret['comment'] = '{0} would be installed'.format(name)
+           ret['changes'] = result
+           return ret
+
+5. Make the desired changes. This should again be done using a function from an
+   accompanying execution module. If the result of that function is enough to
+   tell you whether or not an error occurred, then you can exit with a
+   ``False`` result and a relevant comment to explain what happened.
+
+   .. code-block:: python
+
+       result = __salt__['modname.install'](name)
+
+6. Perform the same check from step 2 again to confirm whether or not the
+   minion is in the desired state. Just as in step 2, this function should be
+   able to tell you by its return data whether or not changes need to be made.
+
+   .. code-block:: python
+
+       ret['changes'] = __salt__['modname.check'](name)
+
+   As you can see here, we are setting the ``changes`` key in the return
+   dictionary to the result of the ``modname.check`` function (just as we did
+   in step 4). The assumption here is that the information-gathering function
+   will return a dictionary explaining what changes need to be made. This may
+   or may not fit your use case.
+
+7. Set the return data and return!
+
+   .. code-block:: python
+
+       if ret['changes']:
+           ret['comment'] = '{0} failed to install'.format(name)
+       else:
+           ret['result'] = True
+           ret['comment'] = '{0} was installed'.format(name)
+
+       return ret
+
 Using Custom State Modules
 ==========================
 
