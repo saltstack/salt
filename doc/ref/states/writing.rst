@@ -146,19 +146,19 @@ A well-written state function will follow these steps:
 Using Custom State Modules
 ==========================
 
-Place your custom state modules inside a ``_states`` directory within the
-:conf_master:`file_roots` specified by the master config file. These custom
-state modules can then be distributed in a number of ways. Custom state modules
-are distributed when :py:func:`state.apply <salt.modules.state.apply_>` is run,
-or by executing the :mod:`saltutil.sync_states
+Before the state module can be used, it must be distributed to minions. This
+can be done by placing them into ``salt://_states/``. They can then be
+distributed manually to minions by running :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
-<salt.modules.saltutil.sync_all>` functions.
+<salt.modules.saltutil.sync_all>`. Alternatively, when running a
+:ref:`highstate <running-highstate>` custom types will automatically be synced.
 
-Any custom states which have been synced to a minion, that are named the
-same as one of Salt's default set of states, will take the place of the default
-state with the same name. Note that a state's default name is its filename
-(i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
-by using a :ref:`__virtual__ function <virtual-modules>`.
+Any custom states which have been synced to a minion, that are named the same
+as one of Salt's default set of states, will take the place of the default
+state with the same name. Note that a state module's name defaults to one based
+on its filename (i.e. ``foo.py`` becomes state module ``foo``), but that its
+name can be overridden by using a :ref:`__virtual__ function
+<virtual-modules>`.
 
 Cross Calling Execution Modules from States
 ===========================================
