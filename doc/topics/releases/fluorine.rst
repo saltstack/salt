@@ -507,3 +507,10 @@ passed correctly to the minion to run an orchestration in test mode. At present
 it is not possible to pass ``test=False`` on the command-line to override a
 minion in permanent test mode and so the ``test:False`` option must still be set
 in the orchestration file.
+
+
+states.event
+--------------
+The :ref:`event.send <salt.states.event.send>` state does not know the results of 
+the sent event, so returns changed every state run.  It can now be set to 
+return changed or unchanged.
