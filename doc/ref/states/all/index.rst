@@ -125,7 +125,6 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
     infoblox_a
     infoblox_cname
     infoblox_host_record
@@ -314,11 +313,14 @@ state modules
     winrepo
     x509
     xmpp
+    zabbix_action
     zabbix_host
     zabbix_hostgroup
     zabbix_mediatype
+    zabbix_template
     zabbix_user
     zabbix_usergroup
+    zabbix_valuemap
     zcbuildout
     zenoss
     zk_concurrency

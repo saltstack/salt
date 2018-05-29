@@ -444,7 +444,10 @@ def clean_old_jobs():
                     hours_difference = (time.time() - jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
                         # Remove the entire f_path from the original JID dir
-                        shutil.rmtree(f_path)
+                        try:
+                            shutil.rmtree(f_path)
+                        except OSError as err:
+                            log.error('Unable to remove %s: %s', t_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug

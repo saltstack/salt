@@ -24,11 +24,11 @@ log = logging.getLogger(__name__)
 TEMPLATE_RELATIONS = ['groups', 'hosts', 'macros']
 TEMPLATE_COMPONENT_ORDER = ('applications',
                             'items',
-                            'triggers',
                             'gitems',
                             'graphs',
                             'screens',
                             'httpTests',
+                            'triggers',
                             'discoveries')
 DISCOVERYRULE_COMPONENT_ORDER = ('itemprototypes', 'triggerprototypes', 'graphprototypes', 'hostprototypes')
 TEMPLATE_COMPONENT_DEF = {

@@ -49,7 +49,9 @@ class StatusModuleTest(ModuleCase):
         status.diskusage
         '''
         ret = self.run_function('status.diskusage')
-        if salt.utils.platform.is_windows():
+        if salt.utils.platform.is_darwin():
+            self.assertIn('not yet supported on this platform', ret)
+        elif salt.utils.platform.is_windows():
             self.assertTrue(isinstance(ret['percent'], float))
         else:
             self.assertIn('total', str(ret))

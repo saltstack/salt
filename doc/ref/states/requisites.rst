@@ -410,10 +410,11 @@ exactly like the ``require`` requisite (the watching state will execute if
       service.running:
         - watch_any:
           - file: /etc/apache2/sites-available/site1.conf
-          - file: /etc/apache2/sites-available/site2.conf
+          - file: apache2-site2
       file.managed:
         - name: /etc/apache2/sites-available/site1.conf
         - source: salt://apache2/files/site1.conf
+    apache2-site2:
       file.managed:
         - name: /etc/apache2/sites-available/site2.conf
         - source: salt://apache2/files/site2.conf
@@ -859,6 +860,17 @@ Reload
 ``reload_modules`` is a boolean option that forces salt to reload its modules
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
+
+.. code-block:: yaml
+
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+
+    grains_read:
+      module.run: 
+       - name: grains.items
 
 .. _unless-requisite:
 
