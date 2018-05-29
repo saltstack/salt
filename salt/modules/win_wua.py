@@ -82,7 +82,6 @@ __func_alias__ = {
 }
 
 
-
 def __virtual__():
     '''
     Only works on Windows systems with PyWin32
