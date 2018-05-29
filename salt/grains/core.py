@@ -409,62 +409,19 @@ def _aix_cpudata():
     #   cpu_model
     #   cpu_flags
     grains = {}
-    data = ""
     cmd = salt.utils.path.which('prtconf')
     if cmd:
-        data += __salt__['cmd.run']('{0}'.format(cmd))
-        data += '\n'
-
-        cpuarch_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Processor\s+Type:\s+(\S+)',  # prtconf
-            ]
-        ]
-
-        cpuflags_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Processor\s+Version:\s+(\S+)',  # prtconf
-            ]
-        ]
-
-        cpumodel_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)',  # prtconf
-            ]
-        ]
-
-        numcpus_regexes = [
-            re.compile(r) for r in [
-                r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)',  # prtconf
-            ]
-        ]
-
-        for regex in cpuarch_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                grains['cpuarch'] = res.group(1).strip().replace("'", "")
-                break
-
-        for regex in cpuflags_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                grains['cpu_flags'] = res.group(1).strip().replace("'", "")
-                break
-
-        for regex in cpumodel_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                grains['cpu_model'] = res.group(1).strip().replace("'", "")
-                break
-
-        for regex in numcpus_regexes:
-            res = regex.search(data)
-            if res and len(res.groups()) >= 1:
-                grains['num_cpus'] = res.group(1).strip().replace("'", "")
-                break
+        data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+        for dest, regstring in (('cpuarch', r'(?im)^\s*Processor\s+Type:\s+(\S+)'),
+                                ('cpu_flags', r'(?im)^\s*Processor\s+Version:\s+(\S+)'),
+                                ('cpu_model', r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)'),
+                                ('num_cpus', r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)')):
+            for regex in [re.compile(r) for r in [regstring]]:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains[dest] = res.group(1).strip().replace("'", '')
     else:
         log.error('The \'prtconf\' binary was not found in $PATH.')
-
     return grains
 
 
@@ -571,9 +528,9 @@ def _aix_memdata():
     prtconf = salt.utils.path.which('prtconf')
     if prtconf:
         for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
-            comps = line.split(' ')
-            if 'Memory' == comps[0].strip() and 'Size:' == comps[1].strip():
-                grains['mem_total'] = int(comps[2].strip())
+            comps = [x for x in line.strip().split(' ') if x]
+            if len(comps) > 2 and 'Memory' in comps[0] and 'Size' in comps[1]:
+                grains['mem_total'] = int(comps[2])
                 break
     else:
         log.error('The \'prtconf\' binary was not found in $PATH.')
@@ -582,13 +539,12 @@ def _aix_memdata():
     if swap_cmd:
         swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
         try:
-            swap_total = int(swap_data[-2]) * 4 + int(swap_data[-6]) * 4
+            swap_total = (int(swap_data[-2]) + int(swap_data[-6])) * 4
         except ValueError:
             swap_total = None
         grains['swap_total'] = swap_total
     else:
         log.error('The \'swap\' binary was not found in $PATH.')
-
     return grains
 
 
@@ -2597,47 +2553,21 @@ def _hw_data(osdata):
                 break
 
     elif osdata['kernel'] == 'AIX':
-        data = ""
         cmd = salt.utils.path.which('prtconf')
-        if cmd:
-            data += __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
 
-            sn_regexes = [
-                re.compile(r) for r in [
-                    r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)',  # prtconf
-                ]
-            ]
-
-            fw_regexes = [
-                re.compile(r) for r in [
-                    r'(?im)^\s*Firmware\s+Version:\s+(.*)',  # prtconf
-                ]
-            ]
-
-            product_regexes = [
-                re.compile(r) for r in [
-                    r'(?im)^\s*System\s+Model:\s+(\S+)',  # prtconf
-                ]
-            ]
-
-            for regex in sn_regexes:
-                res = regex.search(data)
-                if res and len(res.groups()) >= 1:
-                    grains['serialnumber'] = res.group(1).strip().replace("'", "")
-                    break
-
-            for regex in fw_regexes:
-                res = regex.search(data)
-                if res and len(res.groups()) >= 1:
-                    fw_string = res.group(1).strip().replace("'", "")
-                    _, grains['systemfirmware'] = fw_string.split(",")
-                    break
-
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
             for regex in product_regexes:
                 res = regex.search(data)
                 if res and len(res.groups()) >= 1:
-                    sn_string = res.group(1).strip().replace("'", "")
-                    grains['manufacturer'], grains['productname'] = sn_string.split(",")
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
                     break
         else:
             log.error('The \'prtconf\' binary was not found in $PATH.')
