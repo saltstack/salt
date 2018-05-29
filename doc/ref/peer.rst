@@ -68,6 +68,7 @@ allow minions ending with foo.org access to the publisher.
         - pkg.*
 
 .. note::
+
     Functions are matched using regular expressions.
 
 Peer Runner Communication
@@ -97,6 +98,7 @@ to the manage and jobs runner functions.
         - jobs.*
 
 .. note::
+
     Functions are matched using regular expressions.
 
 .. _peer-wheel:
@@ -104,10 +106,12 @@ to the manage and jobs runner functions.
 Peer Wheel Communication
 =========================
 
-Configuration to allow minions to execute wheel from the master is done via
-the ``peer_wheel`` option on the master. The ``peer_wheel`` configuration follows
-the same logic as the ``peer`` option. The only difference is that access is
-granted to wheel modules.
+.. versionadded: Fluorine
+
+Configuration to allow minions to execute wheel functions from the master is
+done via the ``peer_wheel`` option on the master. The ``peer_wheel``
+configuration follows the same logic as the ``peer`` option. The only
+difference is that access is granted to wheel modules.
 
 To open up access to all minions to all wheel:
 
@@ -127,6 +131,7 @@ to the key wheel functions.
         - key.*
 
 .. note::
+
     Functions are matched using regular expressions.
 
 Using Peer Communication
@@ -150,6 +155,7 @@ To match minions using other matchers, use ``tgt_type``:
     # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping tgt_type='compound'
 
 .. note::
+
     In pre-2017.7.0 releases, use ``expr_form`` instead of ``tgt_type``.
 
 To execute the manage.up runner:
