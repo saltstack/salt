@@ -253,3 +253,13 @@ class CMDModuleTest(ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
+
+    def test_cmd_run_whoami(self):
+        '''
+        test return of whoami
+        '''
+        cmd = self.run_function('cmd.run', ['whoami'])
+        if salt.utils.is_windows():
+            self.assertIn('administrator', cmd)
+        else:
+            self.assertEqual('root', cmd)
