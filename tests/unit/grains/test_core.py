@@ -886,7 +886,7 @@ SwapTotal:       4789244 kB'''
                 'productname': 'SPARC S7-2',
                 'product': 'SPARC S7-2',
         }
-        with salt.utils.fopen(os.path.join(SOLARIS_DIR, 'prtconf.s7-zone')) as sparc_return_data:
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.s7-zone')) as sparc_return_data:
             this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
             this_sparc_return_data += '\n'
         self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
@@ -899,7 +899,7 @@ SwapTotal:       4789244 kB'''
                 'productname': 'SPARC S7-2',
                 'product': 'SPARC S7-2',
         }
-        with salt.utils.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.s7')) as sparc_return_data:
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.s7')) as sparc_return_data:
             this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
             this_sparc_return_data += '\n'
         self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
@@ -912,7 +912,7 @@ SwapTotal:       4789244 kB'''
                 'productname': 'SPARC Enterprise T5220',
                 'product': 'SPARC Enterprise T5220',
         }
-        with salt.utils.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.t5220')) as sparc_return_data:
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.t5220')) as sparc_return_data:
             this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
             this_sparc_return_data += '\n'
         self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
@@ -925,7 +925,7 @@ SwapTotal:       4789244 kB'''
                 'productname': 'SPARC Enterprise T5220',
                 'product': 'SPARC Enterprise T5220',
         }
-        with salt.utils.fopen(os.path.join(SOLARIS_DIR, 'prtconf.t5220-zone')) as sparc_return_data:
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.t5220-zone')) as sparc_return_data:
             this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
             this_sparc_return_data += '\n'
         self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
@@ -949,9 +949,9 @@ SwapTotal:       4789244 kB'''
                             with patch.object(salt.utils, 'which_bin',
                                       MagicMock(return_value=None)):
                                 with patch.object(os.path, 'isfile', path_isfile_mock):
-                                    with salt.utils.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
+                                    with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
                                         os_release_content = os_release_file.readlines()
-                                        with patch("salt.utils.fopen", mock_open()) as os_release_file:
+                                        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
                                             os_release_file.return_value.__iter__.return_value = os_release_content
                                             with patch.object(core, '_sunos_cpudata',
                                                       MagicMock(return_value={'cpuarch': 'sparcv9',
