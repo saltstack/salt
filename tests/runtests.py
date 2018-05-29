@@ -743,6 +743,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         with TestDaemon(self):
             if self.options.name:
                 for name in self.options.name:
+                    name = name.strip()
+                    if not name:
+                        continue
                     if os.path.isfile(name):
                         if not name.endswith('.py'):
                             continue

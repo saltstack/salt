@@ -457,9 +457,13 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] == 'OpenBSD':
+        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
-            swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
+            swap_data = __salt__['cmd.run']('{0} -sk'.format(swapctl))
+            if swap_data == 'no swap devices configured':
+                swap_total = 0
+            else:
+                swap_total = swap_data.split(' ')[1]
         else:
             swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         grains['swap_total'] = int(swap_total) // 1024 // 1024
@@ -601,11 +605,7 @@ def _virtual(osdata):
     if not salt.utils.platform.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.path.which('virt-what'):
             _cmds = ['virt-what']
-        else:
-            log.debug(
-                'Please install \'virt-what\' to improve results of the '
-                '\'virtual\' grain.'
-            )
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
@@ -771,13 +771,6 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
             break
-        elif command == 'virt-what':
-            # if 'virt-what' returns nothing, it's either an undetected platform
-            # so we default just as virt-what to 'physical', otherwise use the
-            # platform detected/returned by virt-what
-            if output:
-                grains['virtual'] = output.lower()
-            break
         elif command == 'prtdiag':
             model = output.lower().split("\n")[0]
             if 'vmware' in model:
@@ -792,14 +785,6 @@ def _virtual(osdata):
         elif command == 'virtinfo':
             grains['virtual'] = 'LDOM'
             break
-    else:
-        if osdata['kernel'] not in skip_cmds:
-            log.debug(
-                'All tools for virtual hardware identification failed to '
-                'execute because they do not exist on the system running this '
-                'instance or the user does not have the necessary permissions '
-                'to execute them. Grains output might not be accurate.'
-            )
 
     choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
@@ -984,6 +969,63 @@ def _virtual(osdata):
             'cannot execute it. Grains output might not be '
             'accurate.', command
         )
+    return grains
+
+
+def _virtual_hv(osdata):
+    '''
+    Returns detailed hypervisor information from sysfs
+    Currently this seems to be used only by Xen
+    '''
+    grains = {}
+
+    # Bail early if we're not running on Xen
+    try:
+        if 'xen' not in osdata['virtual']:
+            return grains
+    except KeyError:
+        return grains
+
+    # Try to get the exact hypervisor version from sysfs
+    try:
+        version = {}
+        for fn in ('major', 'minor', 'extra'):
+            with salt.utils.files.fopen('/sys/hypervisor/version/{}'.format(fn), 'r') as fhr:
+                version[fn] = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
+        grains['virtual_hv_version_info'] = [version['major'], version['minor'], version['extra']]
+    except (IOError, OSError, KeyError):
+        pass
+
+    # Try to read and decode the supported feature set of the hypervisor
+    # Based on https://github.com/brendangregg/Misc/blob/master/xen/xen-features.py
+    # Table data from include/xen/interface/features.h
+    xen_feature_table = {0: 'writable_page_tables',
+                         1: 'writable_descriptor_tables',
+                         2: 'auto_translated_physmap',
+                         3: 'supervisor_mode_kernel',
+                         4: 'pae_pgdir_above_4gb',
+                         5: 'mmu_pt_update_preserve_ad',
+                         7: 'gnttab_map_avail_bits',
+                         8: 'hvm_callback_vector',
+                         9: 'hvm_safe_pvclock',
+                        10: 'hvm_pirqs',
+                        11: 'dom0',
+                        12: 'grant_map_identity',
+                        13: 'memory_op_vnode_supported',
+                        14: 'ARM_SMCCC_supported'}
+    try:
+        with salt.utils.files.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
+            features = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        enabled_features = []
+        for bit, feat in six.iteritems(xen_feature_table):
+            if int(features, 16) & (1 << bit):
+                enabled_features.append(feat)
+        grains['virtual_hv_features'] = features
+        grains['virtual_hv_features_list'] = enabled_features
+    except (IOError, OSError, KeyError):
+        pass
+
     return grains
 
 
@@ -1234,6 +1276,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'nilrt-xfce': 'NILinuxRT-XFCE',
+    'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
@@ -1793,7 +1836,7 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os_family') == 'RedHat':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
-    elif grains.get('os_family') == 'NILinuxRT':
+    elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
             if line.startswith('arch'):
@@ -1813,6 +1856,7 @@ def os_data():
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
+    grains.update(_virtual_hv(grains))
     grains.update(_ps(grains))
 
     if grains.get('osrelease', ''):
@@ -2264,6 +2308,7 @@ def _hw_data(osdata):
         hwdata = {
             'manufacturer': 'manufacturer',
             'serialnumber': 'serial#',
+            'productname': 'DeviceDesc',
         }
         for grain_name, cmd_key in six.iteritems(hwdata):
             result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))

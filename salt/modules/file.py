@@ -48,13 +48,13 @@ except ImportError:
 # Import salt libs
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.data
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.itertools
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -4982,7 +4982,7 @@ def get_diff(file1,
         )
 
     args = []
-    for idx, filename in enumerate(files):
+    for filename in files:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5011,7 +5011,8 @@ def get_diff(file1,
                         *salt.utils.data.decode(args)
                     )
                 )
-    return ret
+        return ret
+    return ''
 
 
 def manage_file(name,
@@ -5132,7 +5133,7 @@ def manage_file(name,
 
     .. code-block:: bash
 
-        salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
+        salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' '' base ''
 
     .. versionchanged:: 2014.7.0
         ``follow_symlinks`` option added
@@ -5330,12 +5331,12 @@ def manage_file(name,
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
         if sfn:
             __clean_tmp(sfn)

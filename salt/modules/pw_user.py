@@ -49,7 +49,6 @@ from salt.ext import six
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
-import salt.utils.locales
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
 
@@ -84,10 +83,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
-                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
-                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
-                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.data.decode(gecos_field[0]),
+                'roomnumber': salt.utils.data.decode(gecos_field[1]),
+                'workphone': salt.utils.data.decode(gecos_field[2]),
+                'homephone': salt.utils.data.decode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):

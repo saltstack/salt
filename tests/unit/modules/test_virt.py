@@ -49,7 +49,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.listDefinedDomains.return_value = [name]
         mock_domain = MagicMock()
         self.mock_conn.lookupByName.return_value = mock_domain
-        mock_domain.getXMLDesc.return_value = xml
+        mock_domain.XMLDesc.return_value = xml
 
         # Return state as shutdown
         mock_domain.info.return_value = [4, 0, 0, 0]

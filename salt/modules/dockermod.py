@@ -483,20 +483,6 @@ def _clear_context():
             pass
 
 
-def _pull_if_needed(image, client_timeout):
-    '''
-    Pull the desired image if not present, and return the image ID or name
-    '''
-    image_id = resolve_image_id(image)
-    if not image_id:
-        pull(image, client_timeout=client_timeout)
-        # Avoid another inspect and just use the passed image. docker-py
-        # will do the right thing and resolve the tag for us if we pass it
-        # a tagged image.
-        image_id = image
-    return image_id
-
-
 def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
@@ -2096,6 +2082,16 @@ def port(name, private_port=None):
     name
         Container name or ID
 
+        .. versionchanged:: Fluorine
+            This value can now be a pattern expression (using the
+            pattern-matching characters defined in fnmatch_). If a pattern
+            expression is used, this function will return a dictionary mapping
+            container names which match the pattern to the mappings for those
+            containers. When no pattern expression is used, a dictionary of the
+            mappings for the specified container name will be returned.
+
+        .. _fnmatch: https://docs.python.org/2/library/fnmatch.html
+
     private_port : None
         If specified, get information for that specific port. Can be specified
         either as a port number (i.e. ``5000``), or as a port number plus the
@@ -2118,12 +2114,10 @@ def port(name, private_port=None):
         salt myminion docker.port mycontainer 5000
         salt myminion docker.port mycontainer 5000/udp
     '''
-    # docker.client.Client.port() doesn't do what we need, so just inspect the
-    # container and get the information from there. It's what they're already
-    # doing (poorly) anyway.
-    mappings = inspect_container(name).get('NetworkSettings', {}).get('Ports', {})
-    if not mappings:
-        return {}
+    pattern_used = bool(re.search(r'[*?\[]', name))
+    names = fnmatch.filter(list_containers(all=True), name) \
+        if pattern_used \
+        else [name]
 
     if private_port is None:
         pattern = '*'
@@ -2146,7 +2140,17 @@ def port(name, private_port=None):
             except AttributeError:
                 raise SaltInvocationError(err)
 
-    return dict((x, mappings[x]) for x in fnmatch.filter(mappings, pattern))
+    ret = {}
+    for c_name in names:
+        # docker.client.Client.port() doesn't do what we need, so just inspect
+        # the container and get the information from there. It's what they're
+        # already doing (poorly) anyway.
+        mappings = inspect_container(c_name).get(
+            'NetworkSettings', {}).get('Ports', {})
+        ret[c_name] = dict((x, mappings[x])
+                           for x in fnmatch.filter(mappings, pattern))
+
+    return ret.get(name, {}) if not pattern_used else ret
 
 
 def ps_(filters=None, **kwargs):
@@ -3115,8 +3119,8 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion docker.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     kwargs, unused_kwargs = _get_create_kwargs(
         skip_translate=skip_translate,
@@ -3138,7 +3142,7 @@ def create(image,
     )
     time_started = time.time()
     response = _client_wrapper('create_container',
-                               image_id,
+                               image,
                                name=name,
                                **kwargs)
     response['Time_Elapsed'] = time.time() - time_started
@@ -3224,6 +3228,7 @@ def run_container(image,
     CLI Examples:
 
     .. code-block:: bash
+
         salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh
         # Run container in the background
         salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh bg=True
@@ -3232,8 +3237,8 @@ def run_container(image,
         # net1 using automatic IP, net2 using static IPv4 address
         salt myminion docker.run_container myuser/myimage command='perl /scripts/sync.py' networks='{"net1": {}, "net2": {"ipv4_address": "192.168.27.12"}}'
     '''
-    image_id = image if not kwargs.pop('inspect', True) \
-        else _pull_if_needed(image, client_timeout)
+    if kwargs.pop('inspect', True) and not resolve_image_id(image):
+        pull(image, client_timeout=client_timeout)
 
     removed_ids = None
     if name is not None:
@@ -3303,7 +3308,7 @@ def run_container(image,
 
     time_started = time.time()
     # Create the container
-    ret = _client_wrapper('create_container', image_id, name=name, **kwargs)
+    ret = _client_wrapper('create_container', image, name=name, **kwargs)
 
     if removed_ids:
         ret['Replaces'] = removed_ids
