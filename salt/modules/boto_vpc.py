@@ -510,10 +510,10 @@ def wait_til_resource_exists(resource_type, resource_id, region=None, key=None, 
     # connect to boto3
     conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
     # a dict to map resource types to the corresponding boto3 describe command and that command's keyword for id's
-    resource_id_argument_keyword_dict ={'vpc': {'command': 'describe_vpcs', 'id_keyword': 'VpcIds'}, 'subnet': {'command': 'describe_subnets', 'id_keyword': 'SubnetIds'}, 'internet_gateway': {'command': 'describe_internet_gateways', 'id_keyword': 'InternetGatewayIds'}, 'nat_gateway': {'command': 'describe_customer_gateways', 'id_keyword': 'CustomerGatewayIds'}, 'dhcp_options': {'command': 'describe_dhcp_options', 'id_keyword': 'DhcpOptionsIds'}, 'network_acl': {'command': 'describe_network_acls', 'id_keyword': 'NetworkAclIds'}, 'route_table': {'command': 'describe_route_tables', 'id_keyword': 'RouteTableIds'}, 'vpc_peering_connection': {'command': 'describe_vpc_peering_connections', 'id_keyword': 'VpcPeeringConnectionIds'}}
+    resource_id_argument_keyword_dict = {'vpc': {'command': 'describe_vpcs', 'id_keyword': 'VpcIds'}, 'subnet': {'command': 'describe_subnets', 'id_keyword': 'SubnetIds'}, 'internet_gateway': {'command': 'describe_internet_gateways', 'id_keyword': 'InternetGatewayIds'}, 'nat_gateway': {'command': 'describe_customer_gateways', 'id_keyword': 'CustomerGatewayIds'}, 'dhcp_options': {'command': 'describe_dhcp_options', 'id_keyword': 'DhcpOptionsIds'}, 'network_acl': {'command': 'describe_network_acls', 'id_keyword': 'NetworkAclIds'}, 'route_table': {'command': 'describe_route_tables', 'id_keyword': 'RouteTableIds'}, 'vpc_peering_connection': {'command': 'describe_vpc_peering_connections', 'id_keyword': 'VpcPeeringConnectionIds'}}
     # if it isn't in our resource_id_argument_keyword_dict ignore it because we don't know how to wait for it
     if resource_type in list(resource_id_argument_keyword_dict.keys()):
-        kwargs ={resource_id_argument_keyword_dict[resource_type]['id_keyword']: [resource_id, ]}
+        kwargs = {resource_id_argument_keyword_dict[resource_type]['id_keyword']: [resource_id, ]}
         while resourceWaitErrorCount < 10:
             try:
                 response = getattr(conn3, resource_id_argument_keyword_dict[resource_type]['command'])(**kwargs)
@@ -2129,7 +2129,6 @@ def delete_route_table(route_table_id=None, route_table_name=None,
     if 'id' in route_table_object_dict.keys():
         wait_til_resource_exists(resource_type='route_table', resource_id=route_table_object_dict['id'], region=region, key=key, keyid=keyid, profile=profile)
     return route_table_object_dict
-
 
 
 def route_table_exists(route_table_id=None, name=None, route_table_name=None,
