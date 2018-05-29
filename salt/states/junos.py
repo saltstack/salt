@@ -288,10 +288,10 @@ def install_config(name, **kwargs):
 
     name
         Path where the configuration/template file is present. If the file has
-        a '\*.conf' extension, the content is treated as text format. If the
-        file has a '\*.xml' extension, the content is treated as XML format. If
-        the file has a '\*.set' extension, the content is treated as Junos OS
-        'set' commands
+        a ``*.conf`` extension, the content is treated as text format. If the
+        file has a ``*.xml`` extension, the content is treated as XML format. If
+        the file has a ``*.set`` extension, the content is treated as Junos OS
+        ``set`` commands
 
     template_vars
       The dictionary of data for the jinja variables present in the jinja
@@ -465,10 +465,10 @@ def load(name, **kwargs):
 
     name
         Path where the configuration/template file is present. If the file has
-        a '\*.conf' extension, the content is treated as text format. If the
-        file has a '\*.xml' extension, the content is treated as XML format. If
-        the file has a '\*.set' extension, the content is treated as Junos OS
-        'set' commands.
+        a ``*.conf`` extension, the content is treated as text format. If the
+        file has a ``*.xml`` extension, the content is treated as XML format. If
+        the file has a ``*.set`` extension, the content is treated as Junos OS
+        ``set`` commands.
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the

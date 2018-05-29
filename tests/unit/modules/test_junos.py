@@ -501,7 +501,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     'confirm': 2, '__pub_fun': 'junos.rollback',
                     '__pub_jid': '20170221184518526067', '__pub_tgt': 'mac_min',
                     '__pub_tgt_type': 'glob', '__pub_ret': ''}
-            junos.rollback(2, **args)
+            junos.rollback(id=2, **args)
             mock_rollback.assert_called_with(2)
             mock_commit.assert_called_with(confirm=2)
 
@@ -646,7 +646,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_diff_with_arg(self):
         with patch('jnpr.junos.utils.config.Config.diff') as mock_diff:
-            junos.diff(2)
+            junos.diff(id=2)
             mock_diff.assert_called_with(rb_id=2)
 
     def test_diff_exception(self):
@@ -702,7 +702,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_cli_with_format_as_empty_string(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
-            junos.cli('show version', '')
+            junos.cli('show version', format='')
             mock_cli.assert_called_with('show version', 'text', warning=False)
 
     def test_cli(self):
@@ -1491,7 +1491,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 '<rpc-reply>text rpc reply</rpc-reply>')
             m = mock_open()
             with patch('salt.modules.junos.fopen', m, create=True):
-                junos.rpc('get-chassis-inventory', '/path/to/file', 'text')
+                junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
                 handle = m()
                 handle.write.assert_called_with('text rpc reply')
 

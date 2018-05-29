@@ -152,7 +152,7 @@ def rpc(cmd=None, dest=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc get_config /var/log/config.txt text filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc get_config /var/log/config.txt format=text filter='<configuration><system/></configuration>'
         salt 'device' junos.rpc get-interface-information /home/user/interface.xml interface_name='lo0' terse=True
         salt 'device' junos.rpc get-chassis-inventory
     '''
@@ -605,7 +605,7 @@ def cli(command=None, **kwargs):
 
         salt 'device_name' junos.cli 'show system commit'
         salt 'device_name' junos.cli 'show version' dev_timeout=40
-        salt 'device_name' junos.cli 'show system alarms' xml dest=/home/user/cli_output.txt
+        salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     '''
     conn = __proxy__['junos.conn']()
 
