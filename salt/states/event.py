@@ -13,10 +13,10 @@ import salt.utils.functools
 def send(name,
          data=None,
          preload=None,
-         show_changed=True,
          with_env=False,
          with_grains=False,
          with_pillar=False,
+         show_changed=True,
          **kwargs):
     '''
     Send an event to the Salt Master
