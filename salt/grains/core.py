@@ -605,11 +605,7 @@ def _virtual(osdata):
     if not salt.utils.platform.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.path.which('virt-what'):
             _cmds = ['virt-what']
-        else:
-            log.debug(
-                'Please install \'virt-what\' to improve results of the '
-                '\'virtual\' grain.'
-            )
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
@@ -789,14 +785,6 @@ def _virtual(osdata):
         elif command == 'virtinfo':
             grains['virtual'] = 'LDOM'
             break
-    else:
-        if osdata['kernel'] not in skip_cmds:
-            log.debug(
-                'All tools for virtual hardware identification failed to '
-                'execute because they do not exist on the system running this '
-                'instance or the user does not have the necessary permissions '
-                'to execute them. Grains output might not be accurate.'
-            )
 
     choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
@@ -2262,6 +2250,7 @@ def _hw_data(osdata):
         hwdata = {
             'manufacturer': 'manufacturer',
             'serialnumber': 'serial#',
+            'productname': 'DeviceDesc',
         }
         for grain_name, cmd_key in six.iteritems(hwdata):
             result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
