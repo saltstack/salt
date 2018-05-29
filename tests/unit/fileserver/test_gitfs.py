@@ -15,7 +15,7 @@ import tornado.ioloop
 import logging
 import stat
 try:
-    import pwd
+    import pwd  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -24,6 +24,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.paths import TMP, FILES
+from tests.support.helpers import this_user
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs

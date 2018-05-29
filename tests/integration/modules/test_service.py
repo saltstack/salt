@@ -117,7 +117,7 @@ class ServiceModuleTest(ModuleCase):
         systemd = salt.utils.systemd.booted()
 
         # check service was not enabled
-        if systemd:
+        if systemd or salt.utils.is_windows():
             self.assertIn('ERROR', enable)
         else:
             self.assertFalse(enable)
