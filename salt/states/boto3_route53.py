@@ -502,7 +502,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
           continent to a different resource.
         - You can't create two geolocation resource record sets that specify the same geographic
           location.
-        - The value \* in the CountryCode element matches all geographic locations that aren't
+        - The value ``*`` in the CountryCode element matches all geographic locations that aren't
           specified in other geolocation resource record sets that have the same values for the
           Name and Type elements.
         - Geolocation works by mapping IP addresses to locations.  However, some IP addresses
@@ -510,9 +510,9 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
           record sets that cover all seven continents, Amazon Route 53 will receive some DNS
           queries from locations that it can't identify.  We recommend that you
           create a resource record set for which the value of CountryCode is
-          \*, which handles both queries that come from locations for which you
+          ``*``, which handles both queries that come from locations for which you
           haven't created geolocation resource record sets and queries from IP
-          addresses that aren't mapped to a location.  If you don't create a \*
+          addresses that aren't mapped to a location.  If you don't create a ``*``
           resource record set, Amazon Route 53 returns a "no answer" response
           for queries from those locations.
         - You can't create non-geolocation resource record sets that have the same values for the
