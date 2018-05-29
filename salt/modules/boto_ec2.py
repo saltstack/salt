@@ -56,6 +56,7 @@ import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.ext import six
+from salt.ext.six.moves import map
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
@@ -65,6 +66,7 @@ try:
     import boto.ec2
     # pylint: enable=unused-import
     from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
+    from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -1003,14 +1005,19 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 return False
             security_group_ids += [r]
 
-    if all((network_interface_id, network_interface_name)):
-        raise SaltInvocationError('Only one of network_interface_id or '
-                                  'network_interface_name may be provided.')
+    network_interface_args = list(map(int, [network_interface_id is not None,
+                                            network_interface_name is not None,
+                                            network_interfaces is not None]))
+
+    if sum(network_interface_args) > 1:
+        raise SaltInvocationError('Only one of network_interface_id, '
+                                  'network_interface_name or '
+                                  'network_interfaces may be provided.')
     if network_interface_name:
         result = get_network_interface_id(network_interface_name,
-                                                        region=region, key=key,
-                                                        keyid=keyid,
-                                                        profile=profile)
+                                          region=region, key=key,
+                                          keyid=keyid,
+                                          profile=profile)
         network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
@@ -1019,17 +1026,20 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             )
 
     if network_interface_id:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+        interface = NetworkInterfaceSpecification(
             network_interface_id=network_interface_id,
-            device_index=0
-        )
+            device_index=0)
     else:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+        interface = NetworkInterfaceSpecification(
             subnet_id=subnet_id,
             groups=security_group_ids,
-            device_index=0
-        )
-    interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
+            device_index=0)
+
+    if network_interfaces:
+        interfaces_specs = [NetworkInterfaceSpecification(**x) for x in network_interfaces]
+        interfaces = NetworkInterfaceCollection(*interfaces_specs)
+    else:
+        interfaces = NetworkInterfaceCollection(interface)
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
