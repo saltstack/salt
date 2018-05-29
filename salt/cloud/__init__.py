@@ -203,6 +203,10 @@ class CloudClient(object):
                 profile['profile'] = name
                 self.opts['profiles'].update({name: profile})
                 self.opts['providers'][provider][driver]['profiles'].update({name: profile})
+            for name, map_dct in six.iteritems(pillars.pop('maps', {})):
+                if 'maps' not in self.opts:
+                    self.opts['maps'] = {}
+                self.opts['maps'][name] = map_dct
             self.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
@@ -356,7 +360,7 @@ class CloudClient(object):
 
     def map_run(self, path=None, **kwargs):
         '''
-        Pass in a location for a map to execute
+        To execute a map
         '''
         kwarg = {}
         if path:
@@ -1760,20 +1764,31 @@ class Map(Cloud):
 
     def read(self):
         '''
-        Read in the specified map file and return the map structure
+        Read in the specified map and return the map structure
         '''
         map_ = None
         if self.opts.get('map', None) is None:
             if self.opts.get('map_data', None) is None:
-                return {}
+                if self.opts.get('map_pillar', None) is None:
+                    pass
+                elif self.opts.get('map_pillar') not in self.opts.get('maps'):
+                    log.error(
+                        'The specified map not found in pillar at \'cloud:maps:{0}\''.format(
+                            self.opts['map_pillar'])
+                    )
+                    raise SaltCloudNotFound()
+                else:
+                    # 'map_pillar' is provided, try to use it
+                    map_ = self.opts['maps'][self.opts.get('map_pillar')]
             else:
+                # 'map_data' is provided, try to use it
                 map_ = self.opts['map_data']
-
-        if not map_:
+        else:
+            # 'map' is provided, try to use it
             local_minion_opts = copy.deepcopy(self.opts)
             local_minion_opts['file_client'] = 'local'
             self.minion = salt.minion.MasterMinion(local_minion_opts)
-
+            
             if not os.path.isfile(self.opts['map']):
                 if not (self.opts['map']).startswith('salt://'):
                     log.error(
@@ -1802,10 +1817,13 @@ class Map(Cloud):
                 )
                 return {}
 
-        if 'include' in map_:
-            map_ = salt.config.include_config(
-                map_, self.opts['map'], verbose=False
-            )
+            if 'include' in map_:
+                map_ = salt.config.include_config(
+                    map_, self.opts['map'], verbose=False
+                )
+
+        if not map_:
+            return {}
 
         # Create expected data format if needed
         for profile, mapped in six.iteritems(map_.copy()):
