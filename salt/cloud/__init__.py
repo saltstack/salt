@@ -1788,7 +1788,7 @@ class Map(Cloud):
             local_minion_opts = copy.deepcopy(self.opts)
             local_minion_opts['file_client'] = 'local'
             self.minion = salt.minion.MasterMinion(local_minion_opts)
-            
+
             if not os.path.isfile(self.opts['map']):
                 if not (self.opts['map']).startswith('salt://'):
                     log.error(
