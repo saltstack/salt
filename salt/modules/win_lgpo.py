@@ -2676,7 +2676,6 @@ def __virtual__():
         return False, 'win_lgpo: Not a Windows System'
     if not HAS_WINDOWS_MODULES:
         return False, 'win_lgpo: Required modules failed to load'
-    log.debug('win_lgpo: LGPO module loaded successfully')
     return __virtualname__
 
 
