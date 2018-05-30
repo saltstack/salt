@@ -2958,3 +2958,78 @@ def pool_info(name, **kwargs):
     finally:
         conn.close()
     return result
+
+
+def pool_start(name, **kwargs):
+    '''
+    Start a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_start default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        ret = not bool(pool.create())
+    finally:
+        conn.close()
+
+
+def pool_build(name, **kwargs):
+    '''
+    Build a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_build default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.build())
+    finally:
+        conn.close()
+
+
+def pool_stop(name, **kwargs):
+    '''
+    Stop a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_stop default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.destroy())
+    finally:
+        conn.close()
