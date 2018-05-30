@@ -852,3 +852,35 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.listAllStoragePools.return_value = pool_mocks  # pylint: disable=no-member
         actual = virt.list_pools()
         self.assertEqual(names, actual)
+
+    def test_pool_info(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mock = MagicMock()
+        pool_mock.UUIDString.return_value = 'some-uuid'
+        pool_mock.info.return_value = [0, 1234, 5678, 123]
+        pool_mock.autostart.return_value = True
+        pool_mock.isPersistent.return_value = True
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        # pylint: enable=no-member
+
+        pool = virt.pool_info('foo')
+        self.assertEqual({
+            'uuid': 'some-uuid',
+            'state': 'inactive',
+            'capacity': 1234,
+            'allocation': 5678,
+            'free': 123,
+            'autostart': True,
+            'persistent': True}, pool)
+
+    def test_pool_info_notfound(self):
+        '''
+        Test virt.pool_info() when the pool can't be found
+        '''
+        self.mock_conn.storagePoolLookupByName.side_effect = \
+            self.mock_libvirt.libvirtError("Pool not found")  # pylint: disable=no-member
+        pool = virt.pool_info('foo')
+        self.assertEqual({}, pool)
