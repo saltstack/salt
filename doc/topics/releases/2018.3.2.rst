@@ -1,12 +1,12 @@
-===========================
+========================================
 In Progress: Salt 2018.3.2 Release Notes
-===========================
+========================================
 
 Version 2018.3.2 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 This release is still in progress and has not been released yet.
 
 Changes to win_timezone
------------------------
+=======================
 
 Improves timezone detection by using the pytz module.
 
