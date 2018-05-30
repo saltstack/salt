@@ -2649,6 +2649,29 @@ def net_define(name, bridge, forward, **kwargs):
     return True
 
 
+def list_networks(**kwargs):
+    '''
+    List all virtual networks.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' virt.list_networks
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return [net.name() for net in conn.listAllNetworks()]
+    finally:
+        conn.close()
+
+
 def pool_define_build(name, **kwargs):
     '''
     Create libvirt pool.
