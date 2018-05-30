@@ -1423,8 +1423,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
                 ret['table'][table]['args'] = data.CMD_ARGS
                 ret['table'][table]['command'] = data.GET_CMD
     except ConnectClosedError:
-        conn.connected = False
-        ret['message'] = 'Connection lost with %s' % conn
+        ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                         'with %s' % conn
         ret['out'] = False
         return ret
     except Exception as err:
