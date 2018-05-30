@@ -2895,3 +2895,26 @@ def pool_define_build(name, **kwargs):
         return (True, 'Pool exist')
 
     return True
+
+
+def list_pools(**kwargs):
+    '''
+    List all storage pools.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_pools
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return [pool.name() for pool in conn.listAllStoragePools()]
+    finally:
+        conn.close()
