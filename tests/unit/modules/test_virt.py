@@ -839,3 +839,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.attrib['type'], 'logical')
         self.assertEqual(root.find('target/path').text, '/dev/base')
         self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')
+
+    def test_list_pools(self):
+        '''
+        Test virt.list_pools()
+        '''
+        names = ['pool1', 'default', 'pool2']
+        pool_mocks = [MagicMock(), MagicMock(), MagicMock()]
+        for i, value in enumerate(names):
+            pool_mocks[i].name.return_value = value
+
+        self.mock_conn.listAllStoragePools.return_value = pool_mocks  # pylint: disable=no-member
+        actual = virt.list_pools()
+        self.assertEqual(names, actual)
