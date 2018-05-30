@@ -745,6 +745,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
         self.assertEqual(root.find('vlan/tag').attrib['id'], '1001')
 
+    def test_list_networks(self):
+        '''
+        Test virt.list_networks()
+        '''
+        names = ['net1', 'default', 'net2']
+        net_mocks = [MagicMock(), MagicMock(), MagicMock()]
+        for i, value in enumerate(names):
+            net_mocks[i].name.return_value = value
+
+        self.mock_conn.listAllNetworks.return_value = net_mocks  # pylint: disable=no-member
+        actual = virt.list_networks()
+        self.assertEqual(names, actual)
+
     def test_pool(self):
         '''
         Test virt._gen_pool_xml()
