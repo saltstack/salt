@@ -48,7 +48,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     test for user absent
     '''
     user_name = 'salt-test'
-    user_home = os.path.join('tmp', user_name)
+    user_home = '/var/lib/{0}'.format(user_name) if not salt.utils.is_windows() else os.path.join('tmp', user_name)
 
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
