@@ -758,6 +758,67 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         actual = virt.list_networks()
         self.assertEqual(names, actual)
 
+    def test_network_info(self):
+        '''
+        Test virt.network_info()
+        '''
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV4 = 0
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
+
+        net_mock = MagicMock()
+
+        # pylint: disable=no-member
+        net_mock.UUIDString.return_value = 'some-uuid'
+        net_mock.bridgeName.return_value = 'br0'
+        net_mock.autostart.return_value = True
+        net_mock.isActive.return_value = False
+        net_mock.isPersistent.return_value = True
+        net_mock.DHCPLeases.return_value = [
+            {
+                'iface': 'virbr0',
+                'expirytime': 1527757552,
+                'type': 0,
+                'mac': '52:54:00:01:71:bd',
+                'ipaddr': '192.168.122.45',
+                'prefix': 24,
+                'hostname': 'py3-test',
+                'clientid': '01:52:54:00:01:71:bd',
+                'iaid': None
+            }
+        ]
+        self.mock_conn.networkLookupByName.return_value = net_mock
+        # pylint: enable=no-member
+
+        net = virt.network_info('foo')
+        self.assertEqual({
+            'uuid': 'some-uuid',
+            'bridge': 'br0',
+            'autostart': True,
+            'active': False,
+            'persistent': True,
+            'leases': [
+                {
+                    'iface': 'virbr0',
+                    'expirytime': 1527757552,
+                    'type': 'ipv4',
+                    'mac': '52:54:00:01:71:bd',
+                    'ipaddr': '192.168.122.45',
+                    'prefix': 24,
+                    'hostname': 'py3-test',
+                    'clientid': '01:52:54:00:01:71:bd',
+                    'iaid': None
+                }
+            ]}, net)
+
+    def test_network_info_notfound(self):
+        '''
+        Test virt.network_info() when the network can't be found
+        '''
+        self.mock_conn.networkLookupByName.side_effect = \
+            self.mock_libvirt.libvirtError("Network not found")  # pylint: disable=no-member
+        net = virt.network_info('foo')
+        self.assertEqual({}, net)
+
     def test_pool(self):
         '''
         Test virt._gen_pool_xml()

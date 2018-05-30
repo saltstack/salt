@@ -2672,6 +2672,51 @@ def list_networks(**kwargs):
         conn.close()
 
 
+def network_info(name, **kwargs):
+    '''
+    Return informations on a virtual network provided its name.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_info default
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        leases = net.DHCPLeases()
+        for lease in leases:
+            if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
+                lease['type'] = 'ipv4'
+            elif lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV6:
+                lease['type'] = 'ipv6'
+            else:
+                lease['type'] = 'unknown'
+
+        result = {
+            'uuid': net.UUIDString(),
+            'bridge': net.bridgeName(),
+            'autostart': net.autostart(),
+            'active': net.isActive(),
+            'persistent': net.isPersistent(),
+            'leases': leases
+        }
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
 def pool_define_build(name, **kwargs):
     '''
     Create libvirt pool.
