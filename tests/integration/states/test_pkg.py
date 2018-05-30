@@ -36,7 +36,7 @@ _PKG_TARGETS = {
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'python-pssh'],
     'MacOS': ['libpng', 'jpeg'],
-    'Windows': ['firefox', '7zip'],
+    'Windows': ['putty', '7zip'],
 }
 
 _PKG_TARGETS_32 = {
@@ -158,7 +158,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             __testcontext__['refresh'] = True
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_001_installed(self, grains=None):
         '''
@@ -189,7 +188,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_002_installed_with_version(self, grains=None):
         '''
@@ -237,7 +235,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_003_installed_multipkg(self, grains=None):
         '''
@@ -259,7 +256,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertFalse(any(version.values()))
+        try:
+            self.assertFalse(any(version.values()))
+        except AssertionError:
+            self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=pkg_targets))
 
         ret = self.run_state('pkg.installed',
                              name=None,
@@ -269,7 +269,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains=None):
         '''
@@ -318,7 +317,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_005_installed_32bit(self, grains=None):
         '''
@@ -355,7 +353,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_006_installed_32bit_with_version(self, grains=None):
         '''
@@ -403,7 +400,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_007_with_dot_in_pkgname(self, grains=None):
         '''
@@ -434,7 +430,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_008_epoch_in_version(self, grains=None):
         '''
@@ -485,7 +480,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_010_latest_with_epoch_and_info_installed(self):
         '''
@@ -505,7 +499,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_011_latest(self, grains=None):
         '''
@@ -537,7 +530,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_012_latest_only_upgrade(self, grains=None):
         '''

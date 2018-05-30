@@ -11,7 +11,6 @@ from __future__ import absolute_import
 import os
 import re
 import shutil
-import sys
 import tempfile
 
 # Import Salt Testing libs
@@ -73,8 +72,7 @@ class PipModuleTest(ModuleCase):
 
         # Let's remove the pip binary
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
-        py_dir = 'python{0}.{1}'.format(*sys.version_info[:2])
-        site_dir = os.path.join(self.venv_dir, 'lib', py_dir, 'site-packages')
+        site_dir = self.run_function('virtualenv.get_distribution_path', [self.venv_dir, 'pip'])
         if salt.utils.is_windows():
             pip_bin = os.path.join(self.venv_dir, 'Scripts', 'pip.exe')
             site_dir = os.path.join(self.venv_dir, 'lib', 'site-packages')

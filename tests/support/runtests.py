@@ -49,7 +49,6 @@
 # Import Python modules
 from __future__ import absolute_import, print_function
 import os
-import sys
 import json
 import shutil
 import logging
@@ -57,6 +56,7 @@ import multiprocessing
 
 # Import tests support libs
 import tests.support.paths as paths
+import tests.support.helpers
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -103,12 +103,9 @@ try:
 except ImportError:
     pass
 
-if sys.platform.startswith('win'):
-    import win32api  # pylint: disable=import-error
-    RUNNING_TESTS_USER = win32api.GetUserName()
-else:
-    import pwd
-    RUNNING_TESTS_USER = pwd.getpwuid(os.getuid()).pw_name
+
+RUNNING_TESTS_USER = tests.support.helpers.this_user()
+
 
 log = logging.getLogger(__name__)
 
