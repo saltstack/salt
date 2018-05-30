@@ -2767,6 +2767,31 @@ def network_stop(name, **kwargs):
         conn.close()
 
 
+def network_undefine(name, **kwargs):
+    '''
+    Remove a defined virtual network. This does not stop the virtual network.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_undefine default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.undefine())
+    finally:
+        conn.close()
+
+
 def pool_define_build(name, **kwargs):
     '''
     Create libvirt pool.
