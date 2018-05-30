@@ -104,6 +104,14 @@ def pytest_addoption(parser):
              'may be insecure! Default: False'
     )
     test_selection_group.addoption(
+        '--proxy',
+        '--proxy-tests',
+        dest='proxy',
+        action='store_true',
+        default=False,
+        help='Run proxy tests'
+    )
+    test_selection_group.addoption(
         '--run-destructive',
         action='store_true',
         default=False,
@@ -641,7 +649,8 @@ def test_daemon(request):
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
               ('output_columns', request.config.getoption('--output-columns')),
-              ('ssh', request.config.getoption('--ssh')))
+              ('ssh', request.config.getoption('--ssh')),
+              ('proxy', request.config.getoption('--proxy')))
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 
