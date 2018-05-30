@@ -3033,3 +3033,28 @@ def pool_stop(name, **kwargs):
         return not bool(pool.destroy())
     finally:
         conn.close()
+
+
+def pool_undefine(name, **kwargs):
+    '''
+    Remove a defined libvirt storage pool. The pool needs to be stopped before calling.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_undefine default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.undefine())
+    finally:
+        conn.close()
