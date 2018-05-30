@@ -45,7 +45,7 @@ to the flat roster file.  This behavior can also be enabled by setting
 ``ssh_update_roster: True`` in the master config file.
 
 Changelog for v2018.3.0..v2018.3.1
-=================================================================
+==================================
 
 *Generated at: 2018-05-30 14:09:03 UTC*
 
