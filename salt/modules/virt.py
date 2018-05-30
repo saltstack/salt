@@ -2774,6 +2774,173 @@ def capabilities(**kwargs):
     }
 
 
+def _parse_caps_enum(node):
+    '''
+    Return a tuple containing the name of the enum and the possible values
+    '''
+    return (node.getAttribute('name') or None,
+            [_get_xml_element_text(value) for value in node.getElementsByTagName('value')])
+
+
+def _parse_caps_cpu(node):
+    '''
+    Parse the <cpu> element of the domain capabilities
+    '''
+    result = {}
+    for mode in node.getElementsByTagName('mode'):
+        if not mode.getAttribute('supported') == 'yes':
+            continue
+
+        name = mode.getAttribute('name')
+        if name == 'host-passthrough':
+            result[name] = True
+
+        elif name == 'host-model':
+            host_model = {}
+            model_node = _get_xml_first_element_by_tag_name(mode, 'model')
+            if model_node:
+                model = {
+                    'name': _get_xml_element_text(model_node)
+                }
+
+                vendor_id = model_node.getAttribute('vendor_id')
+                if vendor_id:
+                    model['vendor_id'] = vendor_id
+
+                fallback = model_node.getAttribute('fallback')
+                if fallback:
+                    model['fallback'] = fallback
+                host_model['model'] = model
+
+            vendor = _get_xml_child_text(mode, 'vendor', None)
+            if vendor:
+                host_model['vendor'] = vendor
+
+            features = {feature.getAttribute('name'): feature.getAttribute('policy')
+                        for feature in mode.getElementsByTagName('feature')}
+            if features:
+                host_model['features'] = features
+
+            result[name] = host_model
+
+        elif name == 'custom':
+            custom_model = {}
+            models = {_get_xml_element_text(model): model.getAttribute('usable')
+                      for model in mode.getElementsByTagName('model')}
+            if models:
+                custom_model['models'] = models
+            result[name] = custom_model
+
+    return result
+
+
+def _parse_caps_devices_features(node):
+    '''
+    Parse the devices or features list of the domain capatilities
+    '''
+    result = {}
+    for child in node.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE or not child.getAttribute('supported') == 'yes':
+            continue
+        enums = [_parse_caps_enum(node) for node in child.getElementsByTagName('enum')]
+        result[child.tagName] = {item[0]: item[1] for item in enums if item[0]}
+    return result
+
+
+def _parse_caps_loader(node):
+    '''
+    Parse the <loader> element of the domain capabilities.
+    '''
+    enums = [_parse_caps_enum(enum) for enum in node.getElementsByTagName('enum')]
+    result = {item[0]: item[1] for item in enums if item[0]}
+
+    values = [_get_xml_element_text(child) for child in node.childNodes
+              if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == 'value']
+
+    if values:
+        result['values'] = values
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    '''
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    ..versionadded:: Fluorine
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided the libvirt default domain capabilities
+    will be returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    '''
+    conn = __get_conn(**kwargs)
+    caps = conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
+    caps = minidom.parseString(caps)
+    conn.close()
+
+    root_node = caps.getElementsByTagName('domainCapabilities')[0]
+
+    result = {
+        'emulator': _get_xml_child_text(root_node, 'path', None),
+        'domain': _get_xml_child_text(root_node, 'domain', None),
+        'machine': _get_xml_child_text(root_node, 'machine', None),
+        'arch': _get_xml_child_text(root_node, 'arch', None)
+    }
+
+    for child in root_node.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+
+        if child.tagName == 'vcpu' and child.getAttribute('max'):
+            result['max_vcpus'] = int(child.getAttribute('max'))
+
+        elif child.tagName == 'iothreads':
+            iothreads = child.getAttribute('supported') == 'yes'
+            if iothreads is not None:
+                result['iothreads'] = iothreads
+
+        elif child.tagName == 'os':
+            result['os'] = {}
+            loader_node = _get_xml_first_element_by_tag_name(child, 'loader')
+            if loader_node and loader_node.getAttribute('supported') == 'yes':
+                loader = _parse_caps_loader(loader_node)
+                result['os']['loader'] = loader
+
+        elif child.tagName == 'cpu':
+            cpu = _parse_caps_cpu(child)
+            if cpu:
+                result['cpu'] = cpu
+
+        elif child.tagName == 'devices':
+            devices = _parse_caps_devices_features(child)
+            if devices:
+                result['devices'] = devices
+
+        elif child.tagName == 'features':
+            features = _parse_caps_devices_features(child)
+            if features:
+                result['features'] = features
+
+    return result
+
+
 def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     '''
     Return the optimal 'custom' CPU baseline config for VM's on this minion

@@ -889,6 +889,177 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
         self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
 
+    def test_domain_capabilities(self):
+        xml = '''
+<domainCapabilities>
+  <path>/usr/bin/qemu-system-aarch64</path>
+  <domain>kvm</domain>
+  <machine>virt-2.12</machine>
+  <arch>aarch64</arch>
+  <vcpu max='255'/>
+  <iothreads supported='yes'/>
+  <os supported='yes'>
+    <loader supported='yes'>
+      <value>/usr/share/AAVMF/AAVMF_CODE.fd</value>
+      <value>/usr/share/AAVMF/AAVMF32_CODE.fd</value>
+      <value>/usr/share/OVMF/OVMF_CODE.fd</value>
+      <enum name='type'>
+        <value>rom</value>
+        <value>pflash</value>
+      </enum>
+      <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+    </loader>
+  </os>
+  <cpu>
+    <mode name='host-passthrough' supported='yes'/>
+    <mode name='host-model' supported='yes'>
+      <model fallback='forbid'>sample-cpu</model>
+      <vendor>ACME</vendor>
+      <feature policy='require' name='vme'/>
+      <feature policy='require' name='ss'/>
+    </mode>
+    <mode name='custom' supported='yes'>
+      <model usable='unknown'>pxa262</model>
+      <model usable='yes'>pxa270-a0</model>
+      <model usable='no'>arm1136</model>
+    </mode>
+  </cpu>
+  <devices>
+    <disk supported='yes'>
+      <enum name='diskDevice'>
+        <value>disk</value>
+        <value>cdrom</value>
+        <value>floppy</value>
+        <value>lun</value>
+      </enum>
+      <enum name='bus'>
+        <value>fdc</value>
+        <value>scsi</value>
+        <value>virtio</value>
+        <value>usb</value>
+        <value>sata</value>
+      </enum>
+    </disk>
+    <graphics supported='yes'>
+      <enum name='type'>
+        <value>sdl</value>
+        <value>vnc</value>
+      </enum>
+    </graphics>
+    <video supported='yes'>
+      <enum name='modelType'>
+        <value>vga</value>
+        <value>virtio</value>
+      </enum>
+    </video>
+    <hostdev supported='yes'>
+      <enum name='mode'>
+        <value>subsystem</value>
+      </enum>
+      <enum name='startupPolicy'>
+        <value>default</value>
+        <value>mandatory</value>
+        <value>requisite</value>
+        <value>optional</value>
+      </enum>
+      <enum name='subsysType'>
+        <value>usb</value>
+        <value>pci</value>
+        <value>scsi</value>
+      </enum>
+      <enum name='capsType'/>
+      <enum name='pciBackend'>
+        <value>default</value>
+        <value>kvm</value>
+        <value>vfio</value>
+      </enum>
+    </hostdev>
+  </devices>
+  <features>
+    <gic supported='yes'>
+      <enum name='version'>
+        <value>3</value>
+      </enum>
+    </gic>
+    <vmcoreinfo supported='yes'/>
+  </features>
+</domainCapabilities>
+        '''
+
+        self.mock_conn.getDomainCapabilities.return_value = xml
+        caps = virt.domain_capabilities()
+
+        expected = {
+            'emulator': '/usr/bin/qemu-system-aarch64',
+            'domain': 'kvm',
+            'machine': 'virt-2.12',
+            'arch': 'aarch64',
+            'max_vcpus': 255,
+            'iothreads': True,
+            'os': {
+                'loader': {
+                    'type': ['rom', 'pflash'],
+                    'readonly': ['yes', 'no'],
+                    'values': [
+                        '/usr/share/AAVMF/AAVMF_CODE.fd',
+                        '/usr/share/AAVMF/AAVMF32_CODE.fd',
+                        '/usr/share/OVMF/OVMF_CODE.fd'
+                    ]
+                }
+            },
+            'cpu': {
+                'host-passthrough': True,
+                'host-model': {
+                    'model': {
+                        'name': 'sample-cpu',
+                        'fallback': 'forbid'
+                    },
+                    'vendor': 'ACME',
+                    'features': {
+                        'vme': 'require',
+                        'ss': 'require'
+                    }
+                },
+                'custom': {
+                    'models': {
+                        'pxa262': 'unknown',
+                        'pxa270-a0': 'yes',
+                        'arm1136': 'no'
+                    }
+                }
+            },
+            'devices': {
+                'disk': {
+                    'diskDevice': ['disk', 'cdrom', 'floppy', 'lun'],
+                    'bus': ['fdc', 'scsi', 'virtio', 'usb', 'sata'],
+                },
+                'graphics': {
+                    'type': ['sdl', 'vnc']
+                },
+                'video': {
+                    'modelType': ['vga', 'virtio']
+                },
+                'hostdev': {
+                    'mode': ['subsystem'],
+                    'startupPolicy': ['default', 'mandatory', 'requisite', 'optional'],
+                    'subsysType': ['usb', 'pci', 'scsi'],
+                    'capsType': [],
+                    'pciBackend': ['default', 'kvm', 'vfio']
+                }
+            },
+            'features': {
+                'gic': {
+                    'version': ['3']
+                },
+                'vmcoreinfo': {}
+            }
+        }
+
+        self.assertEqual(expected, caps)
+
     def test_network_tag(self):
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch', 1001)
         root = ET.fromstring(xml_data)
