@@ -2918,3 +2918,43 @@ def list_pools(**kwargs):
         return [pool.name() for pool in conn.listAllStoragePools()]
     finally:
         conn.close()
+
+
+def pool_info(name, **kwargs):
+    '''
+    Return informations on a storage pool provided its name.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_info default
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        infos = pool.info()
+        states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        state = states[infos[0]] if infos[0] < len(states) else 'unknown'
+        result = {
+            'uuid': pool.UUIDString(),
+            'state': state,
+            'capacity': infos[1],
+            'allocation': infos[2],
+            'free': infos[3],
+            'autostart': pool.autostart(),
+            'persistent': pool.isPersistent()
+        }
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
