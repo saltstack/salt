@@ -583,6 +583,25 @@ def _memdata(osdata):
     return grains
 
 
+def _aix_get_machine_id():
+    '''
+    Parse the output of lsattr -El sys0 for os_uuid
+    '''
+    grains = {}
+    cmd = salt.utils.path.which('lsattr')
+    if cmd:
+        data = __salt__['cmd.run']('{0} -El sys0'.format(cmd)) + os.linesep
+        uuid_regexes = [re.compile(r'(?im)^\s*os_uuid\s+(\S+)\s+(.*)')]
+        for regex in uuid_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['machine_id'] = res.group(1).strip()
+                break
+    else:
+        log.error('The \'lsattr\' binary was not found in $PATH.')
+    return grains
+
+
 def _windows_virtual(osdata):
     '''
     Returns what type of virtual hardware is under the hood, kvm or physical
@@ -2213,7 +2232,7 @@ def get_machine_id():
     #   machine-id
 
     if platform.system() == 'AIX':
-        return {'machine_id': platform.machine()}
+        return _aix_get_machine_id()
 
     locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
     existing_locations = [loc for loc in locations if os.path.exists(loc)]
