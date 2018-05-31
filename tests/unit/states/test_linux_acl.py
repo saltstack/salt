@@ -342,7 +342,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(linux_acl.__opts__, {'test': True}):
                 comt = ('Removing permissions')
                 ret.update({'comment': comt})
-                self.assertDictEqual(linux_acl.absent(name, acl_type, acl_names, perms), ret)
+                self.assertDictEqual(linux_acl.list_absent(name, acl_type, acl_names, perms), ret)
 
             comt = ('ACL Type does not exist')
             ret.update({'comment': comt, 'result': False})

@@ -62,6 +62,10 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.utils.path
 
+
+import logging
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'acl'
 
 
@@ -331,8 +335,8 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
         _acl_type = acl_type
         _current_perms = __current_perms[name]
         _default = False
-        _origin_group = _current_perms['comment']['group']
-        _origin_owner = _current_perms['comment']['owner']
+        _origin_group = _current_perms.get('comment', {}).get('group', None)
+        _origin_owner = _current_perms.get('comment', {}).get('owner', None)
 
         _current_acl_types = list()
         diff_perms = False
@@ -532,12 +536,14 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
 
     if _current_perms.get(_acl_type, None) or _default:
         try:
-            for _search_name in _search_names:
-                user = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) == _search_name].pop()
-        except (AttributeError, IndexError, StopIteration, KeyError):
-            user = None
+            users = {}
+            for i in _current_perms[_acl_type]:
+                if i and next(six.iterkeys(i)) in _search_names:
+                    users.update(i)
+        except (AttributeError, KeyError):
+            users = None
 
-        if user:
+        if users:
             ret['comment'] = 'Removing permissions'
 
             if __opts__['test']:
