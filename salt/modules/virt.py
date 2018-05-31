@@ -3113,3 +3113,31 @@ def pool_refresh(name, **kwargs):
         return not bool(pool.refresh())
     finally:
         conn.close()
+
+
+def pool_set_autostart(name, state='on', **kwargs):
+    '''
+    Set the autostart flag on a libvirt storage pool so that the storage pool
+    will start with the host system on reboot.
+
+    :param name: libvirt storage pool name
+    :param state: 'on' to auto start the pool, anything else to mark the
+                  pool not to be started when the host boots
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.pool_set_autostart <pool> <on | off>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.setAutostart(1 if state == 'on' else 0))
+    finally:
+        conn.close()
