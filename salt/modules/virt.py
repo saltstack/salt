@@ -3088,3 +3088,28 @@ def pool_delete(name, fast=True, **kwargs):
         return not bool(pool.delete(flags))
     finally:
         conn.close()
+
+
+def pool_refresh(name, **kwargs):
+    '''
+    Refresh a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_refresh default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.refresh())
+    finally:
+        conn.close()
