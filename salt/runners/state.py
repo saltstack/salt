@@ -24,7 +24,7 @@ def pause(jid, state_id=None, duration=None):
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.pause'](jid, state_id, duration)
 
-set_pause = salt.utils.functools.alias_function(pause, 'pause')
+set_pause = salt.utils.functools.alias_function(pause, 'set_pause')
 
 
 def resume(jid, state_id=None):
