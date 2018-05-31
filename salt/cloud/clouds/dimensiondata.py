@@ -248,7 +248,13 @@ def create(vm_):
         'ex_description': vm_['description'],
         'ex_network_domain': network_domain,
         'ex_vlan': vlan,
-        'ex_is_started': vm_['is_started']
+        'ex_is_started': vm_['is_started'],
+        'ex_ipv4_gateway': vm_['ipv4_gateway'],                     
+        'ex_primary_dns': vm_['primary_dns'],
+        'ex_secondary_dns': vm_['secondary_dns'],
+        'ex_memory_gb': vm_['memory_gb'],
+        'ex_cpu_specification': vm_['cpu_specification'],
+        'ex_primary_dns': vm_['primary_dns']
     }
 
     event_data = _to_event_data(kwargs)
