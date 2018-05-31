@@ -4,6 +4,7 @@ import textwrap
 import subprocess
 import socket
 import inspect
+import io
 
 # Service manager imports
 import sys
@@ -26,6 +27,13 @@ from tests.support.helpers import (
     with_system_user,
 )
 import salt.utils.win_runas
+import salt.ext.six
+
+try:
+    import win32api
+    CODE_DIR = win32api.GetLongPathName(CODE_DIR)
+except ImportError:
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -180,6 +188,8 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
 def service_class_factory(cls_name, name, target=default_target, display_name='', description='', run_in_foreground=False):
     frm = inspect.stack()[1]
     mod = inspect.getmodule(frm[0])
+    if salt.ext.six.PY2:
+        cls_name = cls_name.encode()
     return type(
         cls_name,
         (_ServiceManager, object),
@@ -198,7 +208,6 @@ test_service = service_class_factory('test_service', 'test service')
 
 
 SERVICE_SOURCE = '''
-# -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import logging
 logger = logging.getLogger()
@@ -209,9 +218,9 @@ import salt.utils.win_runas
 import sys
 import yaml
 
-OUTPUT=r'{}'
-USERNAME='{}'
-PASSWORD='{}'
+OUTPUT = {}
+USERNAME = '{}'
+PASSWORD = '{}'
 
 
 def target(service, *args, **kwargs):
@@ -511,8 +520,8 @@ class RunAsTest(ModuleCase):
         if os.path.exists(RUNAS_OUT):
             os.remove(RUNAS_OUT)
         assert not os.path.exists(RUNAS_OUT)
-        runaspy = SERVICE_SOURCE.format(RUNAS_OUT, username, PASSWORD)
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, PASSWORD)
+        with io.open(RUNAS_PATH, 'w', encoding='utf-8') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -532,8 +541,8 @@ class RunAsTest(ModuleCase):
         if os.path.exists(RUNAS_OUT):
             os.remove(RUNAS_OUT)
         assert not os.path.exists(RUNAS_OUT)
-        runaspy = SERVICE_SOURCE.format(RUNAS_OUT, username, '')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, '')
+        with io.open(RUNAS_PATH, 'w', encoding='utf-8') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -553,8 +562,8 @@ class RunAsTest(ModuleCase):
         if os.path.exists(RUNAS_OUT):
             os.remove(RUNAS_OUT)
         assert not os.path.exists(RUNAS_OUT)
-        runaspy = SERVICE_SOURCE.format(RUNAS_OUT, username, PASSWORD)
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, PASSWORD)
+        with io.open(RUNAS_PATH, 'w', encoding='utf-8') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -574,8 +583,8 @@ class RunAsTest(ModuleCase):
         if os.path.exists(RUNAS_OUT):
             os.remove(RUNAS_OUT)
         assert not os.path.exists(RUNAS_OUT)
-        runaspy = SERVICE_SOURCE.format(RUNAS_OUT, username, '')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, '')
+        with io.open(RUNAS_PATH, 'w', encoding='utf-8') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -593,8 +602,8 @@ class RunAsTest(ModuleCase):
         if os.path.exists(RUNAS_OUT):
             os.remove(RUNAS_OUT)
         assert not os.path.exists(RUNAS_OUT)
-        runaspy = SERVICE_SOURCE.format(RUNAS_OUT, 'SYSTEM', '')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), 'SYSTEM', '')
+        with io.open(RUNAS_PATH, 'w', encoding='utf-8') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
