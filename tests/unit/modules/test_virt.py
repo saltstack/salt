@@ -884,3 +884,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_libvirt.libvirtError("Pool not found")  # pylint: disable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
+
+    def test_pool_list_volumes(self):
+        '''
+        Test virt.pool_list_volumes
+        '''
+        names = ['volume1', 'volume2']
+        mock_pool = MagicMock()
+        # pylint: disable=no-member
+        mock_pool.listVolumes.return_value = names
+        self.mock_conn.storagePoolLookupByName.return_value = mock_pool
+        # pylint: enable=no-member
+        self.assertEqual(names, virt.pool_list_volumes('default'))
