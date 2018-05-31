@@ -29,7 +29,7 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 from ctypes.util import find_library
 # pylint: enable=E0611
 
@@ -368,7 +368,7 @@ class DownloadWindowsDlls(Command):
         if LooseVersion(pip.__version__) < LooseVersion('10.0'):
             from pip.utils.logging import indent_log
         else:
-            from pip._internal.utils.logging import indent_log
+            from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()
         url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
@@ -405,7 +405,7 @@ class DownloadWindowsDlls(Command):
                                 if IS_PY3:
                                     while True:
                                         chunk = req.read(4096)
-                                        if len(chunk) == 0:
+                                        if len(chunk) == 0:  # pylint: disable=len-as-condition
                                             break
                                         wfh.write(chunk)
                                         wfh.flush()
