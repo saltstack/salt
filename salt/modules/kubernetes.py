@@ -277,7 +277,7 @@ def nodes(**kwargs):
     cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_node()
+        api_response = api_instance.list_node(**{'label_selector': kwargs.get('label_selector', '')})
 
         return [k8s_node['metadata']['name'] for k8s_node in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -296,12 +296,12 @@ def node(name, **kwargs):
 
     CLI Examples::
 
-        salt '*' kubernetes.node name='minikube'
+        salt '*' kubernetes.node name='minikube' label_selector='io.kompose.service=nginx'
     '''
     cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_node()
+        api_response = api_instance.list_node(**{'label_selector': kwargs.get('label_selector', '')})
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -433,12 +433,12 @@ def deployments(namespace='default', **kwargs):
     CLI Examples::
 
         salt '*' kubernetes.deployments
-        salt '*' kubernetes.deployments namespace=default
+        salt '*' kubernetes.deployments namespace=default label_selector='environment=production'
     '''
     cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
-        api_response = api_instance.list_namespaced_deployment(namespace)
+        api_response = api_instance.list_namespaced_deployment(namespace, **{'label_selector': kwargs.get('label_selector', '')})
 
         return [dep['metadata']['name'] for dep in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -461,12 +461,12 @@ def services(namespace='default', **kwargs):
     CLI Examples::
 
         salt '*' kubernetes.services
-        salt '*' kubernetes.services namespace=default
+        salt '*' kubernetes.services namespace=default label_selector='environment=production'
     '''
     cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_namespaced_service(namespace)
+        api_response = api_instance.list_namespaced_service(namespace, **{'label_selector': kwargs.get('label_selector', '')})
 
         return [srv['metadata']['name'] for srv in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -489,12 +489,12 @@ def pods(namespace='default', **kwargs):
     CLI Examples::
 
         salt '*' kubernetes.pods
-        salt '*' kubernetes.pods namespace=default
+        salt '*' kubernetes.pods namespace=default label_selector='io.kompose.service=tutor-environment-server'
     '''
     cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_namespaced_pod(namespace)
+        api_response = api_instance.list_namespaced_pod(namespace, **{'label_selector': kwargs.get('label_selector', '')})
 
         return [pod['metadata']['name'] for pod in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
