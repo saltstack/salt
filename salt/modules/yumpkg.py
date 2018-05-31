@@ -1772,7 +1772,7 @@ def upgrade(name=None,
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
     .. versionchanged:: Fluorine
-        Added obsoletes and minimal arguments
+        Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
 
@@ -1867,9 +1867,9 @@ def upgrade(name=None,
         .. versionadded:: Fluorine
 
     obsoletes : True
-        Controls wether dnf/yum should take obsoletes into account and remove them.
-        If set to False yum will use update instead of upgrade
-        and dnf will be run with --obsoletes=False
+        Controls wether yum/dnf should take obsoletes into account and remove them.
+        If set to ``False`` yum will use ``update`` instead of ``upgrade``
+        and dnf will be run with ``--obsoletes=False``
 
         .. code-block:: bash
 
@@ -1962,15 +1962,16 @@ def update(name=None,
             obsoletes=False,
             **kwargs):
     '''
-    Uses "upgrade" but defaults to obsoletes=False
-    Introduced to mirror expected CLI usage of yum update
-    For options see "upgrade"
+    .. versionadded:: Fluorine
+
+    Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
+    ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.See
+    :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for further
+    documentation.
 
     .. code-block:: bash
 
         salt '*' pkg.update
-
-    .. versionadded:: Fluorine
     '''
     return upgrade(name, pkgs, refresh, skip_verify, normalize, minimal, obsoletes, **kwargs)
 
