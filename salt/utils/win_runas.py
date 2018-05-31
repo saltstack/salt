@@ -12,6 +12,7 @@ import logging
 import psutil
 
 try:
+    import win32api
     import win32con
     import win32process
     import win32security
@@ -158,12 +159,10 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
 
     win32profile.UnloadUserProfile(user_token, handle_reg)
 
-    # TODO: verify all handles are closed properly
-    # salt.win.kernel32.CloseHandle(handle_reg)
     salt.win.kernel32.CloseHandle(hProcess)
-    # salt.win.kernel32.CloseHandle(user_token)
+    win32api.CloseHandle(user_token)
     if impersonation_token:
         win32security.RevertToSelf()
-    # salt.win.kernel32.CloseHandle(impersonation_token)
+    win32api.CloseHandle(impersonation_token)
 
     return ret

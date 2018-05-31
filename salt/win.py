@@ -32,11 +32,11 @@ import ntsecuritycon
 # Set up logging
 log = logging.getLogger(__name__)
 
-ntdll = ctypes.WinDLL(b'ntdll')
-secur32 = ctypes.WinDLL(b'secur32')
-kernel32 = ctypes.WinDLL(b'kernel32', use_last_error=True)
-advapi32 = ctypes.WinDLL(b'advapi32', use_last_error=True)
-userenv = ctypes.WinDLL(b'userenv', use_last_error=True)
+ntdll = ctypes.WinDLL('ntdll')
+secur32 = ctypes.WinDLL('secur32')
+kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
+userenv = ctypes.WinDLL('userenv', use_last_error=True)
 
 SYSTEM_SID = "S-1-5-18"
 LOCAL_SRV_SID = "S-1-5-19"
@@ -319,7 +319,7 @@ class TOKEN_SOURCE(ctypes.Structure):
 LPTOKEN_SOURCE = ctypes.POINTER(TOKEN_SOURCE)
 py_source_context = TOKEN_SOURCE(b"PYTHON  ")
 py_origin_name = __name__.encode()
-py_logon_process_name = b"{}-{}".format(py_origin_name, os.getpid())
+py_logon_process_name = "{}-{}".format(py_origin_name, os.getpid())
 SIZE_T = ctypes.c_size_t
 
 
