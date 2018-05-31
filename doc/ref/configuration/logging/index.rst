@@ -9,7 +9,7 @@ issues you might find along the way.
 
 If you want to get some more information on the nitty-gritty of salt's logging
 system, please head over to the :ref:`logging development
-document<logging-internals>`, if all you're after is salt's logging
+document <logging-internals>`, if all you're after is salt's logging
 configurations, please continue reading.
 
 
@@ -25,10 +25,9 @@ example, setting ``log_level: error`` will log statements at ``error``,
 ``quiet`` level.
 
 Most of the logging levels are defined by default in Python's logging library
-and can be found in the official `Python documentation
-<https://docs.python.org/library/logging.html#levels>`_.  Salt uses some more
-levels in addition to the standard levels.  All levels available in salt are
-shown in the table below.
+and can be found in the official :ref:`Python documentation <python:levels>`.
+Salt uses some more levels in addition to the standard levels.  All levels
+available in salt are shown in the table below.
 
 .. note::
 
@@ -80,7 +79,7 @@ format for remote addresses is:
     <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
 
 Where ``log-facility`` is the symbolic name of a syslog facility as defined in
-the :py:obj:`SysLogHandler documentation
+the :py:meth:`SysLogHandler documentation
 <logging.handlers.SysLogHandler.encodePriority>`. It defaults to ``LOG_USER``.
 
 Default: Dependent of the binary being executed, for example, for
