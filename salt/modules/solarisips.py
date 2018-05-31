@@ -301,7 +301,7 @@ def version(*names, **kwargs):
     if names:
         cmd = ['/bin/pkg', 'list', '-Hv']
         cmd.extend(names)
-        lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+        lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
         ret = {}
         for line in lines:
             ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
@@ -310,9 +310,9 @@ def version(*names, **kwargs):
     return ''
 
 
-def latest_version(name, **kwargs):
+def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository.
+    The available version of packages in the repository.
     In case of multiple matches, it returns list of all matched packages.
     Accepts full or partial FMRI.
     Please use pkg.latest_version as pkg.available_version is being deprecated.
@@ -323,11 +323,25 @@ def latest_version(name, **kwargs):
 
         salt '*' pkg.latest_version pkg://solaris/entire
     '''
-    cmd = ['/bin/pkg', 'list', '-Hnv', name]
+
+    if len(names) == 0:
+        return ''
+
+    cmd = ['/bin/pkg', 'list', '-Hnv']
+    cmd.extend(names)
     lines = __salt__['cmd.run_stdout'](cmd).splitlines()
     ret = {}
     for line in lines:
         ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
+
+    installed = version(*names)
+
+    for name in ret:
+        if not name in installed:
+            continue
+        if ret[name] == installed[name]:
+            ret[name] = ''
+
     if ret:
         return ret
     return ''
