@@ -21,7 +21,7 @@ try:
     from jnpr.junos.utils.sw import SW
     from jnpr.junos.device import Device
     from jnpr.junos.device import Device
-    import jxmlease
+    import jxmlease  # pylint: disable=unused-import
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
