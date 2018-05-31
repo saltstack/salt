@@ -1965,9 +1965,9 @@ def update(name=None,
     .. versionadded:: Fluorine
 
     Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
-    ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.See
-    :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for further
-    documentation.
+    ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
+    See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
+    further documentation.
 
     .. code-block:: bash
 
