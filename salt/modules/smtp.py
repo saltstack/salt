@@ -82,8 +82,8 @@ def send_msg(recipient,
              use_ssl='True',
              username=None,
              password=None,
-             attachments=None,
-             profile=None):
+             profile=None,
+             attachments=None):
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 

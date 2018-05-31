@@ -32,8 +32,8 @@ def send_msg(name,
              subject,
              sender=None,
              profile=None,
-             attachments=None,
-             use_ssl='True'):
+             use_ssl='True',
+             attachments=None):
     '''
     Send a message via SMTP
 
