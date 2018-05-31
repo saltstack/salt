@@ -172,7 +172,8 @@ def init(
         start=True,
         disk='default',
         saltenv='base',
-        enable_vnc=False):
+        enable_vnc=False,
+        seed_cmd='seed.apply'):
     '''
     This routine is used to create a new virtual machine. This routines takes
     a number of options to determine what the newly created virtual machine
@@ -217,6 +218,9 @@ def init(
 
     saltenv
         The Salt environment to use
+
+    seed_cmd
+        The command to use if 'seed=True' (default: 'seed.apply').
     '''
     __jid_event__.fire_event({'message': 'Searching for hosts'}, 'progress')
     data = query(host, quiet=True)
@@ -273,6 +277,7 @@ def init(
                     install,
                     pub_key,
                     priv_key,
+                    seed_cmd,
                     enable_vnc,
                 ],
                 timeout=600)
