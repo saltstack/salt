@@ -24,6 +24,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.decorators import depends
 
 __virtualname__ = 'system'
 
@@ -608,3 +609,60 @@ def get_computer_name():
         salt '*' network.get_hostname
     '''
     return __salt__['network.get_hostname']()
+
+
+def _is_nilrt_family():
+    '''
+    Determine whether the minion is running on NI Linux RT
+    '''
+    return __grains__.get('os_family') == 'NILinuxRT'
+
+
+NILRT_REBOOT_WITNESS_PATH = '/var/volatile/tmp/salt/reboot_witnessed'
+
+
+@depends('_is_nilrt_family')
+def set_reboot_required_witnessed():
+    '''
+    This function is used to remember that an event indicating that a reboot is
+    required was witnessed. This function writes to a temporary filesystem so
+    the event gets cleared upon reboot.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    .. code-block:: bash
+
+        salt '*' system.set_reboot_required_witnessed
+    '''
+    errcode = -1
+    dir_path = os.path.dirname(NILRT_REBOOT_WITNESS_PATH)
+    if not os.path.exists(dir_path):
+        try:
+            os.makedirs(dir_path)
+        except OSError as ex:
+            raise SaltInvocationError('Error creating {0} (-{1}): {2}'
+                                      .format(dir_path, ex.errno, ex.strerror))
+
+        rdict = __salt__['cmd.run_all']('touch {0}'.format(NILRT_REBOOT_WITNESS_PATH))
+        errcode = rdict['retcode']
+
+    return errcode == 0
+
+
+@depends('_is_nilrt_family')
+def get_reboot_required_witnessed():
+    '''
+    Determine if at any time during the current boot session the salt minion
+    witnessed an event indicating that a reboot is required.
+
+    Returns:
+        bool: ``True`` if the a reboot request was witnessed, ``False`` otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_reboot_required_witnessed
+    '''
+    return os.path.exists(NILRT_REBOOT_WITNESS_PATH)

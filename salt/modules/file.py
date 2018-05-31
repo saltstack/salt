@@ -14,8 +14,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import difflib
 import errno
-import fileinput
 import fnmatch
+import io
 import itertools
 import logging
 import operator
@@ -48,13 +48,13 @@ except ImportError:
 # Import salt libs
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.data
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.itertools
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -2535,10 +2535,16 @@ def blockreplace(path,
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
 
-    if not __utils__['files.is_text'](path):
-        raise SaltInvocationError(
-            'Cannot perform string replacements on a binary file: {0}'
-            .format(path)
+    try:
+        file_encoding = __utils__['files.get_encoding'](path)
+    except CommandExecutionError:
+        file_encoding = None
+
+    if __utils__['files.is_binary'](path):
+        if not file_encoding:
+            raise SaltInvocationError(
+                'Cannot perform string replacements on a binary file: {0}'
+                .format(path)
         )
 
     if append_newline is None and not content.endswith((os.linesep, '\n')):
@@ -2593,18 +2599,9 @@ def blockreplace(path,
     # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
-    #
-    # We could also use salt.utils.filebuffer.BufferedReader
     try:
-        fi_file = fileinput.input(
-            path,
-            inplace=False,
-            backup=False,
-            bufsize=1,
-            mode='rb')
-
+        fi_file = io.open(path, mode='r', encoding=file_encoding, newline='')
         for line in fi_file:
-            line = salt.utils.stringutils.to_unicode(line)
             write_line_to_new_file = True
 
             if linesep is None:
@@ -2709,7 +2706,7 @@ def blockreplace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_bytes(line))
+                    fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
             finally:
                 fh_.close()
 
@@ -4982,7 +4979,7 @@ def get_diff(file1,
         )
 
     args = []
-    for idx, filename in enumerate(files):
+    for filename in files:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5011,7 +5008,8 @@ def get_diff(file1,
                         *salt.utils.data.decode(args)
                     )
                 )
-    return ret
+        return ret
+    return ''
 
 
 def manage_file(name,
@@ -5132,7 +5130,7 @@ def manage_file(name,
 
     .. code-block:: bash
 
-        salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
+        salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' '' base ''
 
     .. versionchanged:: 2014.7.0
         ``follow_symlinks`` option added
@@ -5330,12 +5328,12 @@ def manage_file(name,
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
         if sfn:
             __clean_tmp(sfn)

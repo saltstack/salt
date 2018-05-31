@@ -5,6 +5,16 @@ Salt Release Notes - Codename Fluorine
 ======================================
 
 
+Grains Dictionary Passed into Custom Grains
+-------------------------------------------
+
+Starting in this release, if a custom grains function accepts a variable named
+``grains``, the Grains dictionary of the already compiled grains will be passed
+in.  Because of the non-deterministic order that grains are rendered in, the
+only grains that can be relied upon to be passed in are ``core.py`` grains,
+since those are compiled first.
+
+
 "Virtual Package" Support Dropped for APT
 -----------------------------------------
 
@@ -434,7 +444,7 @@ The ``vault`` utils module had the following changes:
   Please see the :mod:`vault execution module <salt.modules.vault>` documentation for
   details on the new configuration schema.
 
-=======
+=====================
 SaltSSH major updates
 =====================
 
@@ -470,3 +480,58 @@ It is also possible to use several alternative versions of Salt. You can for ins
 a minimal tarball using runners and include that. But this is only possible, when such specific
 Salt version is also available on the Master machine, although does not need to be directly
 installed together with the older Python interpreter.
+
+
+========================
+Salt-Cloud major updates
+========================
+
+
+Dependency Deprecations
+=======================
+
+Salt-Cloud has been updated to use the ``pypsexec`` Python library instead of the
+``winexe`` executable. Both ``winexe`` and ``pypsexec`` run remote commands
+against Windows OSes. Since ``winexe`` is not packaged for every system, it has
+been deprecated in favor of ``pypsexec``.
+
+Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
+This changes was made because ``impacket`` is not compatible with Python 3.
+
+
+====================
+State Module Changes
+====================
+
+states.saltmod
+--------------
+The 'test' option now defaults to None. A value of True or False set here is
+passed to the state being run and can be used to override a ``test:True`` option
+set in the minion's config file. In previous releases the minion's config option
+would take precedence and it would be impossible to run an orchestration on a
+minion with test mode set to True in the config file.
+
+If a minion is not in permanent test mode due to the config file and the 'test'
+argument here is left as None then a value of ``test=True`` on the command-line is
+passed correctly to the minion to run an orchestration in test mode. At present
+it is not possible to pass ``test=False`` on the command-line to override a
+minion in permanent test mode and so the ``test:False`` option must still be set
+in the orchestration file.
+
+states.event
+--------------
+The :ref:`event.send <salt.states.event.send>` state does not know the results of 
+the sent event, so returns changed every state run.  It can now be set to 
+return changed or unchanged.
+
+============================
+LDAP External Authentication
+============================
+
+freeipa 'groupattribute' support
+--------------------------------
+Previously, if Salt was using external authentication against a freeipa LDAP system
+it could only search for users via the 'accountattributename' field. This release
+add an additional search using the 'groupattribute' field as well. The original
+'accountattributename' search is done first then the 'groupattribute' allowing for
+backward compatibility with previous Salt releases.

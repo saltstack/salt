@@ -862,15 +862,6 @@ SwapTotal:       4789244 kB'''
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
-    def _run_dns_test(self, resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows',
-                          MagicMock(return_value=False)):
-            with patch.dict(core.__opts__, {'ipv6': False}):
-                with patch.object(salt.utils.dns, 'parse_resolv',
-                                  MagicMock(return_value=resolv_mock)):
-                    get_dns = core.dns()
-                    self.assertEqual(get_dns, ret)
-
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
@@ -892,3 +883,21 @@ SwapTotal:       4789244 kB'''
             self.assertIn('fqdns', fqdns)
             self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+
+    def test_core_virtual(self):
+        '''
+        test virtual grain with cmd virt-what
+        '''
+        virt = 'kvm'
+        with patch.object(salt.utils.platform, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils.path, 'which',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'cmd.run_all':
+                                                MagicMock(return_value={'pid': 78,
+                                                                        'retcode': 0,
+                                                                        'stderr': '',
+                                                                        'stdout': virt})}):
+                    osdata = {'kernel': 'test', }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret['virtual'], virt)
