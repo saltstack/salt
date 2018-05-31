@@ -1090,7 +1090,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1259,7 +1259,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]

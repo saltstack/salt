@@ -36,7 +36,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
@@ -225,7 +224,7 @@ class Client(object):
         '''
         ret = []
 
-        path = self._check_proto(sdecode(path))
+        path = self._check_proto(salt.utils.data.decode(path))
         # We want to make sure files start with this *directory*, use
         # '/' explicitly because the master (that's generating the
         # list of files) only runs on POSIX
@@ -238,7 +237,7 @@ class Client(object):
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
-            fn_ = sdecode(fn_)
+            fn_ = salt.utils.data.decode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
@@ -261,7 +260,7 @@ class Client(object):
 
             dest = salt.utils.path.join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
-                fn_ = sdecode(fn_)
+                fn_ = salt.utils.data.decode(fn_)
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
@@ -904,7 +903,7 @@ class LocalClient(Client):
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
-                    ret.append(sdecode(relpath))
+                    ret.append(salt.utils.data.decode(relpath))
         return ret
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
@@ -921,7 +920,7 @@ class LocalClient(Client):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(sdecode(os.path.relpath(root, path)))
+                    ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def dir_list(self, saltenv='base', prefix=''):
@@ -935,7 +934,7 @@ class LocalClient(Client):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
-                ret.append(sdecode(os.path.relpath(root, path)))
+                ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def __get_file_path(self, path, saltenv='base'):
@@ -1390,14 +1389,12 @@ class RemoteClient(Client):
         '''
         Return the metadata derived from the master_tops system
         '''
-        salt.utils.versions.warn_until(
-            'Magnesium',
-            'The _ext_nodes master function has '
-            'been renamed to _master_tops. To ensure '
-            'compatibility when using older Salt masters '
-            'we continue to pass the function as _ext_nodes.'
+        log.debug(
+            'The _ext_nodes master function has been renamed to _master_tops. '
+            'To ensure compatibility when using older Salt masters we will '
+            'continue to invoke the function as _ext_nodes until the '
+            'Magnesium release.'
         )
-
         # TODO: Change back to _master_tops
         # for Magnesium release
         load = {'cmd': '_ext_nodes',

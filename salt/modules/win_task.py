@@ -96,6 +96,7 @@ TASK_TRIGGER_SESSION_STATE_CHANGE = 11
 duration = {'Immediately': 'PT0M',
             'Indefinitely': 'PT0M',
             'Do not wait': 'PT0M',
+            '15 seconds': 'PT15S',
             '30 seconds': 'PT30S',
             '1 minute': 'PT1M',
             '5 minutes': 'PT5M',
@@ -1381,10 +1382,16 @@ def info(name, location='\\'):
             trigger['end_date'] = end_date
             trigger['end_time'] = end_time
         trigger['enabled'] = triggerObj.Enabled
-        if triggerObj.RandomDelay == '':
-            trigger['random_delay'] = False
-        else:
-            trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
+        if hasattr(triggerObj, 'RandomDelay'):
+            if triggerObj.RandomDelay:
+                trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
+            else:
+                trigger['random_delay'] = False
+        if hasattr(triggerObj, 'Delay'):
+            if triggerObj.Delay:
+                trigger['delay'] = _reverse_lookup(duration, triggerObj.Delay)
+            else:
+                trigger['delay'] = False
         triggers.append(trigger)
 
     properties['settings'] = settings
@@ -1623,6 +1630,7 @@ def add_trigger(name=None,
                 repeat_duration=None,
                 repeat_stop_at_duration_end=False,
                 execution_time_limit=None,
+                delay=None,
                 **kwargs):
     r'''
 
@@ -1687,9 +1695,9 @@ def add_trigger(name=None,
     :param str random_delay: The delay time that is randomly added to the start
     time of the trigger. Valid values are:
     - 30 seconds
-    = 1 minute
+    - 1 minute
     - 30 minutes
-    = 1 hour
+    - 1 hour
     - 8 hours
     - 1 day
 
@@ -1724,6 +1732,16 @@ def add_trigger(name=None,
     - 12 hours
     - 1 day
     - 3 days (default)
+
+    :param str delay: The time the trigger waits after its activation to start the task.
+    Valid values are:
+    - 15 seconds
+    - 30 seconds
+    - 1 minute
+    - 30 minutes
+    - 1 hour
+    - 8 hours
+    - 1 day
 
     **kwargs**
 
@@ -1976,6 +1994,8 @@ def add_trigger(name=None,
     # Settings
     trigger.StartBoundary = start_boundary
     # Advanced Settings
+    if delay:
+        trigger.Delay = _lookup_first(duration, delay)
     if random_delay:
         trigger.RandomDelay = _lookup_first(duration, random_delay)
     if repeat_interval:

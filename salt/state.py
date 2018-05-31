@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
@@ -49,7 +50,6 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
@@ -261,11 +261,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
@@ -596,7 +606,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -2050,8 +2060,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
