@@ -28,6 +28,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.powershell
 import salt.utils.timed_subprocess
+import salt.utils.win_dacl
 import salt.grains.extra
 import salt.ext.six as six
 from salt.utils import vt
@@ -477,10 +478,18 @@ def _run(cmd,
 
             env_runas = dict((sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas))
             env_runas.update(env)
+
             # Fix platforms like Solaris that don't set a USER env var in the
             # user's default environment as obtained above.
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
+
+            # Fix some corner cases where shelling out to get the user's
+            # environment returns the wrong home directory.
+            runas_home = os.path.expanduser('~{0}'.format(runas))
+            if env_runas.get('HOME') != runas_home:
+                env_runas['HOME'] = runas_home
+
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
@@ -2071,11 +2080,14 @@ def script(source,
             )
         kwargs.pop('__env__')
 
+    win_cwd = False
     if salt.utils.is_windows() and runas and cwd is None:
+        # Create a temp working directory
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
-        __salt__['win_dacl.add_ace'](
-            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
-            'FOLDER&SUBFOLDERS&FILES')
+        win_cwd = True
+        salt.utils.win_dacl.set_permissions(obj_name=cwd,
+                                            principal=runas,
+                                            permissions='full_control')
 
     path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
@@ -2089,10 +2101,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2101,10 +2113,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2134,10 +2146,10 @@ def script(source,
                bg=bg,
                password=password,
                **kwargs)
-    if salt.utils.is_windows() and runas:
+    _cleanup_tempfile(path)
+    # If a temp working directory was created (Windows), let's remove that
+    if win_cwd:
         _cleanup_tempfile(cwd)
-    else:
-        _cleanup_tempfile(path)
     return ret
 
 

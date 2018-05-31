@@ -184,24 +184,19 @@ def _check_pkg_version_format(pkg):
     return ret
 
 
-def _check_if_installed(prefix, state_pkg_name, version_spec,
-                        ignore_installed, force_reinstall,
-                        upgrade, user, cwd, bin_env, env_vars):
+def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
+                        force_reinstall, upgrade, user, cwd, bin_env, env_vars,
+                        **kwargs):
     # result: None means the command failed to run
     # result: True means the package is installed
     # result: False means the package is not installed
     ret = {'result': False, 'comment': None}
 
     # Check if the requested package is already installed.
-    try:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd,
-                                        env_vars=env_vars)
-        prefix_realname = _find_key(prefix, pip_list)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(state_pkg_name, err)
-        return ret
+    pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                    user=user, cwd=cwd,
+                                    env_vars=env_vars, **kwargs)
+    prefix_realname = _find_key(prefix, pip_list)
 
     # If the package was already installed, check
     # the ignore_installed and force_reinstall flags
@@ -313,7 +308,6 @@ def installed(name,
               install_options=None,
               global_options=None,
               user=None,
-              no_chown=False,
               cwd=None,
               pre_releases=False,
               cert=None,
@@ -326,7 +320,8 @@ def installed(name,
               trusted_host=None,
               no_cache_dir=False,
               cache_dir=None,
-              no_binary=None):
+              no_binary=None,
+              **kwargs):
     '''
     Make sure the package is installed
 
@@ -447,10 +442,6 @@ def installed(name,
 
     no_install
         Download and unpack all packages, but don't actually install them
-
-    no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file
 
     no_cache_dir:
         Disable the cache.
@@ -594,6 +585,12 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
+    if 'no_chown' in kwargs:
+        salt.utils.warn_until(
+            'Flourine',
+            'The no_chown argument has been deprecated and is no longer used. '
+            'Its functionality was removed in Boron.')
+        kwargs.pop('no_chown')
 
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -619,11 +616,16 @@ def installed(name,
     ret = {'name': ';'.join(pkgs), 'result': None,
            'comment': '', 'changes': {}}
 
+    try:
+        cur_version = __salt__['pip.version'](bin_env)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = None
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        return ret
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
@@ -637,7 +639,6 @@ def installed(name,
     if no_use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
@@ -650,7 +651,6 @@ def installed(name,
     # Check that the pip binary supports the 'no_binary' option
     if no_binary:
         min_version = '7.0.0'
-        cur_version = __salt__['pip.version'](bin_env)
         too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             ret['result'] = False
@@ -723,7 +723,8 @@ def installed(name,
                 version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
-                                          upgrade, user, cwd, bin_env, env_vars)
+                                          upgrade, user, cwd, bin_env, env_vars,
+                                          **kwargs)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -803,7 +804,6 @@ def installed(name,
         install_options=install_options,
         global_options=global_options,
         user=user,
-        no_chown=no_chown,
         cwd=cwd,
         pre_releases=pre_releases,
         cert=cert,
@@ -815,7 +815,8 @@ def installed(name,
         env_vars=env_vars,
         use_vt=use_vt,
         trusted_host=trusted_host,
-        no_cache_dir=no_cache_dir
+        no_cache_dir=no_cache_dir,
+        **kwargs
     )
 
     if pip_install_call and pip_install_call.get('retcode', 1) == 0:
@@ -871,7 +872,8 @@ def installed(name,
                 if prefix:
                     pipsearch = __salt__['pip.list'](prefix, bin_env,
                                                      user=user, cwd=cwd,
-                                                     env_vars=env_vars)
+                                                     env_vars=env_vars,
+                                                     **kwargs)
 
                     # If we didn't find the package in the system after
                     # installing it report it
