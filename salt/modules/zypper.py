@@ -853,7 +853,7 @@ def _get_configured_repos():
     '''
 
     repos_cfg = configparser.ConfigParser()
-    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS)])
+    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS) if fname.endswith(".repo")])
 
     return repos_cfg
 

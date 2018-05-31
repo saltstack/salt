@@ -47,6 +47,7 @@ from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
+MAX_FILENAME_LENGTH = 255
 
 
 def get_file_client(opts, pillar=False):
@@ -831,6 +832,9 @@ class Client(object):
         else:
             file_name = url_data.path
 
+        if len(file_name) > MAX_FILENAME_LENGTH:
+            file_name = salt.utils.hashutils.sha256_digest(file_name)
+
         return salt.utils.path.join(
             cachedir,
             'extrn_files',
@@ -1396,14 +1400,12 @@ class RemoteClient(Client):
         '''
         Return the metadata derived from the master_tops system
         '''
-        salt.utils.versions.warn_until(
-            'Magnesium',
-            'The _ext_nodes master function has '
-            'been renamed to _master_tops. To ensure '
-            'compatibility when using older Salt masters '
-            'we continue to pass the function as _ext_nodes.'
+        log.debug(
+            'The _ext_nodes master function has been renamed to _master_tops. '
+            'To ensure compatibility when using older Salt masters we will '
+            'continue to invoke the function as _ext_nodes until the '
+            'Magnesium release.'
         )
-
         # TODO: Change back to _master_tops
         # for Magnesium release
         load = {'cmd': '_ext_nodes',
