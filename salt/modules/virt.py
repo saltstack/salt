@@ -3141,3 +3141,28 @@ def pool_set_autostart(name, state='on', **kwargs):
         return not bool(pool.setAutostart(1 if state == 'on' else 0))
     finally:
         conn.close()
+
+
+def pool_list_volumes(name, **kwargs):
+    '''
+    List the volumes contained in a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.pool_list_volumes <pool>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return pool.listVolumes()
+    finally:
+        conn.close()
