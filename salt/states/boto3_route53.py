@@ -702,7 +702,10 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         if ResourceRecords:
             ResourceRecordSet['ResourceRecords'] = ResourceRecords
         for u in updatable:
-            ResourceRecordSet.update({u: locals().get(u)}) if locals().get(u) else None
+            if locals().get(u) or (locals().get(u) == 0):
+                ResourceRecordSet.update({u: locals().get(u)})
+            else:
+                log.debug('Not updating ResourceRecordSet with local value: %s', locals().get(u))
 
         ChangeBatch = {
             'Changes': [
