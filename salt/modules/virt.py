@@ -104,6 +104,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
@@ -182,7 +183,7 @@ def __get_conn(**kwargs):
     if not conn_str:
         conn_str = __salt__['config.get']('virt.connect', None)
         if conn_str is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Sodium',
                 '\'virt.connect\' configuration property has been deprecated in favor '
                 'of \'virt:connection:uri\'. \'virt.connect\' will stop being used in '
@@ -191,7 +192,7 @@ def __get_conn(**kwargs):
         else:
             conn_str = __salt__['config.get']('libvirt:connection', None)
             if conn_str is not None:
-                salt.utils.warn_until(
+                salt.utils.versions.warn_until(
                     'Sodium',
                     '\'libvirt.connection\' configuration property has been deprecated in favor '
                     'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
@@ -202,7 +203,7 @@ def __get_conn(**kwargs):
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', None)
     if hypervisor is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             '\'libvirt.hypervisor\' configuration property has been deprecated. '
             'Rather use the \'virt:connection:uri\' to properly define the libvirt '
@@ -211,7 +212,7 @@ def __get_conn(**kwargs):
         )
 
     if hypervisor == 'esxi' and conn_str is None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             'esxi hypervisor default with no default connection URI detected, '
             'please set \'virt:connection:uri\' to \'esx\' for keep the legacy '
@@ -323,7 +324,7 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     '''
     nics = {}
-    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
     for node in doc.getElementsByTagName('devices'):
         i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
@@ -365,7 +366,7 @@ def _get_graphics(dom):
            'listen': 'None',
            'port': 'None',
            'type': 'None'}
-    xml = dom.getXMLDesc(0)
+    xml = dom.XMLDesc(0)
     ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName('domain'):
@@ -381,7 +382,7 @@ def _get_disks(dom):
     Get domain disks from a libvirt domain object.
     '''
     disks = {}
-    doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -455,7 +456,7 @@ def _get_migrate_command():
     '''
     tunnel = __salt__['config.option']('virt.tunnel')
     if tunnel:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             '\'virt.tunnel\' has been deprecated in favor of '
             '\'virt:tunnel\'. \'virt.tunnel\' will stop '
@@ -655,7 +656,7 @@ def _get_images_dir():
     '''
     img_dir = __salt__['config.option']('virt.images')
     if img_dir:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             '\'virt.images\' has been deprecated in favor of '
             '\'virt:images\'. \'virt.images\' will stop '
@@ -873,7 +874,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     )
 
     if config_data is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             '\'virt.nic\' has been deprecated in favor of \'virt:nic\'. '
             '\'virt.nic\' will stop being used in {version}.'
@@ -1619,7 +1620,7 @@ def start(name, **kwargs):
         salt '*' virt.start <domain>
     '''
     conn = __get_conn(**kwargs)
-    ret = _get_domain(conn, name).create == 0
+    ret = _get_domain(conn, name).create() == 0
     conn.close()
     return ret
 
@@ -1787,7 +1788,7 @@ def define_vol_xml_str(xml, **kwargs):
     '''
     poolname = __salt__['config.get']('libvirt:storagepool', None)
     if poolname is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             '\'libvirt:storagepool\' has been deprecated in favor of '
             '\'virt:storagepool\'. \'libvirt:storagepool\' will stop '
@@ -2265,7 +2266,7 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         Extract the disk devices names from the domain XML definition
         '''
-        doc = minidom.parse(_StringIO(dom.getXMLDesc(0)))
+        doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
         disks = []
         for elem in doc.getElementsByTagName('disk'):
             targets = elem.getElementsByTagName('target')

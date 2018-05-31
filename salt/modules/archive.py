@@ -410,9 +410,9 @@ def list_(name,
                 item.sort()
 
         if verbose:
-            ret = {'dirs': sorted(dirs),
-                   'files': sorted(files),
-                   'links': sorted(links)}
+            ret = {'dirs': sorted(salt.utils.data.decode_list(dirs)),
+                   'files': sorted(salt.utils.data.decode_list(files)),
+                   'links': sorted(salt.utils.data.decode_list(links))}
             ret['top_level_dirs'] = [x for x in ret['dirs']
                                      if x.count('/') == 1]
             ret['top_level_files'] = [x for x in ret['files']

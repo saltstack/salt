@@ -52,8 +52,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
     def test_no_match(self):
-        config = [{'users': {'gareth': {'time': {'end': '5pm',
-                                                 'start': '3pm'}}}}
+        config = [{'users': {'gareth': {'time_range': {'end': '09-22-2017 5pm',
+                                                       'start': '09-22-2017 3pm'}}}}
                   ]
 
         ret = wtmp.validate(config)
@@ -64,6 +64,41 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = wtmp.beacon(config)
             m_open.assert_called_with(wtmp.WTMP, 'rb')
             self.assertEqual(ret, [])
+
+    def test_invalid_users(self):
+        config = [{'users': ['gareth']}]
+
+        ret = wtmp.validate(config)
+
+        self.assertEqual(ret, (False, 'User configuration for wtmp beacon must be a dictionary.'))
+
+    def test_invalid_groups(self):
+        config = [{'groups': ['docker']}]
+
+        ret = wtmp.validate(config)
+
+        self.assertEqual(ret, (False, 'Group configuration for wtmp beacon must be a dictionary.'))
+
+    def test_default_invalid_time_range(self):
+        config = [{'defaults': {'time_range': {'start': '3pm'}}}]
+
+        ret = wtmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for wtmp beacon must contain start & end options.'))
+
+    def test_users_invalid_time_range(self):
+        config = [{'users': {'gareth': {'time_range': {'start': '3pm'}}}}]
+
+        ret = wtmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for wtmp beacon must contain start & end options.'))
+
+    def test_groups_invalid_time_range(self):
+        config = [{'groups': {'docker': {'time_range': {'start': '3pm'}}}}]
+
+        ret = wtmp.validate(config)
+
+        self.assertEqual(ret, (False, 'The time_range parameter for wtmp beacon must contain start & end options.'))
 
     def test_match(self):
         with patch('salt.utils.files.fopen',
@@ -98,8 +133,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value=1506121200)):
                 with patch('struct.unpack',
                            MagicMock(return_value=pack)):
-                    config = [{'users': {'gareth': {'time': {'end': '5pm',
-                                                             'start': '3pm'}}}}
+                    config = [{'users': {'gareth': {'time': {'end': '09-22-2017 5pm',
+                                                             'start': '09-22-2017 3pm'}}}}
                               ]
 
                     ret = wtmp.validate(config)
@@ -119,3 +154,46 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret = wtmp.beacon(config)
                     self.assertEqual(ret, _expected)
+
+    def test_match_group(self):
+
+        for groupadd in ('salt.modules.aix_group',
+                         'salt.modules.mac_group',
+                         'salt.modules.pw_group',
+                         'salt.modules.solaris_group',
+                         'salt.modules.win_groupadd'):
+            mock_group_info = {'passwd': 'x',
+                               'gid': 100,
+                               'name': 'users',
+                               'members': ['gareth']}
+
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=raw)):
+                with patch('time.time',
+                           MagicMock(return_value=1506121200)):
+                    with patch('struct.unpack',
+                               MagicMock(return_value=pack)):
+                        with patch('{0}.info'.format(groupadd),
+                                   new=MagicMock(return_value=mock_group_info)):
+                            config = [{'group': {'users': {'time': {'end': '09-22-2017 5pm',
+                                                                    'start': '09-22-2017 3pm'}}}}
+                                      ]
+
+                            ret = wtmp.validate(config)
+
+                            self.assertEqual(ret,
+                                             (True, 'Valid beacon configuration'))
+
+                            _expected = [{'PID': 6216,
+                                          'line': 'pts/14',
+                                          'session': 0,
+                                          'time': 0,
+                                          'exit_status': 0,
+                                          'inittab': 's/14',
+                                          'type': 7,
+                                          'addr': 1506101523,
+                                          'hostname': '::1',
+                                          'user': 'gareth'}]
+
+                            ret = wtmp.beacon(config)
+                            self.assertEqual(ret, _expected)
