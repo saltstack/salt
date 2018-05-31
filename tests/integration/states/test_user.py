@@ -44,12 +44,6 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     user_name = 'salt_test'
     user_home = '/var/lib/salt_test'
 
-    def setUp(self):
-        if salt.utils.platform.is_darwin():
-            #on mac we need to add user, because there is
-            #no creationtime for nobody user.
-            add_user = self.run_function('user.add', [USER], gid=GID)
-
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
         self.assertSaltTrueReturn(ret)
