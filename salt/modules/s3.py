@@ -81,7 +81,8 @@ def __virtual__():
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,
            service_url=None, verify_ssl=None, kms_keyid=None, location=None,
-           role_arn=None, path_style=None, https_enable=None):
+           role_arn=None, path_style=None, https_enable=None, headers=None,
+           full_headers=False):
     '''
     Delete a bucket, or delete an object from a bucket.
 
@@ -93,6 +94,10 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
 
         salt myminion s3.delete mybucket remoteobject
     '''
+
+    if not headers:
+        headers = {}
+
     key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
@@ -117,13 +122,16 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                  location=location,
                                  role_arn=role_arn,
                                  path_style=path_style,
-                                 https_enable=https_enable)
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
 def get(bucket='', path='', return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
         verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
-        path_style=None, https_enable=None):
+        path_style=None, https_enable=None, headers=None,
+        full_headers=False):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
@@ -175,6 +183,10 @@ def get(bucket='', path='', return_bin=False, action=None,
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
+
+    if not headers:
+        headers = {}
+
     key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
@@ -201,12 +213,14 @@ def get(bucket='', path='', return_bin=False, action=None,
                                  location=location,
                                  role_arn=role_arn,
                                  path_style=path_style,
-                                 https_enable=https_enable)
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
 def head(bucket, path='', key=None, keyid=None, service_url=None,
          verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
-         path_style=None, https_enable=None):
+         path_style=None, https_enable=None, headers=None, full_headers=False):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
@@ -217,6 +231,10 @@ def head(bucket, path='', key=None, keyid=None, service_url=None,
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     '''
+
+    if not headers:
+        headers = {}
+
     key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
@@ -241,13 +259,15 @@ def head(bucket, path='', key=None, keyid=None, service_url=None,
                                  full_headers=True,
                                  role_arn=role_arn,
                                  path_style=path_style,
-                                 https_enable=https_enable)
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
         key=None, keyid=None, service_url=None, verify_ssl=None,
         kms_keyid=None, location=None, role_arn=None, path_style=None,
-        https_enable=None):
+        https_enable=None, headers=None, full_headers=False):
     '''
     Create a new bucket, or upload an object to a bucket.
 
@@ -263,6 +283,10 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
+
+    if not headers:
+        headers = {}
+
     key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
@@ -289,7 +313,9 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
                                  location=location,
                                  role_arn=role_arn,
                                  path_style=path_style,
-                                 https_enable=https_enable)
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
 def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable):
