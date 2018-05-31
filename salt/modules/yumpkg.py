@@ -92,6 +92,7 @@ def _strip_headers(output, *args):
     if not args:
         args_lc = ('installed packages',
                    'available packages',
+                   'available upgrades',
                    'updated packages',
                    'upgraded packages')
     else:
@@ -1009,11 +1010,14 @@ def list_downloaded():
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     .. versionadded:: 2015.8.1
 
     Return the information of the named package(s), installed on the system.
+
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
 
     CLI example:
 
@@ -1021,19 +1025,24 @@ def info_installed(*names):
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in pkg_nfo.items():
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in _nfo.items():
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
+                else:
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
             else:
-                t_nfo[key] = value
-
-        ret[pkg_name] = t_nfo
-
+                ret.setdefault(pkg_name, []).append(t_nfo)
     return ret
 
 
@@ -1355,7 +1364,7 @@ def install(name=None,
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, saltenv=saltenv, normalize=normalize
+            name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1653,7 +1662,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install' if pkg_type is not 'advisory' else 'update')
+            cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,
@@ -1739,6 +1748,8 @@ def upgrade(name=None,
             refresh=True,
             skip_verify=False,
             normalize=True,
+            minimal=False,
+            obsoletes=True,
             **kwargs):
     '''
     Run a full system upgrade (a ``yum upgrade`` or ``dnf upgrade``), or
@@ -1760,7 +1771,8 @@ def upgrade(name=None,
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    Run a full system upgrade, a yum upgrade
+    .. versionchanged:: Fluorine
+        Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
 
@@ -1844,6 +1856,27 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
+    minimal : False
+        Use upgrade-minimal instead of upgrade (e.g., ``yum upgrade-minimal``)
+        Goes to the 'newest' package match which fixes a problem that affects your system.
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade minimal=True
+
+        .. versionadded:: Fluorine
+
+    obsoletes : True
+        Controls wether yum/dnf should take obsoletes into account and remove them.
+        If set to ``False`` yum will use ``update`` instead of ``upgrade``
+        and dnf will be run with ``--obsoletes=False``
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade obsoletes=False
+
+        .. versionadded:: Fluorine
+
     setopt
         A comma-separated or Python list of key=value options. This list will
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
@@ -1891,7 +1924,17 @@ def upgrade(name=None,
     cmd.extend(options)
     if skip_verify:
         cmd.append('--nogpgcheck')
-    cmd.append('upgrade')
+    if obsoletes:
+        cmd.append('upgrade' if not minimal else 'upgrade-minimal')
+    else:
+        # do not force the removal of obsolete packages
+        if _yum() == 'dnf':
+            # for dnf we can just disable obsoletes
+            cmd.append('--obsoletes=False')
+            cmd.append('upgrade' if not minimal else 'upgrade-minimal')
+        else:
+            # for yum we have to use update instead of upgrade
+            cmd.append('update' if not minimal else 'update-minimal')
     cmd.extend(targets)
 
     result = __salt__['cmd.run_all'](cmd,
@@ -1908,6 +1951,29 @@ def upgrade(name=None,
         )
 
     return ret
+
+
+def update(name=None,
+            pkgs=None,
+            refresh=True,
+            skip_verify=False,
+            normalize=True,
+            minimal=False,
+            obsoletes=False,
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
+    ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
+    See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
+    further documentation.
+
+    .. code-block:: bash
+
+        salt '*' pkg.update
+    '''
+    return upgrade(name, pkgs, refresh, skip_verify, normalize, minimal, obsoletes, **kwargs)
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
@@ -1957,7 +2023,24 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and not pkg_params[target]:
+            targets.append(target)
+        elif target in old and pkg_params[target] in old[target].split(','):
+            arch = ''
+            pkgname = target
+            try:
+                namepart, archpart = target.rsplit('.', 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in salt.utils.pkg.rpm.ARCHES:
+                    arch = '.' + archpart
+                    pkgname = namepart
+            targets.append('{0}-{1}{2}'.format(pkgname, pkg_params[target], arch))
     if not targets:
         return {}
 

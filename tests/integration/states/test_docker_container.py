@@ -16,7 +16,7 @@ from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
 from tests.support.paths import FILES, TMP
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
@@ -31,24 +31,6 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
-
-
-def with_temp_dir(func):
-    '''
-    Generate a temp directory for a test
-    '''
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        tempdir = tempfile.mkdtemp(dir=TMP)
-        try:
-            return func(self, tempdir, *args, **kwargs)
-        finally:
-            try:
-                salt.utils.files.rm_rf(tempdir)
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:
-                    raise
-    return wrapper
 
 
 def container_name(func):
@@ -126,7 +108,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         log.debug('ret = %s', ret)
         return ret
 
-    @with_temp_dir
+    @with_tempdir()
     @container_name
     def test_running_with_no_predefined_volume(self, name, bind_dir_host):
         '''
@@ -493,7 +475,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -506,7 +487,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -540,7 +520,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltFalseReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -558,7 +537,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('docker_container.absent',
             name=name,
             force=True,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -571,6 +549,21 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             ret['comment'],
             'Forcibly removed container \'{0}\''.format(name)
         )
+
+    @container_name
+    def test_running_image_name(self, name):
+        '''
+        Ensure that we create the container using the image name instead of ID
+        '''
+        ret = self.run_state(
+            'docker_container.running',
+            name=name,
+            image=self.image,
+            shutdown_timeout=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_function('docker.inspect_container', [name])
+        self.assertEqual(ret['Config']['Image'], self.image)
 
     @container_name
     def test_env_with_running_container(self, name):

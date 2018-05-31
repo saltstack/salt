@@ -75,7 +75,7 @@ set -l salt_programs_select salt salt-cp
 for program in $salt_programs_select
 	complete -c $program     -f -s G -l grain                -d "Instead of using shell globs to evaluate the target use a grain value to identify targets, the syntax for the target is the grain key followed by a globexpression: \"os:Arch*\""
 	complete -c $program     -f      -l grain-pcre           -d "Instead of using shell globs to evaluate the target use a grain value to identify targets, the syntax for the target is the grain key followed by a pcre regular expression: \"os:Arch.*\""
-	complete -c $program     -f -s L -l list                 -d "Instead of using shell globs to evaluate the target servers, take a comma or space delimited list of servers."
+	complete -c $program     -f -s L -l list                 -d "Instead of using shell globs to evaluate the target servers, take a comma or whitespace delimited list of servers."
 	complete -c $program     -f -s N -l nodegroup            -d "Instead of using shell globs to evaluate the target use one of the predefined nodegroups to identify a list of targets."
 	complete -c $program     -f -s E -l pcre                 -d "Instead of using shell globs to evaluate the target servers, use pcre regular expressions"
 	complete -c $program     -f -s R -l range                -d "Instead of using shell globs to evaluate the target use a range expression to identify targets. Range expressions look like %cluster"

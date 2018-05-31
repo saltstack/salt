@@ -55,12 +55,16 @@ import salt.log.setup
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['pytest_catchlog', 'tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
 
 log = logging.getLogger('salt.testsuite')
+
+# Reset logging root handlers
+for handler in logging.root.handlers:
+    logging.root.removeHandler(handler)
 
 
 def pytest_tempdir_basename():
@@ -98,6 +102,14 @@ def pytest_addoption(parser):
         help='Run salt-ssh tests. These tests will spin up a temporary '
              'SSH server on your machine. In certain environments, this '
              'may be insecure! Default: False'
+    )
+    test_selection_group.addoption(
+        '--proxy',
+        '--proxy-tests',
+        dest='proxy',
+        action='store_true',
+        default=False,
+        help='Run proxy tests'
     )
     test_selection_group.addoption(
         '--run-destructive',
@@ -197,25 +209,6 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
-    # Configure the console logger based on the catch_log settings.
-    # Most importantly, shutdown Salt's null, store and temporary logging queue handlers
-    catch_log = config.pluginmanager.getplugin('_catch_log')
-    cli_logging_handler = catch_log.log_cli_handler
-    # Add the pytest_catchlog CLI log handler to the logging root
-    logging.root.addHandler(cli_logging_handler)
-    cli_level = cli_logging_handler.level
-    cli_level = config._catchlog_log_cli_level
-    cli_format = cli_logging_handler.formatter._fmt
-    cli_date_format = cli_logging_handler.formatter.datefmt
-    # Setup the console logger which shuts down the null and the temporary queue handlers
-    salt.log.setup_console_logger(
-        log_level=salt.log.setup.LOG_VALUES_TO_LEVELS.get(cli_level, 'error'),
-        log_format=cli_format,
-        date_format=cli_date_format
-    )
-    # Disable the store logging queue handler
-    salt.log.setup.setup_extended_logging({'extension_modules': ''})
-
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
     config.addinivalue_line(
         'markers',
@@ -656,7 +649,8 @@ def test_daemon(request):
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
               ('output_columns', request.config.getoption('--output-columns')),
-              ('ssh', request.config.getoption('--ssh')))
+              ('ssh', request.config.getoption('--ssh')),
+              ('proxy', request.config.getoption('--proxy')))
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 

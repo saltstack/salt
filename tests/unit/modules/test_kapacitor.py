@@ -53,9 +53,9 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
     def test_define_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})
         with patch.dict(kapacitor.__salt__, {'cmd.run_all': cmd_mock}):
-            kapacitor.define_task('taskname', '/tmp/script.tick')
+            kapacitor.define_task('taskname', '/tmp/script.tick', dbrps=['db.rp'])
         cmd_mock.assert_called_once_with('kapacitor define taskname '
-            '-tick /tmp/script.tick -type stream', env=self.__class__.env)
+            '-tick /tmp/script.tick -type stream -dbrp db.rp', env=self.__class__.env)
 
     def test_enable_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})

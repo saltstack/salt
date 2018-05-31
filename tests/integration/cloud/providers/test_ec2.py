@@ -10,27 +10,27 @@ import yaml
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+import salt.utils.cloud
 import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import expectedFailure
+from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
-
-EC2_TIMEOUT = 1000
+HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
+TIMEOUT = 1000
 
 
 class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
-    TIMEOUT = 1000
 
     def _installer_name(self):
         '''
@@ -95,11 +95,13 @@ class EC2Test(ShellCase):
         id_ = config[profile_str][PROVIDER_NAME]['id']
         key = config[profile_str][PROVIDER_NAME]['key']
         key_name = config[profile_str][PROVIDER_NAME]['keyname']
-        sec_group = config[profile_str][PROVIDER_NAME]['securitygroup']
         private_key = config[profile_str][PROVIDER_NAME]['private_key']
         location = config[profile_str][PROVIDER_NAME]['location']
+        group_or_subnet = config[profile_str][PROVIDER_NAME].get('securitygroup', '')
+        if not group_or_subnet:
+            group_or_subnet = config[profile_str][PROVIDER_NAME].get('subnetid', '')
 
-        conf_items = [id_, key, key_name, sec_group, private_key, location]
+        conf_items = [id_, key, key_name, private_key, location, group_or_subnet]
         missing_conf_item = []
 
         for item in conf_items:
@@ -172,19 +174,17 @@ class EC2Test(ShellCase):
         '''
         # create the instance
         rename = INSTANCE_NAME + '-rename'
-        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME),
-                                  timeout=EC2_TIMEOUT)
+        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=EC2_TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=EC2_TIMEOUT)
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=TIMEOUT)
 
         check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
         exp_results = ['        {0}:'.format(rename), '            size:',
@@ -193,13 +193,11 @@ class EC2Test(ShellCase):
             for result in exp_results:
                 self.assertIn(result, check_rename[0])
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=EC2_TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(rename),
-                                timeout=EC2_TIMEOUT)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=TIMEOUT)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -211,13 +209,12 @@ class EC2Test(ShellCase):
         '''
         self._test_instance('ec2-test')
 
-    @expectedFailure
-    def test_win2012r2_winexe(self):
+    def test_win2012r2_psexec(self):
         '''
         Tests creating and deleting a Windows 2012r2instance on EC2 using
-        winexe (classic)
+        psexec (classic)
         '''
-        # TODO: winexe calls hang and the test fails by timing out. The same
+        # TODO: psexec calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
         self.override_profile_config(
             'ec2-win2012r2-test',
@@ -227,8 +224,9 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
         '''
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
@@ -240,13 +238,13 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
-    @expectedFailure
-    def test_win2016_winexe(self):
+    def test_win2016_psexec(self):
         '''
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
         (classic)
@@ -261,8 +259,9 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
         '''
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
@@ -274,10 +273,11 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
     def tearDown(self):
         '''
@@ -288,4 +288,4 @@ class EC2Test(ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=self.TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)

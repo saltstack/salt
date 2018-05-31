@@ -546,7 +546,7 @@ def thin_sum(cachedir, form='sha1'):
     thintar = gen_thin(cachedir)
     code_checksum_path = os.path.join(cachedir, 'thin', 'code-checksum')
     if os.path.isfile(code_checksum_path):
-        with salt.utils.fopen(code_checksum_path, 'r') as fh:
+        with salt.utils.files.fopen(code_checksum_path, 'r') as fh:
             code_checksum = "'{0}'".format(fh.read().strip())
     else:
         code_checksum = "'0'"
@@ -674,6 +674,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         'salt/__init__.py',
         'salt/utils',
         'salt/utils/__init__.py',
+        'salt/utils/atomicfile.py',
         'salt/utils/validate',
         'salt/utils/validate/__init__.py',
         'salt/utils/validate/path.py',

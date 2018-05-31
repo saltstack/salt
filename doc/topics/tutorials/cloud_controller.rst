@@ -245,7 +245,7 @@ The Salt Virt runner will now automatically select a hypervisor to deploy
 the new virtual machine on. Using ``salt://`` assumes that the CentOS virtual
 machine image is located in the root of the :ref:`file-server` on the master.
 When images are cloned (i.e. copied locatlly after retrieval from the file server)
-the destination directory on the hypervisor minion is determined by the ``virt.images``
+the destination directory on the hypervisor minion is determined by the ``virt:images``
 config option; by default this is ``/srv/salt/salt-images/``.
 
 When a VM is initialized using ``virt.init`` the image is copied to the hypervisor
@@ -322,16 +322,17 @@ opened on hypervisors:
 
     :ref:`Opening the Firewall up for Salt <firewall>`
 
-Salt also needs the ``virt.tunnel`` option to be turned on.
+Salt also needs the ``virt:tunnel`` option to be turned on.
 This flag tells Salt to run migrations securely via the libvirt TLS tunnel and to
-use port 16514. Without ``virt.tunnel`` libvirt tries to bind to random ports when
+use port 16514. Without ``virt:tunnel`` libvirt tries to bind to random ports when
 running migrations.
 
-To turn on ``virt.tunnel`` simple apply it to the master config file:
+To turn on ``virt:tunnel`` simply apply it to the master config file:
 
 .. code-block:: yaml
 
-    virt.tunnel: True
+    virt:
+        tunnel: True
 
 Once the master config has been updated, restart the master and send out a call
 to the minions to refresh the pillar to pick up on the change:

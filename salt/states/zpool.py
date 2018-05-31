@@ -8,7 +8,7 @@ States for managing zpools
 :platform:      smartos, illumos, solaris, freebsd, linux
 
 .. versionadded:: 2016.3.0
-.. versionchanged:: Flourine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -63,7 +63,8 @@ States for managing zpools
 .. warning::
 
     The layout will never be updated, it will only be used at time of creation.
-    It's a whole lot of work to figure out if a devices needs to be detached, removed, ... this is best done by the sysadmin on a case per case basis.
+    It's a whole lot of work to figure out if a devices needs to be detached, removed,
+    etc. This is best done by the sysadmin on a case per case basis.
 
     Filesystem properties are also not updated, this should be managed by the zfs state module.
 
@@ -90,7 +91,7 @@ def __virtual__():
     if __grains__['zfs_support']:
         return __virtualname__
     else:
-        return (False, "The zpool state cannot be loaded: zfs not supported")
+        return False, 'The zpool state cannot be loaded: zfs not supported'
 
 
 def _layout_to_vdev(layout, device_dir=None):
@@ -186,7 +187,8 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         The following configuration properties can be toggled in the config parameter.
           - import (true) - try to import the pool before creating it if absent
           - import_dirs (None) - specify additional locations to scan for devices on import (comma-seperated)
-          - device_dir (None, SunOS=/dev/dsk, Linux=/dev) - specify device directory to prepend for none absolute device paths
+          - device_dir (None, SunOS=/dev/dsk, Linux=/dev) - specify device directory to prepend for none
+            absolute device paths
           - force (false) - try to force the import or creation
 
     .. note::
@@ -240,7 +242,8 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
             zpool create mypool mirror /tmp/vdisk0 /tmp/vdisk1 /tmp/vdisk2
 
-        Creating a 3-way mirror! While you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
+        Creating a 3-way mirror! While you probably expect it to be mirror
+        root vdev with 2 devices + a root vdev of 1 device!
 
     '''
     ret = {'name': name,
@@ -248,7 +251,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
            'result': None,
            'comment': ''}
 
-    ## config defaults
+    # config defaults
     default_config = {
         'import': True,
         'import_dirs': None,
@@ -260,12 +263,12 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     elif __grains__['kernel'] == 'Linux':
         default_config['device_dir'] = '/dev'
 
-    ## merge state config
+    # merge state config
     if config:
         default_config.update(config)
     config = default_config
 
-    ## ensure properties are zfs values
+    # ensure properties are zfs values
     if properties:
         properties = __utils__['zfs.from_auto_dict'](properties)
     elif properties is None:
@@ -275,25 +278,21 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     elif filesystem_properties is None:
         filesystem_properties = {}
 
-    ## parse layout
+    # parse layout
     vdevs = _layout_to_vdev(layout, config['device_dir'])
     if vdevs:
         vdevs.insert(0, name)
 
-    ## log configuration
-    log.debug('zpool.present::%s::config - %s',
-        name, config)
-    log.debug('zpool.present::%s::vdevs - %s',
-        name, vdevs)
-    log.debug('zpool.present::%s::properties -  %s',
-        name, properties)
-    log.debug('zpool.present::%s::filesystem_properties -  %s',
-        name, filesystem_properties)
+    # log configuration
+    log.debug('zpool.present::%s::config - %s', name, config)
+    log.debug('zpool.present::%s::vdevs - %s', name, vdevs)
+    log.debug('zpool.present::%s::properties -  %s', name, properties)
+    log.debug('zpool.present::%s::filesystem_properties -  %s', name, filesystem_properties)
 
-    ## ensure the pool is present
+    # ensure the pool is present
     ret['result'] = False
 
-    ## NOTE: don't do anything because this is a test
+    # don't do anything because this is a test
     if __opts__['test']:
         ret['result'] = True
         if __salt__['zpool.exists'](name):
@@ -302,26 +301,27 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
             ret['changes'][name] = 'imported' if config['import'] else 'created'
         ret['comment'] = 'storage pool {0} was {1}'.format(name, ret['changes'][name])
 
-    ## NOTE: update pool
+    # update pool
     elif __salt__['zpool.exists'](name):
         ret['result'] = True
 
-        ## NOTE: fetch current pool properties
+        # fetch current pool properties
         properties_current = __salt__['zpool.get'](name, parsable=True)
 
-        ## NOTE: build list of properties to update
+        # build list of properties to update
         properties_update = []
-        for prop in properties:
-            ## NOTE: skip unexisting properties
-            if prop not in properties_current:
-                log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
-                continue
+        if properties:
+            for prop in properties:
+                # skip unexisting properties
+                if prop not in properties_current:
+                    log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
+                    continue
 
-            ## NOTE: compare current and wanted value
-            if properties_current[prop] != properties[prop]:
-                properties_update.append(prop)
+                # compare current and wanted value
+                if properties_current[prop] != properties[prop]:
+                    properties_update.append(prop)
 
-        ## NOTE: update pool properties
+        # update pool properties
         for prop in properties_update:
             res = __salt__['zpool.set'](name, prop, properties[prop])
 
@@ -338,9 +338,9 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         if ret['result']:
             ret['comment'] = 'properties updated' if ret['changes'] else 'no update needed'
 
-    ## NOTE: import or create the pool (at least try to anyway)
+    # import or create the pool (at least try to anyway)
     else:
-        ## NOTE: import pool
+        # import pool
         if config['import']:
             mod_res = __salt__['zpool.import'](
                 name,
@@ -353,11 +353,11 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                 ret['changes'][name] = 'imported'
                 ret['comment'] = 'storage pool {0} was imported'.format(name)
 
-        ## NOTE: create pool
+        # create pool
         if not ret['result'] and vdevs:
             log.debug('zpool.present::%s::creating', name)
 
-            ## NOTE: execute zpool.create
+            # execute zpool.create
             mod_res = __salt__['zpool.create'](
                 *vdevs,
                 force=config['force'],
@@ -374,7 +374,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
             else:
                 ret['comment'] = 'could not create storage pool {0}'.format(name)
 
-        ## NOTE: give up, we cannot import the pool and we do not have a layout to create it
+        # give up, we cannot import the pool and we do not have a layout to create it
         if not ret['result'] and not vdevs:
             ret['comment'] = 'storage pool {0} was not imported, no (valid) layout specified for creation'.format(name)
 
@@ -398,13 +398,11 @@ def absent(name, export=False, force=False):
            'result': None,
            'comment': ''}
 
-    ## log configuration
-    log.debug('zpool.absent::%s::config::force = %s',
-        name, force)
-    log.debug('zpool.absent::%s::config::export = %s',
-        name, export)
+    # log configuration
+    log.debug('zpool.absent::%s::config::force = %s', name, force)
+    log.debug('zpool.absent::%s::config::export = %s', name, export)
 
-    ## ensure the pool is absent
+    # ensure the pool is absent
     if __salt__['zpool.exists'](name):  # looks like we need to do some work
         mod_res = {}
         ret['result'] = False

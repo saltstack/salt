@@ -60,7 +60,7 @@ def _zfs_pool_data():
         flags=['-H'],
         opts={'-o': 'name,size'},
     )
-    for zpool in __salt__['cmd.run'](zpool_list_cmd).splitlines():
+    for zpool in __salt__['cmd.run'](zpool_list_cmd, ignore_retcode=True).splitlines():
         if 'zpool' not in grains:
             grains['zpool'] = {}
         zpool = zpool.split()

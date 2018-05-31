@@ -177,7 +177,7 @@ class SaltCoverageTestingParser(SaltTestingParser):
             # Update environ so that any subprocess started on tests are also
             # included in the report
             coverage_options['data_suffix'] = True
-            os.environ['COVERAGE_PROCESS_START'] = '1'
+            os.environ['COVERAGE_PROCESS_START'] = ''
             os.environ['COVERAGE_OPTIONS'] = salt.utils.json.dumps(coverage_options)
 
         # Setup coverage
