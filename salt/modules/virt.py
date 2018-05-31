@@ -2792,6 +2792,34 @@ def network_undefine(name, **kwargs):
         conn.close()
 
 
+def network_set_autostart(name, state='on', **kwargs):
+    '''
+    Set the autostart flag on a virtual network so that the network
+    will start with the host system on reboot.
+
+    :param name: virtual network name
+    :param state: 'on' to auto start the network, anything else to mark the
+                  virtual network not to be started when the host boots
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.network_set_autostart <pool> <on | off>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.setAutostart(1 if state == 'on' else 0))
+    finally:
+        conn.close()
+
+
 def pool_define_build(name, **kwargs):
     '''
     Create libvirt pool.
