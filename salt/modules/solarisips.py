@@ -342,9 +342,11 @@ def latest_version(*names, **kwargs):
         if ret[name] == installed[name]:
             ret[name] = ''
 
-    if ret:
-        return ret
-    return ''
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+
+    return ret
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
