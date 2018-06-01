@@ -937,6 +937,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_delete_no_match(self):
+        '''
+        Tests that when calling file.line with ``mode=delete``,
+        with not matching pattern to delete returns False
+        :return:
+        '''
+        file_content = os.linesep.join([
+            'file_roots:',
+            '  base:',
+            '    - /srv/salt',
+            '    - /srv/custom'
+        ])
+        match = 'not matching'
+        for mode in ['delete', 'replace']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    self.assertFalse(filemod.line('foo', content='foo', match=match, mode=mode))
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_modecheck_failure(self):
         '''
         Test for file.line for empty or wrong mode.
@@ -1087,7 +1110,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/sugar'
         ])
         cfg_content = '- /srv/custom'
-        for before_line in ['/srv/salt', '/srv/sa.*t', '/sr.*']:
+        for before_line in ['/srv/salt', '/srv/sa.*t']:
             files_fopen = mock_open(read_data=file_content)
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
@@ -1096,6 +1119,32 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(atomic_opener().write.call_args_list), 1)
                 self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
                                  file_modified)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_assert_exception_pattern(self):
+        '''
+        Test for file.line for exception on insert with too general pattern.
+
+        :return:
+        '''
+        file_content = os.linesep.join([
+            'file_roots:',
+            '  base:',
+            '    - /srv/salt',
+            '    - /srv/sugar'
+        ])
+        cfg_content = '- /srv/custom'
+        for before_line in ['/sr.*']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    with self.assertRaises(CommandExecutionError) as cm:
+                        filemod.line('foo', content=cfg_content, before=before_line, mode='insert')
+                    self.assertEqual(cm.exception.strerror,
+                                     'Found more than expected occurrences in "before" expression')
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1184,7 +1233,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '  base:',
             '    - /srv/salt',
             '    - /srv/sugar',
-            cfg_content
+            '    ' + cfg_content
         ])
         files_fopen = mock_open(read_data=file_content)
         with patch('salt.utils.files.fopen', files_fopen):
@@ -1220,6 +1269,33 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             atomic_opener = mock_open()
             with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
                 filemod.line('foo', content=cfg_content, before='exit 0', mode='ensure')
+            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
+            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
+                             file_modified)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_insert_ensure_before_first_line(self):
+        '''
+        Test for file.line for insertion ensuring the line is before first line
+        :return:
+        '''
+        cfg_content = '#!/bin/bash'
+        file_content = os.linesep.join([
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            cfg_content,
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        files_fopen = mock_open(read_data=file_content)
+        with patch('salt.utils.files.fopen', files_fopen):
+            atomic_opener = mock_open()
+            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
             self.assertEqual(len(atomic_opener().write.call_args_list), 1)
             self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
                              file_modified)
