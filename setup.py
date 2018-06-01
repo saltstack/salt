@@ -405,7 +405,7 @@ class DownloadWindowsDlls(Command):
                                 if IS_PY3:
                                     while True:
                                         chunk = req.read(4096)
-                                        if len(chunk) == 0:  # pylint: disable=len-as-condition
+                                        if len(chunk) == 0:
                                             break
                                         wfh.write(chunk)
                                         wfh.flush()
