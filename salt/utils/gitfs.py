@@ -93,7 +93,7 @@ try:
     import git
     import gitdb
     GITPYTHON_VERSION = _LooseVersion(git.__version__)
-except ImportError:
+except Exception:
     GITPYTHON_VERSION = None
 
 try:
