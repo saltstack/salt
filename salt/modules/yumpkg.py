@@ -315,6 +315,10 @@ def _get_yum_config():
             raise CommandExecutionError(
                 'Could not query yum config: {0}'.format(exc)
             )
+        except yum.Errors.YumBaseError as yum_base_error:
+            raise CommandExecutionError(
+                'Error accessing yum or rpmdb: {0}'.format(yum_base_error)
+            )
     else:
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
