@@ -106,6 +106,7 @@ MOCK_MODULES = [
 
     'tornado',
     'tornado.concurrent',
+    'tornado.escape',
     'tornado.gen',
     'tornado.httpclient',
     'tornado.httpserver',
@@ -137,8 +138,8 @@ MOCK_MODULES = [
     'pymongo',
     'rabbitmq_server',
     'redis',
-    'requests',
-    'requests.exceptions',
+    #'requests',
+    #'requests.exceptions',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
@@ -237,8 +238,7 @@ formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
-        'python2': ('http://docs.python.org/2', None),
-        'python3': ('http://docs.python.org/3', None)
+    'python': ('https://docs.python.org/3', None)
 }
 # <---- Intersphinx Settings -------------------------------------------------
 
@@ -357,9 +357,8 @@ rst_prolog = """\
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
-    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
+    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 

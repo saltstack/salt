@@ -272,8 +272,8 @@ command:
 3.  Fill out the remaining parameters needed for the chosen client.
 
 The ``client`` field is a reference to the main Python classes used in Salt's
-Python API. Read the full :ref:`client interfaces <netapi-clients>`
-documentation, but in short:
+Python API. Read the full :ref:`Client APIs <client-apis>` documentation, but
+in short:
 
 * "local" uses :py:class:`LocalClient <salt.client.LocalClient>` which sends
   commands to Minions. Equivalent to the ``salt`` CLI command.
@@ -289,7 +289,7 @@ documentation, but in short:
 
 Most clients have variants like synchronous or asynchronous execution as well as
 others like batch execution. See the :ref:`full list of client interfaces
-<netapi-clients>`.
+<client-interfaces>`.
 
 Each client requires different arguments and sometimes has different syntax.
 For example, ``LocalClient`` requires the ``tgt`` argument because it forwards
@@ -1203,7 +1203,7 @@ class LowDataAdapter(object):
 
             curl -i localhost:8000
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET / HTTP/1.1
             Host: localhost:8000
@@ -1211,7 +1211,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1255,7 +1255,7 @@ class LowDataAdapter(object):
                 -H "Content-type: application/json" \\
                 -d '[{"client": "local", "tgt": "*", "fun": "test.ping"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1267,7 +1267,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 200
@@ -1315,7 +1315,7 @@ class Minions(LowDataAdapter):
 
             curl -i localhost:8000/minions/ms-3
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /minions/ms-3 HTTP/1.1
             Host: localhost:8000
@@ -1323,7 +1323,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 129005
@@ -1359,8 +1359,8 @@ class Minions(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            :term:`lowstate` data describing Salt commands must be sent in the
-            request body. The ``client`` option will be set to
+            Lowstate data describing Salt commands must be sent in the request
+            body. The ``client`` option will be set to
             :py:meth:`~salt.client.LocalClient.local_async`.
 
         **Example request:**
@@ -1372,7 +1372,7 @@ class Minions(LowDataAdapter):
                 -H "Accept: application/x-yaml" \\
                 -d '[{"tgt": "*", "fun": "status.diskusage"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /minions HTTP/1.1
             Host: localhost:8000
@@ -1383,7 +1383,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 202 Accepted
             Content-Length: 86
@@ -1436,7 +1436,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs HTTP/1.1
             Host: localhost:8000
@@ -1444,7 +1444,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1465,7 +1465,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs/20121130104633606931
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs/20121130104633606931 HTTP/1.1
             Host: localhost:8000
@@ -1473,7 +1473,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1558,7 +1558,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys HTTP/1.1
             Host: localhost:8000
@@ -1566,7 +1566,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1587,7 +1587,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys/jerry
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys/jerry HTTP/1.1
             Host: localhost:8000
@@ -1595,7 +1595,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1672,14 +1672,14 @@ class Keys(LowDataAdapter):
                     -d eauth=pam \
                     -o jerry-salt-keys.tar
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /keys HTTP/1.1
             Host: localhost:8000
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 10240
@@ -1754,7 +1754,7 @@ class Login(LowDataAdapter):
 
             curl -i localhost:8000/login
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /login HTTP/1.1
             Host: localhost:8000
@@ -1762,7 +1762,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: text/html
@@ -1806,7 +1806,7 @@ class Login(LowDataAdapter):
                     "eauth": "auto"
                 }'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1819,7 +1819,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1955,7 +1955,7 @@ class Token(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -2016,8 +2016,8 @@ class Run(LowDataAdapter):
 
         .. http:post:: /run
 
-            An array of :term:`lowstate` data describing Salt commands must be
-            sent in the request body.
+            An array of lowstate data describing Salt commands must be sent in
+            the request body.
 
             :status 200: |200|
             :status 400: |400|
@@ -2054,7 +2054,7 @@ class Run(LowDataAdapter):
                     "token": "<salt eauth token here>"
                 }]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2066,7 +2066,7 @@ class Run(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -2100,7 +2100,7 @@ class Run(LowDataAdapter):
                 -d tgt='*' \\
                 -d fun='test.ping'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2112,7 +2112,7 @@ class Run(LowDataAdapter):
 
         **Example SSH response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
                 return:
                 - silver:
@@ -2212,7 +2212,7 @@ class Events(object):
 
             curl -NsS localhost:8000/events
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
@@ -2224,7 +2224,7 @@ class Events(object):
         clients to only watch for certain tags without having to deserialze the
         JSON object each time.
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Connection: keep-alive
@@ -2410,7 +2410,7 @@ class WebsocketEndpoint(object):
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /ws HTTP/1.1
             Connection: Upgrade
@@ -2423,7 +2423,7 @@ class WebsocketEndpoint(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 101 Switching Protocols
             Upgrade: websocket
@@ -2582,7 +2582,7 @@ class Webhook(object):
                         -d branch="${TRAVIS_BRANCH}" \
                         -d commit="${TRAVIS_COMMIT}"
 
-    .. seealso:: :ref:`events`, :ref:`reactor`
+    .. seealso:: :ref:`events`, :ref:`reactor <reactor>`
     '''
     exposed = True
     tag_base = ['salt', 'netapi', 'hook']
@@ -2626,7 +2626,7 @@ class Webhook(object):
                 -H 'Content-type: application/json' \\
                 -d '{"foo": "Foo!", "bar": "Bar!"}'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /hook HTTP/1.1
             Host: localhost:8000
@@ -2637,7 +2637,7 @@ class Webhook(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 14

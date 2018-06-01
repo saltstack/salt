@@ -4,13 +4,12 @@
 Understanding Jinja
 ===================
 
-`Jinja <http://jinja.pocoo.org/docs/>`_ is the default templating language
-in SLS files.
+`Jinja`_ is the default templating language in SLS files.
+
+.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja in States
 ===============
-
-.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja is evaluated before YAML, which means it is evaluated before the States
 are run.
@@ -176,10 +175,9 @@ Saltstack extends `builtin filters`_ with these custom filters:
 ``strftime``
 ------------
 
-Converts any time related object into a time based string. It requires a
-valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
-:ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-the official Python documentation.
+Converts any time related object into a time based string. It requires valid
+strftime directives. An exhaustive list can be found :ref:`here
+<strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -1805,7 +1803,7 @@ Logs
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- do salt.log.error('testing jinja logging') -%}
 

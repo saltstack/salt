@@ -210,13 +210,13 @@ def load_term_config(filter_name,
         select a source just using the name, instead of specifying a destination_port and protocol.
         Allows the same options as ``source_service``.
 
-    **term_fields
-        Term attributes.
-        To see what fields are supported, please consult the list of supported keywords_.
-        Some platforms have few other optional_ keywords.
+    term_fields
+        Term attributes. To see what fields are supported, please consult the
+        list of supported keywords_. Some platforms have a few other optional_
+        keywords.
 
-            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
-            .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
+        .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
+        .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
         The following fields are accepted (some being platform-specific):
@@ -347,8 +347,10 @@ def load_term_config(filter_name,
         .. code-block:: yaml
 
             source_port:
-                - [1000, 2000]
-                - [3000, 4000]
+                - - 1000
+                  - 2000
+                - - 3000
+                  - 4000
 
         With the configuration above, the user is able to select the 1000-2000 and 3000-4000 source port ranges.
 
@@ -621,11 +623,14 @@ def load_filter_config(filter_name,
           - my-filter:
               terms:
                 - my-term:
-                    source_port: [1234, 1235]
+                    source_port:
+                     - 1234
+                     - 1235
                     action: reject
                 - my-other-term:
                     source_port:
-                      - [5678, 5680]
+                      - - 5678
+                        - 5680
                     protocol: tcp
                     action: accept
     '''
@@ -749,7 +754,7 @@ def load_policy_config(filters=None,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.flw01:
             ----------
@@ -803,7 +808,9 @@ def load_policy_config(filters=None,
           - my-filter:
               terms:
                 - my-term:
-                    source_port: [1234, 1235]
+                    source_port:
+                     - 1234
+                     - 1235
                     protocol:
                       - tcp
                       - udp

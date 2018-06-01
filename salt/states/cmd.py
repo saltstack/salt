@@ -12,7 +12,7 @@ A simple example to execute a command:
 .. code-block:: yaml
 
     # Store the current date in a file
-    date > /tmp/salt-run:
+    'date > /tmp/salt-run':
       cmd.run
 
 Only run if another execution failed, in this case truncate syslog if there is
@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    > /var/log/messages:
+    '> /var/log/messages/:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -37,7 +37,7 @@ touch /tmp/foo if it does not exist:
 
 .. code-block:: yaml
 
-    echo 'foo' | tee /tmp/bar > /tmp/baz:
+    "echo 'foo' | tee /tmp/bar > /tmp/baz":
       cmd.run:
         - creates:
           - /tmp/bar
@@ -55,7 +55,7 @@ In situations like this try the following:
 
     run_installer:
       cmd.run:
-        - name: /tmp/installer.bin  > /dev/null 2>&1
+        - name: /tmp/installer.bin > /dev/null 2>&1
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -471,7 +471,7 @@ def wait(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -608,7 +608,7 @@ def wait_script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -727,7 +727,7 @@ def run(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -997,7 +997,7 @@ def script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 

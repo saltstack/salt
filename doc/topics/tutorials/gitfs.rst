@@ -70,6 +70,7 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
     log when making a connection using SSH, review the libssh2 details listed
@@ -1001,7 +1002,7 @@ If not, then the easiest way to add the key is to su to the user (usually
 ``root``) under which the salt-master runs and attempt to login to the
 server via SSH:
 
-.. code-block:: bash
+.. code-block:: text
 
     $ su -
     Password:

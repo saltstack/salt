@@ -1986,7 +1986,7 @@ def present(name,
 
     template
         If a new repository is initialized, this argument will specify an
-        alternate `template directory`_
+        alternate template directory.
 
         .. versionadded:: 2015.8.0
 
