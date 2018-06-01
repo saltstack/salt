@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Daniel Mizyrycki (mzdaniel@glidelink.net)`
+    :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
 
     tests.integration.cli.custom_module

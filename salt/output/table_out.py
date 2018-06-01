@@ -315,11 +315,11 @@ def output(ret, **kwargs):
         * nested_indent: integer, specify the left alignment.
         * has_header: boolean specifying if header should be displayed. Default: True.
         * row_delimiter: character to separate rows. Default: ``_``.
-        * delim: character to separate columns. Default: `` | ``.
+        * delim: character to separate columns. Default: ``" | "``.
         * justify: text alignment. Default: ``center``.
         * separate_rows: boolean specifying if row separator will be displayed between consecutive rows. Default: True.
-        * prefix: character at the beginning of the row. Default: ``| ``.
-        * suffix: character at the end of the row. Default: `` |``.
+        * prefix: character at the beginning of the row. Default: ``"| "``.
+        * suffix: character at the end of the row. Default: ``" |"``.
         * width: column max width. Default: ``50``.
         * rows_key: display the rows under a specific key.
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).

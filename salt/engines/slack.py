@@ -28,8 +28,9 @@ prefaced with a ``!``.
                     list_commands:
                         cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
-    :configuration: Example configuration using groups
-    .. versionadded: 2017.7.0
+:configuration: Example configuration using groups
+
+    .. code-block:: yaml
 
         engines:
             - slack:
