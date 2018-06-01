@@ -448,21 +448,23 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         ratio of a resource's weight to the total.
 
         Note the following:
-          - You must specify a value for the Weight element for every weighted resource record set.
-          - You can only specify one ResourceRecord per weighted resource record set.
-          - You can't create latency, failover, or geolocation resource record sets that have the
-            same values for the Name and Type elements as weighted resource record sets.
-          - You can create a maximum of 100 weighted resource record sets that have the same values
-            for the Name and Type elements.
-          - For weighted (but not weighted alias) resource record sets, if you set Weight to 0 for a
-            resource record set, Amazon Route 53 never responds to queries with the applicable value
-            for that resource record set.  However, if you set Weight to 0 for all resource record
-            sets that have the same combination of DNS name and type, traffic is routed to all
-            resources with equal probability.  The effect of setting Weight to 0 is different when
-            you associate health checks with weighted resource record sets. For more information,
-            see `Options for Configuring Amazon Route 53 Active-Active and Active-Passive Failover`__
-            in the Amazon Route 53 Developer Guide.
-            .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-configuring-options.html
+
+        - You must specify a value for the Weight element for every weighted resource record set.
+        - You can only specify one ResourceRecord per weighted resource record set.
+        - You can't create latency, failover, or geolocation resource record sets that have the
+          same values for the Name and Type elements as weighted resource record sets.
+        - You can create a maximum of 100 weighted resource record sets that have the same values
+          for the Name and Type elements.
+        - For weighted (but not weighted alias) resource record sets, if you set Weight to 0 for a
+          resource record set, Amazon Route 53 never responds to queries with the applicable value
+          for that resource record set.  However, if you set Weight to 0 for all resource record
+          sets that have the same combination of DNS name and type, traffic is routed to all
+          resources with equal probability.  The effect of setting Weight to 0 is different when
+          you associate health checks with weighted resource record sets. For more information,
+          see `Options for Configuring Amazon Route 53 Active-Active and Active-Passive Failover`__
+          in the Amazon Route 53 Developer Guide.
+
+          .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-configuring-options.html
 
     Region
         Valid for Latency-based resource record sets only.  The Amazon EC2 Region where the resource
@@ -476,6 +478,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         queries from Africa to be routed to a web server with an IP address of 192.0.2.111, create a
         resource record set with a Type of A and a ContinentCode of AF.
 
+        .. code-block:: text
+
             ContinentCode
                 The two-letter code for the continent.
                 Valid values: AF | AN | AS | EU | OC | NA | SA
@@ -488,50 +492,54 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 province in Canada.
 
         Notes
-          - Creating geolocation and geolocation alias resource record sets in private hosted zones
-            is not supported.
-          - If you create separate resource record sets for overlapping geographic regions (for
-            example, one resource record set for a continent and one for a country on the same
-            continent), priority goes to the smallest geographic region. This allows you to route
-            most queries for a continent to one resource and to route queries for a country on that
-            continent to a different resource.
-          - You can't create two geolocation resource record sets that specify the same geographic
-            location.
-          - The value * in the CountryCode element matches all geographic locations that aren't
-            specified in other geolocation resource record sets that have the same values for the
-            Name and Type elements.
-          - Geolocation works by mapping IP addresses to locations.  However, some IP addresses
-            aren't mapped to geographic locations, so even if you create geolocation resource
-            record sets that cover all seven continents, Amazon Route 53 will receive some DNS
-            queries from locations that it can't identify.  We recommend that you create a resource
-            record set for which the value of CountryCode is *, which handles both queries that
-            come from locations for which you haven't created geolocation resource record sets and
-            queries from IP addresses that aren't mapped to a location.  If you don't create a *
-            resource record set, Amazon Route 53 returns a "no answer" response for queries from
-            those locations.
-          - You can't create non-geolocation resource record sets that have the same values for the
-            Name and Type elements as geolocation resource record sets.
+
+        - Creating geolocation and geolocation alias resource record sets in private hosted zones
+          is not supported.
+        - If you create separate resource record sets for overlapping geographic regions (for
+          example, one resource record set for a continent and one for a country on the same
+          continent), priority goes to the smallest geographic region. This allows you to route
+          most queries for a continent to one resource and to route queries for a country on that
+          continent to a different resource.
+        - You can't create two geolocation resource record sets that specify the same geographic
+          location.
+        - The value ``*`` in the CountryCode element matches all geographic locations that aren't
+          specified in other geolocation resource record sets that have the same values for the
+          Name and Type elements.
+        - Geolocation works by mapping IP addresses to locations.  However, some IP addresses
+          aren't mapped to geographic locations, so even if you create geolocation resource
+          record sets that cover all seven continents, Amazon Route 53 will receive some DNS
+          queries from locations that it can't identify.  We recommend that you
+          create a resource record set for which the value of CountryCode is
+          ``*``, which handles both queries that come from locations for which you
+          haven't created geolocation resource record sets and queries from IP
+          addresses that aren't mapped to a location.  If you don't create a ``*``
+          resource record set, Amazon Route 53 returns a "no answer" response
+          for queries from those locations.
+        - You can't create non-geolocation resource record sets that have the same values for the
+          Name and Type elements as geolocation resource record sets.
 
     TTL
         The resource record cache time to live (TTL), in seconds.
         Note the following:
-          - If you're creating an alias resource record set, omit TTL. Amazon Route 53 uses the
-            value of TTL for the alias target.
-          - If you're associating this resource record set with a health check (if you're adding
-            a HealthCheckId element), we recommend that you specify a TTL of 60 seconds or less so
-            clients respond quickly to changes in health status.
-          - All of the resource record sets in a group of weighted, latency, geolocation, or
-            failover resource record sets must have the same value for TTL.
-          - If a group of weighted resource record sets includes one or more weighted alias
-            resource record sets for which the alias target is an ELB load balancer, we recommend
-            that you specify a TTL of 60 seconds for all of the non-alias weighted resource record
-            sets that have the same name and type. Values other than 60 seconds (the TTL for load
-            balancers) will change the effect of the values that you specify for Weight.
+
+        - If you're creating an alias resource record set, omit TTL. Amazon Route 53 uses the
+          value of TTL for the alias target.
+        - If you're associating this resource record set with a health check (if you're adding
+          a HealthCheckId element), we recommend that you specify a TTL of 60 seconds or less so
+          clients respond quickly to changes in health status.
+        - All of the resource record sets in a group of weighted, latency, geolocation, or
+          failover resource record sets must have the same value for TTL.
+        - If a group of weighted resource record sets includes one or more weighted alias
+          resource record sets for which the alias target is an ELB load balancer, we recommend
+          that you specify a TTL of 60 seconds for all of the non-alias weighted resource record
+          sets that have the same name and type. Values other than 60 seconds (the TTL for load
+          balancers) will change the effect of the values that you specify for Weight.
 
     ResourceRecords
         A list, containing one or more values for the resource record.  No single value can exceed
         4,000 characters.  For details on how to format values for different record types, see
         `Supported DNS Resource Record Types`__ in the Amazon Route 53 Developer Guide.
+
         .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html
 
         Note:  You can specify more than one value for all record types except CNAME and SOA.
@@ -559,6 +567,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         in their entirety) would be silly and counterproductive.  If you need this feature, then
         Read The Fine Materials at the `Boto 3 Route 53 page`__ and/or the `AWS Route 53 docs`__
         and suss them for yourself - I sure won't claim to understand them partcularly well.
+
         .. __: http://boto3.readthedocs.io/en/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         .. __: http://docs.aws.amazon.com/Route53/latest/APIReference/API_AliasTarget.html
 

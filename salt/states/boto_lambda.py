@@ -152,15 +152,16 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         to the same VPC.  This is a dict of the form:
 
         .. code-block:: yaml
+
             VpcConfig:
-                SecurityGroupNames:
+              SecurityGroupNames:
                 - mysecgroup1
                 - mysecgroup2
-                SecurityGroupIds:
+              SecurityGroupIds:
                 - sg-abcdef1234
-                SubnetNames:
+              SubnetNames:
                 - mysubnet1
-                SubnetIds:
+              SubnetIds:
                 - subnet-1234abcd
                 - subnet-abcd1234
 
@@ -177,11 +178,14 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     Environment
         The parent object that contains your environment's configuration
         settings.  This is a dictionary of the form:
-        {
-            'Variables': {
-                'VariableName': 'VariableValue'
+
+        .. code-block:: python
+
+            {
+                'Variables': {
+                    'VariableName': 'VariableValue'
+                }
             }
-        }
 
         .. versionadded:: 2017.7.0
 
