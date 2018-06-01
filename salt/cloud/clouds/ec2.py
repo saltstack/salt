@@ -2913,6 +2913,15 @@ def stop(name, call=None):
 
     instance_id = _get_node(name)['instanceId']
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'stopping instance',
+        'salt/cloud/{0}/stopping'.format(name),
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
     result = aws.query(params,
@@ -2936,6 +2945,15 @@ def start(name, call=None):
     log.info('Starting node %s', name)
 
     instance_id = _get_node(name)['instanceId']
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'starting instance',
+        'salt/cloud/{0}/starting'.format(name),
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
