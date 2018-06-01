@@ -2802,9 +2802,9 @@ def create(image,
 
         Example:
 
-        - ``log_opt="syslog-address=tcp://192.168.0.42,syslog-facility=daemon"
-        - ``log_opt="['syslog-address=tcp://192.168.0.42', 'syslog-facility=daemon']"
-        - ``log_opt="{'syslog-address': 'tcp://192.168.0.42', 'syslog-facility: daemon
+        - ``log_opt="syslog-address=tcp://192.168.0.42,syslog-facility=daemon"``
+        - ``log_opt="['syslog-address=tcp://192.168.0.42', 'syslog-facility=daemon']"``
+        - ``log_opt="{'syslog-address': 'tcp://192.168.0.42', 'syslog-facility': 'daemon'}"``
 
     lxc_conf
         Additional LXC configuration parameters to set before starting the
