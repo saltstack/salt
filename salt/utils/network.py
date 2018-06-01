@@ -1783,7 +1783,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), h[1]))
+                    s.connect((candidate_addr.strip('[]'), h[4][1]))
                     s.close()
 
                     resolved = candidate_addr

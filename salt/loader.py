@@ -751,10 +751,13 @@ def grains(opts, force_refresh=False, proxy=None):
             # proxymodule for retrieving information from the connected
             # device.
             log.trace('Loading %s grain', key)
-            if funcs[key].__code__.co_argcount == 1:
-                ret = funcs[key](proxy)
-            else:
-                ret = funcs[key]()
+            parameters = list(funcs[key].__code__.co_varnames)
+            kwargs = {}
+            if 'proxy' in parameters:
+                kwargs['proxy'] = proxy
+            if 'grains' in parameters:
+                kwargs['grains'] = grains_data
+            ret = funcs[key](**kwargs)
         except Exception:
             if salt.utils.platform.is_proxy():
                 log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
