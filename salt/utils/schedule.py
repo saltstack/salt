@@ -81,7 +81,8 @@ class Schedule(object):
                 cleanup=None,
                 proxy=None,
                 standalone=False,
-                new_instance=False):
+                new_instance=False,
+                utils=None):
         '''
         Only create one instance of Schedule
         '''
@@ -91,7 +92,13 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             instance = object.__new__(cls)
-            instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
+            instance.__singleton_init__(opts, functions,
+                                        returners=returners,
+                                        intervals=intervals,
+                                        cleanup=cleanup,
+                                        proxy=proxy,
+                                        standalone=standalone,
+                                        utils=utils)
             if new_instance is True:
                 return instance
             cls.instance = instance
@@ -106,14 +113,23 @@ class Schedule(object):
                  cleanup=None,
                  proxy=None,
                  standalone=False,
-                 new_instance=False):
+                 new_instance=False,
+                 utils=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
+    def __singleton_init__(self, opts,
+                           functions,
+                           returners=None,
+                           intervals=None,
+                           cleanup=None,
+                           proxy=None,
+                           standalone=False,
+                           utils=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.utils = utils or salt.loader.utils(opts)
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
@@ -598,9 +614,9 @@ class Schedule(object):
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts)
+                self.functions = salt.loader.runner(self.opts, utils=self.utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=self.utils)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
@@ -715,6 +731,7 @@ class Schedule(object):
                     for global_key, value in six.iteritems(func_globals):
                         self.functions[mod_name].__globals__[global_key] = value
 
+            self.functions.pack['__context__']['retcode'] = 0
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -766,11 +783,13 @@ class Schedule(object):
                 else:
                     # Send back to master so the job is included in the job list
                     mret = ret.copy()
-                    mret['jid'] = 'req'
-                    if data.get('return_job') == 'nocache':
-                        # overwrite 'req' to signal to master that
-                        # this job shouldn't be stored
-                        mret['jid'] = 'nocache'
+                    # No returners defined, so we're only sending back to the master
+                    if not data_returner and not self.schedule_returner:
+                        mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that
+                            # this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                     load = {'cmd': '_return', 'id': self.opts['id']}
                     for key, value in six.iteritems(mret):
                         load[key] = value
@@ -858,7 +877,7 @@ class Schedule(object):
 
                 data['_next_scheduled_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
-        def _handle_once(job, data, loop_interval):
+        def _handle_once(data, loop_interval):
             '''
             Handle schedule item with once
             '''
@@ -880,7 +899,9 @@ class Schedule(object):
                         data['_error'] = ('Date string could not '
                                           'be parsed: {0}, {1}. '
                                           'Ignoring job {2}.'.format(
-                                              data['once'], once_fmt, job))
+                                              data['once'],
+                                              once_fmt,
+                                              data['name']))
                         log.error(data['_error'])
                         return
                 data['_next_fire_time'] = once
@@ -889,13 +910,13 @@ class Schedule(object):
                 if once < now - loop_interval:
                     data['_continue'] = True
 
-        def _handle_when(job, data, loop_interval):
+        def _handle_when(data, loop_interval):
             '''
             Handle schedule item with when
             '''
             if not _WHEN_SUPPORTED:
                 data['_error'] = ('Missing python-dateutil. '
-                                  'Ignoring job {0}.'.format(job))
+                                  'Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -908,7 +929,7 @@ class Schedule(object):
                                           dict):
                             data['_error'] = ('Pillar item "whens" '
                                               'must be a dict. '
-                                              'Ignoring job {0}.'.format(job))
+                                              'Ignoring job {0}.'.format(data['name']))
                             log.error(data['_error'])
                             return
                         when_ = self.opts['pillar']['whens'][i]
@@ -917,7 +938,7 @@ class Schedule(object):
                         if not isinstance(self.opts['grains']['whens'],
                                           dict):
                             data['_error'] = ('Grain "whens" must be a dict.'
-                                              'Ignoring job {0}.'.format(job))
+                                              'Ignoring job {0}.'.format(data['name']))
                             log.error(data['_error'])
                             return
                         when_ = self.opts['grains']['whens'][i]
@@ -929,7 +950,7 @@ class Schedule(object):
                             when_ = dateutil_parser.parse(when_)
                         except ValueError:
                             data['_error'] = ('Invalid date string {0}. '
-                                              'Ignoring job {1}.'.format(i, job))
+                                              'Ignoring job {1}.'.format(i, data['name']))
                             log.error(data['_error'])
                             return
 
@@ -978,7 +999,7 @@ class Schedule(object):
                         data['when'] in self.opts['pillar']['whens']):
                     if not isinstance(self.opts['pillar']['whens'], dict):
                         data['_error'] = ('Pillar item "whens" must be dict.'
-                                          'Ignoring job {0}.'.format(job))
+                                          'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
                     when = self.opts['pillar']['whens'][data['when']]
@@ -986,7 +1007,7 @@ class Schedule(object):
                       data['when'] in self.opts['grains']['whens']):
                     if not isinstance(self.opts['grains']['whens'], dict):
                         data['_error'] = ('Grain "whens" must be a dict. '
-                                          'Ignoring job {0}.'.format(job))
+                                          'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
                     when = self.opts['grains']['whens'][data['when']]
@@ -998,7 +1019,7 @@ class Schedule(object):
                         when = dateutil_parser.parse(when)
                     except ValueError:
                         data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(job))
+                                          'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
 
@@ -1022,13 +1043,13 @@ class Schedule(object):
                     data['_next_fire_time'] = when
                     data['_run'] = True
 
-        def _handle_cron(job, data, loop_interval):
+        def _handle_cron(data, loop_interval):
             '''
             Handle schedule item with cron
             '''
             if not _CRON_SUPPORTED:
                 data['_error'] = ('Missing python-croniter. '
-                                  'Ignoring job {0}.'.format(job))
+                                  'Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -1040,7 +1061,7 @@ class Schedule(object):
                     data['_next_scheduled_fire_time'] = croniter.croniter(data['cron'], now).get_next(datetime.datetime)
                 except (ValueError, KeyError):
                     data['_error'] = ('Invalid cron string. '
-                                      'Ignoring job {0}.'.format(job))
+                                      'Ignoring job {0}.'.format(data['name']))
                     log.error(data['_error'])
                     return
 
@@ -1108,20 +1129,20 @@ class Schedule(object):
             else:
                 data['run'] = True
 
-        def _handle_skip_during_range(job, data, loop_interval):
+        def _handle_skip_during_range(data, loop_interval):
             '''
             Handle schedule item with skip_explicit
             '''
             if not _RANGE_SUPPORTED:
                 data['_error'] = ('Missing python-dateutil. '
-                                  'Ignoring job {0}.'.format(job))
+                                  'Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
                 return
 
             if not isinstance(data['skip_during_range'], dict):
                 data['_error'] = ('schedule.handle_func: Invalid, range '
                                   'must be specified as a dictionary. '
-                                  'Ignoring job {0}.'.format(job))
+                                  'Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -1133,7 +1154,7 @@ class Schedule(object):
                 except ValueError:
                     data['_error'] = ('Invalid date string for start in '
                                       'skip_during_range. Ignoring '
-                                      'job {0}.'.format(job))
+                                      'job {0}.'.format(data['name']))
                     log.error(data['_error'])
                     return
 
@@ -1143,7 +1164,7 @@ class Schedule(object):
                 except ValueError:
                     data['_error'] = ('Invalid date string for end in '
                                       'skip_during_range. Ignoring '
-                                      'job {0}.'.format(job))
+                                      'job {0}.'.format(data['name']))
                     log.error(data['_error'])
                     return
 
@@ -1175,23 +1196,23 @@ class Schedule(object):
             else:
                 data['_error'] = ('schedule.handle_func: Invalid '
                                   'range, end must be larger than '
-                                  'start. Ignoring job {0}.'.format(job))
+                                  'start. Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
 
-        def _handle_range(job, data):
+        def _handle_range(data):
             '''
             Handle schedule item with skip_explicit
             '''
             if not _RANGE_SUPPORTED:
                 data['_error'] = ('Missing python-dateutil. '
-                                  'Ignoring job {0}'.format(job))
+                                  'Ignoring job {0}'.format(data['name']))
                 log.error(data['_error'])
                 return
 
             if not isinstance(data['range'], dict):
                 data['_error'] = ('schedule.handle_func: Invalid, range '
                                   'must be specified as a dictionary.'
-                                  'Ignoring job {0}.'.format(job))
+                                  'Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -1202,7 +1223,7 @@ class Schedule(object):
                     start = dateutil_parser.parse(start)
                 except ValueError:
                     data['_error'] = ('Invalid date string for start. '
-                                      'Ignoring job {0}.'.format(job))
+                                      'Ignoring job {0}.'.format(data['name']))
                     log.error(data['_error'])
                     return
 
@@ -1211,7 +1232,7 @@ class Schedule(object):
                     end = dateutil_parser.parse(end)
                 except ValueError:
                     data['_error'] = ('Invalid date string for end.'
-                                      ' Ignoring job {0}.'.format(job))
+                                      ' Ignoring job {0}.'.format(data['name']))
                     log.error(data['_error'])
                     return
 
@@ -1235,16 +1256,16 @@ class Schedule(object):
             else:
                 data['_error'] = ('schedule.handle_func: Invalid '
                                   'range, end must be larger '
-                                  'than start. Ignoring job {0}.'.format(job))
+                                  'than start. Ignoring job {0}.'.format(data['name']))
                 log.error(data['_error'])
 
-        def _handle_after(job, data):
+        def _handle_after(data):
             '''
             Handle schedule item with after
             '''
             if not _WHEN_SUPPORTED:
                 data['_error'] = ('Missing python-dateutil. '
-                                  'Ignoring job {0}'.format(job))
+                                  'Ignoring job {0}'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -1264,13 +1285,13 @@ class Schedule(object):
             else:
                 data['run'] = True
 
-        def _handle_until(job, data):
+        def _handle_until(data):
             '''
             Handle schedule item with until
             '''
             if not _WHEN_SUPPORTED:
                 data['_error'] = ('Missing python-dateutil. '
-                                  'Ignoring job {0}'.format(job))
+                                  'Ignoring job {0}'.format(data['name']))
                 log.error(data['_error'])
                 return
 
@@ -1320,10 +1341,15 @@ class Schedule(object):
                     del data[item]
             run = False
 
+            if 'name' in data:
+                job_name = data['name']
+            else:
+                job_name = data['name'] = job
+
             if not isinstance(data, dict):
                 log.error(
                     'Scheduled job "%s" should have a dict value, not %s',
-                    job, type(data)
+                    job_name, type(data)
                 )
                 continue
             if 'function' in data:
@@ -1337,10 +1363,8 @@ class Schedule(object):
             if func not in self.functions:
                 log.info(
                     'Invalid function: %s in scheduled job %s.',
-                    func, job
+                    func, job_name
                 )
-            if 'name' not in data:
-                data['name'] = job
 
             if '_next_fire_time' not in data:
                 data['_next_fire_time'] = None
@@ -1395,11 +1419,11 @@ class Schedule(object):
             if True in [True for item in time_elements if item in data]:
                 _handle_time_elements(data)
             elif 'once' in data:
-                _handle_once(job, data, loop_interval)
+                _handle_once(data, loop_interval)
             elif 'when' in data:
-                _handle_when(job, data, loop_interval)
+                _handle_when(data, loop_interval)
             elif 'cron' in data:
-                _handle_cron(job, data, loop_interval)
+                _handle_cron(data, loop_interval)
             else:
                 continue
 
@@ -1459,7 +1483,7 @@ class Schedule(object):
                 data['_run_on_start'] = False
             elif run:
                 if 'range' in data:
-                    _handle_range(job, data)
+                    _handle_range(data)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1476,7 +1500,7 @@ class Schedule(object):
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:
-                    _handle_skip_during_range(job, data, loop_interval)
+                    _handle_skip_during_range(data, loop_interval)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1500,7 +1524,7 @@ class Schedule(object):
                         func = data['func']
 
                 if 'until' in data:
-                    _handle_until(job, data)
+                    _handle_until(data)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1509,7 +1533,7 @@ class Schedule(object):
                     run = data['run']
 
                 if 'after' in data:
-                    _handle_after(job, data)
+                    _handle_after(data)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1530,7 +1554,7 @@ class Schedule(object):
 
             # Job is disabled, set run to False
             if 'enabled' in data and not data['enabled']:
-                log.debug('Job: %s is disabled', job)
+                log.debug('Job: %s is disabled', job_name)
                 data['_skip_reason'] = 'disabled'
                 run = False
 
@@ -1542,7 +1566,7 @@ class Schedule(object):
             try:
                 # Job is disabled, continue
                 if 'enabled' in data and not data['enabled']:
-                    log.debug('Job: %s is disabled', job)
+                    log.debug('Job: %s is disabled', job_name)
                     data['_skip_reason'] = 'disabled'
                     data['_skipped_time'] = now
                     data['_skipped'] = True
@@ -1550,14 +1574,15 @@ class Schedule(object):
 
                 if 'jid_include' not in data or data['jid_include']:
                     data['jid_include'] = True
-                    log.debug('schedule: This job was scheduled with jid_include, '
-                              'adding to cache (jid_include defaults to True)')
+                    log.debug('schedule: Job %s was scheduled with jid_include, '
+                              'adding to cache (jid_include defaults to True)',
+                              job_name)
                     if 'maxrunning' in data:
-                        log.debug('schedule: This job was scheduled with a max '
-                                  'number of %s', data['maxrunning'])
+                        log.debug('schedule: Job %s was scheduled with a max '
+                                  'number of %s', job_name, data['maxrunning'])
                     else:
                         log.info('schedule: maxrunning parameter was not specified for '
-                                 'job %s, defaulting to 1.', job)
+                                 'job %s, defaulting to 1.', job_name)
                         data['maxrunning'] = 1
 
                 if not self.standalone:
@@ -1569,15 +1594,15 @@ class Schedule(object):
                     run = data['run']
 
                 if run:
-                    log.info('Running scheduled job: %s%s', job, miss_msg)
+                    log.info('Running scheduled job: %s%s', job_name, miss_msg)
                     self._run_job(func, data)
             finally:
                 # Only set _last_run if the job ran
                 if run:
                     data['_last_run'] = now
-                    if '_seconds' in data:
-                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
                     data['_splay'] = None
+                if '_seconds' in data:
+                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
     def _run_job(self, func, data):
         job_dry_run = data.get('dry_run', False)
@@ -1601,6 +1626,8 @@ class Schedule(object):
             self.functions = {}
             returners = self.returners
             self.returners = {}
+            utils = self.utils
+            self.utils = {}
 
         try:
             if multiprocessing_enabled:
@@ -1623,6 +1650,7 @@ class Schedule(object):
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
+                self.utils = utils
 
 
 def clean_proc_dir(opts):

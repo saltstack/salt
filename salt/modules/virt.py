@@ -2,6 +2,71 @@
 '''
 Work with virtual machines managed by libvirt
 
+Connection
+==========
+
+The connection to the virtualization host can be either setup in the minion configuration,
+pillar data or overridden for each individual call.
+
+By default, the libvirt connection URL will be guessed: the first available libvirt
+hypervisor driver will be used. This can be overridden like this:
+
+.. code-block:: yaml
+
+    virt:
+        connection:
+            uri: lxc:///
+
+If the connection requires an authentication like for ESXi, this can be defined in the
+minion pillar data like this:
+
+.. code-block:: yaml
+
+    virt:
+        connection:
+            uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
+            auth:
+                username: user
+                password: secret
+
+Connecting with SSH protocol
+----------------------------
+
+Libvirt can connect to remote hosts using SSH using one of the ``ssh``, ``libssh`` and
+``libssh2`` transports. Note that ``libssh2`` is likely to fail as it doesn't read the
+``known_hosts`` file. Libvirt may also have been built without ``libssh`` or ``libssh2``
+support.
+
+To use the SSH transport, on the minion setup an SSH agent with a key authorized on
+the remote libvirt machine.
+
+Per call connection setup
+-------------------------
+
+All the calls requiring the libvirt connection configuration as mentioned above can
+override this configuration using ``connection``, ``username`` and ``password`` parameters.
+
+This means that the following will list the domains on the local LXC libvirt driver,
+whatever the ``virt:connection`` is.
+
+.. code-block:: bash
+
+    salt 'hypervisor' virt.list_domains connection=lxc:///
+
+The calls not using the libvirt connection setup are:
+
+ - get_profiles
+ - seed_non_shared_migrate
+ - virt_type
+ - is_*hyper
+ - all migration functions
+
+Reference:
+
+ - http://libvirt.org/drvesx.html#uriformat
+ - http://libvirt.org/uri.html#URI_config
+ - http://libvirt.org/auth.html#Auth_client_config
+
 :depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
@@ -22,11 +87,9 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
+from xml.dom import minidom
 import jinja2
 import jinja2.exceptions
-from salt.ext import six
-from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
-from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
@@ -41,8 +104,11 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
+from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +136,40 @@ def __virtual__():
     return 'virt'
 
 
-def __get_conn():
+def __get_request_auth(username, password):
+    '''
+    Get libvirt.openAuth callback with username, password values overriding
+    the configuration ones.
+    '''
+
+    # pylint: disable=unused-argument
+    def __request_auth(credentials, user_data):
+        '''Callback method passed to libvirt.openAuth().
+
+        The credentials argument is a list of credentials that libvirt
+        would like to request. An element of this list is a list containing
+        5 items (4 inputs, 1 output):
+          - the credential type, e.g. libvirt.VIR_CRED_AUTHNAME
+          - a prompt to be displayed to the user
+          - a challenge
+          - a default result for the request
+          - a place to store the actual result for the request
+
+        The user_data argument is currently not set in the openAuth call.
+        '''
+        for credential in credentials:
+            if credential[0] == libvirt.VIR_CRED_AUTHNAME:
+                credential[4] = username if username else \
+                                __salt__['config.get']('virt:connection:auth:username', credential[3])
+            elif credential[0] == libvirt.VIR_CRED_NOECHOPROMPT:
+                credential[4] = password if password else \
+                                __salt__['config.get']('virt:connection:auth:password', credential[3])
+            else:
+                log.info('Unhandled credential type: %s', credential[0])
+        return 0
+
+
+def __get_conn(**kwargs):
     '''
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
@@ -78,115 +177,254 @@ def __get_conn():
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
 
-    def __esxi_uri():
-        '''
-        Connect to an ESXi host with a configuration like so:
+    username = kwargs.get('username', None)
+    password = kwargs.get('password', None)
+    conn_str = kwargs.get('connection', None)
+    if not conn_str:
+        conn_str = __salt__['config.get']('virt.connect', None)
+        if conn_str is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                '\'virt.connect\' configuration property has been deprecated in favor '
+                'of \'virt:connection:uri\'. \'virt.connect\' will stop being used in '
+                '{version}.'
+            )
+        else:
+            conn_str = __salt__['config.get']('libvirt:connection', None)
+            if conn_str is not None:
+                salt.utils.versions.warn_until(
+                    'Sodium',
+                    '\'libvirt.connection\' configuration property has been deprecated in favor '
+                    'of \'virt:connection:uri\'. \'libvirt.connection\' will stop being used in '
+                    '{version}.'
+                )
 
-        .. code-block:: yaml
+        conn_str = __salt__['config.get']('virt:connection:uri', conn_str)
 
-            libvirt:
-              hypervisor: esxi
-              connection: esx01
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', None)
+    if hypervisor is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'libvirt.hypervisor\' configuration property has been deprecated. '
+            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+            'stop being used in {version}.'
+        )
 
-        The connection setting can either be an explicit libvirt URI,
-        or a libvirt URI alias as in this example. No, it cannot be
-        just a hostname.
-
-
-        Example libvirt `/etc/libvirt/libvirt.conf`:
-
-        .. code-block::
-
-            uri_aliases = [
-              "esx01=esx://10.1.1.101/?no_verify=1&auto_answer=1",
-              "esx02=esx://10.1.1.102/?no_verify=1&auto_answer=1",
-            ]
-
-        Reference:
-
-         - http://libvirt.org/drvesx.html#uriformat
-         - http://libvirt.org/uri.html#URI_config
-        '''
-        connection = __salt__['config.get']('libvirt:connection', 'esx')
-        return connection
-
-    def __esxi_auth():
-        '''
-        We rely on that the credentials is provided to libvirt through
-        its built in mechanisms.
-
-        Example libvirt `/etc/libvirt/auth.conf`:
-
-        .. code-block::
-
-            [credentials-myvirt]
-            username=user
-            password=secret
-
-            [auth-esx-10.1.1.101]
-            credentials=myvirt
-
-            [auth-esx-10.1.1.102]
-            credentials=myvirt
-
-        Reference:
-
-          - http://libvirt.org/auth.html#Auth_client_config
-        '''
-        return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
-
-    if 'virt.connect' in __opts__:
-        conn_str = __opts__['virt.connect']
-    else:
-        conn_str = 'qemu:///system'
-
-    conn_func = {
-        'esxi': [libvirt.openAuth, [__esxi_uri(),
-                                    __esxi_auth(),
-                                    0]],
-        'qemu': [libvirt.open, [conn_str]],
-    }
-
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
+    if hypervisor == 'esxi' and conn_str is None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'esxi hypervisor default with no default connection URI detected, '
+            'please set \'virt:connection:uri\' to \'esx\' for keep the legacy '
+            'behavior. Will default to libvirt guess once \'libvirt:hypervisor\' '
+            'configuration is removed in {version}.'
+        )
+        conn_str = 'esx'
 
     try:
-        conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
+        auth_types = [libvirt.VIR_CRED_AUTHNAME,
+                      libvirt.VIR_CRED_NOECHOPROMPT,
+                      libvirt.VIR_CRED_ECHOPROMPT,
+                      libvirt.VIR_CRED_PASSPHRASE,
+                      libvirt.VIR_CRED_EXTERNAL]
+        conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
                 __grains__['fqdn'],
-                conn_func[hypervisor][1][0]
+                conn_str
             )
         )
     return conn
 
 
-def _get_domain(*vms, **kwargs):
+def _get_domain(conn, *vms, **kwargs):
     '''
     Return a domain object for the named VM or return domain object for all VMs.
     '''
     ret = list()
     lookup_vms = list()
-    conn = __get_conn()
 
-    all_vms = list_domains()
+    all_vms = []
+    if kwargs.get('active', True):
+        for id_ in conn.listDomainsID():
+            all_vms.append(conn.lookupByID(id_).name())
+
+    if kwargs.get('inactive', True):
+        for id_ in conn.listDefinedDomains():
+            all_vms.append(id_)
+
     if not all_vms:
         raise CommandExecutionError('No virtual machines found.')
 
     if vms:
-        for vm in vms:
-            if vm not in all_vms:
-                raise CommandExecutionError('The VM "{name}" is not present'.format(name=vm))
+        for name in vms:
+            if name not in all_vms:
+                raise CommandExecutionError('The VM "{name}" is not present'.format(name=name))
             else:
-                lookup_vms.append(vm)
+                lookup_vms.append(name)
     else:
         lookup_vms = list(all_vms)
 
-    for vm in lookup_vms:
-        ret.append(conn.lookupByName(vm))
+    for name in lookup_vms:
+        ret.append(conn.lookupByName(name))
 
     return len(ret) == 1 and not kwargs.get('iterable') and ret[0] or ret
+
+
+def _parse_qemu_img_info(info):
+    '''
+    Parse qemu-img info output into disk infos YAML
+    '''
+    output = []
+    snapshots = False
+    columns = None
+    lines = info.strip().split('\n')
+    for line in lines:
+        if line.startswith('Snapshot list:'):
+            snapshots = True
+            continue
+
+        # If this is a copy-on-write image, then the backing file
+        # represents the base image
+        #
+        # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
+        elif line.startswith('backing file'):
+            matches = re.match(r'.*\(actual path: (.*?)\)', line)
+            if matches:
+                output.append('backing file: {0}'.format(matches.group(1)))
+            continue
+
+        elif snapshots:
+            if line.startswith('ID'):  # Do not parse table headers
+                line = line.replace('VM SIZE', 'VMSIZE')
+                line = line.replace('VM CLOCK', 'TIME VMCLOCK')
+                columns = re.split(r'\s+', line)
+                columns = [c.lower() for c in columns]
+                output.append('snapshots:')
+                continue
+            fields = re.split(r'\s+', line)
+            for i, field in enumerate(fields):
+                sep = ' '
+                if i == 0:
+                    sep = '-'
+                output.append(
+                    '{0} {1}: "{2}"'.format(
+                        sep, columns[i], field
+                    )
+                )
+            continue
+        output.append(line)
+    return '\n'.join(output)
+
+
+def _get_nics(dom):
+    '''
+    Get domain network interfaces from a libvirt domain object.
+    '''
+    nics = {}
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
+        for i_node in i_nodes:
+            nic = {}
+            nic['type'] = i_node.getAttribute('type')
+            for v_node in i_node.getElementsByTagName('*'):
+                if v_node.tagName == 'mac':
+                    nic['mac'] = v_node.getAttribute('address')
+                if v_node.tagName == 'model':
+                    nic['model'] = v_node.getAttribute('type')
+                if v_node.tagName == 'target':
+                    nic['target'] = v_node.getAttribute('dev')
+                # driver, source, and match can all have optional attributes
+                if re.match('(driver|source|address)', v_node.tagName):
+                    temp = {}
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
+                    nic[six.text_type(v_node.tagName)] = temp
+                # virtualport needs to be handled separately, to pick up the
+                # type attribute of the virtualport itself
+                if v_node.tagName == 'virtualport':
+                    temp = {}
+                    temp['type'] = v_node.getAttribute('type')
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
+                    nic['virtualport'] = temp
+            if 'mac' not in nic:
+                continue
+            nics[nic['mac']] = nic
+    return nics
+
+
+def _get_graphics(dom):
+    '''
+    Get domain graphics from a libvirt domain object.
+    '''
+    out = {'autoport': 'None',
+           'keymap': 'None',
+           'listen': 'None',
+           'port': 'None',
+           'type': 'None'}
+    xml = dom.XMLDesc(0)
+    ssock = _StringIO(xml)
+    doc = minidom.parse(ssock)
+    for node in doc.getElementsByTagName('domain'):
+        g_nodes = node.getElementsByTagName('graphics')
+        for g_node in g_nodes:
+            for key, value in g_node.attributes.items():
+                out[key] = value
+    return out
+
+
+def _get_disks(dom):
+    '''
+    Get domain disks from a libvirt domain object.
+    '''
+    disks = {}
+    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
+    for elem in doc.getElementsByTagName('disk'):
+        sources = elem.getElementsByTagName('source')
+        targets = elem.getElementsByTagName('target')
+        if sources:
+            source = sources[0]
+        else:
+            continue
+        if targets:
+            target = targets[0]
+        else:
+            continue
+        if target.hasAttribute('dev'):
+            qemu_target = ''
+            if source.hasAttribute('file'):
+                qemu_target = source.getAttribute('file')
+            elif source.hasAttribute('dev'):
+                qemu_target = source.getAttribute('dev')
+            elif source.hasAttribute('protocol') and \
+                    source.hasAttribute('name'):  # For rbd network
+                qemu_target = '{0}:{1}'.format(
+                        source.getAttribute('protocol'),
+                        source.getAttribute('name'))
+            if qemu_target:
+                disks[target.getAttribute('dev')] = {
+                    'file': qemu_target,
+                    'type': elem.getAttribute('device')}
+    for dev in disks:
+        try:
+            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
+            if hypervisor not in ['qemu', 'kvm']:
+                break
+
+            stdout = subprocess.Popen(
+                        ['qemu-img', 'info', disks[dev]['file']],
+                        shell=False,
+                        stdout=subprocess.PIPE).communicate()[0]
+            qemu_output = salt.utils.stringutils.to_str(stdout)
+            output = _parse_qemu_img_info(qemu_output)
+            disks[dev].update(salt.utils.yaml.safe_load(output))
+        except TypeError:
+            disks[dev].update({'image': 'Does not exist'})
+    return disks
 
 
 def _libvirt_creds():
@@ -197,15 +435,15 @@ def _libvirt_creds():
     u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
         stdout = subprocess.Popen(g_cmd,
-                    shell=True,
-                    stdout=subprocess.PIPE).communicate()[0]
+                                  shell=True,
+                                  stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
         stdout = subprocess.Popen(u_cmd,
-                    shell=True,
-                    stdout=subprocess.PIPE).communicate()[0]
+                                  shell=True,
+                                  stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = 'root'
@@ -216,13 +454,25 @@ def _get_migrate_command():
     '''
     Returns the command shared by the different migration types
     '''
-    if __salt__['config.option']('virt.tunnel'):
+    tunnel = __salt__['config.option']('virt.tunnel')
+    if tunnel:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'virt.tunnel\' has been deprecated in favor of '
+            '\'virt:tunnel\'. \'virt.tunnel\' will stop '
+            'being used in {version}.')
+    else:
+        tunnel = __salt__['config.get']('virt:tunnel')
+    if tunnel:
         return ('virsh migrate --p2p --tunnelled --live --persistent '
                 '--undefinesource ')
     return 'virsh migrate --live --persistent --undefinesource '
 
 
 def _get_target(target, ssh):
+    '''
+    Compute libvirt URL for target migration host.
+    '''
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
@@ -253,10 +503,7 @@ def _gen_xml(name,
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
-    if kwargs.get('enable_vnc', True):
-        context['enable_vnc'] = True
-    else:
-        context['enable_vnc'] = False
+    context['enable_vnc'] = bool(kwargs.get('enable_vnc', True))
 
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []
@@ -402,6 +649,26 @@ def _qemu_image_info(path):
     return ret
 
 
+def _get_images_dir():
+    '''
+    Extract the images dir from the configuration. First attempts to
+    find legacy virt.images, then tries virt:images.
+    '''
+    img_dir = __salt__['config.option']('virt.images')
+    if img_dir:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'virt.images\' has been deprecated in favor of '
+            '\'virt:images\'. \'virt.images\' will stop '
+            'being used in {version}.')
+    else:
+        img_dir = __salt__['config.get']('virt:images')
+
+    log.debug('Image directory from config option `virt:images`'
+              ' is %s', img_dir)
+    return img_dir
+
+
 def _qemu_image_create(vm_name,
                        disk_file_name,
                        disk_image=None,
@@ -421,9 +688,8 @@ def _qemu_image_create(vm_name,
             .format(disk_file_name)
         )
 
-    img_dir = __salt__['config.option']('virt.images')
-    log.debug('Image directory from config option `virt.images`'
-              ' is %s', img_dir)
+    img_dir = _get_images_dir()
+
     img_dest = os.path.join(
         img_dir,
         vm_name,
@@ -469,10 +735,10 @@ def _qemu_image_create(vm_name,
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as e:
+        except (IOError, OSError) as err:
             raise CommandExecutionError(
                 'Problem while copying image. {0} - {1}'
-                .format(disk_image, e)
+                .format(disk_image, err)
             )
 
     else:
@@ -497,26 +763,13 @@ def _qemu_image_create(vm_name,
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as e:
+        except (IOError, OSError) as err:
             raise CommandExecutionError(
                 'Problem while creating volume {0} - {1}'
-                .format(img_dest, e)
+                .format(img_dest, err)
             )
 
     return img_dest
-
-
-# TODO: this function is deprecated, should be replaced with
-# _qemu_image_info()
-def _image_type(vda):
-    '''
-    Detect what driver needs to be used for the given image
-    '''
-    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
-    if 'file format: qcow2' in out:
-        return 'qcow2'
-    else:
-        return 'raw'
 
 
 # TODO: this function is deprecated, should be merged and replaced
@@ -577,21 +830,16 @@ def _disk_profile(profile, hypervisor, **kwargs):
     The ``format`` and ``model`` parameters are optional, and will
     default to whatever is best suitable for the active hypervisor.
     '''
-    default = [
-          {'system':
-             {'size': '8192'}
-          }
-    ]
+    default = [{'system':
+                {'size': '8192'}}]
     if hypervisor in ['esxi', 'vmware']:
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
-                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))
-                  }
+                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
                    'model': 'virtio',
-                   'pool': __salt__['config.option']('virt.images')
-                  }
+                   'pool': _get_images_dir()}
     else:
         overlay = {}
 
@@ -606,6 +854,9 @@ def _disk_profile(profile, hypervisor, **kwargs):
 
 
 def _nic_profile(profile_name, hypervisor, **kwargs):
+    '''
+    Compute NIC data based on profile
+    '''
 
     default = [{'eth0': {}}]
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
@@ -622,14 +873,24 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         profile_name, None
     )
 
-    if config_data is None:
+    if config_data is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'virt.nic\' has been deprecated in favor of \'virt:nic\'. '
+            '\'virt.nic\' will stop being used in {version}.'
+        )
+    else:
         config_data = __salt__['config.get']('virt:nic', {}).get(
             profile_name, default
         )
 
     interfaces = []
 
+    # pylint: disable=invalid-name
     def append_dict_profile_to_interface_list(profile_dict):
+        '''
+        Append dictionary profile data to interfaces list
+        '''
         for interface_name, attributes in six.iteritems(profile_dict):
             attributes['name'] = interface_name
             interfaces.append(attributes)
@@ -693,11 +954,17 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         attributes['source'] = attributes.get('source', None)
 
     def _apply_default_overlay(attributes):
+        '''
+        Apply the default overlay to attributes
+        '''
         for key, value in six.iteritems(overlays[hypervisor]):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
     def _assign_mac(attributes, hypervisor):
+        '''
+        Compute mac address for NIC depending on hypervisor
+        '''
         dmac = kwargs.get('dmac', None)
         if dmac is not None:
             log.debug('DMAC address is %s', dmac)
@@ -749,6 +1016,15 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 salt://path/to/image.raw
         salt 'hypervisor' virt.init vm_name 4 512 /var/lib/libvirt/images/img.raw
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
+
+    The disk images will be created in an image folder within the directory
+    defined by the ``virt:images`` option. Its default value is
+    ``/srv/salt/salt-images/`` but this can changed with such a configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            images: /data/my/vm/images/
     '''
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     log.debug('Using hyperisor %s', hypervisor)
@@ -767,10 +1043,10 @@ def init(name,
         diskp[0][disk_name]['image'] = image
 
     # Create multiple disks, empty or from specified images.
-    for disk in diskp:
-        log.debug("Creating disk for VM [ %s ]: %s", name, disk)
+    for _disk in diskp:
+        log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
 
-        for disk_name, args in six.iteritems(disk):
+        for disk_name, args in six.iteritems(_disk):
 
             if hypervisor in ['esxi', 'vmware']:
                 if 'image' in args:
@@ -781,7 +1057,7 @@ def init(name,
                     )
                 else:
                     # assume libvirt manages disks for us
-                    log.debug('Generating libvirt XML for %s', disk)
+                    log.debug('Generating libvirt XML for %s', _disk)
                     xml = _gen_vol_xml(
                         name,
                         disk_name,
@@ -829,24 +1105,27 @@ def init(name,
     log.debug('Generating VM XML')
     kwargs['enable_vnc'] = enable_vnc
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
+    conn = __get_conn(**kwargs)
     try:
-        define_xml_str(xml)
+        conn.defineXML(xml)
     except libvirtError as err:
         # check if failure is due to this domain already existing
         if "domain '{}' already exists".format(name) in six.text_type(err):
             # continue on to seeding
             log.warning(err)
         else:
+            conn.close()
             raise err  # a real error we should report upwards
 
     if start:
         log.debug('Starting VM %s', name)
-        _get_domain(name).create()
+        _get_domain(conn, name).create()
+    conn.close()
 
     return True
 
 
-def list_domains():
+def list_domains(**kwargs):
     '''
     Return a list of available domains.
 
@@ -857,12 +1136,14 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     vms = []
-    vms.extend(list_active_vms())
-    vms.extend(list_inactive_vms())
+    conn = __get_conn(**kwargs)
+    for dom in _get_domain(conn, iterable=True):
+        vms.append(dom.name())
+    conn.close()
     return vms
 
 
-def list_active_vms():
+def list_active_vms(**kwargs):
     '''
     Return a list of names for active virtual machine on the minion
 
@@ -872,14 +1153,15 @@ def list_active_vms():
 
         salt '*' virt.list_active_vms
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDomainsID():
-        vms.append(conn.lookupByID(id_).name())
+    conn = __get_conn(**kwargs)
+    for dom in _get_domain(conn, iterable=True, inactive=False):
+        vms.append(dom.name())
+    conn.close()
     return vms
 
 
-def list_inactive_vms():
+def list_inactive_vms(**kwargs):
     '''
     Return a list of names for inactive virtual machine on the minion
 
@@ -889,14 +1171,15 @@ def list_inactive_vms():
 
         salt '*' virt.list_inactive_vms
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDefinedDomains():
-        vms.append(id_)
+    conn = __get_conn(**kwargs)
+    for dom in _get_domain(conn, iterable=True, active=False):
+        vms.append(dom.name())
+    conn.close()
     return vms
 
 
-def vm_info(vm_=None):
+def vm_info(vm_=None, **kwargs):
     '''
     Return detailed information about the vms on this hyper in a
     list of dicts:
@@ -923,27 +1206,31 @@ def vm_info(vm_=None):
 
         salt '*' virt.vm_info
     '''
-    def _info(vm_):
-        dom = _get_domain(vm_)
+    def _info(dom):
+        '''
+        Compute the infos of a domain
+        '''
         raw = dom.info()
         return {'cpu': raw[3],
                 'cputime': int(raw[4]),
-                'disks': get_disks(vm_),
-                'graphics': get_graphics(vm_),
-                'nics': get_nics(vm_),
+                'disks': _get_disks(dom),
+                'graphics': _get_graphics(dom),
+                'nics': _get_nics(dom),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     info = {}
+    conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in _get_domain(conn, iterable=True):
+            info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
-def vm_state(vm_=None):
+def vm_state(vm_=None, **kwargs):
     '''
     Return list of all the vms and their state.
 
@@ -956,32 +1243,29 @@ def vm_state(vm_=None):
 
         salt '*' virt.vm_state <domain>
     '''
-    def _info(vm_):
+    def _info(dom):
+        '''
+        Compute domain state
+        '''
         state = ''
-        dom = _get_domain(vm_)
         raw = dom.info()
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
     info = {}
+    conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in _get_domain(conn, iterable=True):
+            info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
-def node_info():
+def _node_info(conn):
     '''
-    Return a dict with information about this node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.node_info
+    Internal variant of node_info taking a libvirt connection as parameter
     '''
-    conn = __get_conn()
     raw = conn.getInfo()
     info = {'cpucores': raw[6],
             'cpumhz': raw[3],
@@ -994,7 +1278,23 @@ def node_info():
     return info
 
 
-def get_nics(vm_):
+def node_info(**kwargs):
+    '''
+    Return a dict with information about this node
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.node_info
+    '''
+    conn = __get_conn(**kwargs)
+    info = _node_info(conn)
+    conn.close()
+    return info
+
+
+def get_nics(vm_, **kwargs):
     '''
     Return info about the network interfaces of a named vm
 
@@ -1004,41 +1304,13 @@ def get_nics(vm_):
 
         salt '*' virt.get_nics <domain>
     '''
-    nics = {}
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            nic = {}
-            nic['type'] = i_node.getAttribute('type')
-            for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == 'mac':
-                    nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == 'model':
-                    nic['model'] = v_node.getAttribute('type')
-                if v_node.tagName == 'target':
-                    nic['target'] = v_node.getAttribute('dev')
-                # driver, source, and match can all have optional attributes
-                if re.match('(driver|source|address)', v_node.tagName):
-                    temp = {}
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic[six.text_type(v_node.tagName)] = temp
-                # virtualport needs to be handled separately, to pick up the
-                # type attribute of the virtualport itself
-                if v_node.tagName == 'virtualport':
-                    temp = {}
-                    temp['type'] = v_node.getAttribute('type')
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic['virtualport'] = temp
-            if 'mac' not in nic:
-                continue
-            nics[nic['mac']] = nic
+    conn = __get_conn(**kwargs)
+    nics = _get_nics(_get_domain(conn, vm_))
+    conn.close()
     return nics
 
 
-def get_macs(vm_):
+def get_macs(vm_, **kwargs):
     '''
     Return a list off MAC addresses from the named vm
 
@@ -1049,7 +1321,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <domain>
     '''
     macs = []
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_, **kwargs)))
     for node in doc.getElementsByTagName('devices'):
         i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
@@ -1058,7 +1330,7 @@ def get_macs(vm_):
     return macs
 
 
-def get_graphics(vm_):
+def get_graphics(vm_, **kwargs):
     '''
     Returns the information on vnc for a given vm
 
@@ -1068,23 +1340,13 @@ def get_graphics(vm_):
 
         salt '*' virt.get_graphics <domain>
     '''
-    out = {'autoport': 'None',
-           'keymap': 'None',
-           'listen': 'None',
-           'port': 'None',
-           'type': 'None'}
-    xml = get_xml(vm_)
-    ssock = _StringIO(xml)
-    doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName('domain'):
-        g_nodes = node.getElementsByTagName('graphics')
-        for g_node in g_nodes:
-            for key, value in g_node.attributes.items():
-                out[key] = value
-    return out
+    conn = __get_conn(**kwargs)
+    graphics = _get_graphics(_get_domain(conn, vm_))
+    conn.close()
+    return graphics
 
 
-def get_disks(vm_):
+def get_disks(vm_, **kwargs):
     '''
     Return the disks of a named vm
 
@@ -1094,92 +1356,13 @@ def get_disks(vm_):
 
         salt '*' virt.get_disks <domain>
     '''
-    disks = {}
-    doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for elem in doc.getElementsByTagName('disk'):
-        sources = elem.getElementsByTagName('source')
-        targets = elem.getElementsByTagName('target')
-        if len(sources) > 0:
-            source = sources[0]
-        else:
-            continue
-        if len(targets) > 0:
-            target = targets[0]
-        else:
-            continue
-        if target.hasAttribute('dev'):
-            qemu_target = ''
-            if source.hasAttribute('file'):
-                qemu_target = source.getAttribute('file')
-            elif source.hasAttribute('dev'):
-                qemu_target = source.getAttribute('dev')
-            elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'):  # For rbd network
-                qemu_target = '{0}:{1}'.format(
-                        source.getAttribute('protocol'),
-                        source.getAttribute('name'))
-            if qemu_target:
-                disks[target.getAttribute('dev')] = {
-                    'file': qemu_target,
-                    'type': elem.getAttribute('device')}
-    for dev in disks:
-        try:
-            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
-            if hypervisor not in ['qemu', 'kvm']:
-                break
-
-            output = []
-            stdout = subprocess.Popen(
-                        ['qemu-img', 'info', disks[dev]['file']],
-                        shell=False,
-                        stdout=subprocess.PIPE).communicate()[0]
-            qemu_output = salt.utils.stringutils.to_str(stdout)
-            snapshots = False
-            columns = None
-            lines = qemu_output.strip().split('\n')
-            for line in lines:
-                if line.startswith('Snapshot list:'):
-                    snapshots = True
-                    continue
-
-                # If this is a copy-on-write image, then the backing file
-                # represents the base image
-                #
-                # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
-                elif line.startswith('backing file'):
-                    matches = re.match(r'.*\(actual path: (.*?)\)', line)
-                    if matches:
-                        output.append('backing file: {0}'.format(matches.group(1)))
-                    continue
-
-                elif snapshots:
-                    if line.startswith('ID'):  # Do not parse table headers
-                        line = line.replace('VM SIZE', 'VMSIZE')
-                        line = line.replace('VM CLOCK', 'TIME VMCLOCK')
-                        columns = re.split(r'\s+', line)
-                        columns = [c.lower() for c in columns]
-                        output.append('snapshots:')
-                        continue
-                    fields = re.split(r'\s+', line)
-                    for i, field in enumerate(fields):
-                        sep = ' '
-                        if i == 0:
-                            sep = '-'
-                        output.append(
-                            '{0} {1}: "{2}"'.format(
-                                sep, columns[i], field
-                            )
-                        )
-                    continue
-                output.append(line)
-            output = '\n'.join(output)
-            disks[dev].update(salt.utils.yaml.safe_load(output))
-        except TypeError:
-            disks[dev].update({'image': 'Does not exist'})
+    conn = __get_conn(**kwargs)
+    disks = _get_disks(_get_domain(conn, vm_))
+    conn.close()
     return disks
 
 
-def setmem(vm_, memory, config=False):
+def setmem(vm_, memory, config=False, **kwargs):
     '''
     Changes the amount of memory allocated to VM. The VM must be shutdown
     for this to work.
@@ -1194,10 +1377,11 @@ def setmem(vm_, memory, config=False):
         salt '*' virt.setmem <domain> <size>
         salt '*' virt.setmem my_domain 768
     '''
-    if vm_state(vm_)[vm_] != 'shutdown':
-        return False
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
 
-    dom = _get_domain(vm_)
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
+        return False
 
     # libvirt has a funny bitwise system for the flags in that the flag
     # to affect the "current" setting is 0, which means that to set the
@@ -1209,11 +1393,13 @@ def setmem(vm_, memory, config=False):
     ret1 = dom.setMemoryFlags(memory * 1024, flags)
     ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
 
+    conn.close()
+
     # return True if both calls succeeded
     return ret1 == ret2 == 0
 
 
-def setvcpus(vm_, vcpus, config=False):
+def setvcpus(vm_, vcpus, config=False, **kwargs):
     '''
     Changes the amount of vcpus allocated to VM. The VM must be shutdown
     for this to work.
@@ -1228,10 +1414,11 @@ def setvcpus(vm_, vcpus, config=False):
         salt '*' virt.setvcpus <domain> <amount>
         salt '*' virt.setvcpus my_domain 4
     '''
-    if vm_state(vm_)[vm_] != 'shutdown':
-        return False
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
 
-    dom = _get_domain(vm_)
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown':
+        return False
 
     # see notes in setmem
     flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
@@ -1241,10 +1428,25 @@ def setvcpus(vm_, vcpus, config=False):
     ret1 = dom.setVcpusFlags(vcpus, flags)
     ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
 
+    conn.close()
+
     return ret1 == ret2 == 0
 
 
-def freemem():
+def _freemem(conn):
+    '''
+    Internal variant of freemem taking a libvirt connection as parameter
+    '''
+    mem = conn.getInfo()[1]
+    # Take off just enough to sustain the hypervisor
+    mem -= 256
+    for dom in _get_domain(conn, iterable=True):
+        if dom.ID() > 0:
+            mem -= dom.info()[2] / 1024
+    return mem
+
+
+def freemem(**kwargs):
     '''
     Return an int representing the amount of memory (in MB) that has not
     been given to virtual machines on this node
@@ -1255,18 +1457,24 @@ def freemem():
 
         salt '*' virt.freemem
     '''
-    conn = __get_conn()
-    mem = conn.getInfo()[1]
-    # Take off just enough to sustain the hypervisor
-    mem -= 256
-    for vm_ in list_domains():
-        dom = _get_domain(vm_)
-        if dom.ID() > 0:
-            mem -= dom.info()[2] / 1024
+    conn = __get_conn(**kwargs)
+    mem = _freemem(conn)
+    conn.close()
     return mem
 
 
-def freecpu():
+def _freecpu(conn):
+    '''
+    Internal variant of freecpu taking a libvirt connection as parameter
+    '''
+    cpus = conn.getInfo()[2]
+    for dom in _get_domain(conn, iterable=True):
+        if dom.ID() > 0:
+            cpus -= dom.info()[3]
+    return cpus
+
+
+def freecpu(**kwargs):
     '''
     Return an int representing the number of unallocated cpus on this
     hypervisor
@@ -1277,16 +1485,13 @@ def freecpu():
 
         salt '*' virt.freecpu
     '''
-    conn = __get_conn()
-    cpus = conn.getInfo()[2]
-    for vm_ in list_domains():
-        dom = _get_domain(vm_)
-        if dom.ID() > 0:
-            cpus -= dom.info()[3]
+    conn = __get_conn(**kwargs)
+    cpus = _freecpu(conn)
+    conn.close()
     return cpus
 
 
-def full_info():
+def full_info(**kwargs):
     '''
     Return the node_info, vm_info and freemem
 
@@ -1296,13 +1501,16 @@ def full_info():
 
         salt '*' virt.full_info
     '''
-    return {'freecpu': freecpu(),
-            'freemem': freemem(),
-            'node_info': node_info(),
+    conn = __get_conn(**kwargs)
+    info = {'freecpu': _freecpu(conn),
+            'freemem': _freemem(conn),
+            'node_info': _node_info(conn),
             'vm_info': vm_info()}
+    conn.close()
+    return info
 
 
-def get_xml(vm_):
+def get_xml(vm_, **kwargs):
     '''
     Returns the XML for a given vm
 
@@ -1312,8 +1520,10 @@ def get_xml(vm_):
 
         salt '*' virt.get_xml <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.XMLDesc(0)
+    conn = __get_conn(**kwargs)
+    xml_desc = _get_domain(conn, vm_).XMLDesc(0)
+    conn.close()
+    return xml_desc
 
 
 def get_profiles(hypervisor=None):
@@ -1348,7 +1558,7 @@ def get_profiles(hypervisor=None):
     return ret
 
 
-def shutdown(vm_):
+def shutdown(vm_, **kwargs):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -1358,11 +1568,14 @@ def shutdown(vm_):
 
         salt '*' virt.shutdown <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.shutdown() == 0
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    ret = dom.shutdown() == 0
+    conn.close()
+    return ret
 
 
-def pause(vm_):
+def pause(vm_, **kwargs):
     '''
     Pause the named vm
 
@@ -1372,11 +1585,14 @@ def pause(vm_):
 
         salt '*' virt.pause <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.suspend() == 0
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    ret = dom.suspend() == 0
+    conn.close()
+    return ret
 
 
-def resume(vm_):
+def resume(vm_, **kwargs):
     '''
     Resume the named vm
 
@@ -1386,11 +1602,14 @@ def resume(vm_):
 
         salt '*' virt.resume <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.resume() == 0
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    ret = dom.resume() == 0
+    conn.close()
+    return ret
 
 
-def start(name):
+def start(name, **kwargs):
     '''
     Start a defined domain
 
@@ -1400,10 +1619,13 @@ def start(name):
 
         salt '*' virt.start <domain>
     '''
-    return _get_domain(name).create() == 0
+    conn = __get_conn(**kwargs)
+    ret = _get_domain(conn, name).create() == 0
+    conn.close()
+    return ret
 
 
-def stop(name):
+def stop(name, **kwargs):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the power.
 
@@ -1413,10 +1635,13 @@ def stop(name):
 
         salt '*' virt.stop <domain>
     '''
-    return _get_domain(name).destroy() == 0
+    conn = __get_conn(**kwargs)
+    ret = _get_domain(conn, name).destroy() == 0
+    conn.close()
+    return ret
 
 
-def reboot(name):
+def reboot(name, **kwargs):
     '''
     Reboot a domain via ACPI request
 
@@ -1426,10 +1651,13 @@ def reboot(name):
 
         salt '*' virt.reboot <domain>
     '''
-    return _get_domain(name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
+    conn = __get_conn(**kwargs)
+    ret = _get_domain(conn, name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
+    conn.close()
+    return ret
 
 
-def reset(vm_):
+def reset(vm_, **kwargs):
     '''
     Reset a VM by emulating the reset button on a physical machine
 
@@ -1439,15 +1667,18 @@ def reset(vm_):
 
         salt '*' virt.reset <domain>
     '''
-    dom = _get_domain(vm_)
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
 
     # reset takes a flag, like reboot, but it is not yet used
     # so we just pass in 0
     # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
-    return dom.reset(0) == 0
+    ret = dom.reset(0) == 0
+    conn.close()
+    return ret
 
 
-def ctrl_alt_del(vm_):
+def ctrl_alt_del(vm_, **kwargs):
     '''
     Sends CTRL+ALT+DEL to a VM
 
@@ -1457,11 +1688,14 @@ def ctrl_alt_del(vm_):
 
         salt '*' virt.ctrl_alt_del <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    ret = dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+    conn.close()
+    return ret
 
 
-def create_xml_str(xml):
+def create_xml_str(xml, **kwargs):
     '''
     Start a domain based on the XML passed to the function
 
@@ -1471,11 +1705,13 @@ def create_xml_str(xml):
 
         salt '*' virt.create_xml_str <XML in string format>
     '''
-    conn = __get_conn()
-    return conn.createXML(xml, 0) is not None
+    conn = __get_conn(**kwargs)
+    ret = conn.createXML(xml, 0) is not None
+    conn.close()
+    return ret
 
 
-def create_xml_path(path):
+def create_xml_path(path, **kwargs):
     '''
     Start a domain based on the XML-file path passed to the function
 
@@ -1488,13 +1724,14 @@ def create_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return create_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
 
 
-def define_xml_str(xml):
+def define_xml_str(xml, **kwargs):
     '''
     Define a domain based on the XML passed to the function
 
@@ -1504,11 +1741,13 @@ def define_xml_str(xml):
 
         salt '*' virt.define_xml_str <XML in string format>
     '''
-    conn = __get_conn()
-    return conn.defineXML(xml) is not None
+    conn = __get_conn(**kwargs)
+    ret = conn.defineXML(xml) is not None
+    conn.close()
+    return ret
 
 
-def define_xml_path(path):
+def define_xml_path(path, **kwargs):
     '''
     Define a domain based on the XML-file path passed to the function
 
@@ -1522,13 +1761,14 @@ def define_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return define_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
 
 
-def define_vol_xml_str(xml):
+def define_vol_xml_str(xml, **kwargs):
     '''
     Define a volume based on the XML passed to the function
 
@@ -1537,14 +1777,34 @@ def define_vol_xml_str(xml):
     .. code-block:: bash
 
         salt '*' virt.define_vol_xml_str <XML in string format>
+
+    The storage pool where the disk image will be defined is ``default``
+    unless changed with a configuration like this:
+
+    .. code-block:: yaml
+
+        virt:
+            storagepool: mine
     '''
-    poolname = __salt__['config.get']('libvirt:storagepool', 'default')
-    conn = __get_conn()
+    poolname = __salt__['config.get']('libvirt:storagepool', None)
+    if poolname is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'libvirt:storagepool\' has been deprecated in favor of '
+            '\'virt:storagepool\'. \'libvirt:storagepool\' will stop '
+            'being used in {version}.'
+        )
+    else:
+        poolname = __salt__['config.get']('virt:storagepool', 'default')
+
+    conn = __get_conn(**kwargs)
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
-    return pool.createXML(xml, 0) is not None
+    ret = pool.createXML(xml, 0) is not None
+    conn.close()
+    return ret
 
 
-def define_vol_xml_path(path):
+def define_vol_xml_path(path, **kwargs):
     '''
     Define a volume based on the XML-file path passed to the function
 
@@ -1558,7 +1818,8 @@ def define_vol_xml_path(path):
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
             return define_vol_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read())
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                **kwargs
             )
     except (OSError, IOError):
         return False
@@ -1573,13 +1834,24 @@ def migrate_non_shared(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1592,13 +1864,24 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1611,13 +1894,24 @@ def migrate(vm_, target, ssh=False):
     .. code-block:: bash
 
         salt '*' virt.migrate <domain> <target hypervisor>
+
+    A tunnel data migration can be performed by setting this in the
+    configuration:
+
+    .. code-block:: yaml
+
+        virt:
+            tunnel: True
+
+    For more details on tunnelled data migrations, report to
+    https://libvirt.org/migration.html#transporttunnel
     '''
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)
 
     stdout = subprocess.Popen(cmd,
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
+                              shell=True,
+                              stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
 
 
@@ -1640,8 +1934,8 @@ def seed_non_shared_migrate(disks, force=False):
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if it is compatible
             pre = salt.utils.yaml.safe_load(subprocess.Popen('qemu-img info arch',
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0])
+                                                             shell=True,
+                                                             stdout=subprocess.PIPE).communicate()[0])
             if pre['file format'] != data['file format']\
                     and pre['virtual size'] != data['virtual size']:
                 return False
@@ -1657,7 +1951,7 @@ def seed_non_shared_migrate(disks, force=False):
     return True
 
 
-def set_autostart(vm_, state='on'):
+def set_autostart(vm_, state='on', **kwargs):
     '''
     Set the autostart flag on a VM so that the VM will start with the host
     system on reboot.
@@ -1668,21 +1962,23 @@ def set_autostart(vm_, state='on'):
 
         salt "*" virt.set_autostart <domain> <on | off>
     '''
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
 
-    dom = _get_domain(vm_)
+    # return False if state is set to something other then on or off
+    ret = False
 
     if state == 'on':
-        return dom.setAutostart(1) == 0
+        ret = dom.setAutostart(1) == 0
 
     elif state == 'off':
-        return dom.setAutostart(0) == 0
+        ret = dom.setAutostart(0) == 0
 
-    else:
-        # return False if state is set to something other then on or off
-        return False
+    conn.close()
+    return ret
 
 
-def undefine(vm_):
+def undefine(vm_, **kwargs):
     '''
     Remove a defined vm, this does not purge the virtual machine image, and
     this only works if the vm is powered down
@@ -1693,11 +1989,14 @@ def undefine(vm_):
 
         salt '*' virt.undefine <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.undefine() == 0
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    ret = dom.undefine() == 0
+    conn.close()
+    return ret
 
 
-def purge(vm_, dirs=False, removables=None):
+def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
     Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
@@ -1713,7 +2012,9 @@ def purge(vm_, dirs=False, removables=None):
 
         salt '*' virt.purge <domain> removables=False
     '''
-    disks = get_disks(vm_)
+    conn = __get_conn(**kwargs)
+    dom = _get_domain(conn, vm_)
+    disks = _get_disks(dom)
     if removables is None:
         salt.utils.versions.warn_until(
             'Sodium',
@@ -1722,12 +2023,8 @@ def purge(vm_, dirs=False, removables=None):
             'the current behavior in the future.'
         )
         removables = True
-    try:
-        if not stop(vm_):
-            return False
-    except libvirt.libvirtError:
-        # This is thrown if the machine is already shut down
-        pass
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], 'unknown') != 'shutdown' and dom.destroy() != 0:
+        return False
     directories = set()
     for disk in disks:
         if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
@@ -1737,7 +2034,8 @@ def purge(vm_, dirs=False, removables=None):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
-    undefine(vm_)
+    dom.undefine()
+    conn.close()
     return True
 
 
@@ -1815,7 +2113,7 @@ def is_hyper():
     return False
 
 
-def vm_cputime(vm_=None):
+def vm_cputime(vm_=None, **kwargs):
     '''
     Return cputime used by the vms on this hyper in a
     list of dicts:
@@ -1839,10 +2137,13 @@ def vm_cputime(vm_=None):
 
         salt '*' virt.vm_cputime
     '''
-    host_cpus = __get_conn().getInfo()[2]
+    conn = __get_conn(**kwargs)
+    host_cpus = conn.getInfo()[2]
 
-    def _info(vm_):
-        dom = _get_domain(vm_)
+    def _info(dom):
+        '''
+        Compute cputime info of a domain
+        '''
         raw = dom.info()
         vcpus = int(raw[3])
         cputime = int(raw[4])
@@ -1856,14 +2157,15 @@ def vm_cputime(vm_=None):
                }
     info = {}
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in _get_domain(conn, iterable=True):
+            info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
-def vm_netstats(vm_=None):
+def vm_netstats(vm_=None, **kwargs):
     '''
     Return combined network counters used by the vms on this hyper in a
     list of dicts:
@@ -1893,9 +2195,11 @@ def vm_netstats(vm_=None):
 
         salt '*' virt.vm_netstats
     '''
-    def _info(vm_):
-        dom = _get_domain(vm_)
-        nics = get_nics(vm_)
+    def _info(dom):
+        '''
+        Compute network stats of a domain
+        '''
+        nics = _get_nics(dom)
         ret = {
                 'rx_bytes': 0,
                 'rx_packets': 0,
@@ -1921,15 +2225,17 @@ def vm_netstats(vm_=None):
 
         return ret
     info = {}
+    conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+        for domain in _get_domain(conn, iterable=True):
+            info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
-def vm_diskstats(vm_=None):
+def vm_diskstats(vm_=None, **kwargs):
     '''
     Return disk usage counters used by the vms on this hyper in a
     list of dicts:
@@ -1956,8 +2262,11 @@ def vm_diskstats(vm_=None):
 
         salt '*' virt.vm_blockstats
     '''
-    def get_disk_devs(vm_):
-        doc = minidom.parse(_StringIO(get_xml(vm_)))
+    def get_disk_devs(dom):
+        '''
+        Extract the disk devices names from the domain XML definition
+        '''
+        doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
         disks = []
         for elem in doc.getElementsByTagName('disk'):
             targets = elem.getElementsByTagName('target')
@@ -1965,11 +2274,13 @@ def vm_diskstats(vm_=None):
             disks.append(target.getAttribute('dev'))
         return disks
 
-    def _info(vm_):
-        dom = _get_domain(vm_)
+    def _info(dom):
+        '''
+        Compute the disk stats of a domain
+        '''
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
-        disks = get_disk_devs(vm_)
+        disks = get_disk_devs(dom)
         ret = {'rd_req': 0,
                'rd_bytes': 0,
                'wr_req': 0,
@@ -1986,16 +2297,18 @@ def vm_diskstats(vm_=None):
 
         return ret
     info = {}
+    conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(vm_)
+        info[vm_] = _info(_get_domain(conn, vm_))
     else:
         # Can not run function blockStats on inactive VMs
-        for vm_ in list_active_vms():
-            info[vm_] = _info(vm_)
+        for domain in _get_domain(conn, iterable=True, inactive=False):
+            info[domain.name()] = _info(domain)
+    conn.close()
     return info
 
 
-def _parse_snapshot_description(snapshot, unix_time=False):
+def _parse_snapshot_description(vm_snapshot, unix_time=False):
     '''
     Parse XML doc and return a dict with the status values.
 
@@ -2003,22 +2316,22 @@ def _parse_snapshot_description(snapshot, unix_time=False):
     :return:
     '''
     ret = dict()
-    tree = ElementTree.fromstring(snapshot.getXMLDesc())
+    tree = ElementTree.fromstring(vm_snapshot.getXMLDesc())
     for node in tree:
         if node.tag == 'name':
             ret['name'] = node.text
         elif node.tag == 'creationTime':
-            ret['created'] = not unix_time and datetime.datetime.fromtimestamp(
-                float(node.text)).isoformat(' ') or float(node.text)
+            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ') \
+                                if not unix_time else float(node.text)
         elif node.tag == 'state':
             ret['running'] = node.text == 'running'
 
-    ret['current'] = snapshot.isCurrent() == 1
+    ret['current'] = vm_snapshot.isCurrent() == 1
 
     return ret
 
 
-def list_snapshots(domain=None):
+def list_snapshots(domain=None, **kwargs):
     '''
     List available snapshots for certain vm or for all.
 
@@ -2032,13 +2345,15 @@ def list_snapshots(domain=None):
         salt '*' virt.list_snapshots <domain>
     '''
     ret = dict()
-    for vm_domain in _get_domain(*(domain and [domain] or list()), iterable=True):
+    conn = __get_conn(**kwargs)
+    for vm_domain in _get_domain(conn, *(domain and [domain] or list()), iterable=True):
         ret[vm_domain.name()] = [_parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()] or 'N/A'
 
+    conn.close()
     return ret
 
 
-def snapshot(domain, name=None, suffix=None):
+def snapshot(domain, name=None, suffix=None, **kwargs):
     '''
     Create a snapshot of a VM.
 
@@ -2071,7 +2386,9 @@ def snapshot(domain, name=None, suffix=None):
     n_name = ElementTree.SubElement(doc, 'name')
     n_name.text = name
 
-    _get_domain(domain).snapshotCreateXML(ElementTree.tostring(doc))
+    conn = __get_conn(**kwargs)
+    _get_domain(conn, domain).snapshotCreateXML(ElementTree.tostring(doc))
+    conn.close()
 
     return {'name': name}
 
@@ -2095,15 +2412,20 @@ def delete_snapshots(name, *names, **kwargs):
         salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
     '''
     deleted = dict()
-    for snap in _get_domain(name).listAllSnapshots():
+    conn = __get_conn(**kwargs)
+    domain = _get_domain(conn, name)
+    for snap in domain.listAllSnapshots():
         if snap.getName() in names or not names:
             deleted[snap.getName()] = _parse_snapshot_description(snap)
             snap.delete()
+    conn.close()
 
-    return {'available': list_snapshots(name), 'deleted': deleted}
+    available = {name: [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()] or 'N/A'}
+
+    return {'available': available, 'deleted': deleted}
 
 
-def revert_snapshot(name, snapshot=None, cleanup=False):
+def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     '''
     Revert snapshot to the previous from current (if available) or to the specific.
 
@@ -2121,7 +2443,8 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
         salt '*' virt.revert <domain> <snapshot>
     '''
     ret = dict()
-    domain = _get_domain(name)
+    conn = __get_conn(**kwargs)
+    domain = _get_domain(conn, name)
     snapshots = domain.listAllSnapshots()
 
     _snapshots = list()
@@ -2131,24 +2454,28 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
     del _snapshots
 
     if not snapshots:
+        conn.close()
         raise CommandExecutionError('No snapshots found')
     elif len(snapshots) == 1:
+        conn.close()
         raise CommandExecutionError('Cannot revert to itself: only one snapshot is available.')
 
     snap = None
     for p_snap in snapshots:
-        if not snapshot:
+        if not vm_snapshot:
             if p_snap.isCurrent() and snapshots[snapshots.index(p_snap) + 1:]:
                 snap = snapshots[snapshots.index(p_snap) + 1:][0]
                 break
-        elif p_snap.getName() == snapshot:
+        elif p_snap.getName() == vm_snapshot:
             snap = p_snap
             break
 
     if not snap:
+        conn.close()
         raise CommandExecutionError(
-            snapshot and 'Snapshot "{0}" not found'.format(snapshot) or 'No more previous snapshots available')
+            snapshot and 'Snapshot "{0}" not found'.format(vm_snapshot) or 'No more previous snapshots available')
     elif snap.isCurrent():
+        conn.close()
         raise CommandExecutionError('Cannot revert to the currently running snapshot.')
 
     domain.revertToSnapshot(snap)
@@ -2166,23 +2493,24 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
     else:
         ret['deleted'] = 'N/A'
 
+    conn.close()
+
     return ret
 
 
-def _capabilities():
+def _capabilities(conn):
     '''
     Return connection capabilities
     It's a huge klutz to parse right,
     so hide func for now and pass on the XML instead
     '''
-    conn = __get_conn()
     caps = conn.getCapabilities()
     caps = minidom.parseString(caps)
 
     return caps
 
 
-def cpu_baseline(full=False, migratable=False, out='libvirt'):
+def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     '''
     Return the optimal 'custom' CPU baseline config for VM's on this minion
 
@@ -2199,8 +2527,8 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
         salt '*' virt.cpu_baseline
 
     '''
-    conn = __get_conn()
-    caps = _capabilities()
+    conn = __get_conn(**kwargs)
+    caps = _capabilities(conn)
 
     cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
 
@@ -2212,6 +2540,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
         if getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_MIGRATABLE', False):
             flags += libvirt.VIR_CONNECT_BASELINE_CPU_MIGRATABLE
         else:
+            conn.close()
             raise ValueError
 
     if full and getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
@@ -2221,6 +2550,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     cpu = conn.baselineCPU([cpu.toxml()], flags)
     cpu = minidom.parseString(cpu).getElementsByTagName('cpu')
     cpu = cpu[0]
+    conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
@@ -2230,9 +2560,10 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
 
         cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue
         while cpu_model:
-            cpu_specs = [el for el in cpu_map.getElementsByTagName('model') if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
+            cpu_map_models = cpu_map.getElementsByTagName('model')
+            cpu_specs = [el for el in cpu_map_models if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
 
-            if not len(cpu_specs):
+            if not cpu_specs:
                 raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
             elif len(cpu_specs) > 1:
                 raise ValueError('Multiple models {0} found in CPU map'.format(cpu_model))
@@ -2240,7 +2571,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
             cpu_specs = cpu_specs[0]
 
             cpu_model = cpu_specs.getElementsByTagName('model')
-            if not len(cpu_model):
+            if not cpu_model:
                 cpu_model = None
             else:
                 cpu_model = cpu_model[0].getAttribute('name')
@@ -2248,14 +2579,13 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
             for feature in cpu_specs.getElementsByTagName('feature'):
                 cpu.appendChild(feature)
 
-    if out == 'libvirt':
-        return cpu.toxml()
-    elif out == 'salt':
+    if out == 'salt':
         return {
             'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
             'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
             'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
         }
+    return cpu.toxml()
 
 
 def net_define(name, bridge, forward, **kwargs):
@@ -2276,7 +2606,7 @@ def net_define(name, bridge, forward, **kwargs):
 
         salt '*' virt.net_define network main bridge openvswitch
     '''
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     vport = kwargs.get('vport', None)
     tag = kwargs.get('tag', None)
     autostart = kwargs.get('autostart', True)
@@ -2292,15 +2622,18 @@ def net_define(name, bridge, forward, **kwargs):
         conn.networkDefineXML(xml)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     try:
         network = conn.networkLookupByName(name)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     if network is None:
+        conn.close()
         return False
 
     if (starting is True or autostart is True) and network.isActive() != 1:
@@ -2310,6 +2643,8 @@ def net_define(name, bridge, forward, **kwargs):
         network.setAutostart(int(autostart))
     elif autostart is False and network.autostart() == 1:
         network.setAutostart(int(autostart))
+
+    conn.close()
 
     return True
 
@@ -2329,11 +2664,11 @@ def pool_define_build(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.pool_defin base logical base
+        salt '*' virt.pool_define base logical base
     '''
     exist = False
     update = False
-    conn = __get_conn()
+    conn = __get_conn(**kwargs)
     ptype = kwargs.pop('ptype', None)
     target = kwargs.pop('target', None)
     source = kwargs.pop('source', None)
@@ -2352,14 +2687,17 @@ def pool_define_build(name, **kwargs):
         if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
             exist = True
         else:
+            conn.close()
             raise err  # a real error we should report upwards
     try:
         pool = conn.storagePoolLookupByName(name)
     except libvirtError as err:
         log.warning(err)
+        conn.close()
         raise err  # a real error we should report upwards
 
     if pool is None:
+        conn.close()
         return False
 
     if (starting is True or autostart is True) and pool.isActive() != 1:
@@ -2377,6 +2715,9 @@ def pool_define_build(name, **kwargs):
         if exist is True:
             update = True
         pool.setAutostart(int(autostart))
+
+    conn.close()
+
     if exist is True:
         if update is True:
             return (True, 'Pool exist', 'Pool update')

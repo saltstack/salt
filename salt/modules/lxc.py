@@ -867,7 +867,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     # on old versions of lxc, still support the gateway auto mode
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
-    if _LooseVersion(version()) <= '1.0.7' and \
+    if _LooseVersion(version()) <= _LooseVersion('1.0.7') and \
             True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
             True in ['lxc.network.ipv4' in a for a in ret]:
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
@@ -2077,7 +2077,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if version() >= _LooseVersion('2.0'):
+    if _LooseVersion(version()) >= _LooseVersion('2.0'):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = 'lxc-copy'
         cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)

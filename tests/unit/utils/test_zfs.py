@@ -7,7 +7,7 @@ Tests for the zfs utils library
 :maturity:      new
 :platform:      illumos,freebsd,linux
 
-.. versionadded:: Fluorine
+.. versionadded:: 2018.3.1
 '''
 
 # Import Python libs
@@ -891,6 +891,17 @@ class ZfsUtilsTestCase(TestCase):
     This class contains a set of functions that test salt.utils.zfs utils
     '''
     ## NOTE: test parameter parsing
+    def test_is_supported(self):
+        '''
+        Test zfs.is_supported method
+        '''
+        for value in [False, True]:
+            with patch('salt.utils.path.which',
+                       MagicMock(return_value=value)):
+                with patch('salt.utils.platform.is_linux',
+                                  MagicMock(return_value=value)):
+                    self.assertEqual(value, zfs.is_supported())
+
     def test_property_data_zpool(self):
         '''
         Test parsing of zpool get output

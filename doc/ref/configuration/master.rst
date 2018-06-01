@@ -2100,13 +2100,13 @@ are enabled and available!
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The renderer to use on the minions to render the state data.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_master:: userdata_template
 
@@ -4499,6 +4499,11 @@ strategy between different sources. It accepts 5 values:
 * ``smart`` (default):
 
   Guesses the best strategy based on the "renderer" setting.
+
+.. note::
+    In order for yamlex based features such as ``!aggregate`` to work as expected
+    across documents using the default ``smart`` merge strategy, the :conf_master:`renderer`
+    config option must be set to ``jinja|yamlex`` or similar.
 
 .. conf_master:: pillar_merge_lists
 

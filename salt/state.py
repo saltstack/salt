@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
@@ -42,22 +43,22 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
     SaltRenderError,
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
+import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ def _calculate_fake_duration():
     start_time = local_start_time.time().isoformat()
     delta = (utc_finish_time - utc_start_time)
     # duration in milliseconds.microseconds
-    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
 
     return start_time, duration
 
@@ -260,11 +261,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
@@ -595,7 +606,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -1723,27 +1734,20 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, cdata, low):
+    def _call_parallel_target(self, name, cdata, low):
         '''
         The target function to call that will create the parallel thread/process
         '''
+        # we need to re-record start/end duration here because it is impossible to
+        # correctly calculate further down the chain
+        utc_start_time = datetime.datetime.utcnow()
+
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
         except Exception:
             trb = traceback.format_exc()
-            # There are a number of possibilities to not have the cdata
-            # populated with what we might have expected, so just be smart
-            # enough to not raise another KeyError as the name is easily
-            # guessable and fallback in all cases to present the real
-            # exception to the user
-            if len(cdata['args']) > 0:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
-                name = low.get('name', low.get('__id__'))
             ret = {
                 'result': False,
                 'name': name,
@@ -1751,6 +1755,13 @@ class State(object):
                 'comment': 'An exception occurred in this state: {0}'.format(
                     trb)
             }
+
+        utc_finish_time = datetime.datetime.utcnow()
+        delta = (utc_finish_time - utc_start_time)
+        # duration in milliseconds.microseconds
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        ret['duration'] = duration
+
         troot = os.path.join(self.opts['cachedir'], self.jid)
         tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
@@ -1761,17 +1772,26 @@ class State(object):
                 # and the attempt, we are safe to pass
                 pass
         with salt.utils.files.fopen(tfile, 'wb+') as fp_:
-            fp_.write(msgpack.dumps(ret))
+            fp_.write(msgpack_serialize(ret))
 
     def call_parallel(self, cdata, low):
         '''
         Call the state defined in the given cdata in parallel
         '''
+        # There are a number of possibilities to not have the cdata
+        # populated with what we might have expected, so just be smart
+        # enough to not raise another KeyError as the name is easily
+        # guessable and fallback in all cases to present the real
+        # exception to the user
+        name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+        if not name:
+            name = low.get('name', low.get('__id__'))
+
         proc = salt.utils.process.MultiprocessingProcess(
                 target=self._call_parallel_target,
-                args=(cdata, low))
+                args=(name, cdata, low))
         proc.start()
-        ret = {'name': cdata['args'][0],
+        ret = {'name': name,
                 'result': None,
                 'changes': {},
                 'comment': 'Started in a separate process',
@@ -1916,12 +1936,10 @@ class State(object):
             # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
-            if len(cdata['args']) > 0:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
+            name = (cdata.get('args') or [None])[0] or cdata['kwargs'].get('name')
+            if not name:
                 name = low.get('name', low.get('__id__'))
+
             ret = {
                 'result': False,
                 'name': name,
@@ -1962,7 +1980,7 @@ class State(object):
         ret['start_time'] = local_start_time.time().isoformat()
         delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2042,8 +2060,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
@@ -2130,7 +2149,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.01)
+            time.sleep(0.0001)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2162,7 +2181,7 @@ class State(object):
                     tries = 0
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
-                            pdat = msgpack.loads(fp_.read())
+                            pdat = msgpack_deserialize(fp_.read())
                         except msgpack.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
@@ -2209,7 +2228,7 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = msgpack_deserialize(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
@@ -2322,15 +2341,17 @@ class State(object):
                 run_dict = self.pre
             else:
                 run_dict = running
+
+            while True:
+                if self.reconcile_procs(run_dict):
+                    break
+                time.sleep(0.0001)
+
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
                     req_stats.add('unmet')
                     continue
-                if run_dict[tag].get('proc'):
-                    # Run in parallel, first wait for a touch and then recheck
-                    time.sleep(0.01)
-                    return self.check_requisite(low, running, chunks, pre)
                 if r_state.startswith('onfail'):
                     if run_dict[tag]['result'] is True:
                         req_stats.add('onfail')  # At least one state is OK
@@ -2932,7 +2953,7 @@ class BaseHighState(object):
         mopts = self.client.master_opts()
         if not isinstance(mopts, dict):
             # An error happened on the master
-            opts['renderer'] = 'yaml_jinja'
+            opts['renderer'] = 'jinja|yaml'
             opts['failhard'] = False
             opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
@@ -3002,7 +3023,7 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
-            self.opts['environment'] = self.opts['default_top']
+            self.opts['saltenv'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
@@ -3386,7 +3407,7 @@ class BaseHighState(object):
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
             top_file_matches = matches.get(saltenv, [])
-            if self.opts['master_tops_first']:
+            if self.opts.get('master_tops_first'):
                 first = ext_matches[saltenv]
                 second = top_file_matches
             else:
@@ -3433,43 +3454,45 @@ class BaseHighState(object):
                     'Specified SLS {0} on local filesystem cannot '
                     'be found.'.format(sls)
                 )
+        state = None
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master or through a configured '
                 'fileserver'.format(sls, saltenv)
             )
-        state = None
-        try:
-            state = compile_template(fn_,
-                                     self.state.rend,
-                                     self.state.opts['renderer'],
-                                     self.state.opts['renderer_blacklist'],
-                                     self.state.opts['renderer_whitelist'],
-                                     saltenv,
-                                     sls,
-                                     rendered_sls=mods
-                                     )
-        except SaltRenderError as exc:
-            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
-                saltenv, sls, exc
-            )
-            log.critical(msg)
-            errors.append(msg)
-        except Exception as exc:
-            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
-                sls, exc
-            )
-            log.critical(
-                msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        try:
-            mods.add('{0}:{1}'.format(saltenv, sls))
-        except AttributeError:
-            pass
+        else:
+            try:
+                state = compile_template(fn_,
+                                         self.state.rend,
+                                         self.state.opts['renderer'],
+                                         self.state.opts['renderer_blacklist'],
+                                         self.state.opts['renderer_whitelist'],
+                                         saltenv,
+                                         sls,
+                                         rendered_sls=mods
+                                         )
+            except SaltRenderError as exc:
+                msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
+                    saltenv, sls, exc
+                )
+                log.critical(msg)
+                errors.append(msg)
+            except Exception as exc:
+                msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                    sls, exc
+                )
+                log.critical(
+                    msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
+            try:
+                mods.add('{0}:{1}'.format(saltenv, sls))
+            except AttributeError:
+                pass
+
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -3892,7 +3915,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)

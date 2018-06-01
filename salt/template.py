@@ -12,8 +12,8 @@ import codecs
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
-import salt.utils.locales
 import salt.utils.stringio
 import salt.utils.versions
 
@@ -110,7 +110,7 @@ def compile_template(template,
                 log.debug(
                     'Rendered data from file: %s:\n%s',
                     template,
-                    salt.utils.locales.sdecode(ret.read()))  # pylint: disable=no-member
+                    salt.utils.data.decode(ret.read()))  # pylint: disable=no-member
                 ret.seek(0)  # pylint: disable=no-member
 
     # Preserve newlines from original template

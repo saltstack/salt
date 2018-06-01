@@ -221,8 +221,9 @@ The best way to create new Formula repositories for now is to create a
 repository in your own account on GitHub and notify a SaltStack employee when
 it is ready. We will add you to the Contributors team on the
 `saltstack-formulas`_ organization and help you transfer the repository over.
-Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an email to
-the `salt-users`_ mailing list.
+Ping a SaltStack employee on IRC (``#salt`` on Freenode), join the
+``#formulas`` channel on the `salt-slack`_ or send an email to the
+`salt-users`_ mailing list.
 
 There are a lot of repositories in that organization! Team members can manage
 which repositories they are subscribed to on GitHub's watching page:

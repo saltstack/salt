@@ -235,9 +235,10 @@ etc) will be created in.
 
 network_resource_group
 ----------------------
-Optional. If specified, then the VM will be connected to the network resources
-in this group, rather than the group that it was created in. The VM interfaces
-and IPs will remain in the configured ``resource_group`` with the VM.
+Optional. If specified, then the VM will be connected to the virtual network
+in this resource group, rather than the parent resource group of the instance.
+The VM interfaces and IPs will remain in the configured ``resource_group`` with
+the VM.
 
 network
 -------
@@ -247,6 +248,11 @@ subnet
 ------
 Optional. The subnet inside the virtual network that the VM will be spun up in.
 Default is ``default``.
+
+allocate_public_ip
+------------------
+Optional. Default is ``False``. If set to ``True``, a public IP will
+be created and assigned to the VM.
 
 load_balancer
 -------------
