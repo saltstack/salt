@@ -3,6 +3,7 @@
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import sys
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -664,6 +665,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertTrue(info['arch'] in ('x86_64', 'i686'))
 
     def test_yum_base_error(self):
+        if not yumpkg.HAS_YUM:
+            sys.modules['yum'] = Mock()
         with patch('yum.YumBase') as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
             self.assertRaises(CommandExecutionError, yumpkg._get_yum_config)
