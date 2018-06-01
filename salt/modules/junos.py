@@ -25,6 +25,7 @@ except ImportError:
     from salt._compat import ElementTree as etree
 
 # Import Salt libs
+import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
@@ -505,10 +506,10 @@ def diff(**kwargs):
 
         salt 'device_name' junos.diff 3
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     id_ = kwargs.pop('id', 0)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     conn = __proxy__['junos.conn']()
     ret = dict()
