@@ -555,7 +555,7 @@ def info_available(*names, **kwargs):
         if nfo.get('status'):
             nfo['status'] = nfo.get('status')
         if nfo.get('installed'):
-            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
+            nfo['installed'] = nfo.get('installed').lower().startswith('yes')
 
     return ret
 
@@ -862,7 +862,7 @@ def _get_configured_repos():
     '''
 
     repos_cfg = configparser.ConfigParser()
-    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS)])
+    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS) if fname.endswith(".repo")])
 
     return repos_cfg
 

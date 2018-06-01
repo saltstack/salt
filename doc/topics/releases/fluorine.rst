@@ -5,6 +5,16 @@ Salt Release Notes - Codename Fluorine
 ======================================
 
 
+Grains Dictionary Passed into Custom Grains
+-------------------------------------------
+
+Starting in this release, if a custom grains function accepts a variable named
+``grains``, the Grains dictionary of the already compiled grains will be passed
+in.  Because of the non-deterministic order that grains are rendered in, the
+only grains that can be relied upon to be passed in are ``core.py`` grains,
+since those are compiled first.
+
+
 "Virtual Package" Support Dropped for APT
 -----------------------------------------
 
@@ -507,3 +517,21 @@ passed correctly to the minion to run an orchestration in test mode. At present
 it is not possible to pass ``test=False`` on the command-line to override a
 minion in permanent test mode and so the ``test:False`` option must still be set
 in the orchestration file.
+
+states.event
+--------------
+The :ref:`event.send <salt.states.event.send>` state does not know the results of 
+the sent event, so returns changed every state run.  It can now be set to 
+return changed or unchanged.
+
+============================
+LDAP External Authentication
+============================
+
+freeipa 'groupattribute' support
+--------------------------------
+Previously, if Salt was using external authentication against a freeipa LDAP system
+it could only search for users via the 'accountattributename' field. This release
+add an additional search using the 'groupattribute' field as well. The original
+'accountattributename' search is done first then the 'groupattribute' allowing for
+backward compatibility with previous Salt releases.
