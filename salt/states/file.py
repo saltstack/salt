@@ -294,7 +294,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
@@ -486,7 +485,7 @@ def _gen_recurse_managed_files(
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = sdecode(posixpath.relpath(fn_, srcpath))
+        relname = salt.utils.data.decode(posixpath.relpath(fn_, srcpath))
         if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
 
@@ -2246,6 +2245,12 @@ def managed(name,
             'avoid reading the file unnecessarily.'.format(name)
         )
 
+    if 'file_mode' in kwargs:
+        ret.setdefault('warnings', []).append(
+            'The \'file_mode\' argument will be ignored.  '
+            'Please use \'mode\' instead to set file permissions.'
+        )
+
     # Use this below to avoid multiple '\0' checks and save some CPU cycles
     if contents_pillar is not None:
         if isinstance(contents_pillar, list):
@@ -3391,7 +3396,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = os.path.expanduser(sdecode(name))
+    name = salt.utils.data.decode(os.path.expanduser(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():

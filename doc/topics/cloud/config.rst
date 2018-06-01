@@ -173,8 +173,8 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars. This is only used when inside the cloud
-module. You can setup a variable called ``cloud`` that contains your profile and provider to pass
-that information to the cloud servers instead of having to copy the full configuration to every
+module. You can setup a variable called ``cloud`` that contains your profile, provider, and map to
+pass that information to the cloud servers instead of having to copy the full configuration to every
 minion. In your pillar file, you would use something like this:
 
 .. code-block:: yaml
@@ -197,6 +197,26 @@ minion. In your pillar file, you would use something like this:
           size: ds512M
           image: CentOS 7
           script_args: git develop
+
+      maps:
+        my-dev-map:
+          ubuntu-openstack:
+            - dev-test01
+            - dev-test02
+            - dev-test03
+            - dev-test04
+        my-prd-map:
+          ubuntu-openstack:
+            - prd-web01
+            - prd-web02
+                minion:
+                  id: custom-minion-id-app1-stack1-frontend
+                grains:
+                  roles:
+                    - webserver
+                  deployment: datacenter4-openstack
+            - prod-db01
+            - prod-db02
 
 
 Cloud Configurations
@@ -345,7 +365,7 @@ OpenStack
 ---------
 
 Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
-openstack-infra team.  
+openstack-infra team.
 
 This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
 `os-client-config <https://docs.openstack.org/os-client-config/latest/>`
