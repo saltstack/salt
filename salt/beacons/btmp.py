@@ -10,10 +10,10 @@ Beacon to fire events at failed login of users
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+import datetime
 import logging
 import os
 import struct
-import time
 
 # Import Salt Libs
 import salt.utils.stringutils
@@ -102,8 +102,8 @@ def _check_time_range(time_range, now):
     Check time range
     '''
     if _TIME_SUPPORTED:
-        _start = int(time.mktime(dateutil_parser.parse(time_range['start']).timetuple()))
-        _end = int(time.mktime(dateutil_parser.parse(time_range['end']).timetuple()))
+        _start = dateutil_parser.parse(time_range['start'])
+        _end = dateutil_parser.parse(time_range['end'])
 
         return bool(_start <= now <= _end)
     else:
@@ -249,7 +249,7 @@ def beacon(config):
         else:
             fp_.seek(loc)
         while True:
-            now = int(time.time())
+            now = datetime.datetime.now()
             raw = fp_.read(SIZE)
             if len(raw) != SIZE:
                 return ret
