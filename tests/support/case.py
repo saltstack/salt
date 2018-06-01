@@ -98,9 +98,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                             script_name
                         )
                     )
-                sfh.write(
+                contents = (
                     '#!{0}\n'.format(sys.executable) +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
+                )
+                sfh.write(contents)
+                log.debug(
+                    'Wrote the following contents to temp script %s:\n%s',
+                    script_path, contents
                 )
             st = os.stat(script_path)
             os.chmod(script_path, st.st_mode | stat.S_IEXEC)
