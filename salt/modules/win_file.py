@@ -58,8 +58,9 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir, _assert_occurrence, _starts_till)
+        _set_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol, _get_eol,
+        _insert_line_after, _insert_line_before)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils.functools import namespaced_function as _namespaced_function
@@ -116,8 +117,9 @@ def __virtual__():
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _get_line_indent, dirname, basename
+            global _regex_to_static, _set_line_indent, dirname, basename
             global list_backups_dir, normpath_, _assert_occurrence, _starts_till
+            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -172,7 +174,11 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
             _regex_to_static = _namespaced_function(_regex_to_static, globals())
-            _get_line_indent = _namespaced_function(_get_line_indent, globals())
+            _set_line_indent = _namespaced_function(_set_line_indent, globals())
+            _set_line_eol = _namespaced_function(_set_line_eol, globals())
+            _get_eol = _namespaced_function(_get_eol, globals())
+            _insert_line_after = _namespaced_function(_insert_line_after, globals())
+            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
