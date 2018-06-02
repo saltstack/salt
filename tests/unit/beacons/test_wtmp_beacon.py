@@ -16,7 +16,7 @@ import salt.beacons.wtmp as wtmp
 
 # pylint: disable=import-error
 try:
-    import dateutil.parser as dateutil_parser
+    import dateutil.parser as dateutil_parser  # pylint: disable=unused-import
     _TIME_SUPPORTED = True
 except ImportError:
     _TIME_SUPPORTED = False
