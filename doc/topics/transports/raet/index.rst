@@ -31,7 +31,7 @@ Using RAET in Salt
 ==================
 
 Using RAET in Salt is easy, the main difference is that the core dependencies
-change, instead of needing pycrypto, M2Crypto, ZeroMQ, and PYZMQ, the packages
+change, instead of needing pycryptodomex, M2Crypto, ZeroMQ, and PYZMQ, the packages
 `libsodium`_, libnacl, ioflo, and raet are required. Encryption is handled very cleanly
 by libnacl, while the queueing and flow control is handled by
 ioflo. Distribution packages are forthcoming, but `libsodium`_ can be easily

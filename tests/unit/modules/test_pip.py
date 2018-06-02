@@ -950,7 +950,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
-            'pycrypto==2.6'
+            'pycryptodomex==3.4.7'
         ]
         mock = MagicMock(
             return_value={
@@ -1009,7 +1009,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
             'pip==0.9.1',
-            'pycrypto==2.6',
+            'pycryptodomex==3.4.7',
             'setuptools==20.10.1'
         ]
         mock = MagicMock(
@@ -1048,7 +1048,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
-            'pycrypto==2.6'
+            'pycryptodomex==3.4.7'
         ]
         mock_version = '6.1.1'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': '\n'.join(eggs)})
@@ -1092,7 +1092,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
             'pip==9.0.1',
-            'pycrypto==2.6',
+            'pycryptodomex==3.4.7',
             'setuptools==20.10.1'
         ]
         # N.B.: this is deliberately different from the "output" of pip freeze.
@@ -1140,7 +1140,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
-            'pycrypto==2.6'
+            'pycryptodomex==3.4.7'
         ]
         mock = MagicMock(
             return_value={
@@ -1230,7 +1230,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
-            'pycrypto==2.6'
+            'pycryptodomex==3.4.7'
         ]
         mock = MagicMock(
             return_value={
@@ -1257,7 +1257,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
             'bbfreeze==1.1.0',
             'bbfreeze-loader==1.1.0',
-            'pycrypto==2.6'
+            'pycryptodomex==3.4.7'
         ]
         mock = MagicMock(
             return_value={

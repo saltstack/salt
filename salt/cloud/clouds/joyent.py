@@ -46,7 +46,7 @@ included:
 
       api_host_suffix: .api.myhostname.com
 
-:depends: PyCrypto
+:depends: PyCryptodomex
 '''
 # pylint: disable=invalid-name,function-redefined
 

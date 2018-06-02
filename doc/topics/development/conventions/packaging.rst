@@ -106,7 +106,7 @@ Depends
 - `Salt Common`
 - `ZeroMQ` >= 3.2
 - `PyZMQ` >= 2.10
-- `PyCrypto`
+- `PyCryptodome`
 - `M2Crypto`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 
@@ -140,7 +140,7 @@ Depends
 - `Salt Master`
 - `ZeroMQ` >= 3.2
 - `PyZMQ` >= 2.10
-- `PyCrypto`
+- `PyCryptodome`
 - `M2Crypto`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 
@@ -169,7 +169,7 @@ Depends
 - `Salt Common`
 - `ZeroMQ` >= 3.2
 - `PyZMQ` >= 2.10
-- `PyCrypto`
+- `PyCryptodome`
 - `M2Crypto`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 

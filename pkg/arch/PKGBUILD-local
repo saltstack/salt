@@ -13,7 +13,7 @@ depends=('python2'
          'python2-pyzmq'
          'python-m2crypto'
          'python2-yaml'
-         'pycrypto'
+         'pycryptodomex'
          'python2-psutil')
 makedepends=('git')
 provides=()

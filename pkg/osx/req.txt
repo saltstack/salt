@@ -17,7 +17,7 @@ MarkupSafe==1.0
 msgpack-python==0.4.8
 pyasn1==0.4.2
 pycparser==2.18
-pycrypto==2.6.1
+pycryptodomex>=3.4.7
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 PyYAML==3.12

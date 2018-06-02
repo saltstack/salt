@@ -622,6 +622,7 @@ py
 pybluez
 pycassa
 pycrypto
+pycryptodomex
 pydsl
 pygerduty
 pygit
