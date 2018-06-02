@@ -41,7 +41,6 @@ import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
-from salt.utils import to_unicode
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1992,9 +1991,9 @@ def pkg(pkg_path,
     # Verify that the tarball does not extract outside of the intended root
     members = s_pkg.getmembers()
     for member in members:
-        if to_unicode(member.path).startswith((os.sep, '..{0}'.format(os.sep))):
+        if salt.utils.stringutils.to_unicode(member.path).startswith((os.sep, '..{0}'.format(os.sep))):
             return {}
-        elif '..{0}'.format(os.sep) in to_unicode(member.path):
+        elif '..{0}'.format(os.sep) in salt.utils.stringutils.to_unicode(member.path):
             return {}
     s_pkg.extractall(root)
     s_pkg.close()
