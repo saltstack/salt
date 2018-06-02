@@ -132,7 +132,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret = btmp.beacon(config)
                 self.assertEqual(ret, _expected)
 
-    @skipIf(not _TIME_SUPPORTED)
+    @skipIf(not _TIME_SUPPORTED, 'dateutil.parser is missing.')
     def test_match_time(self):
         with patch('salt.utils.files.fopen',
                    mock_open(read_data=raw)):
