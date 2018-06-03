@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Tests for cluster related functions in salt.utils.vmware
 '''

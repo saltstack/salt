@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
-    :codeauthor: :email:`Tomas Sirny <tsirny@gmail.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
+    :codeauthor: Tomas Sirny <tsirny@gmail.com>
 '''
 
 # Import Python Libs

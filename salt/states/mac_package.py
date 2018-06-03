@@ -16,11 +16,12 @@ Install any kind of pkg, dmg or app file on macOS:
         - dmg: True
 
     /mnt/xcode.dmg:
-        macpackage.installed:
-            - dmg: True
-            - app: True
-            - target: /Applications/Xcode.app
-            - version_check: xcodebuild -version=Xcode 7.1\n.*7B91b
+      macpackage.installed:
+        - dmg: True
+        - app: True
+        - target: /Applications/Xcode.app
+        - version_check: xcodebuild -version=Xcode 7.1\\n.*7B91b
+
 '''
 
 # Import python libs
@@ -92,6 +93,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
         The command and version that we want to check against, the version number can use regex.
 
         .. code-block:: yaml
+
             version_check: python --version_check=2.7.[0-9]
 
     '''

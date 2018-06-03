@@ -544,7 +544,7 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
+        salt '*' rabbitmq.set_permissions myvhost myuser
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
@@ -565,7 +565,7 @@ def list_permissions(vhost, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_permissions '/myvhost'
+        salt '*' rabbitmq.list_permissions /myvhost
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
@@ -585,7 +585,7 @@ def list_user_permissions(name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_user_permissions 'user'.
+        salt '*' rabbitmq.list_user_permissions user
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
@@ -604,7 +604,7 @@ def set_user_tags(name, tags, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_user_tags 'myadmin' 'administrator'
+        salt '*' rabbitmq.set_user_tags myadmin administrator
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()
@@ -668,7 +668,7 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
+        salt '*' rabbitmq.join_cluster rabbit.example.com rabbit
     '''
     cmd = [RABBITMQCTL, 'join_cluster']
     if ram_node:
@@ -816,7 +816,7 @@ def list_policies(vhost="/", runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_policies'
+        salt '*' rabbitmq.list_policies
     '''
     ret = {}
     if runas is None and not salt.utils.is_windows():
@@ -888,7 +888,7 @@ def delete_policy(vhost, name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.delete_policy / HA'
+        salt '*' rabbitmq.delete_policy / HA
     '''
     if runas is None and not salt.utils.is_windows():
         runas = salt.utils.get_user()

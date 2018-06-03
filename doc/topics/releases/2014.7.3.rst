@@ -2,9 +2,9 @@
 Salt 2014.7.3 Release Notes
 ===========================
 
-:release: TBA
+:release: 2015-03-25
 
-Version 2014.7.3 is a bugfix release for :ref:`2014.7.0<release-2014-7-0>`.
+Version 2014.7.3 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
 
 Changes:
 
