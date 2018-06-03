@@ -315,6 +315,10 @@ def _get_yum_config():
             raise CommandExecutionError(
                 'Could not query yum config: {0}'.format(exc)
             )
+        except yum.Errors.YumBaseError as yum_base_error:
+            raise CommandExecutionError(
+                'Error accessing yum or rpmdb: {0}'.format(yum_base_error)
+            )
     else:
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
@@ -1748,6 +1752,8 @@ def upgrade(name=None,
             refresh=True,
             skip_verify=False,
             normalize=True,
+            minimal=False,
+            obsoletes=True,
             **kwargs):
     '''
     Run a full system upgrade (a ``yum upgrade`` or ``dnf upgrade``), or
@@ -1769,7 +1775,8 @@ def upgrade(name=None,
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    Run a full system upgrade, a yum upgrade
+    .. versionchanged:: Fluorine
+        Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
 
@@ -1853,6 +1860,27 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
+    minimal : False
+        Use upgrade-minimal instead of upgrade (e.g., ``yum upgrade-minimal``)
+        Goes to the 'newest' package match which fixes a problem that affects your system.
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade minimal=True
+
+        .. versionadded:: Fluorine
+
+    obsoletes : True
+        Controls wether yum/dnf should take obsoletes into account and remove them.
+        If set to ``False`` yum will use ``update`` instead of ``upgrade``
+        and dnf will be run with ``--obsoletes=False``
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade obsoletes=False
+
+        .. versionadded:: Fluorine
+
     setopt
         A comma-separated or Python list of key=value options. This list will
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
@@ -1900,7 +1928,17 @@ def upgrade(name=None,
     cmd.extend(options)
     if skip_verify:
         cmd.append('--nogpgcheck')
-    cmd.append('upgrade')
+    if obsoletes:
+        cmd.append('upgrade' if not minimal else 'upgrade-minimal')
+    else:
+        # do not force the removal of obsolete packages
+        if _yum() == 'dnf':
+            # for dnf we can just disable obsoletes
+            cmd.append('--obsoletes=False')
+            cmd.append('upgrade' if not minimal else 'upgrade-minimal')
+        else:
+            # for yum we have to use update instead of upgrade
+            cmd.append('update' if not minimal else 'update-minimal')
     cmd.extend(targets)
 
     result = __salt__['cmd.run_all'](cmd,
@@ -1917,6 +1955,29 @@ def upgrade(name=None,
         )
 
     return ret
+
+
+def update(name=None,
+            pkgs=None,
+            refresh=True,
+            skip_verify=False,
+            normalize=True,
+            minimal=False,
+            obsoletes=False,
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
+    ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
+    See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
+    further documentation.
+
+    .. code-block:: bash
+
+        salt '*' pkg.update
+    '''
+    return upgrade(name, pkgs, refresh, skip_verify, normalize, minimal, obsoletes, **kwargs)
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
