@@ -315,13 +315,22 @@ def latest_version(*names, **kwargs):
     The available version of packages in the repository.
     In case of multiple matches, it returns list of all matched packages.
     Accepts full or partial FMRI.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
     Please use pkg.latest_version as pkg.available_version is being deprecated.
+
+    .. versionchanged:: Fluorine
+        Argument changed from 'name' to '*names' tu support multiple packages.
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt '*' pkg.latest_version bash
         salt '*' pkg.latest_version pkg://solaris/entire
+        salt '*' pkg.latest_version postfix sendmail
     '''
 
     if len(names) == 0:
