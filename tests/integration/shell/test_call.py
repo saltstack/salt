@@ -422,7 +422,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 except OSError:
                     log.error(
                         'run_script failed to generate output file:\n'
-                        'return code %d\n'
+                        'return code: %s\n'
                         'stdout:\n'
                         '%s\n\n'
                         'stderr\n'
