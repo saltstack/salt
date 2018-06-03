@@ -235,9 +235,10 @@ etc) will be created in.
 
 network_resource_group
 ----------------------
-Optional. If specified, then the VM will be connected to the network resources
-in this group, rather than the group that it was created in. The VM interfaces
-and IPs will remain in the configured ``resource_group`` with the VM.
+Optional. If specified, then the VM will be connected to the virtual network
+in this resource group, rather than the parent resource group of the instance.
+The VM interfaces and IPs will remain in the configured ``resource_group`` with
+the VM.
 
 network
 -------

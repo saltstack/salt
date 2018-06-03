@@ -119,7 +119,10 @@ def __virtual__():
                 os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.md5sum'))):
             _update_nilrt_module_dep_info()
         return __virtualname__
-    return (False, "Module opkg only works on nilrt based systems")
+
+    if os.path.isdir(OPKG_CONFDIR):
+        return __virtualname__
+    return False, "Module opkg only works on OpenEmbedded based systems"
 
 
 def latest_version(*names, **kwargs):
