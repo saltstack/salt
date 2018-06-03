@@ -55,7 +55,7 @@ Multiple policy configuration
             - user_policy:
                 Do not process the legacy run list: Enabled
 
-.. code-block:: yaml
+.. code-block:: text
 
     server_policy:
       lgpo.set:
