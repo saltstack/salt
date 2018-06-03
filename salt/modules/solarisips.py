@@ -288,6 +288,7 @@ def version(*names, **kwargs):
     '''
     Common interface for obtaining the version of installed packages.
     Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
+    Partial FMRI is returned if the package is not installed.
 
     CLI Example:
 
@@ -298,23 +299,32 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version pkg://solaris/entire
 
     '''
-    if names:
-        cmd = ['/bin/pkg', 'list', '-Hv']
-        cmd.extend(names)
-        lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
-        ret = {}
-        for line in lines:
-            ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
-        if ret:
-            return ret
-    return ''
+    if len(names) == 0:
+        return ''
+
+    cmd = ['/bin/pkg', 'list', '-Hv']
+    cmd.extend(names)
+    lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
+    ret = {}
+    for line in lines:
+        ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
+
+    # Append package names which are not installed/found
+    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret.keys(), False), names))
+    ret.update(zip(unmatched, [ '' ] * len(unmatched)))
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+
+    return ret
 
 
 def latest_version(*names, **kwargs):
     '''
     The available version of packages in the repository.
-    In case of multiple matches, it returns list of all matched packages.
-    Accepts full or partial FMRI.
+    Accepts full or partial FMRI. Partial FMRI is returned if the full FMRI
+    could not be resolved.
 
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
@@ -350,6 +360,10 @@ def latest_version(*names, **kwargs):
             continue
         if ret[name] == installed[name]:
             ret[name] = ''
+
+    # Append package names which are not found
+    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret.keys(), False), names))
+    ret.update(zip(unmatched, [ '' ] * len(unmatched)))
 
     # Return a string if only one package name passed
     if len(names) == 1:
