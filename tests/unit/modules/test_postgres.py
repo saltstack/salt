@@ -1484,12 +1484,14 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test Checks if postgres version is older
         '''
-        self.assertTrue(salt.modules.postgres._pg_is_older_ext_ver('8.5', '9.5'))
-        self.assertTrue(salt.modules.postgres._pg_is_older_ext_ver('8.5', '8.6'))
-        self.assertTrue(salt.modules.postgres._pg_is_older_ext_ver('8.5.2', '8.5.3'))
-        self.assertFalse(salt.modules.postgres._pg_is_older_ext_ver('9.5', '8.5'))
-        self.assertFalse(salt.modules.postgres._pg_is_older_ext_ver('9.5', '9.6'))
-        self.assertFalse(salt.modules.postgres._pg_is_older_ext_ver('9.5.0', '9.5.1'))
-        self.assertFalse(salt.modules.postgres._pg_is_older_ext_ver('9.5', '9.5.1'))
-        self.assertTrue(salt.modules.postgres._pg_is_older_ext_ver('9.5.1', '9.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '9.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '8.6'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5.2', '8.5.3'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5', '8.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.6'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5.0', '9.5.1'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.5.1'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5.1', '9.5'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5b', '9.5a'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('10a', '10b'))
 
