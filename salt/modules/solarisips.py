@@ -348,7 +348,7 @@ def latest_version(*names, **kwargs):
 
     cmd = ['/bin/pkg', 'list', '-Hnv']
     cmd.extend(names)
-    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+    lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
     ret = {}
     for line in lines:
         ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
