@@ -1350,7 +1350,6 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
-    'nilrt-xfce': 'NILinuxRT-XFCE',
     'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
@@ -1423,7 +1422,6 @@ _OS_FAMILY_MAP = {
     'Cumulus': 'Debian',
     'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
@@ -1788,8 +1786,11 @@ def os_data():
         # so that linux_distribution() does the /etc/lsb-release parsing, but
         # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
-            grains['osfullname'] = \
-                grains.get('lsb_distrib_id', osname).strip()
+            # If NI Linux RT distribution, set the grains['osfullname'] to 'nilrt'
+            if grains.get('lsb_distrib_id', '').lower().startswith('nilrt'):
+                grains['osfullname'] = 'nilrt'
+            else:
+                grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
         if 'osrelease' not in grains:
             # NOTE: This is a workaround for CentOS 7 os-release bug
             # https://bugs.centos.org/view.php?id=8359
