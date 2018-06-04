@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The `cache` roster provides a flexible interface to the Salt Masters' minion cache
+The ``cache`` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
 
 .. versionadded:: 2017.7.0
