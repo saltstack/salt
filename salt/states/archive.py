@@ -82,8 +82,9 @@ def _checksum_file_path(path):
             )
         else:
             raise
-    log.debug('Found path: %s', relpath)
-    return salt.utils.path_join(__opts__['cachedir'], 'archive_hash', relpath)
+    ret = salt.utils.path_join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
