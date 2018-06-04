@@ -19,6 +19,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -829,13 +830,10 @@ def list_policies(vhost="/", runas=None):
     _check_response(res)
     output = res['stdout']
 
-    if __salt__['pkg.version']('rabbitmq-server'):
-        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0].split('.')
+    if __grains__['os_family'] != 'FreeBSD':
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
     else:
-        version = __salt__['pkg.version']('rabbitmq').split('-')[0].split('.')
-
-    major_version = int(version[0])
-    minor_version = int(version[1])
+        version = __salt__['pkg.version']('rabbitmq').split('-')[0]
 
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
@@ -848,7 +846,7 @@ def list_policies(vhost="/", runas=None):
             ret[vhost] = {}
         ret[vhost][name] = {}
 
-        if major_version >= 3 and minor_version >= 7:
+        if _LooseVersion(version) >= _LooseVersion("3.7"):
             # in version 3.7 the position of apply_to and pattern has been
             # switched
             ret[vhost][name]['pattern'] = parts[2]
