@@ -356,7 +356,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
     - vpc_name (really just a pointer to vpc_id anyway).
     - vpc_region (again, supported in boto3 but not boto2).
 
-    If you need the ability to update these attributes, please use the newer 
+    If you need the ability to update these attributes, please use the newer
     boto3_route53 module instead.
 
     name
