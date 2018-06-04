@@ -182,7 +182,7 @@ def beacon(config):
     for item in _config['txt']:
         changes_key = 'txt.' + salt.utils.stringutils.to_unicode(item)
         if _config['txt'][item].startswith('grains.'):
-            grain = _config['txt'][item][6:]
+            grain = _config['txt'][item][7:]
             grain_index = None
             square_bracket = grain.find('[')
             if square_bracket != -1 and grain[-1] == ']':
