@@ -355,6 +355,10 @@ def latest_version(*names, **kwargs):
 
     installed = version(*names)
 
+    if len(names) == 1:
+        # Convert back our result in a dict if only one name is passed
+        installed = { list(ret.keys())[0] if len(ret) > 0 else names[0]: installed }
+
     for name in ret:
         if not name in installed:
             continue
