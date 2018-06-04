@@ -29,13 +29,14 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import (
+    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
+)
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import salt.utils.json
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -97,9 +98,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                             script_name
                         )
                     )
-                sfh.write(
+                contents = (
                     '#!{0}\n'.format(sys.executable) +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
+                )
+                sfh.write(contents)
+                log.debug(
+                    'Wrote the following contents to temp script %s:\n%s',
+                    script_path, contents
                 )
             st = os.stat(script_path)
             os.chmod(script_path, st.st_mode | stat.S_IEXEC)
@@ -287,10 +293,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
         process = subprocess.Popen(cmd, **popen_kwargs)
+
+        # Late import
+        import salt.utils.platform
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
@@ -303,13 +309,23 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # Kill the process group since sending the term signal
                         # would only terminate the shell, not the command
                         # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                         term_sent = True
                         continue
 
                     try:
                         # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
                             # If errno is not "no such process", raise
@@ -855,6 +871,10 @@ class SSHCase(ShellCase):
                            wipe=wipe, raw=raw)
         log.debug('SSHCase run_function executed %s with arg %s', function, arg)
         log.debug('SSHCase JSON return: %s', ret)
+
+        # Late import
+        import salt.utils.json
+
         try:
             return salt.utils.json.loads(ret)['localhost']
         except Exception:

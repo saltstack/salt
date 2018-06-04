@@ -54,7 +54,6 @@ import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -551,6 +550,10 @@ def associate_vpc_with_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             r = conn.associate_vpc_with_hosted_zone(**args)
             return _wait_for_sync(r['ChangeInfo']['Id'], conn)
         except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'ConflictingDomainExists':
+                log.debug('VPC Association already exists.')
+                # return True since the current state is the desired one
+                return True
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
@@ -642,6 +645,10 @@ def disassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             r = conn.disassociate_vpc_from_hosted_zone(**args)
             return _wait_for_sync(r['ChangeInfo']['Id'], conn)
         except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'VPCAssociationNotFound':
+                log.debug('No VPC Association exists.')
+                # return True since the current state is the desired one
+                return True
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)

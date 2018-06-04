@@ -329,6 +329,48 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_syslog_file_not_found(self):
+        '''
+        test when log_file is set to a syslog file that does not exist
+        '''
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = salt.utils.yaml.load(fh_.read())
+            minion_config['log_file'] = 'file:///dev/doesnotexist'
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    salt.utils.yaml.dump(minion_config, default_flow_style=False)
+                )
+        ret = self.run_script(
+            'salt-call',
+            '--config-dir {0} cmd.run "echo foo"'.format(
+                config_dir
+            ),
+            timeout=60,
+            catch_stderr=True,
+            with_retcode=True
+        )
+        try:
+            if sys.version_info >= (3, 5, 4):
+                self.assertIn('local:', ret[0])
+                self.assertIn('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.', ret[1])
+                self.assertEqual(ret[2], 0)
+            else:
+                self.assertIn(
+                    'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+                )
+                self.assertEqual(ret[2], 2)
+        finally:
+            self.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
     def test_issue_15074_output_file_append(self):
         output_file_append = os.path.join(TMP, 'issue-15074')
         try:
@@ -366,7 +408,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         with salt.utils.files.set_umask(0o077):
             try:
                 # Let's create an initial output file with some data
-                self.run_script(
+                stdout, stderr, retcode = self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -g'.format(
                         self.get_config_dir(),
@@ -375,7 +417,20 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat1 = os.stat(output_file)
+                try:
+                    stat1 = os.stat(output_file)
+                except OSError:
+                    log.error(
+                        'run_script failed to generate output file:\n'
+                        'return code: %s\n'
+                        'stdout:\n'
+                        '%s\n\n'
+                        'stderr\n'
+                        '%s',
+                        retcode, stdout, stderr
+                    )
+                    self.fail(
+                        'Failed to generate output file, see log for details')
 
                 # Let's change umask
                 os.umask(0o777)  # pylint: disable=blacklisted-function

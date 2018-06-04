@@ -43,7 +43,7 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range, zip
+from salt.ext.six.moves import range, zip, map
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -405,6 +405,19 @@ def _run(cmd,
 
         return win_runas(cmd, runas, password, cwd)
 
+    if runas and salt.utils.platform.is_darwin():
+        # we need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that
+        # method doesn't work properly when run as root for certain commands.
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(map(_cmd_quote, cmd))
+
+        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
+        # set runas to None, because if you try to run `su -l` as well as
+        # simulate the environment macOS will prompt for the password of the
+        # user and will cause salt to hang.
+        runas = None
+
     if runas:
         # Save the original command before munging it
         try:
@@ -478,10 +491,18 @@ def _run(cmd,
                 for k, v in six.iteritems(env_runas)
             )
             env_runas.update(env)
+
             # Fix platforms like Solaris that don't set a USER env var in the
             # user's default environment as obtained above.
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
+
+            # Fix some corner cases where shelling out to get the user's
+            # environment returns the wrong home directory.
+            runas_home = os.path.expanduser('~{0}'.format(runas))
+            if env_runas.get('HOME') != runas_home:
+                env_runas['HOME'] = runas_home
+
             env = env_runas
         except ValueError as exc:
             log.exception('Error raised retrieving environment for user %s', runas)

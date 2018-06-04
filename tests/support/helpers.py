@@ -59,8 +59,12 @@ from tests.support.paths import FILES, TMP
 import salt.utils.files
 import salt.utils.platform
 
-log = logging.getLogger(__name__)
+if salt.utils.platform.is_windows():
+    import salt.utils.win_functions
+else:
+    import pwd
 
+log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
 
@@ -1159,7 +1163,6 @@ def skip_if_not_root(func):
             func.__unittest_skip__ = True
             func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
     else:
-        import salt.utils.win_functions
         current_user = salt.utils.win_functions.get_current_user()
         if current_user != 'SYSTEM':
             if not salt.utils.win_functions.is_admin(current_user):
@@ -1572,3 +1575,32 @@ class Webserver(object):
         '''
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+
+def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
+        timeout=None, on_terminate=None):
+    '''
+    Kill a process tree (including grandchildren) with signal "sig" and return
+    a (gone, still_alive) tuple.  "on_terminate", if specified, is a callabck
+    function which is called as soon as a child terminates.
+    '''
+    if pid == os.getpid():
+        raise RuntimeError("I refuse to kill myself")
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    if include_parent:
+        children.append(parent)
+    for p in children:
+        p.send_signal(sig)
+    gone, alive = psutil.wait_procs(children, timeout=timeout,
+                                    callback=on_terminate)
+    return (gone, alive)
+
+
+def this_user():
+    '''
+    Get the user associated with the current process.
+    '''
+    if salt.utils.platform.is_windows():
+        return salt.utils.win_functions.get_current_user()
+    return pwd.getpwuid(os.getuid())[0]

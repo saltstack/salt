@@ -460,13 +460,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Path to requirements
 
     bin_env
-        Path to pip bin or path to virtualenv. If doing a system install,
-        and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
-        specify the pip bin you want.
-
-        .. note::
-            If installing into a virtualenv, just use the path to the
-            virtualenv (e.g. ``/home/code/path/to/virtualenv/``)
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
 
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
@@ -569,7 +566,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         The user under which to run pip
 
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
 
     pre_releases
         Include pre-releases in the available versions
@@ -630,7 +627,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     '''
     if 'no_chown' in kwargs:
         salt.utils.versions.warn_until(
-            'Flourine',
+            'Fluorine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')
         kwargs.pop('no_chown')
@@ -941,36 +938,38 @@ def uninstall(pkgs=None,
               saltenv='base',
               use_vt=False):
     '''
-    Uninstall packages with pip
-
-    Uninstall packages individually or from a pip requirements file. Uninstall
-    packages globally or from a virtualenv.
+    Uninstall packages individually or from a pip requirements file
 
     pkgs
         comma separated list of packages to install
+
     requirements
-        path to requirements.
+        Path to requirements file
+
     bin_env
-        path to pip bin or path to virtualenv. If doing an uninstall from
-        the system python and want to use a specific pip bin (pip-2.7,
-        pip-2.6, etc..) just specify the pip bin you want.
-        If uninstalling from a virtualenv, just use the path to the virtualenv
-        (/home/code/path/to/virtualenv/)
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
     log
         Log file where a complete (maximum verbosity) record will be kept
+
     proxy
-        Specify a proxy in the form
-        user:passwd@proxy.server:port. Note that the
-        user:password@ is optional and required only if you
-        are behind an authenticated proxy.  If you provide
-        user@proxy.server:port then you will be prompted for a
-        password.
+        Specify a proxy in the format ``user:passwd@proxy.server:port``. Note
+        that the ``user:password@`` is optional and required only if you are
+        behind an authenticated proxy.  If you provide
+        ``user@proxy.server:port`` then you will be prompted for a password.
+
     timeout
         Set the socket timeout (default 15 seconds)
+
     user
         The user under which to run pip
+
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
+
     use_vt
         Use VT terminal emulation (see output while installing)
 
@@ -982,7 +981,6 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall requirements=/path/to/requirements.txt
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
-
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['uninstall', '-y'])
@@ -1065,32 +1063,27 @@ def freeze(bin_env=None,
     virtualenv
 
     bin_env
-        path to pip bin or path to virtualenv. If doing an uninstall from
-        the system python and want to use a specific pip bin (pip-2.7,
-        pip-2.6, etc..) just specify the pip bin you want.
-        If uninstalling from a virtualenv, just use the path to the virtualenv
-        (/home/code/path/to/virtualenv/)
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
     user
         The user under which to run pip
+
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
 
     .. note::
-
         If the version of pip available is older than 8.0.3, the list will not
-        include the packages pip, wheel, setuptools, or distribute even if they
-        are installed.
+        include the packages ``pip``, ``wheel``, ``setuptools``, or
+        ``distribute`` even if they are installed.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pip.freeze /home/code/path/to/virtualenv/
-
-    .. versionchanged:: 2016.11.2
-
-        The packages pip, wheel, setuptools, and distribute are included if the
-        installed pip is new enough.
+        salt '*' pip.freeze bin_env=/home/code/path/to/virtualenv
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.append('freeze')
@@ -1135,21 +1128,16 @@ def list_(prefix=None,
     .. note::
 
         If the version of pip available is older than 8.0.3, the packages
-        wheel, setuptools, and distribute will not be reported by this function
-        even if they are installed. Unlike
-        :py:func:`pip.freeze <salt.modules.pip.freeze>`, this function always
-        reports the version of pip which is installed.
+        ``wheel``, ``setuptools``, and ``distribute`` will not be reported by
+        this function even if they are installed. Unlike :py:func:`pip.freeze
+        <salt.modules.pip.freeze>`, this function always reports the version of
+        pip which is installed.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.list salt
-
-    .. versionchanged:: 2016.11.2
-
-        The packages wheel, setuptools, and distribute are included if the
-        installed pip is new enough.
     '''
     packages = {}
 
@@ -1457,9 +1445,10 @@ def list_all_versions(pkg,
         The package to check
 
     bin_env
-        Path to pip bin or path to virtualenv. If doing a system install,
-        and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
-        specify the pip bin you want.
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
 
     include_alpha
         Include alpha versions in the list
@@ -1474,7 +1463,7 @@ def list_all_versions(pkg,
         The user under which to run pip
 
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
 
     CLI Example:
 
