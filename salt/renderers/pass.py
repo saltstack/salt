@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Pass Renderer for Salt
+======================
 
 [pass](https://www.passwordstore.org/)
 

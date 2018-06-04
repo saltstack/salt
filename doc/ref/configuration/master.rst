@@ -872,8 +872,7 @@ Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
 ``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+what you are doing!
 
 .. code-block:: yaml
 
@@ -886,10 +885,10 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
 Default: ``{}``
 
-(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
-This setting has a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+(experimental) Starts multiple transports and overrides options for each
+transport with the provided dictionary This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!  The
+following example shows how to start a TCP transport alongside a ZMQ transport.
 
 .. code-block:: yaml
 
@@ -1031,7 +1030,7 @@ a minion performs an authentication check with the master.
 .. conf_master:: minion_data_cache_events
 
 ``minion_data_cache_events``
---------------------
+----------------------------
 
 .. versionadded:: 2017.7.3
 
@@ -1061,6 +1060,23 @@ Define the default salt-ssh roster module to use
 .. code-block:: yaml
 
     roster: cache
+
+.. conf_master:: roster_defaults
+
+``roster_defaults``
+-------------------
+
+.. versionadded:: 2017.7.0
+
+Default settings which will be inherited by all rosters.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
 
 .. conf_master:: roster_file
 
@@ -1706,10 +1722,10 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
-.. conf_master:: allow_minion_key_revoke
+.. conf_master:: preserve_minion_cache
 
-``allow_minion_key_revoke``
----------------------------
+``preserve_minion_cache``
+-------------------------
 
 Default: ``False``
 
@@ -1738,7 +1754,7 @@ the master will drop the request and the minion's key will remain accepted.
 
 .. code-block:: yaml
 
-    rotate_aes_key: True
+    allow_minion_key_revoke: False
 
 
 Master Large Scale Tuning Settings
@@ -4319,7 +4335,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <git_pillar-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml
@@ -4367,12 +4383,14 @@ The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 5 values:
 
 * ``none``:
-.. versionadded:: 2016.3.4
+
   It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
+
+  .. versionadded:: 2016.3.4
 
 * ``recurse``:
 
-  it will merge recursively mapping of data. For example, theses 2 sources:
+  It will recursively merge data. For example, theses 2 sources:
 
   .. code-block:: yaml
 
@@ -5469,7 +5487,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <winrepo-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml

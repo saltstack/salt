@@ -66,7 +66,7 @@ def wait(name, sfun=None):
 
     Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Stand up a new web server.
         apache:

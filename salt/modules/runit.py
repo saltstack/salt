@@ -561,10 +561,8 @@ def enable(name, start=False, **kwargs):
     name
         the service's name
 
-    start
-        ``False`` : Do not start the service once enabled. Default mode.
-                    (consistent with other service management)
-        ``True``  : also start the service at the same time (default sv mode)
+    start : False
+        If ``True``, start the service once enabled.
 
     CLI Example:
 

@@ -324,7 +324,7 @@ option on the Salt master.
 .. conf_minion:: publish_port
 
 ``publish_port``
----------------
+----------------
 
 Default: ``4505``
 
@@ -561,7 +561,7 @@ ids.
 
 Default: ``True``
 
-Caches the minion id to a file when the minion's :minion_conf:`id` is not
+Caches the minion id to a file when the minion's :conf_minion:`id` is not
 statically defined in the minion config. This setting prevents potential
 problems when automatic minion id resolution changes, which can cause the
 minion to lose connection with the master. To turn off minion id caching,
@@ -1007,7 +1007,7 @@ is appropriate if you expect occasional downtime from the master(s).
 
     master_tries: 1
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_tries
 
 ``auth_tries``
 --------------
@@ -1275,8 +1275,7 @@ Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
 ``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+what you are doing!
 
 .. code-block:: yaml
 
@@ -1591,7 +1590,7 @@ below.
 Default: ``-1``
 
 Specify a max size (in bytes) for modules on import. This feature is currently
-only supported on *nix operating systems and requires psutil.
+only supported on \*NIX operating systems and requires psutil.
 
 .. code-block:: yaml
 
@@ -2658,7 +2657,7 @@ Thread Settings
 .. conf_minion:: multiprocessing
 
 ``multiprocessing``
--------
+-------------------
 
 Default: ``True``
 

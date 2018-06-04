@@ -423,6 +423,7 @@ class _vfstab_entry(object):
 def fstab(config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
+
     List the contents of the fstab
 
     CLI Example:
@@ -465,6 +466,7 @@ def fstab(config='/etc/fstab'):
 def vfstab(config='/etc/vfstab'):
     '''
     .. versionadded:: 2016.3.2
+
     List the contents of the vfstab
 
     CLI Example:
@@ -480,6 +482,7 @@ def vfstab(config='/etc/vfstab'):
 def rm_fstab(name, device, config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
+
     Remove the mount point from the fstab
 
     CLI Example:
@@ -531,6 +534,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 def rm_vfstab(name, device, config='/etc/vfstab'):
     '''
     .. versionadded:: 2016.3.2
+
     Remove the mount point from the vfstab
 
     CLI Example:

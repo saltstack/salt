@@ -1602,5 +1602,5 @@ def this_user():
     Get the user associated with the current process.
     '''
     if salt.utils.platform.is_windows():
-        return salt.utils.win_functions.get_current_user()
+        return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
