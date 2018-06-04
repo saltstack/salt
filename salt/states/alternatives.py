@@ -88,7 +88,7 @@ def install(name, link, path, priority):
                 ).format(name, path, priority)
             else:
                 ret['comment'] = (
-                    'Alternative {0} for {1} registered  with priority {2} and not set to default'
+                    'Alternative {0} for {1} registered with priority {2} and not set to default'
                 ).format(path, name, priority)
             ret['changes'] = {'name': name,
                               'link': link,
