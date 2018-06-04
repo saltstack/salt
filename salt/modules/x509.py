@@ -840,7 +840,6 @@ def create_private_key(path=None,
     bio = M2Crypto.BIO.MemoryBuffer()
     if passphrase is None:
         cipher = None
-
     rsa.save_key_bio(
         bio,
         cipher=cipher,
