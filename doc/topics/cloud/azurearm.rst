@@ -235,9 +235,10 @@ etc) will be created in.
 
 network_resource_group
 ----------------------
-Optional. If specified, then the VM will be connected to the network resources
-in this group, rather than the group that it was created in. The VM interfaces
-and IPs will remain in the configured ``resource_group`` with the VM.
+Optional. If specified, then the VM will be connected to the virtual network
+in this resource group, rather than the parent resource group of the instance.
+The VM interfaces and IPs will remain in the configured ``resource_group`` with
+the VM.
 
 network
 -------
@@ -285,6 +286,24 @@ Optional. A **list** of the DNS servers to configure for the network interface
 availability_set
 ----------------
 Optional. If set, the VM will be added to the specified availability set.
+
+volumes
+-------
+Optional. A list of dictionaries describing data disks to attach to the instance can
+be specified using this setting. The data disk dictionaries are passed entirely to the
+`Azure DataDisk object
+ <https://docs.microsoft.com/en-us/python/api/azure.mgmt.compute.v2017_12_01.models.datadisk?view=azure-python>`_
+, so ad-hoc options can be handled as long as they are valid properties of the object.
+
+.. code-block:: yaml
+
+    volumes:
+    - disk_size_gb: 50
+      caching: ReadWrite
+    - disk_size_gb: 100
+      caching: ReadWrite
+      managed_disk:
+        storage_account_type: Standard_LRS
 
 cleanup_disks
 -------------
