@@ -451,7 +451,11 @@ def _bsd_memdata(osdata):
 
         if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
-            swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
+            swap_data = __salt__['cmd.run']('{0} -sk'.format(swapctl))
+            if swap_data == 'no swap devices configured':
+                swap_total = 0
+            else:
+                swap_total = swap_data.split(' ')[1]
         else:
             swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         grains['swap_total'] = int(swap_total) // 1024 // 1024
@@ -2308,9 +2312,9 @@ def _hw_data(osdata):
 
         product_regexes = [
             re.compile(r) for r in [
-                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)',  # prtdiag
-                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
-                r'(?im)^\s*product-name:\s*(.*)',  # prtconf
+                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+[^\S\r\n]*(.*)',  # prtdiag
+                r'(?im)^[^\S\r\n]*banner-name:[^\S\r\n]*(.*)',  # prtconf
+                r'(?im)^[^\S\r\n]*product-name:[^\S\r\n]*(.*)',  # prtconf
             ]
         ]
 
@@ -2377,8 +2381,11 @@ def _hw_data(osdata):
         for regex in product_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains['product'] = res.group(1).strip().replace("'", "")
-                break
+                t_productname = res.group(1).strip().replace("'", "")
+                if t_productname:
+                    grains['product'] = t_productname
+                    grains['productname'] = t_productname
+                    break
 
     return grains
 

@@ -36,6 +36,11 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
 
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+}
+
 
 def __virtual__():
     '''
@@ -112,6 +117,18 @@ def _run_all(cmd):
     ret['stderr'] = err
 
     return ret
+
+
+def _check_launchctl_stderr(ret):
+    '''
+    helper class to check the launchctl stderr.
+    launchctl does not always return bad exit code
+    if there is a failure
+    '''
+    err = ret['stderr'].lower()
+    if 'service is disabled' in err:
+        return True
+    return False
 
 
 def execute_return_success(cmd):
@@ -267,10 +284,12 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Run command
     kwargs['python_shell'] = False
-    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
+    error = _check_launchctl_stderr(ret)
 
     # Raise an error or return successful result
-    if ret['retcode']:
+    if ret['retcode'] or error:
         out = 'Failed to {0} service:\n'.format(sub_cmd)
         out += 'stdout: {0}\n'.format(ret['stdout'])
         out += 'stderr: {0}\n'.format(ret['stderr'])
@@ -321,7 +340,7 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
+                    plist_xml = __salt__['cmd.run'](cmd)
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:

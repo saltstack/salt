@@ -50,6 +50,8 @@ SYS_TMP_DIR = os.path.abspath(os.path.realpath(
 ))
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+BASE_FILES = os.path.join(FILES, 'file', 'base')
+PROD_FILES = os.path.join(FILES, 'file', 'prod')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')

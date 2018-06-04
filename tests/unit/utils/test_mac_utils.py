@@ -175,11 +175,8 @@ class MacUtilsTestCase(TestCase):
         mock_cmd = MagicMock(return_value={'retcode': 0,
                                            'stdout': 'success',
                                            'stderr': 'none'})
-        with patch('salt.modules.cmdmod.run_all', mock_cmd) as m_run_all:
+        with patch('salt.utils.mac_utils.__salt__', {'cmd.run_all': mock_cmd}):
             ret = mac_utils.launchctl('enable', 'org.salt.minion')
-            m_run_all.assert_called_with(
-                ['launchctl', 'enable', 'org.salt.minion'],
-                python_shell=False)
             self.assertEqual(ret, True)
 
     def test_launchctl_return_stdout(self):
@@ -189,12 +186,10 @@ class MacUtilsTestCase(TestCase):
         mock_cmd = MagicMock(return_value={'retcode': 0,
                                            'stdout': 'success',
                                            'stderr': 'none'})
-        with patch('salt.modules.cmdmod.run_all', mock_cmd) as m_run_all:
+        with patch('salt.utils.mac_utils.__salt__', {'cmd.run_all': mock_cmd}):
             ret = mac_utils.launchctl('enable',
                                       'org.salt.minion',
                                       return_stdout=True)
-            m_run_all.assert_called_with(['launchctl', 'enable', 'org.salt.minion'],
-                                         python_shell=False)
             self.assertEqual(ret, 'success')
 
     def test_launchctl_error(self):
@@ -208,13 +203,11 @@ class MacUtilsTestCase(TestCase):
                 'stdout: failure\n' \
                 'stderr: test failure\n' \
                 'retcode: 1'
-        with patch('salt.modules.cmdmod.run_all', mock_cmd) as m_run_all:
+        with patch('salt.utils.mac_utils.__salt__', {'cmd.run_all': mock_cmd}):
             try:
                 mac_utils.launchctl('enable', 'org.salt.minion')
             except CommandExecutionError as exc:
                 self.assertEqual(exc.message, error)
-            m_run_all.assert_called_with(['launchctl', 'enable', 'org.salt.minion'],
-                                         python_shell=False)
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -317,7 +310,7 @@ class MacUtilsTestCase(TestCase):
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
     @patch('plistlib.readPlist')
-    @patch('salt.modules.cmdmod.run')
+    @patch('salt.utils.mac_utils.__salt__')
     @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
     def test_available_services_non_xml(self,
                                         mock_read_plist_from_string,
@@ -334,9 +327,15 @@ class MacUtilsTestCase(TestCase):
             [('/System/Library/LaunchAgents', [], ['com.apple.slla1.plist', 'com.apple.slla2.plist'])],
             [('/System/Library/LaunchDaemons', [], ['com.apple.slld1.plist', 'com.apple.slld2.plist'])],
         ]
+        attrs = {'cmd.run': MagicMock(return_value='<some xml>')}
+
+        def getitem(name):
+            return attrs[name]
+
+        mock_run.__getitem__.side_effect = getitem
+        mock_run.configure_mock(**attrs)
         mock_exists.return_value = True
         mock_read_plist.side_effect = Exception()
-        mock_run.return_value = '<some xml>'
         mock_read_plist_from_string.side_effect = [
             MagicMock(Label='com.apple.lla1'),
             MagicMock(Label='com.apple.lla2'),
@@ -352,32 +351,24 @@ class MacUtilsTestCase(TestCase):
 
         cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
         calls = [
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchAgents', 'com.apple.lla1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchAgents', 'com.apple.lla2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),
-                output_loglevel='quiet'),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchAgents', 'com.apple.lla1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchAgents', 'com.apple.lla2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),),
         ]
-        mock_run.assert_has_calls(calls)
+        mock_run.assert_has_calls(calls, any_order=True)
 
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
@@ -404,7 +395,7 @@ class MacUtilsTestCase(TestCase):
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
     @patch('plistlib.readPlist')
-    @patch('salt.modules.cmdmod.run')
+    @patch('salt.utils.mac_utils.__salt__')
     @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
     def test_available_services_non_xml_malformed_plist(self,
                                                         mock_read_plist_from_string,
@@ -421,41 +412,39 @@ class MacUtilsTestCase(TestCase):
             [('/System/Library/LaunchAgents', [], ['com.apple.slla1.plist', 'com.apple.slla2.plist'])],
             [('/System/Library/LaunchDaemons', [], ['com.apple.slld1.plist', 'com.apple.slld2.plist'])],
         ]
+        attrs = {'cmd.run': MagicMock(return_value='<some xml>')}
+
+        def getitem(name):
+            return attrs[name]
+
+        mock_run.__getitem__.side_effect = getitem
+        mock_run.configure_mock(**attrs)
         mock_exists.return_value = True
         mock_read_plist.side_effect = Exception()
-        mock_run.return_value = '<some xml>'
         mock_read_plist_from_string.return_value = 'malformedness'
 
         ret = mac_utils._available_services()
 
         cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
         calls = [
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchAgents', 'com.apple.lla1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchAgents', 'com.apple.lla2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),
-                output_loglevel='quiet'),
-            call(cmd.format(os.path.realpath(os.path.join(
-                '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),
-                output_loglevel='quiet'),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchAgents', 'com.apple.lla1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchAgents', 'com.apple.lla2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),),
+            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
+                         '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),),
         ]
-        mock_run.assert_has_calls(calls)
+        mock_run.assert_has_calls(calls, any_order=True)
 
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
