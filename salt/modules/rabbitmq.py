@@ -19,6 +19,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -828,24 +829,43 @@ def list_policies(vhost="/", runas=None):
         python_shell=False)
     _check_response(res)
     output = res['stdout']
+
+    if __grains__['os_family'] != 'FreeBSD':
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
+    else:
+        version = __salt__['pkg.version']('rabbitmq').split('-')[0]
+
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
+
         if len(parts) not in (5, 6):
             continue
+
         vhost, name = parts[0], parts[1]
         if vhost not in ret:
             ret[vhost] = {}
         ret[vhost][name] = {}
-        # How many fields are there? - 'apply_to' was inserted in position
-        # 2 at some point
-        offset = len(parts) - 5
-        if len(parts) == 6:
-            ret[vhost][name]['apply_to'] = parts[2]
-        ret[vhost][name].update({
-            'pattern': parts[offset+2],
-            'definition': parts[offset+3],
-            'priority': parts[offset+4]
-        })
+
+        if _LooseVersion(version) >= _LooseVersion("3.7"):
+            # in version 3.7 the position of apply_to and pattern has been
+            # switched
+            ret[vhost][name]['pattern'] = parts[2]
+            ret[vhost][name]['apply_to'] = parts[3]
+            ret[vhost][name]['definition'] = parts[4]
+            ret[vhost][name]['priority'] = parts[5]
+        else:
+            # How many fields are there? - 'apply_to' was inserted in position
+            # 2 at some point
+            # and in version 3.7 the position of apply_to and pattern has been
+            # switched
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
 
     return ret
 
