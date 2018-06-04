@@ -408,9 +408,9 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         with salt.utils.files.set_umask(0o077):
             try:
                 # Let's create an initial output file with some data
-                stdout, stderr, retcode = self.run_script(
+                self.run_script(
                     'salt-call',
-                    '-c {0} --output-file={1} -g'.format(
+                    '-c {0} --output-file={1} -l debug -g'.format(
                         self.get_config_dir(),
                         output_file
                     ),
@@ -420,17 +420,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 try:
                     stat1 = os.stat(output_file)
                 except OSError:
-                    log.error(
-                        'run_script failed to generate output file:\n'
-                        'return code: %s\n'
-                        'stdout:\n'
-                        '%s\n\n'
-                        'stderr\n'
-                        '%s',
-                        retcode, stdout, stderr
-                    )
-                    self.fail(
-                        'Failed to generate output file, see log for details')
+                    self.fail('Failed to generate output file, see log for details')
 
                 # Let's change umask
                 os.umask(0o777)  # pylint: disable=blacklisted-function
@@ -444,7 +434,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat2 = os.stat(output_file)
+                try:
+                    stat2 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 self.assertEqual(stat1.st_mode, stat2.st_mode)
                 # Data was appeneded to file
                 self.assertTrue(stat1.st_size < stat2.st_size)
@@ -462,7 +455,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat3 = os.stat(output_file)
+                try:
+                    stat3 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 # Mode must have changed since we're creating a new log file
                 self.assertNotEqual(stat1.st_mode, stat3.st_mode)
             finally:
