@@ -29,6 +29,7 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
+integration.modules.test_win_dns_client
 integration.reactor.test_reactor
 integration.renderers.test_pydsl
 integration.returners.test_librato_return
@@ -38,6 +39,7 @@ integration.runners.test_salt
 integration.sdb.test_env
 integration.states.test_host
 integration.states.test_pip_state
+integration.states.test_pkg
 integration.states.test_reg
 integration.states.test_renderers
 integration.utils.testprogram

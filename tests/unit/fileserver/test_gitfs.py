@@ -15,7 +15,7 @@ import tornado.ioloop
 import logging
 import stat
 try:
-    import pwd
+    import pwd  # pylint: disable=unused-import
 except ImportError:
     pass
 

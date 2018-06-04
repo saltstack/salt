@@ -24,7 +24,7 @@ from tests.support import win_installer
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
-TIMEOUT = 1000
+TIMEOUT = 1200
 
 
 class EC2Test(ShellCase):
