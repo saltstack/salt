@@ -9,15 +9,19 @@ import logging
 
 # Import Salt libs
 import salt.utils.platform
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd party libs
 from salt.ext import six
 
 _HKEY = 'HKLM'
+
 _SNMP_KEY = r'SYSTEM\CurrentControlSet\Services\SNMP\Parameters'
 _AGENT_KEY = r'{0}\RFC1156Agent'.format(_SNMP_KEY)
 _COMMUNITIES_KEY = r'{0}\ValidCommunities'.format(_SNMP_KEY)
+
+_SNMP_GPO_KEY = r'SOFTWARE\Policies\SNMP\Parameters'
+_COMMUNITIES_GPO_KEY = r'{0}\ValidCommunities'.format(_SNMP_GPO_KEY)
 
 _PERMISSION_TYPES = {'None': 1,
                      'Notify': 2,
@@ -284,6 +288,21 @@ def get_community_names():
     '''
     Get the current accepted SNMP community names and their permissions.
 
+    If community names are being managed by Group Policy, those values will be
+    returned instead like this:
+
+    .. code-block:: bash
+
+        TestCommunity:
+            Managed by GPO
+
+    Community names managed normally will denote the permission instead:
+
+    .. code-block:: bash
+
+        TestCommunity:
+            Read Only
+
     Returns:
         dict: A dictionary of community names and permissions.
 
@@ -294,25 +313,69 @@ def get_community_names():
         salt '*' win_snmp.get_community_names
     '''
     ret = dict()
-    current_values = __salt__['reg.list_values'](
-        _HKEY, _COMMUNITIES_KEY, include_default=False)
 
-    # The communities are stored as the community name with a numeric permission
-    # value. Convert the numeric value to the text equivalent, as present in the
-    # Windows SNMP service GUI.
-    if isinstance(current_values, list):
-        for current_value in current_values:
+    # Look in GPO settings first
+    if __salt__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
 
-            # Ignore error values
-            if not isinstance(current_value, dict):
-                continue
+        _LOG.debug('Loading communities from Group Policy settings')
 
-            permissions = six.text_type()
-            for permission_name in _PERMISSION_TYPES:
-                if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
-                    permissions = permission_name
-                    break
-            ret[current_value['vname']] = permissions
+        current_values = __salt__['reg.list_values'](
+            _HKEY, _COMMUNITIES_GPO_KEY, include_default=False)
+
+        # GPO settings are different in that they do not designate permissions
+        # They are a numbered list of communities like so:
+        #
+        # {1: "community 1",
+        #  2: "community 2"}
+        #
+        # Denote that it is being managed by Group Policy.
+        #
+        # community 1:
+        #     Managed by GPO
+        # community 2:
+        #     Managed by GPO
+        if isinstance(current_values, list):
+            for current_value in current_values:
+
+                # Ignore error values
+                if not isinstance(current_value, dict):
+                    continue
+
+                ret[current_value['vdata']] = 'Managed by GPO'
+
+    if not ret:
+
+        _LOG.debug('Loading communities from SNMP settings')
+
+        current_values = __salt__['reg.list_values'](
+            _HKEY, _COMMUNITIES_KEY, include_default=False)
+
+        # The communities are stored as the community name with a numeric
+        # permission value. Like this (4 = Read Only):
+        #
+        # {"community 1": 4,
+        #  "community 2": 4}
+        #
+        # Convert the numeric value to the text equivalent, as present in the
+        # Windows SNMP service GUI.
+        #
+        # community 1:
+        #     Read Only
+        # community 2:
+        #     Read Only
+        if isinstance(current_values, list):
+            for current_value in current_values:
+
+                # Ignore error values
+                if not isinstance(current_value, dict):
+                    continue
+
+                permissions = six.text_type()
+                for permission_name in _PERMISSION_TYPES:
+                    if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
+                        permissions = permission_name
+                        break
+                ret[current_value['vname']] = permissions
 
     if not ret:
         _LOG.debug('Unable to find existing communities.')
@@ -323,6 +386,11 @@ def set_community_names(communities):
     '''
     Manage the SNMP accepted community names and their permissions.
 
+    .. note::
+        Settings managed by Group Policy will always take precedence over those
+        set using the SNMP interface. Therefore if this function finds Group
+        Policy settings it will raise a CommandExecutionError
+
     Args:
         communities (dict): A dictionary of SNMP community names and
             permissions. The possible permissions can be found via
@@ -331,6 +399,10 @@ def set_community_names(communities):
     Returns:
         bool: True if successful, otherwise False
 
+    Raises:
+        CommandExecutionError:
+            If SNMP settings are being managed by Group Policy
+
     CLI Example:
 
     .. code-block:: bash
@@ -338,6 +410,11 @@ def set_community_names(communities):
         salt '*' win_snmp.set_community_names communities="{'TestCommunity': 'Read Only'}'
     '''
     values = dict()
+
+    if __salt__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
+        _LOG.debug('Communities on this system are managed by Group Policy')
+        raise CommandExecutionError(
+            'Communities on this system are managed by Group Policy')
 
     current_communities = get_community_names()
 
