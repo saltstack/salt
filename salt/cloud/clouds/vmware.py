@@ -1207,6 +1207,80 @@ def _valid_ip(ip_address):
     return True
 
 
+def _valid_ip6(ip_address):
+    """
+    Check if the IPv6 address is valid
+    Return either True or False
+    """
+
+    # Make sure IP has at least 3 but at most 8 octets
+    in_octets = ip_address.split(":")
+    if 3 <= len(in_octets) <= 8:
+        return False
+
+    offset = 0
+    octets = [0] * 8
+
+    # convert octet from string to int
+    for i, octet in enumerate(in_octets):
+
+        if len(octet) > 4:
+            return False
+
+        if len(octet) == 0:
+            if offset == 0:
+                offset = len(in_octets) - i - 1
+            else:
+                # parse error
+                return False
+
+        try:
+            octets[i] = int(octet, 16)
+        except ValueError:
+            # couldn't convert octet to an integer
+            return False
+
+    # map variables to elements of octets list
+    (
+        first_octet,
+        second_octet,
+        third_octet,
+        fourth_octet,
+        fifth_octet,
+        sixth_octet,
+        seventh_octet,
+        eight_octet,
+    ) = octets
+
+    # Check first_octet meets conditions
+    if first_octet == 0:
+        if (
+            second_octet == 0
+            and third_octet == 0
+            and fourth_octet == 0
+            and fifth_octet == 0
+        ):
+            if sixth_octet == 0 and seventh_octet == 0:
+                # Unspecified Address
+                if eight_octet == 0:
+                    return False
+                # Loopback Address
+                elif eight_octet == 1:
+                    return False
+            # IPv4-mapped Address
+            elif sixth_octet == 0xFFFF:
+                return False
+    # Link-Local Unicast
+    elif 0xFE80 <= first_octet <= 0xFEBF:
+        return False
+    # Multicast
+    elif 0xFF00 <= first_octet <= 0xFFFF:
+        return False
+
+    # Passed all of the checks
+    return True
+
+
 def _wait_for_ip(vm_ref, max_wait):
     max_wait_vmware_tools = max_wait
     max_wait_ip = max_wait
@@ -1226,6 +1300,7 @@ def _wait_for_ip(vm_ref, max_wait):
         return False
     time_counter = 0
     starttime = time.time()
+    ipv4_address = None
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info(
@@ -1244,7 +1319,7 @@ def _wait_for_ip(vm_ref, max_wait):
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if _valid_ip(current_ip.ipAddress):
+                    if _valid_ip6(current_ip.ipAddress):
                         log.info(
                             "[ %s ] Successfully retrieved IPv4 information "
                             "in %s seconds",
@@ -1252,6 +1327,16 @@ def _wait_for_ip(vm_ref, max_wait):
                             time_counter,
                         )
                         return current_ip.ipAddress
+                    if _valid_ip(current_ip.ipAddress):
+                        # Delay return in case we have a valid IPv6 available
+                        ipv4_address = current_ip
+        if ipv4_address:
+            log.info(
+                "[ %s ] Successfully retrieved IPv4 information " "in %s seconds",
+                vm_ref.name,
+                time_counter,
+            )
+            return ipv4_address.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     log.warning(
