@@ -314,7 +314,7 @@ def version(*names, **kwargs):
     ret.update(zip(unmatched, [ '' ] * len(unmatched)))
 
     # Return a string if only one package name passed
-    if len(ret) == 1:
+    if len(names) == 1:
         return list(ret.values())[0]
 
     return ret
@@ -366,7 +366,7 @@ def latest_version(*names, **kwargs):
     ret.update(zip(unmatched, [ '' ] * len(unmatched)))
 
     # Return a string if only one package name passed
-    if len(ret) == 1:
+    if len(names) == 1:
         return list(ret.values())[0]
 
     return ret
