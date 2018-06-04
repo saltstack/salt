@@ -112,6 +112,10 @@ Authentication Options
 
     Specify the SSH private key file to be used for authentication.
 
+.. option:: --priv-passwd=SSH_PRIV_PASSWD
+
+    Specify the SSH private key file's passphrase if need be.
+
 .. option:: -i, --ignore-host-keys
 
     By default ssh host keys are honored and connections  will ask for

@@ -3024,6 +3024,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Ssh private key file.'
         )
         auth_group.add_option(
+            '--priv-passwd',
+            dest='ssh_priv_passwd',
+            default='',
+            help='Passphrase for ssh private key file.'
+        )
+        auth_group.add_option(
             '-i',
             '--ignore-host-keys',
             dest='ignore_host_keys',
