@@ -11,7 +11,11 @@ import subprocess
 import os
 import plistlib
 import time
-import pwd
+try:
+    import pwd
+except ImportError:
+    # The pwd module is not available on all platforms
+    pass
 
 # Import Salt Libs
 import salt.modules.cmdmod
