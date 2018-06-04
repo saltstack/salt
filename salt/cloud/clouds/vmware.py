@@ -1049,13 +1049,13 @@ def _valid_ip6(ip_address):
 
         if len(octet) == 0:
             if offset == 0:
-                offset = len(in_octets) - i - 1
+                offset = 8 - len(in_octets)
             else:
                 # parse error
                 return False
 
         try:
-            octets[i] = int(octet, 16)
+            octets[i + offset] = int(octet, 16)
         except ValueError:
             # couldn't convert octet to an integer
             return False
