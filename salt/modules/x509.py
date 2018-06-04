@@ -376,7 +376,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return passphrase
+        return salt.utils.stringutils.to_str(passphrase)
     return f
 
 
@@ -837,6 +837,7 @@ def create_private_key(path=None,
     bio = M2Crypto.BIO.MemoryBuffer()
     if passphrase is None:
         cipher = None
+
     rsa.save_key_bio(
         bio,
         cipher=cipher,
