@@ -559,3 +559,14 @@ it could only search for users via the 'accountattributename' field. This releas
 add an additional search using the 'groupattribute' field as well. The original
 'accountattributename' search is done first then the 'groupattribute' allowing for
 backward compatibility with previous Salt releases.
+
+============================
+salt-api
+============================
+
+salt-api Windows support
+--------------------------------
+Previously, salt-api was was not supported on the Microsoft Windows platforms. Now it is!
+salt-api is providing a RESTful interface to a running Salt system. It allows
+for viewing minions, runners, and jobs as well as running execution modules
+and runners of a running Salt system through a REST API that returns JSON.
