@@ -299,37 +299,39 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        def format_return(retcode, stdout, stderr=None):
+        def format_return(retcode, stdout, stderr=None, timed_out=False):
             '''
             DRY helper to log script result if it failed, and then return the
             desired output based on whether or not stderr was desired, and
             wither or not a retcode was desired.
             '''
-            if log_output is True or \
-                    (log_output is None and (retcode is None or retcode != 0)):
-                if stderr is not None:
-                    log.debug(
-                        'run_script results for: %s %s\n'
-                        'return code: %s\n'
-                        'stdout:\n'
-                        '%s\n\n'
-                        'stderr:\n'
-                        '%s',
-                        script, arg_str, retcode, stdout, stderr
-                    )
-                else:
-                    log.debug(
-                        'run_script results for: %s %s\n'
-                        'return code: %s\n'
-                        'stdout:\n'
-                        '%s',
-                        script, arg_str, retcode, stdout
-                    )
+            log_func = log.debug
+            if timed_out:
+                log.error(
+                    'run_script timed out after %d seconds (process killed)',
+                    timeout
+                )
+                log_func = log.error
+
+            if log_output is True \
+                    or timed_out \
+                    or (log_output is None and retcode != 0):
+                log_func(
+                    'run_script results for: %s %s\n'
+                    'return code: %s\n'
+                    'stdout:\n'
+                    '%s\n\n'
+                    'stderr:\n'
+                    '%s',
+                    script, arg_str, retcode, stdout, stderr
+                )
+
+            stdout = stdout or ''
+            stderr = stderr or ''
 
             if not raw:
                 stdout = stdout.splitlines()
-                if stderr is not None:
-                    stderr = stderr.splitlines()
+                stderr = stderr.splitlines()
 
             ret = [stdout]
             if catch_stderr:
@@ -384,9 +386,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
                     return format_return(
                         process.returncode,
-                        'Process took more than {0} seconds to complete. '
-                        'Process Killed!'.format(timeout),
-                        'Process killed, unable to catch stderr output'
+                        *process.communicate(),
+                        timed_out=True
                     )
 
         tmp_file.seek(0)
