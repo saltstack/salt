@@ -6318,6 +6318,7 @@ def serialize(name,
                 try:
                     existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
                 except (TypeError, salt.serializers.DeserializationError):
+                    log.debug('DeserializationError exception caught, trying to merge without serializer_opts: %s', options.get(serializer_name, {}))
                     fhr.seek(0)
                     existing_data = __serializers__[deserializer_name](fhr)
 
