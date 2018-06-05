@@ -409,11 +409,7 @@ class _Section(OrderedDict):
                     self.name == item.name)
 
 
-# pylint: disable=useless-super-delegation
 class _Ini(_Section):
-    def __init__(self, name, inicontents='', separator='=', commenter='#'):
-        super(_Ini, self).__init__(name, inicontents, separator, commenter)
-
     def refresh(self, inicontents=None):
         if inicontents is None:
             try:
