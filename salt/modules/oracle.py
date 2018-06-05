@@ -97,9 +97,9 @@ def _connect(uri):
     else:
         credentials = uri_l[0]
         mode = 0
-    
+
     serv_name = False
-    userpass, hostport = credentials.split('@')
+    userpass, hostportsid = credentials.split('@')
     user, password = userpass.split('/')
     hostport, sid = hostportsid.split('/')
     if 'servicename' in sid:
