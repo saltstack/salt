@@ -949,7 +949,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
         else:
             ret.setdefault('repo', {}).update(config)
             ret.setdefault('name_map', {}).update(revmap)
-            successful_verbose[short_path_name] = config.keys()
+            successful_verbose[short_path_name] = list(config.keys())
     elif config:
         return _failed_compile('Compiled contents', 'not a dictionary/hash')
     else:
