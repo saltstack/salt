@@ -201,6 +201,7 @@ import pipes
 import re
 import shutil
 import string
+import sys
 import time
 import uuid
 import subprocess
@@ -6669,7 +6670,7 @@ def call(name, function, *args, **kwargs):
 
     try:
         salt_argv = [
-            'python',
+            'python{0}'.format(sys.version_info[0]),
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
