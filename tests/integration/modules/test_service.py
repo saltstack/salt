@@ -11,7 +11,6 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils
 import salt.utils.systemd
-from salt.exceptions import CommandExecutionError
 
 
 @destructiveTest
