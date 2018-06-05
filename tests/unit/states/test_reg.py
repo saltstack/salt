@@ -18,7 +18,6 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.reg as reg
 import salt.utils.platform
-import salt.utils.stringutils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -49,9 +48,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
                                            {'vdata': 'a', 'success': True},
                                            {'vdata': 'a', 'success': True}])
         mock_t = MagicMock(return_value=True)
-        mock_cast = MagicMock(
-            return_value=salt.utils.stringutils.to_unicode(vdata)
-        )
+        mock_cast = MagicMock(return_value=vdata)
         with patch.dict(reg.__utils__, {'reg.read_value': mock_read,
                                         'reg.set_value': mock_t,
                                         'reg.cast_vdata': mock_cast}):
