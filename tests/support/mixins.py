@@ -171,9 +171,13 @@ class AdaptedConfigurationTestCaseMixin(object):
                 )
         return RUNTIME_VARS.RUNTIME_CONFIGS[config_for]
 
-    @staticmethod
-    def get_config_dir():
+    @property
+    def config_dir(self):
         return RUNTIME_VARS.TMP_CONF_DIR
+
+    def get_config_dir(self):
+        log.warning('Use the config_dir attribute instead of calling get_config_dir()')
+        return self.config_dir
 
     @staticmethod
     def get_config_file_path(filename):

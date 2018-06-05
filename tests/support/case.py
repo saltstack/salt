@@ -127,7 +127,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     data = '\n'.join(data)
                     self.assertIn('minion', data)
         '''
-        arg_str = '-c {0} -t {1} {2}'.format(self.get_config_dir(), timeout, arg_str)
+        arg_str = '-c {0} -t {1} {2}'.format(self.config_dir, timeout, arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
@@ -138,7 +138,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
-            self.get_config_dir(),
+            self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str
@@ -156,7 +156,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Execute salt-run
         '''
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(
-                config_dir or self.get_config_dir(),
+                config_dir or self.config_dir,
                 arg_str,
                 timeout=timeout,
                 async_flag=' --async' if async else '')
@@ -212,7 +212,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-key
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script(
             'salt-key',
             arg_str,
@@ -224,12 +224,12 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-cp
         '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.get_config_dir(), arg_str)
+                                                    self.config_dir, arg_str)
 
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
@@ -237,7 +237,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def run_script(self,
@@ -468,7 +468,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt',
                               arg_str,
                               with_retcode=with_retcode,
@@ -497,7 +497,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
-            self.get_config_dir(),
+            self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str)
@@ -514,7 +514,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.config_dir,
                                                                arg_str,
                                                                timeout=timeout,
                                                                async_flag=' --async' if async else '')
@@ -570,7 +570,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-key
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt-key',
                               arg_str,
                               catch_stderr=catch_stderr,
@@ -585,7 +585,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         # Note: not logging result of run_cp because it will log a bunch of
         # bytes which will not be very helpful.
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp',
                                arg_str,
                                with_retcode=with_retcode,
@@ -597,7 +597,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         Execute salt-call.
         '''
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.get_config_dir(), arg_str)
+                                                    self.config_dir, arg_str)
         ret = self.run_script('salt-call',
                               arg_str,
                               with_retcode=with_retcode,
@@ -610,7 +610,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt-cloud',
                               arg_str,
                               catch_stderr,
