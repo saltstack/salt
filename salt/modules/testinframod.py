@@ -16,7 +16,6 @@ import types
 
 log = logging.getLogger(__name__)
 
-from salt.ext import six
 try:
     import testinfra
     from testinfra import modules
