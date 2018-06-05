@@ -253,6 +253,7 @@ def pytest_runtest_setup(item):
     if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
+    os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_marker('expensive_test')
     if expensive_tests_marker is not None:
