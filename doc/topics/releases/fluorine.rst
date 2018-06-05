@@ -481,6 +481,12 @@ a minimal tarball using runners and include that. But this is only possible, whe
 Salt version is also available on the Master machine, although does not need to be directly
 installed together with the older Python interpreter.
 
+SaltSSH now support private key's passphrase. You can configure it by:
+
+* `--priv-passwd` for salt-ssh cli
+* `salt_priv_passwd` for salt master configure file
+* `priv_passwd` for salt roster file
+
 
 ========================
 Salt-Cloud major updates

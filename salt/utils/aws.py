@@ -467,7 +467,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             log.debug('AWS Response Status Code: %s', result.status_code)
             log.trace(
                 'AWS Response Text: %s',
-                result.text.encode(result.encoding if result.encoding else 'utf-8')
+                result.text
             )
             result.raise_for_status()
             break
@@ -503,11 +503,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.text.encode(
-        result.encoding if result.encoding else 'utf-8'
-    )
-
-    root = ET.fromstring(response)
+    root = ET.fromstring(result.text)
     items = root[1]
     if return_root is True:
         items = root
