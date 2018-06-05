@@ -259,6 +259,7 @@ def pytest_runtest_setup(item):
     if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
+    os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
