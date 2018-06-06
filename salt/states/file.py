@@ -6298,6 +6298,9 @@ def serialize(name,
                 }
 
     if serializer_opts:
+        if not options.get(serializer_name, {}):
+            options[serializer_name] = {}
+
         options.get(serializer_name, {}).update(
             salt.utils.data.repack_dictlist(serializer_opts)
         )
@@ -6312,7 +6315,12 @@ def serialize(name,
                         'result': False}
 
             with salt.utils.files.fopen(name, 'r') as fhr:
-                existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
+                try:
+                    existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
+                except (TypeError, salt.serializers.DeserializationError):
+                    log.debug('DeserializationError exception caught, trying to merge without serializer_opts: %s', options.get(serializer_name, {}))
+                    fhr.seek(0)
+                    existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
