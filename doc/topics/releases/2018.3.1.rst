@@ -46,8 +46,6 @@ to the flat roster file.  This behavior can also be enabled by setting
 Changelog for v2018.3.0..v2018.3.1
 ==================================
 
-Changelog for v2018.3.0..605463ca0df694e47eb781dbda12234ea8439f22
-=================================================================
 
 *Generated at: 2018-06-06 17:43:01 UTC*
 
