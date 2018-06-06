@@ -8,14 +8,13 @@ import tempfile
 # Import Salt Libs
 from salt.cloud.clouds import ec2
 from salt.exceptions import SaltCloudSystemExit
+import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, PropertyMock
 from tests.support.paths import TMP
 from tests.unit.test_crypt import PRIVKEY_DATA
-
-import mock
 
 PASS_DATA = (
     b'qOjCKDlBdcNEbJ/J8eRl7sH+bYIIm4cvHHY86gh2NEUnufFlFo0gGVTZR05Fj0cw3n/w7gR'
@@ -61,10 +60,10 @@ class EC2TestCase(TestCase):
             self.assertRaises(
                 SaltCloudSystemExit, ec2._validate_key_path_and_mode, 'key_file')
 
-    @mock.patch('salt.cloud.clouds.ec2._get_node')
-    @mock.patch('salt.cloud.clouds.ec2.get_location')
-    @mock.patch('salt.cloud.clouds.ec2.get_provider')
-    @mock.patch('salt.utils.aws.query')
+    @patch('salt.cloud.clouds.ec2._get_node')
+    @patch('salt.cloud.clouds.ec2.get_location')
+    @patch('salt.cloud.clouds.ec2.get_provider')
+    @patch('salt.utils.aws.query')
     def test_get_password_data(self, query, get_provider, get_location, _get_node):
         query.return_value = [
             {
@@ -74,9 +73,9 @@ class EC2TestCase(TestCase):
         _get_node.return_value = {'instanceId': 'i-abcdef'}
         get_location.return_value = 'us-west2'
         get_provider.return_value = 'ec2'
-        ec2.__opts__ = {}
-        ec2.__active_provider_name__ = None
-        with open(self.key_file, 'w') as fp:
+        ec2.__opts__ = {}  # pylint: disable=unmocked-patch-dunder
+        ec2.__active_provider_name__ = None  # pylint: disable=unmocked-patch
+        with salt.utils.files.fopen(self.key_file, 'w') as fp:
             fp.write(PRIVKEY_DATA)
         ret = ec2.get_password_data(
             name='i-abcddef', kwargs={'key_file': self.key_file}, call='action'
