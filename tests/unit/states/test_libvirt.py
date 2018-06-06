@@ -2,6 +2,8 @@
 '''
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
+# pylint: disable=3rd-party-module-not-gated
+
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import tempfile
@@ -56,17 +58,17 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
                                           {'libvirt.servercert.pem': 'A'}])
-            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):  # pylint: disable=no-member
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
                 self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
-                with patch.dict(virt.__opts__, {'test': True}):
+                with patch.dict(virt.__opts__, {'test': True}):  # pylint: disable=no-member
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
-                with patch.dict(virt.__opts__, {'test': False}):
+                with patch.dict(virt.__opts__, {'test': False}):  # pylint: disable=no-member
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
@@ -87,21 +89,21 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
                                           {'libvirt.servercert.pem': 'A'}])
-            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):  # pylint: disable=no-member
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
                 self.assertDictEqual(virt.keys(name,
                                                basepath=self.pki_dir,
                                                expiration_days=700), ret)
 
-                with patch.dict(virt.__opts__, {'test': True}):
+                with patch.dict(virt.__opts__, {'test': True}):  # pylint: disable=no-member
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(virt.keys(name,
                                                    basepath=self.pki_dir,
                                                    expiration_days=700), ret)
 
-                with patch.dict(virt.__opts__, {'test': False}):
+                with patch.dict(virt.__opts__, {'test': False}):  # pylint: disable=no-member
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
@@ -124,21 +126,21 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
                                           {'libvirt.servercert.pem': 'A'}])
-            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):  # pylint: disable=no-member
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
                 self.assertDictEqual(virt.keys(name,
                                                basepath=self.pki_dir,
                                                st='California'), ret)
 
-                with patch.dict(virt.__opts__, {'test': True}):
+                with patch.dict(virt.__opts__, {'test': True}):  # pylint: disable=no-member
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(virt.keys(name,
                                                    basepath=self.pki_dir,
                                                    st='California'), ret)
 
-                with patch.dict(virt.__opts__, {'test': False}):
+                with patch.dict(virt.__opts__, {'test': False}):  # pylint: disable=no-member
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
@@ -161,7 +163,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
                                           {'libvirt.servercert.pem': 'A'}])
-            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):  # pylint: disable=no-member
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
                 self.assertDictEqual(virt.keys(name,
@@ -172,7 +174,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                organization='SaltStack',
                                                expiration_days=700), ret)
 
-                with patch.dict(virt.__opts__, {'test': True}):
+                with patch.dict(virt.__opts__, {'test': True}):  # pylint: disable=no-member
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(virt.keys(name,
@@ -183,7 +185,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    organization='SaltStack',
                                                    expiration_days=700), ret)
 
-                with patch.dict(virt.__opts__, {'test': False}):
+                with patch.dict(virt.__opts__, {'test': False}):  # pylint: disable=no-member
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
