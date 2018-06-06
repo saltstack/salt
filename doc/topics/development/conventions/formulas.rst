@@ -236,13 +236,13 @@ repository be sure to communicate with any other contributors there on pull
 requests that are large or have breaking changes.
 
 In general it is best to have another Contributor review and merge any pull
-requests that you open. Feel free to `at-mention`__ other regular contributors
+requests that you open. Feel free to `at-mention`_ other regular contributors
 to a repository and request a review. However, there are a lot of formula
 repositories so if a repository does not yet have regular contributors or if
 your pull request has stayed open for more than a couple days feel free to
 "selfie-merge" your own pull request.
 
-__: https://help.github.com/articles/basic-writing-and-formatting-syntax/#mentioning-users-and-teams
+.. _`at-mention`: https://help.github.com/articles/basic-writing-and-formatting-syntax/#mentioning-users-and-teams
 
 Style
 -----

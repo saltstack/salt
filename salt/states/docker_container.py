@@ -1017,7 +1017,7 @@ def running(name,
     labels
         Add metadata to the container. Labels can be set both with and without
         values, and labels with values can be passed either as ``key=value`` or
-        ``key: value `` pairs. For example, while the below would be very
+        ``key: value`` pairs. For example, while the below would be very
         confusing to read, it is technically valid, and demonstrates the
         different ways in which labels can be passed:
 
@@ -2137,11 +2137,12 @@ def run(name,
     CLI Examples:
 
     .. code-block:: bash
+
         salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh
 
     **USAGE EXAMPLE**
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set pkg_version = salt.pillar.get('pkg_version', '1.0-1') %}
         build_package:
