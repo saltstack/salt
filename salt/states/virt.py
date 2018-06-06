@@ -158,14 +158,14 @@ def _virt_call(domain, function, section, comment, **kwargs):
     targeted_domains = fnmatch.filter(__salt__['virt.list_domains'](), domain)
     changed_domains = list()
     ignored_domains = list()
-    for domain in targeted_domains:
+    for targeted_domain in targeted_domains:
         try:
-            response = __salt__['virt.{0}'.format(function)](domain, **kwargs)
+            response = __salt__['virt.{0}'.format(function)](targeted_domain, **kwargs)
             if isinstance(response, dict):
                 response = response['name']
-            changed_domains.append({'domain': domain, function: response})
+            changed_domains.append({'domain': targeted_domain, function: response})
         except libvirt.libvirtError as err:
-            ignored_domains.append({'domain': domain, 'issue': six.text_type(err)})
+            ignored_domains.append({'domain': targeted_domain, 'issue': six.text_type(err)})
     if not changed_domains:
         ret['result'] = False
         ret['comment'] = 'No changes had happened'
@@ -333,7 +333,7 @@ def saved(name, suffix=None):
     return _virt_call(name, 'snapshot', 'saved', 'Snapshots has been taken', suffix=suffix)
 
 
-def reverted(name, snapshot=None, cleanup=False):
+def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-outer-name
     '''
     .. deprecated:: 2016.3.0
 
