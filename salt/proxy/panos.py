@@ -5,7 +5,7 @@ Proxy Minion interface module for managing Palo Alto firewall devices
 
 .. versionadded:: 2018.3.0
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
