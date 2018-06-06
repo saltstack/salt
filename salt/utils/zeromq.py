@@ -50,6 +50,10 @@ def install_zmq():
     older version still need one.
     :return:
     '''
+    # The zmq module is mocked in Sphinx, so when we build the docs
+    # ZMQ_VERSION_INFO ends up being an empty tuple. Using a tuple comparison
+    # instead of checking the first element of ZMQ_VERSION_INFO will prevent an
+    # IndexError when this function is invoked during the docs build.
     if zmq and ZMQ_VERSION_INFO < (17,):
         if tornado.version_info < (5,):
             zmq.eventloop.ioloop.install()
