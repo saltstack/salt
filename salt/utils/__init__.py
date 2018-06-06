@@ -1923,7 +1923,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
     return salt.utils.profile.output_profile(pr, stats_path, stop, id_)
 
 
-def get_function_environment(env=None):
+def get_module_environment(env=None):
     '''
     Get function optional environment.
 
