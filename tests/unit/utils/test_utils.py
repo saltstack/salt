@@ -33,3 +33,14 @@ class UtilsTestCase(TestCase):
         out = salt.utils.get_module_environment({})
         assert out == {}
         assert isinstance(out, dict)
+
+    def test_get_module_environment_opts(self):
+        '''
+        Test for salt.utils.get_module_environment
+
+        :return:
+        '''
+        expectation = {'message': 'Melting hard drives'}
+        _globals = {'__opts__': {'system-environment': {'salt.in.system': expectation}},
+                    '__file__': '/daemons/loose/in/system.py'}
+        assert salt.utils.get_module_environment(_globals) == expectation
