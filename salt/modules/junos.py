@@ -17,7 +17,11 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 # Import Python libraries
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import traceback
+import json
 import os
+import glob
+import yaml
 
 try:
     from lxml import etree
@@ -40,7 +44,12 @@ try:
     from jnpr.junos.utils.scp import SCP
     import jnpr.junos.utils
     import jnpr.junos.cfg
+    import jnpr.junos.op as tables_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    from jnpr.junos.factory.optable import OpTable
+    from jnpr.junos.exception import ConnectClosedError
     import jxmlease
+    import yamlordereddictloader
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -64,8 +73,9 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The junos module could not be loaded: '
-                       'junos-eznc or jxmlease or proxy could not be loaded.')
+        return (False, 'The junos or dependent module could not be loaded: '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
+                       'proxy could not be loaded.')
 
 
 def facts_refresh():
@@ -1309,4 +1319,118 @@ def commit_check():
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 
+    return ret
+
+
+def get_table(table, file, path=None, target=None, key=None, key_items=None,
+              filters=None, args=None):
+    """
+    Retrieve data from a Junos device using Tables/Views
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+
+    Parameters:
+      Required
+        * table:
+          Name of PyEZ Table
+        * file:
+          YAML file that has the table specified in table parameter
+      Optional
+        * path:
+          Path of location of the YAML file.
+          defaults to op directory in jnpr.junos.op
+        * target:
+          if command need to run on FPC, can specify fpc target
+        * key:
+          To overwrite key provided in YAML
+        * key_items:
+          To select only given key items
+        * filters:
+          To select only filter for the dictionary from columns
+        * args:
+          key/value pair which should render Jinja template command
+    """
+
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    ret['hostname'] = conn._hostname
+    ret['tablename'] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs['target'] = target
+    if key is not None:
+        get_kvargs['key'] = key
+    if key_items is not None:
+        get_kvargs['key_items'] = key_items
+    if filters is not None:
+        get_kvargs['filters'] = filters
+    if args is not None and isinstance(args, dict):
+        get_kvargs['args'] = args
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
+    try:
+        file_loc = glob.glob(os.path.join(path, '{}'.format(file))) or \
+                   glob.glob(os.path.join(pyez_tables_path, '{}'.format(file)))
+        if len(file_loc) == 1:
+            file_name = file_loc[0]
+        elif len(file_loc) > 1:
+            ret['message'] = 'Given table file %s is located at multiple location'\
+                % file
+            ret['out'] = False
+            return ret
+        elif len(file_loc) == 0:
+            ret['message'] = 'Given table file %s cannot be located' % file
+            ret['out'] = False
+            return ret
+        try:
+            with salt.utils.fopen(file_name) as fp:
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret['table']))
+        except IOError as err:
+            ret['message'] = 'Uncaught exception during YAML Load - please ' \
+                             'report: {0}'.format(str(err))
+            ret['out'] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get(**get_kvargs)
+        except KeyError as err:
+            ret['message'] = 'Uncaught exception during get API call - please ' \
+                             'report: {0}'.format(str(err))
+            ret['out'] = False
+            return ret
+        ret['reply'] = json.loads(data.to_json())
+        if data.__class__.__bases__[0] == OpTable:
+            # Sets key value if not present in YAML. To be used by returner
+            if ret['table'][table].get('key') is None:
+                ret['table'][table]['key'] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+        else:
+            if target is not None:
+                ret['table'][table]['target'] = data.TARGET
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+            if key_items is not None:
+                ret['table'][table]['key_items'] = data.KEY_ITEMS
+            if args is not None:
+                ret['table'][table]['args'] = data.CMD_ARGS
+                ret['table'][table]['command'] = data.GET_CMD
+    except ConnectClosedError:
+        ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                         'with %s' % conn
+        ret['out'] = False
+        return ret
+    except Exception as err:
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(
+            str(err))
+        traceback.print_exc()
+        ret['out'] = False
+        return ret
     return ret

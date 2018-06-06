@@ -106,9 +106,18 @@ def init(opts):
             args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
-    thisproxy['conn'].open()
+    try:
+        thisproxy['conn'].open()
+    except Exception:
+        log.error("not able to initiate connection to the device %s" %
+                  opts['proxy']['host'])
+        thisproxy['initialized'] = False
+        return
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
-    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    try:
+        thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    except Exception as ex:
+        log.error('Bind failed with SW class due to: %s' % ex)
     thisproxy['initialized'] = True
 
 
