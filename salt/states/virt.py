@@ -247,13 +247,17 @@ def running(name, **kwargs):
                 __salt__['virt.start'](name)
                 ret['changes'][name] = 'Domain started'
                 ret['comment'] = 'Domain {0} started'.format(name)
+            else:
+                ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
             kwargs = salt.utils.args.clean_kwargs(**kwargs)
             __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
-    except libvirt.libvirtError:
-        ret['comment'] = 'Domain {0} exists and is running'.format(name)
+    except libvirt.libvirtError as err:
+        # Something bad happened when starting the VM, report it
+        ret['comment'] = six.text_type(err)
+        ret['result'] = False
 
     return ret
 
