@@ -378,7 +378,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             _ = self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -391,7 +391,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} --output-file-append test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -438,7 +438,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} --output-file-append -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
@@ -456,7 +456,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
