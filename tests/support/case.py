@@ -245,6 +245,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    arg_str,
                    catch_stderr=False,
                    with_retcode=False,
+                   catch_timeout=False,
                    # FIXME A timeout of zero or disabling timeouts may not return results!
                    timeout=15,
                    raw=False,
@@ -338,6 +339,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 ret.append(stderr)
             if with_retcode:
                 ret.append(retcode)
+            if catch_timeout:
+                ret.append(timed_out)
 
             return ret[0] if len(ret) == 1 else tuple(ret)
 
