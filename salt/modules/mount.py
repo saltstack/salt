@@ -276,7 +276,7 @@ class _fstab_entry(object):
             raise cls.ParseError("Comment!")
 
         comps = line.split()
-        if len(comps)  < 4 or len(comps) > 6:
+        if len(comps) < 4 or len(comps) > 6:
             raise cls.ParseError("Invalid Entry!")
 
         comps.extend(['0'] * (len(keys) - len(comps)))
