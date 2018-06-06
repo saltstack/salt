@@ -2048,18 +2048,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
 
-    cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend([_yum(), '-y', 'remove'] + targets)
-
-    out = __salt__['cmd.run_all'](
-        [_yum(), '-y', 'remove'] + targets,
-        output_loglevel='trace',
-        python_shell=False,
-        env=get_module_environment(globals())
-    )
+    out = _call_yum(['-y', 'remove'] + targets, scope=(salt.utils.systemd.has_scope(__context__)
+                                                       and __salt__['config.get']('systemd.scope', True)))
 
     if out['retcode'] != 0 and out['stderr']:
         errors = [out['stderr']]
