@@ -38,13 +38,14 @@ class UtilsTestCase(TestCase):
         '''
         Test for salt.utils.get_module_environment
         Test if __opts__ are visible.
-
         :return:
         '''
         expectation = {'message': 'Melting hard drives'}
-        _globals = {'__opts__': {'system-environment': {'salt.in.system': expectation}},
+        _globals = {'__opts__': {'system-environment': {
+            'salt.in.system': expectation}},
                     '__file__': '/daemons/loose/in/system.py'}
         assert salt.utils.get_module_environment(_globals) == expectation
+
     def test_get_module_environment_pillars(self):
         '''
         Test for salt.utils.get_module_environment
@@ -56,6 +57,7 @@ class UtilsTestCase(TestCase):
             'salt.electric.interference': expectation}},
                     '__file__': '/piezo/electric/interference.py'}
         assert salt.utils.get_module_environment(_globals) == expectation
+
     def test_get_module_environment_pillar_override(self):
         '''
         Test for salt.utils.get_module_environment
