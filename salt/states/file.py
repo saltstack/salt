@@ -13,7 +13,7 @@ jinja, mako, or wempy template, adding a dynamic component to file management.
 An example of :mod:`file.managed <salt.states.file.managed>` which makes use of
 the jinja templating system would look like this:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     /etc/http/conf/http.conf:
       file.managed:
@@ -65,7 +65,7 @@ first file to be matched will be the one that is used. This allows you to have
 a default file on which to fall back if the desired file does not exist on the
 salt fileserver. Here's an example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     /etc/foo.conf:
       file.managed:
@@ -92,7 +92,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
     /etc/foo.conf:
       file.managed:
         - source:
-          - salt://foo.conf?saltenv=dev
+          - 'salt://foo.conf?saltenv=dev'
         - user: foo
         - group: users
         - mode: '0644'
@@ -110,9 +110,8 @@ declarations. Each item in the ``names`` list receives its own individual state
 ``name`` and is converted into its own low-data structure. This is a convenient
 way to manage several files with similar attributes.
 
-There is more documentation about this feature in the
-:ref:`Names declaration<names-declaration>` section of the
- :ref:`Highstate docs<states-highstate>`.
+There is more documentation about this feature in the :ref:`Names declaration
+<names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
@@ -229,7 +228,7 @@ would look something like this:
 
 A more complex ``recurse`` example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set site_user = 'testuser' %}
     {% set site_name = 'test_site' %}
@@ -1961,7 +1960,6 @@ def managed(name,
                     -----END RSA PRIVATE KEY-----
 
         .. note::
-
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
             pipe character, and the mutliline string is indented two more
@@ -2101,7 +2099,7 @@ def managed(name,
                 - mode: 0440
                 - tmp_ext: '.conf'
                 - contents:
-                  - 'description "Salt Minion"''
+                  - 'description "Salt Minion"'
                   - 'start on started mountall'
                   - 'stop on shutdown'
                   - 'respawn'
@@ -2867,7 +2865,7 @@ def directory(name,
 
         create_config_dir:
           file.directory:
-            - name: C:\config\
+            - name: 'C:\config\'
             - win_owner: Administrators
             - win_perms:
                 # Basic Permissions
@@ -3346,7 +3344,7 @@ def recurse(name,
         is glob match; if prefixed with 'E@', then regexp match.
         Example:
 
-        .. code-block:: yaml
+        .. code-block:: text
 
           - include_pat: hello*       :: glob matches 'hello01', 'hello02'
                                          ... but not 'otherhello'
@@ -3363,7 +3361,7 @@ def recurse(name,
         list and preserve in the destination.
         Example:
 
-        .. code-block:: yaml
+        .. code-block:: text
 
           - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
                                                    APPDATA.02,.. for exclusion
@@ -3375,7 +3373,7 @@ def recurse(name,
         source path.
         Example:
 
-        .. code-block:: yaml
+        .. code-block:: text
 
           - maxdepth: 0      :: Only include files located in the source
                                 directory
@@ -4041,10 +4039,10 @@ def replace(name,
         replaced, otherwise all occurrences will be replaced.
 
     flags
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
-        'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
+        'MULTILINE']``.  Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
         ``8`` (which equates to ``['MULTILINE']``).
 
@@ -4126,7 +4124,7 @@ def replace(name,
           file.replace:
             # <...snip...>
             - pattern: |
-                CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
+                CentOS \(2.6.32[^\\n]+\\n\s+root[^\\n]+\\n\)+
 
     .. note::
 
@@ -4347,7 +4345,7 @@ def blockreplace(
 
     Example of usage with an accumulator and with a variable:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set myvar = 42 %}
         hosts-config-block-{{ myvar }}:
@@ -4833,12 +4831,12 @@ def append(name,
 
         /etc/motd:
           file:
-              - append
-              - template: jinja
-              - sources:
-                - salt://motd/devops-messages.tmpl
-                - salt://motd/hr-messages.tmpl
-                - salt://motd/general-messages.tmpl
+            - append
+            - template: jinja
+            - sources:
+              - salt://motd/devops-messages.tmpl
+              - salt://motd/hr-messages.tmpl
+              - salt://motd/general-messages.tmpl
 
     .. versionadded:: 0.9.5
     '''
@@ -5026,12 +5024,12 @@ def prepend(name,
 
         /etc/motd:
           file:
-              - prepend
-              - template: jinja
-              - sources:
-                - salt://motd/devops-messages.tmpl
-                - salt://motd/hr-messages.tmpl
-                - salt://motd/general-messages.tmpl
+            - prepend
+            - template: jinja
+            - sources:
+              - salt://motd/devops-messages.tmpl
+              - salt://motd/hr-messages.tmpl
+              - salt://motd/general-messages.tmpl
 
     .. versionadded:: 2014.7.0
     '''
@@ -6211,8 +6209,8 @@ def serialize(name,
                 description: A package using naive versioning
                 author: A confused individual <iam@confused.com>
                 dependencies:
-                    express: >= 1.2.0
-                    optimist: >= 0.1.0
+                  express: '>= 1.2.0'
+                  optimist: '>= 0.1.0'
                 engine: node 0.4.1
             - formatter: json
 
@@ -6679,7 +6677,7 @@ def decode(name,
     Be careful with multi-line strings that the YAML indentation is correct.
     E.g.,
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         write_base64_encoded_string_to_a_file:
           file.decode:

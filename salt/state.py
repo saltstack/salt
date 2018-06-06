@@ -2149,7 +2149,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.0001)
+            time.sleep(0.01)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2345,7 +2345,7 @@ class State(object):
             while True:
                 if self.reconcile_procs(run_dict):
                     break
-                time.sleep(0.0001)
+                time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)

@@ -326,4 +326,5 @@ state modules
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

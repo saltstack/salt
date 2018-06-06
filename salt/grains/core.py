@@ -2226,11 +2226,10 @@ def dns():
 
 def get_machine_id():
     '''
-    Provide the machine-id
+    Provide the machine-id for machine/virtualization combination
     '''
     # Provides:
     #   machine-id
-
     if platform.system() == 'AIX':
         return _aix_get_machine_id()
 
@@ -2573,6 +2572,25 @@ def _hw_data(osdata):
                     grains['product'] = t_productname
                     grains['productname'] = t_productname
                     break
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
 
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Beacon to announce via Bonjour (zeroconf)
+Beacon to announce via Bonjour (zeroconf)
 '''
 
 # Import Python libs
@@ -98,42 +98,37 @@ def beacon(config):
     (do not poll) on the beacon configuration.
 
     The following are required configuration settings:
-        'servicetype': The service type to announce.
-        'port': The port of the service to announce.
-        'txt': The TXT record of the service being announced as a dict.
-               Grains can be used to define TXT values using the syntax:
-                   grains.<grain_name>
-               or:
-                   grains.<grain_name>[i]
-               where i is an integer representing the index of the grain to
-               use. If the grain is not a list, the index is ignored.
+
+    - ``servicetype`` - The service type to announce
+    - ``port`` - The port of the service to announce
+    - ``txt`` - The TXT record of the service being announced as a dict. Grains
+      can be used to define TXT values using one of following two formats:
+
+      - ``grains.<grain_name>``
+      - ``grains.<grain_name>[i]`` where i is an integer representing the
+        index of the grain to use. If the grain is not a list, the index is
+        ignored.
 
     The following are optional configuration settings:
-        'servicename': Set the name of the service. Will use the hostname from
-                       __grains__['host'] if not set.
-        'reset_on_change': If true and there is a change in TXT records
-                           detected, it will stop announcing the service and
-                           then restart announcing the service. This
-                           interruption in service announcement may be
-                           desirable if the client relies on changes in the
-                           browse records to update its cache of the TXT
-                           records.
-                           Defaults to False.
-        'reset_wait': The number of seconds to wait after announcement stops
-                      announcing and before it restarts announcing in the
-                      case where there is a change in TXT records detected
-                      and 'reset_on_change' is True.
-                      Defaults to 0.
-        'copy_grains': If set to True, it will copy the grains passed into
-                       the beacon when it backs them up to check for changes
-                       on the next iteration. Normally, instead of copy, it
-                       would use straight value assignment. This will allow
-                       detection of changes to grains where the grains are
-                       modified in-place instead of completely replaced.
-                       In-place grains changes are not currently done in the
-                       main Salt code but may be done due to a custom
-                       plug-in.
-                       Defaults to False.
+
+    - ``servicename`` - Set the name of the service. Will use the hostname from
+      the minion's ``host`` grain if this value is not set.
+    - ``reset_on_change`` - If ``True`` and there is a change in TXT records
+      detected, it will stop announcing the service and then restart announcing
+      the service. This interruption in service announcement may be desirable
+      if the client relies on changes in the browse records to update its cache
+      of TXT records. Defaults to ``False``.
+    - ``reset_wait`` - The number of seconds to wait after announcement stops
+      announcing and before it restarts announcing in the case where there is a
+      change in TXT records detected and ``reset_on_change`` is ``True``.
+      Defaults to ``0``.
+    - ``copy_grains`` - If ``True``, Salt will copy the grains passed into the
+      beacon when it backs them up to check for changes on the next iteration.
+      Normally, instead of copy, it would use straight value assignment. This
+      will allow detection of changes to grains where the grains are modified
+      in-place instead of completely replaced.  In-place grains changes are not
+      currently done in the main Salt code but may be done due to a custom
+      plug-in. Defaults to ``False``.
 
     Example Config
 

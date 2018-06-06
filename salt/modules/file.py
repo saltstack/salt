@@ -576,30 +576,26 @@ def lsattr(path):
     return results
 
 
-def chattr(*args, **kwargs):
+def chattr(*files, **kwargs):
     '''
     .. versionadded:: 2018.3.0
 
-    Change the attributes of files
-
-    *args
-        list of files to modify attributes of
-
-    **kwargs - the following are valid <key,value> pairs:
+    Change the attributes of files. This function accepts one or more files and
+    the following options:
 
     operator
-        add|remove
-        determines whether attributes should be added or removed from files
+        Can be wither ``add`` or ``remove``. Determines whether attributes
+        should be added or removed from files
 
     attributes
-        acdijstuADST
-        string of characters representing attributes to add/remove from files
+        One or more of the following characters: ``acdijstuADST``, representing
+        attributes to add to/remove from files
 
     version
-        a version number to assign to the files
+        a version number to assign to the file(s)
 
     flags
-        [RVf]
+        One or more of the following characters: ``RVf``, representing
         flags to assign to chattr (recurse, verbose, suppress most errors)
 
     CLI Example:
@@ -609,34 +605,34 @@ def chattr(*args, **kwargs):
         salt '*' file.chattr foo1.txt foo2.txt operator=add attributes=ai
         salt '*' file.chattr foo3.txt operator=remove attributes=i version=2
     '''
-    args = [arg if salt.utils.stringutils.is_quoted(arg) else '"{0}"'.format(arg)
-            for arg in args]
-
     operator = kwargs.pop('operator', None)
     attributes = kwargs.pop('attributes', None)
     flags = kwargs.pop('flags', None)
     version = kwargs.pop('version', None)
 
-    if (operator is None) or (operator not in ['add', 'remove']):
+    if (operator is None) or (operator not in ('add', 'remove')):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
         raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+
+    cmd = ['chattr']
 
     if operator == "add":
         attrs = '+{0}'.format(attributes)
     elif operator == "remove":
         attrs = '-{0}'.format(attributes)
 
-    flgs = ''
+    cmd.append(attrs)
+
     if flags is not None:
-        flgs = '-{0}'.format(flags)
+        cmd.append('-{0}'.format(flags))
 
-    vrsn = ''
     if version is not None:
-        vrsn = '-v {0}'.format(version)
+        cmd.extend(['-v', version])
 
-    cmd = 'chattr {0} {1} {2} {3}'.format(attrs, flgs, vrsn, ' '.join(args))
+    cmd.extend(files)
+
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
@@ -2103,8 +2099,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
