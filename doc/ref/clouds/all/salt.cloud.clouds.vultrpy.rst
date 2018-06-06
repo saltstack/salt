@@ -1,5 +1,6 @@
-salt.cloud.clouds.vultrpy module
-================================
+=========================
+salt.cloud.clouds.vultrpy
+=========================
 
 .. automodule:: salt.cloud.clouds.vultrpy
     :members:

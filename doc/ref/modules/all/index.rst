@@ -498,5 +498,6 @@ execution modules
     znc
     zoneadm
     zonecfg
+    zookeeper
     zpool
     zypper

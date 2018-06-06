@@ -16,29 +16,7 @@ Configuration
 The Namecheap username, API key and URL should be set in the minion configuration
 file, or in the Pillar data.
 
-        * ``requests``
-
-        .. code-block:: bash
-
-            pip install requests
-
- - As saltstack depends on ``requests`` this shouldn't be a problem
-
- Prerequisite Configuration
- --------------------------
-
- - The namecheap username, api key and url should be set in a minion
-   configuration file or pillar
-
-   .. code-block:: yaml
-
-        namecheap.name: companyname
-        namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
-        namecheap.client_ip: 162.155.30.172
-        #Real url
-        namecheap.url: https://api.namecheap.com/xml.response
-        #Sandbox url
-        #namecheap.url: https://api.sandbox.namecheap.xml.response
+.. code-block:: yaml
 
     namecheap.name: companyname
     namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3

@@ -623,7 +623,7 @@ This directory may contain sensitive data and should be protected accordingly.
 .. conf_master:: color_theme
 
 ``color_theme``
----------
+---------------
 
 Default: ``""``
 
@@ -2674,7 +2674,7 @@ executed in a thread.
 .. conf_minion:: process_count_max
 
 ``process_count_max``
--------
+---------------------
 
 .. versionadded:: 2018.3.0
 

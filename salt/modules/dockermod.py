@@ -19,7 +19,7 @@ Management of Docker Containers
 .. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
 .. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
 .. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
-.. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+.. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
 .. _timelib: https://pypi.python.org/pypi/timelib
 .. _`trusted builds`: https://blog.docker.com/2013/11/introducing-trusted-builds/
 .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
@@ -788,7 +788,7 @@ def get_client_args(limit=None):
         Added ability to limit the input to specific client functions
 
     Many functions in Salt have been written to support the full list of
-    arguments for a given function in docker-py's `low-level API`_. However,
+    arguments for a given function in the `docker-py Low-level API`_. However,
     depending on the version of docker-py installed on the minion, the
     available arguments may differ. This function will get the arguments for
     various functions in the installed version of docker-py, to be used as a
@@ -996,17 +996,17 @@ def compare_container_networks(first, second):
     :py:func:`docker_container.running <salt.states.docker_container.running>`
     state), automatic IP configuration will also be checked in these cases.
 
-    This function uses the :minion_opts:`docker.compare_container_networks`
+    This function uses the :conf_minion:`docker.compare_container_networks`
     minion config option to determine which keys to examine. This provides
     flexibility in the event that features added in a future Docker release
     necessitate changes to how Salt compares networks. In these cases, rather
     than waiting for a new Salt release one can just set
-    :minion_opts:`docker.compare_container_networks`.
+    :conf_minion:`docker.compare_container_networks`.
 
     .. note::
         The checks for automatic IP configuration described above only apply if
         ``IPAMConfig`` is among the keys set for static IP checks in
-        :minion_opts:`docker.compare_container_networks`.
+        :conf_minion:`docker.compare_container_networks`.
 
     first
         Name or ID of first container (old)
@@ -5069,7 +5069,7 @@ def create_network(name,
         other issues to be more easily worked around. See the following links
         for more information:
 
-        - docker-py `low-level API`_
+        - `docker-py Low-level API`_
         - `Docker Engine API`_
 
         .. versionadded:: 2018.3.0
@@ -5159,6 +5159,8 @@ def create_network(name,
             turned on without an IPv6 subnet explicitly configured, you will
             get an error unless you have set up a fixed IPv6 subnet. Consult
             the `Docker IPv6 docs`_ for information on how to do this.
+
+            .. _`Docker IPv6 docs`: https://docs.docker.com/v17.09/engine/userguide/networking/default_network/ipv6/
 
     attachable : False
         If ``True``, and the network is in the global scope, non-service
