@@ -45,3 +45,14 @@ class UtilsTestCase(TestCase):
         _globals = {'__opts__': {'system-environment': {'salt.in.system': expectation}},
                     '__file__': '/daemons/loose/in/system.py'}
         assert salt.utils.get_module_environment(_globals) == expectation
+    def test_get_module_environment_pillars(self):
+        '''
+        Test for salt.utils.get_module_environment
+        Test if __pillar__ is visible.
+        :return:
+        '''
+        expectation = {'message': 'The CPU has shifted, and become decentralized.'}
+        _globals = {'__pillar__': {'system-environment': {
+            'salt.electric.interference': expectation}},
+                    '__file__': '/piezo/electric/interference.py'}
+        assert salt.utils.get_module_environment(_globals) == expectation
