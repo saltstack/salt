@@ -1141,6 +1141,19 @@ The ssh password to log in with.
 
     ssh_passwd: ''
 
+.. conf_master:: ssh_priv_passwd
+
+``ssh_priv_passwd``
+--------------
+
+Default: ``''``
+
+Passphrase for ssh private key file.
+
+.. code-block:: yaml
+
+    ssh_priv_passwd: ''
+
 .. conf_master:: ssh_port
 
 ``ssh_port``

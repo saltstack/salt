@@ -106,8 +106,20 @@ def dict_search_and_replace(d, old, new, expanded):
     for (k, v) in six.iteritems(d):
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
+
+        if isinstance(v, list):
+            x = 0
+            for i in v:
+                if isinstance(i, dict):
+                    dict_search_and_replace(v[x], old, new, expanded)
+                if isinstance(i, six.string_types):
+                    if i == old:
+                        v[x] = new
+                x = x + 1
+
         if v == old:
             d[k] = new
+
     return d
 
 
@@ -124,6 +136,35 @@ def find_value_to_expand(x, v):
     return a
 
 
+# Look for regexes and expand them
+def find_and_process_re(_str, v, k, b, expanded):
+    vre = re.finditer(r'(^|.)\$\{.*?\}', _str)
+    if vre:
+        for re_v in vre:
+            re_str = str(re_v.group())
+            if re_str.startswith('\\'):
+                v_new = _str.replace(re_str, re_str.lstrip('\\'))
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                expanded.append(k)
+            elif not re_str.startswith('$'):
+                v_expanded = find_value_to_expand(b, re_str[1:])
+                v_new = _str.replace(re_str[1:], v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                expanded.append(k)
+            else:
+                v_expanded = find_value_to_expand(b, re_str)
+                if isinstance(v, six.string_types):
+                    v_new = v.replace(re_str, v_expanded)
+                else:
+                    v_new = _str.replace(re_str, v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                v = v_new
+                expanded.append(k)
+    return b
+
+
 # Return a dict that contains expanded variables if found
 def expand_variables(a, b, expanded, path=None):
     if path is None:
@@ -134,23 +175,15 @@ def expand_variables(a, b, expanded, path=None):
         if isinstance(v, dict):
             expand_variables(v, b, expanded, path + [six.text_type(k)])
         else:
-            if isinstance(v, str):
-                vre = re.search(r'(^|.)\$\{.*?\}', v)
-                if vre:
-                    re_v = vre.group(0)
-                    if re_v.startswith('\\'):
-                        v_new = v.replace(re_v, re_v.lstrip('\\'))
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    elif not re_v.startswith('$'):
-                        v_expanded = find_value_to_expand(b, re_v[1:])
-                        v_new = v.replace(re_v[1:], v_expanded)
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    else:
-                        v_expanded = find_value_to_expand(b, re_v)
-                        b = dict_search_and_replace(b, v, v_expanded, expanded)
-                        expanded.append(k)
+            if isinstance(v, list):
+                for i in v:
+                    if isinstance(i, dict):
+                        expand_variables(i, b, expanded, path + [str(k)])
+                    if isinstance(i, six.string_types):
+                        b = find_and_process_re(i, v, k, b, expanded)
+
+            if isinstance(v, six.string_types):
+                b = find_and_process_re(v, v, k, b, expanded)
     return b
 
 

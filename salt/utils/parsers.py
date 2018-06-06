@@ -3024,6 +3024,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Ssh private key file.'
         )
         auth_group.add_option(
+            '--priv-passwd',
+            dest='ssh_priv_passwd',
+            default='',
+            help='Passphrase for ssh private key file.'
+        )
+        auth_group.add_option(
             '-i',
             '--ignore-host-keys',
             dest='ignore_host_keys',
@@ -3087,11 +3093,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Run command via sudo.'
         )
         auth_group.add_option(
-            '--skip-roster',
-            dest='ssh_skip_roster',
+            '--update-roster',
+            dest='ssh_update_roster',
             default=False,
             action='store_true',
-            help='If hostname is not found in the roster, do not store the information'
+            help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)

@@ -4,6 +4,34 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+New Docker Proxy Minion
+-----------------------
+
+Docker containers can now be treated as actual minions without installing salt
+in the container, using the new :py:mod:`docker proxy minion <salt.proxy.docker>`.
+
+This proxy minion uses the :py:mod:`docker executor <salt.executors.docker>` to
+pass commands to the docker container using :py:func:`docker.call
+<salt.modules.dockermod.call>`.  Any state module calls are passed through the
+corresponding function from the :py:mod:`docker <salt.modules.dockermod>`
+module.
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: docker
+      name: keen_proskuriakova
+
+
+Grains Dictionary Passed into Custom Grains
+-------------------------------------------
+
+Starting in this release, if a custom grains function accepts a variable named
+``grains``, the Grains dictionary of the already compiled grains will be passed
+in.  Because of the non-deterministic order that grains are rendered in, the
+only grains that can be relied upon to be passed in are ``core.py`` grains,
+since those are compiled first.
+
 
 "Virtual Package" Support Dropped for APT
 -----------------------------------------
@@ -471,6 +499,12 @@ a minimal tarball using runners and include that. But this is only possible, whe
 Salt version is also available on the Master machine, although does not need to be directly
 installed together with the older Python interpreter.
 
+SaltSSH now support private key's passphrase. You can configure it by:
+
+* `--priv-passwd` for salt-ssh cli
+* `salt_priv_passwd` for salt master configure file
+* `priv_passwd` for salt roster file
+
 
 ========================
 Salt-Cloud major updates
@@ -507,6 +541,12 @@ passed correctly to the minion to run an orchestration in test mode. At present
 it is not possible to pass ``test=False`` on the command-line to override a
 minion in permanent test mode and so the ``test:False`` option must still be set
 in the orchestration file.
+
+states.event
+--------------
+The :ref:`event.send <salt.states.event.send>` state does not know the results of 
+the sent event, so returns changed every state run.  It can now be set to 
+return changed or unchanged.
 
 ============================
 LDAP External Authentication

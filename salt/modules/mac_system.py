@@ -74,8 +74,7 @@ def _atrun_enabled():
         # Collect information on service: will raise an error if it fails
         salt.utils.mac_utils.launchctl('list',
                                        label,
-                                       return_stdout=True,
-                                       output_loglevel='quiet')
+                                       return_stdout=True)
         return True
     except CommandExecutionError:
         return False
@@ -111,9 +110,8 @@ def _enable_atrun():
         return False
 
     salt.utils.mac_utils.launchctl('enable',
-                                   'system/{0}'.format(label),
-                                   output_loglevel='quiet')
-    salt.utils.mac_utils.launchctl('load', path, output_loglevel='quiet')
+                                   'system/{0}'.format(label))
+    salt.utils.mac_utils.launchctl('load', path)
     return _atrun_enabled()
 
 

@@ -3813,14 +3813,22 @@ def remote_refs(url,
                 https_pass=None,
                 ignore_retcode=False,
                 output_encoding=None,
-                saltenv='base'):
+                saltenv='base',
+                **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    Return the remote refs for the specified URL
+    Return the remote refs for the specified URL by running ``git ls-remote``.
 
     url
         URL of the remote repository
+
+    filter
+        Optionally provide a ref name to ``git ls-remote``. This can be useful
+        to make this function run faster on repositories with many
+        branches/tags.
+
+        .. versionadded:: Fluorine
 
     heads : False
         Restrict output to heads. Can be combined with ``tags``.
@@ -3893,7 +3901,13 @@ def remote_refs(url,
     .. code-block:: bash
 
         salt myminion git.remote_refs https://github.com/saltstack/salt.git
+        salt myminion git.remote_refs https://github.com/saltstack/salt.git filter=develop
     '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    filter_ = kwargs.pop('filter', None)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     command = ['git', 'ls-remote']
     if heads:
         command.append('--heads')
@@ -3906,6 +3920,8 @@ def remote_refs(url,
                                                           https_only=True))
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
+    if filter_:
+        command.append(filter_)
     output = _git_run(command,
                       user=user,
                       password=password,
