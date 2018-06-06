@@ -23,13 +23,29 @@ import salt.states.virt as virt
 import salt.utils.files
 
 
+class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
+    '''
+    libvirt library mockup
+    '''
+
+    class libvirtError(Exception):  # pylint: disable=invalid-name
+        '''
+        libvirt error mockup
+        '''
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.libvirt
     '''
     def setup_loader_modules(self):
-        return {virt: {}}
+        self.mock_libvirt = LibvirtMock()  # pylint: disable=attribute-defined-outside-init
+        self.addCleanup(delattr, self, 'mock_libvirt')
+        loader_globals = {
+            'libvirt': self.mock_libvirt
+        }
+        return {virt: loader_globals}
 
     @classmethod
     def setUpClass(cls):
@@ -195,3 +211,26 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                        locality='Los_Angeles',
                                                        organization='SaltStack',
                                                        expiration_days=700), ret)
+
+    def test_running(self):
+        '''
+        running state test cases.
+        '''
+        ret = {'name': 'myvm',
+               'changes': {},
+               'result': True,
+               'comment': 'myvm is running'}
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.vm_state': MagicMock(return_value='stopped'),
+                    'virt.start': MagicMock(return_value=0)
+                }):
+            ret.update({'changes': {'myvm': 'Domain started'},
+                        'comment': 'Domain myvm started'})
+            self.assertDictEqual(virt.running('myvm'), ret)
+
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.vm_state': MagicMock(return_value='stopped'),
+                    'virt.start': MagicMock(side_effect=[self.mock_libvirt.libvirtError('libvirt error msg')])
+                }):
+            ret.update({'changes': {}, 'result': False, 'comment': 'libvirt error msg'})
+            self.assertDictEqual(virt.running('myvm'), ret)
