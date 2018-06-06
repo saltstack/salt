@@ -6,7 +6,7 @@ IRC Bot engine
 
 Example Configuration
 
-.. code:: yaml
+.. code-block:: yaml
 
     engines:
       - ircbot:
@@ -26,7 +26,7 @@ Example Configuration
           allow_nicks:
             - gtmanfred
 
-Available commands on irc are
+Available commands on irc are:
 
 ping
     return pong
