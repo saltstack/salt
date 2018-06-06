@@ -25,7 +25,7 @@ in your environment variables!!
 
 Example usage of sdb env module:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     set some env var:
       cmd.run:

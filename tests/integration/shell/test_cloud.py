@@ -5,7 +5,7 @@
 
     CLI related unit testing
 
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 '''
 
 # Import Python libs

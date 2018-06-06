@@ -28,7 +28,7 @@ def check(name, port=None, **kwargs):
     port
       The port to test the connection on
 
-    **kwargs
+    kwargs
       Additional parameters, parameters allowed are:
         proto (tcp or udp)
         family (ipv4 or ipv6)

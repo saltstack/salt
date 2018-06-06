@@ -11,7 +11,7 @@ Salt is available in the FreeBSD ports at `sysutils/py-salt. <https://www.freshp
 FreeBSD binary repo
 ===================
 
-.. code-block:: shell
+.. code-block:: bash
 
     pkg install py27-salt
 
@@ -20,13 +20,13 @@ FreeBSD ports
 
 By default salt is packaged using python 2.7, but if you build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
 
-.. code-block:: shell
+.. code-block:: text
 
     echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
 
 Then build the port and install:
 
-.. code-block:: shell
+.. code-block:: bash
 
     cd /usr/ports/sysutils/py-salt
     make install
@@ -38,7 +38,7 @@ Post-installation tasks
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
@@ -46,7 +46,7 @@ Copy the sample configuration file:
 
 Activate the Salt Master in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_master_enable="YES"
 
@@ -54,7 +54,7 @@ Activate the Salt Master in ``/etc/rc.conf``:
 
 Start the Salt Master as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_master start
 
@@ -62,7 +62,7 @@ Start the Salt Master as follows:
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
@@ -70,7 +70,7 @@ Copy the sample configuration file:
 
 Activate the Salt Minion in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_minion_enable="YES"
 
@@ -78,7 +78,7 @@ Activate the Salt Minion in ``/etc/rc.conf``:
 
 Start the Salt Minion as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_minion start
 

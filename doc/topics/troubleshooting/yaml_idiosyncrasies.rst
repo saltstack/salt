@@ -39,10 +39,10 @@ fact that the data is uniform and not deeply nested.
 Nested Dictionaries
 -------------------
 
-When :ref:`dicts <python2:typesmapping>` are nested within other data
-structures (particularly lists), the indentation logic sometimes changes.
-Examples of where this might happen include ``context`` and ``default`` options
-from the :mod:`file.managed <salt.states.file>` state:
+When dictionaries are nested within other data structures (particularly lists),
+the indentation logic sometimes changes.  Examples of where this might happen
+include ``context`` and ``default`` options from the :mod:`file.managed
+<salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -77,11 +77,11 @@ deeply-nested dict can be declared with curly braces:
         - group: root
         - mode: 644
         - template: jinja
-        - context: {
-          custom_var: "override" }
-        - defaults: {
-          custom_var: "default value",
-          other_var: 123 }
+        - context:
+          custom_var: "override"
+        - defaults:
+            custom_var: "default value"
+            other_var: 123
 
 Here is a more concrete example of how YAML actually handles these
 indentations, using the Python interpreter on the command line:
@@ -160,7 +160,7 @@ them.
     When using a jinja ``load_yaml`` map, items must be quoted twice. For
     example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% load_yaml as wsus_schedule %}
 

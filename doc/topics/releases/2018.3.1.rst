@@ -1907,7 +1907,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * b429fc3e74 Add tests for mac_utils
 
-  * b5f67130cc Used *args and **kwargs
+  * b5f67130cc Used \*args and \*\*kwargs
 
   * ed061617a2 Fix unicode_literal issue in mac_assistive
 
@@ -2418,7 +2418,7 @@ Changelog for v2018.3.0..v2018.3.1
 
       * 62d64c9230 Fix missing import
 
-      * 18b1730320 Skip test that requires pywin32 on *nix platforms
+      * 18b1730320 Skip test that requires pywin32 on \*nix platforms
 
       * 45dce1a485 Add reg module to globals
 

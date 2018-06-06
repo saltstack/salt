@@ -1,45 +1,30 @@
 # -*- coding: utf-8 -*-
 '''
-Namecheap dns management
+Namecheap DNS Management
 
 .. versionadded:: 2017.7.0
 
- General Notes
- -------------
+Prerequisites
+-------------
 
- Use this module to manage dns through the namecheap
- api.  The Namecheap settings will be set in grains.
+This module uses the ``requests`` Python module to communicate to the namecheap
+API.
 
- Installation Prerequisites
- --------------------------
+Configuration
+-------------
 
- - This module uses the following python libraries to communicate to
-   the namecheap API:
+The Namecheap username, API key and URL should be set in the minion configuration
+file, or in the Pillar data.
 
-        * ``requests``
+.. code-block:: yaml
 
-        .. code-block:: bash
-
-            pip install requests
-
- - As saltstack depends on ``requests`` this shouldn't be a problem
-
- Prerequisite Configuration
- --------------------------
-
- - The namecheap username, api key and url should be set in a minion
-   configuration file or pillar
-
-   .. code-block:: yaml
-
-        namecheap.name: companyname
-        namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
-        namecheap.client_ip: 162.155.30.172
-        #Real url
-        namecheap.url: https://api.namecheap.com/xml.response
-        #Sandbox url
-        #namecheap.url: https://api.sandbox.namecheap.xml.response
-
+    namecheap.name: companyname
+    namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
+    namecheap.client_ip: 162.155.30.172
+    #Real url
+    namecheap.url: https://api.namecheap.com/xml.response
+    #Sandbox url
+    #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
 
 # Import Python libs
@@ -75,10 +60,10 @@ def get_hosts(sld, tld):
     returns a dictionary of information about the requested domain
 
     sld
-        string  sld of the domainname
+        SLD of the domain name
 
     tld
-        string  tld of the domainname
+        TLD of the domain name
 
     CLI Example:
 
@@ -106,10 +91,10 @@ def get_list(sld, tld):
     returns a dictionary of information about requested domain
 
     sld
-        string  sld of the domainname
+        SLD of the domain name
 
     tld
-        string  tld of the domain name
+        TLD of the domain name
 
     CLI Example:
 
@@ -137,21 +122,23 @@ def set_hosts(sld, tld, hosts):
     returns True if the host records were set successfully
 
     sld
-        string  sld of the domainname
+        SLD of the domain name
 
     tld
-        string  tld of the domain name
+        TLD of the domain name
 
     hosts
-        array of dictionaries  each dictionary should contain the following keys:
-                               'hostname', 'recordtype', and 'address'
-                               'ttl' is optional, Default value is 1800
-                               'mxpref' is optional but must be included with 'emailtype'
+        Must be passed as a list of Python dictionaries, with each dictionary
+        containing the following keys:
 
-                               'hostname' should be the subdomain/hostname
-                               'recordtype' should be A,AAAA,CNAME,MX,MXE,TXT,URL,URL301,FRAME
-                               'address' should be url or ip address
-                               'ttl' should be an integer between 60 to 60000
+        - **hostname**
+        - **recordtype** - One of ``A``, ``AAAA``, ``CNAME``, ``MX``, ``MXE``,
+          ``TXT``, ``URL``, ``URL301``, or ``FRAME``
+        - **address** - URL or IP address
+        - **ttl** - An integer between 60 and 60000 (default: ``1800``)
+
+        Additonally, the ``mxpref`` key can be present, but must be accompanied
+        by an ``emailtype`` key.
 
     CLI Example:
 
@@ -190,10 +177,10 @@ def set_custom(sld, tld, nameservers):
     returns True if the custom nameservers were set successfully
 
     sld
-        string  sld of the domainname
+        SLD of the domain name
 
     tld
-        string  tld of the domain name
+        TLD of the domain name
 
     nameservers
         array of strings  List of nameservers to be associated with this domain
@@ -218,17 +205,18 @@ def set_custom(sld, tld, nameservers):
 
 def set_default(sld, tld):
     '''
-    Sets domain to use namecheap default DNS servers.
-    Required for free services like Host record management,
-    URL forwarding, email forwarding, dynamic dns and other value added services.
-
-    returns True if the domain was set to default
+    Sets domain to use namecheap default DNS servers. Required for free
+    services like Host record management, URL forwarding, email forwarding,
+    dynamic DNS and other value added services.
 
     sld
-        string  sld of the domainname
+        SLD of the domain name
 
     tld
-        string  tld of the domain name
+        TLD of the domain name
+
+    Returns ``True`` if the domain was successfully pointed at the default DNS
+    servers.
 
     CLI Example:
 
