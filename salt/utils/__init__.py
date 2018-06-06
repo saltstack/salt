@@ -16,6 +16,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 
 # Import 3rd-party libs
 from salt.ext import six
+import os
 
 
 #
@@ -1920,3 +1921,24 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
         stacklevel=3
     )
     return salt.utils.profile.output_profile(pr, stats_path, stop, id_)
+
+
+def get_function_environment(env=None):
+    '''
+    Get function optional environment.
+
+    :param env:
+    :return:
+    '''
+    result = {}
+    if not env:
+        env = {}
+
+    for env_src in [env.get('__opts__', {}), env.get('__pillar__', {})]:
+        fname = env.get('__file__', '')
+        physical_name = os.path.basename(fname).split('.')[0]
+        section = os.path.basename(os.path.dirname(fname))
+        for m_name in set([env.get('__virtualname__'), physical_name]):
+            result.update(env_src.get('system-environment', {}).get('salt.{sn}.{mn}'.format(sn=section, mn=m_name), {}))
+
+    return result
