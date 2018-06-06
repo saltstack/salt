@@ -1925,11 +1925,31 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
 
 def get_module_environment(env=None):
     '''
-    Get function optional environment.
+    Get module optional environment.
+
+    To setup an environment option for a particular module,
+    add either pillar or config at the minion as follows:
+
+    system-environment:
+      salt.modules.pkg:
+        LC_ALL: en_GB.UTF-8
+        FOO: bar
+      salt.states.pkg:
+        LC_ALL: en_US.Latin-1
+        NAME: Fred
+
+    So this will export the environment to all the modules,
+    states, returnes etc. And calling this function with the globals()
+    in that context will fetch the environment for further reuse.
+
+    First will be fetched configuration, where virtual name goes first,
+    then the physical name of the module overrides the virtual settings.
+    Then pillar settings will override the configuration in the same order.
 
     :param env:
     :return:
     '''
+
     result = {}
     if not env:
         env = {}
