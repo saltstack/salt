@@ -201,6 +201,7 @@ import pipes
 import re
 import shutil
 import string
+import sys
 import time
 import uuid
 import subprocess
@@ -257,6 +258,7 @@ __func_alias__ = {
     'signal_': 'signal',
     'start_': 'start',
     'tag_': 'tag',
+    'apply_': 'apply'
 }
 
 # Minimum supported versions
@@ -270,6 +272,13 @@ NOTSET = object()
 # Define the module's virtual name and alias
 __virtualname__ = 'docker'
 __virtual_aliases__ = ('dockerng', 'moby')
+
+__proxyenabled__ = ['docker']
+__outputter__ = {
+    'sls': 'highstate',
+    'apply_': 'highstate',
+    'highstate': 'highstate',
+}
 
 
 def __virtual__():
@@ -6586,6 +6595,9 @@ def _compile_state(sls_opts, mods=None):
     '''
     st_ = HighState(sls_opts)
 
+    if not mods:
+        return st_.compile_low_chunks()
+
     high_data, errors = st_.render_highstate({sls_opts['saltenv']: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -6658,7 +6670,7 @@ def call(name, function, *args, **kwargs):
 
     try:
         salt_argv = [
-            'python',
+            'python{0}'.format(sys.version_info[0]),
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
@@ -6690,6 +6702,27 @@ def call(name, function, *args, **kwargs):
         # delete the thin dir so that it does not end in the image
         rm_thin_argv = ['rm', '-rf', thin_dest_path]
         run_all(name, subprocess.list2cmdline(rm_thin_argv))
+
+
+def apply_(name, mods=None, **kwargs):
+    '''
+    .. versionadded:: Flourine
+
+    Apply states! This function will call highstate or state.sls based on the
+    arguments passed in, ``apply`` is intended to be the main gateway for
+    all state executions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'docker' docker.apply web01
+        salt 'docker' docker.apply web01 test
+        salt 'docker' docker.apply web01 test,pkgs
+    '''
+    if mods:
+        return sls(name, mods, **kwargs)
+    return highstate(name, **kwargs)
 
 
 def sls(name, mods=None, **kwargs):
@@ -6807,6 +6840,31 @@ def sls(name, mods=None, **kwargs):
     else:
         __context__['retcode'] = 0
     return ret
+
+
+def highstate(name, saltenv='base', **kwargs):
+    '''
+    Apply a highstate to the running container
+
+    .. versionadded:: Flourine
+
+    The container does not need to have Salt installed, but Python is required.
+
+    name
+        Container name or ID
+
+    saltenv : base
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.highstate compassionate_mirzakhani
+
+    '''
+    return sls(name, saltenv='base', **kwargs)
 
 
 def sls_build(repository,
