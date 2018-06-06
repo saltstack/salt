@@ -4,7 +4,7 @@ Manage VMware vCenter servers and ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstaley.com>
 
 Dependencies
 ============
@@ -9059,8 +9059,7 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
 
     .. code-block:: bash
 
-        salt vm_minion vsphere.create_vm vm_name=vmname \
-        cpu='{count: 2, nested: True}' ...
+        salt vm_minion vsphere.create_vm vm_name=vmname cpu='{count: 2, nested: True}' ...
 
     vm_name
         Name of the virtual machine
@@ -9090,7 +9089,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
 
     devices
         interfaces
+
         .. code-block:: bash
+
             interfaces:
               adapter: 'Network adapter 1'
               name: vlan100
@@ -9103,7 +9104,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
                 start_connected: True
 
         disks
+
         .. code-block:: bash
+
             disks:
               adapter: 'Hard disk 1'
               size: 16
@@ -9116,14 +9119,18 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
               filename: 'vm/mydisk.vmdk'
 
         scsi_devices
+
         .. code-block:: bash
+
             scsi_devices:
               controller: 'SCSI controller 0'
               type: paravirtual
               bus_sharing: no_sharing
 
         serial_ports
+
         .. code-block:: bash
+
             serial_ports:
               adapter: 'Serial port 1'
               type: network
@@ -9138,7 +9145,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
               yield: False
 
         cd_drives
+
         .. code-block:: bash
+
             cd_drives:
               adapter: 'CD/DVD drive 0'
               controller: 'IDE 0'
