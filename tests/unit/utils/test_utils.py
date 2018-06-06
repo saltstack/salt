@@ -56,3 +56,17 @@ class UtilsTestCase(TestCase):
             'salt.electric.interference': expectation}},
                     '__file__': '/piezo/electric/interference.py'}
         assert salt.utils.get_module_environment(_globals) == expectation
+    def test_get_module_environment_pillar_override(self):
+        '''
+        Test for salt.utils.get_module_environment
+        Test if __pillar__ is overriding __opts__.
+        :return:
+        '''
+        expectation = {'msg': 'The CPU has shifted, and become decentralized.'}
+        _globals = {
+            '__pillar__': {'system-environment': {'salt.electric.interference': expectation}},
+            '__opts__': {'system-environment': {'salt.electric.interference': {'msg': 'la!'}}},
+            '__file__': '/piezo/electric/interference.py'
+        }
+        assert salt.utils.get_module_environment(_globals) == expectation
+
