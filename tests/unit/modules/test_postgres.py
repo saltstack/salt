@@ -1482,7 +1482,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pg_is_older_ext_ver(self):
         '''
-        Test Checks if postgres version is older
+        Test Checks if postgres extension version string is older
         '''
         self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '9.5'))
         self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '8.6'))
@@ -1494,4 +1494,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(postgres._pg_is_older_ext_ver('9.5.1', '9.5'))
         self.assertFalse(postgres._pg_is_older_ext_ver('9.5b', '9.5a'))
         self.assertTrue(postgres._pg_is_older_ext_ver('10a', '10b'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('1.2.3.4', '1.2.3.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('10dev', '10next'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('10next', '10dev'))
 
