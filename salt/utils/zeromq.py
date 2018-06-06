@@ -50,7 +50,7 @@ def install_zmq():
     older version still need one.
     :return:
     '''
-    if zmq and ZMQ_VERSION_INFO[0] < 17:
+    if zmq and ZMQ_VERSION_INFO < (17,):
         if tornado.version_info < (5,):
             zmq.eventloop.ioloop.install()
 
