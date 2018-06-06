@@ -149,7 +149,7 @@ def _yum():
     return __context__[contextkey]
 
 
-def _call_yum(args, **kwargs):
+def _call_yum(args, scope=False, **kwargs):
     '''
     Call yum/dnf.
 
@@ -160,8 +160,13 @@ def _call_yum(args, **kwargs):
               'python_shell': False,
               'env': get_module_environment(globals())}
     params.update(kwargs)
+    cmd = []
+    if scope:
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.append(_yum())
+    cmd.extend(args)
 
-    return __salt__['cmd.run_all']([_yum()] + args, **params)
+    return __salt__['cmd.run_all'](cmd, **params)
 
 
 def _yum_pkginfo(output):
