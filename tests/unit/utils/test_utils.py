@@ -37,6 +37,7 @@ class UtilsTestCase(TestCase):
     def test_get_module_environment_opts(self):
         '''
         Test for salt.utils.get_module_environment
+        Test if __opts__ are visible.
 
         :return:
         '''
