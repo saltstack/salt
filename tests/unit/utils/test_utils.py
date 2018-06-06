@@ -2,6 +2,7 @@
 '''
 Test case for utils/__init__.py
 '''
+from __future__ import unicode_literals, print_function, absolute_import
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     NO_MOCK,
@@ -22,10 +23,13 @@ class UtilsTestCase(TestCase):
     '''
     Test case for utils/__init__.py
     '''
-    def test_get_module_environment(self):
+    def test_get_module_environment_empty(self):
         '''
         Test for salt.utils.get_module_environment
+        Test if empty globals returns to an empty environment
+        with the correct type.
         :return:
         '''
-        _globals = {}
-        salt.utils.get_module_environment(_globals)
+        out = salt.utils.get_module_environment({})
+        assert out == {}
+        assert isinstance(out, dict)
