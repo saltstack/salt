@@ -4,7 +4,7 @@ Configuration of the alternatives system
 
 Control the alternatives system
 
-.. code-block:: yaml
+.. code-block:: jinja
 
   {% set my_hadoop_conf = '/opt/hadoop/conf' %}
 
