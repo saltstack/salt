@@ -133,15 +133,16 @@ def lookup_jid(jid,
     targeted_minions = data.get('Minions', [])
     returns = data.get('Result', {})
 
-    for minion in returns:
-        if display_progress:
-            __jid_event__.fire_event({'message': minion}, 'progress')
-        if u'return' in returns[minion]:
-            if returned:
-                ret[minion] = returns[minion].get(u'return')
-        else:
-            if returned:
-                ret[minion] = returns[minion].get('return')
+    if returns:
+        for minion in returns:
+            if display_progress:
+                __jid_event__.fire_event({'message': minion}, 'progress')
+            if u'return' in returns[minion]:
+                if returned:
+                    ret[minion] = returns[minion].get(u'return')
+            else:
+                if returned:
+                    ret[minion] = returns[minion].get('return')
     if missing:
         for minion_id in (x for x in targeted_minions if x not in returns):
             ret[minion_id] = 'Minion did not return'
