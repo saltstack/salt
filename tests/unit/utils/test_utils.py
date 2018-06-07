@@ -4,18 +4,12 @@ Test case for utils/__init__.py
 '''
 from __future__ import unicode_literals, print_function, absolute_import
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch
-)
+import salt.utils
 
 try:
     import pytest
 except ImportError:
     pytest = None
-import salt.utils
 
 
 @skipIf(pytest is None, 'PyTest is missing')
