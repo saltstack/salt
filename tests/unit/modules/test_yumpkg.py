@@ -581,8 +581,9 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     ['yum', '--quiet', '-y', '--disablerepo=*',
                      '--enablerepo=good', '--branch=foo',
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
-                     '--exclude=kernel*', 'upgrade'],
+                     '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
+                    ignore_retcode=True,
                     python_shell=False)
 
             # without fromrepo
@@ -599,8 +600,9 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     ['yum', '--quiet', '-y', '--disablerepo=bad',
                      '--enablerepo=good', '--branch=foo',
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
-                     '--exclude=kernel*', 'upgrade'],
+                     '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
+                    ignore_retcode=True,
                     python_shell=False)
 
     def test_info_installed_with_all_versions(self):
