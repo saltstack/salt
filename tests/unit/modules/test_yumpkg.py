@@ -696,3 +696,14 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def test_call_yum_default(self):
+        '''
+        Call default Yum/Dnf.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock()}):
+            yumpkg._call_yum(['-y', '--do-something'])
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
+                output_loglevel='trace', python_shell=False)
+
