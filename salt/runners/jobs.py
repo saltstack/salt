@@ -70,12 +70,12 @@ def active(display_progress=False):
     for jid in ret:
         returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if minion not in ret[jid]['Returned']:
-                ret[jid]['Returned'].append(minion)
+        if data:
+            for minion in data:
+                if minion not in ret[jid]['Returned']:
+                    ret[jid]['Returned'].append(minion)
 
     return ret
-
 
 def lookup_jid(jid,
                ext_source=None,
@@ -541,6 +541,10 @@ def _format_job_instance(job):
     '''
     Helper to format a job instance
     '''
+    if not job:
+        ret = {'Error': 'Cannot contact returner or no job with this jid'}
+        return ret
+
     ret = {'Function': job.get('fun', 'unknown-function'),
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
