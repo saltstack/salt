@@ -292,7 +292,7 @@ class OrchEventTest(ShellCase):
     '''
     def setUp(self):
         self.timeout = 60
-        self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
+        self.master_d_dir = os.path.join(self.config_dir, 'master.d')
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:

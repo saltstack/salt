@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jochen Breuer <jbreuer@suse.de>`
+    :codeauthor: Jochen Breuer <jbreuer@suse.de>
 '''
 
 # Import Python Libs

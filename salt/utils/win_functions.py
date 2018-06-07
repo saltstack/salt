@@ -119,7 +119,7 @@ def get_sid_from_name(name):
     return win32security.ConvertSidToStringSid(sid)
 
 
-def get_current_user():
+def get_current_user(with_domain=True):
     '''
     Gets the user executing the process
 
@@ -136,6 +136,8 @@ def get_current_user():
                 user_name = 'SYSTEM'
             elif get_sid_from_name(test_user) == 'S-1-5-18':
                 user_name = 'SYSTEM'
+        elif not with_domain:
+            user_name = win32api.GetUserName()
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed to get current user: {0}'.format(exc))
