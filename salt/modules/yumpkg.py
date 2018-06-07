@@ -137,7 +137,8 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 
 def _yum():
     '''
-    return yum or dnf depending on version
+    Determine package manager name (yum or dnf),
+    depending on the system version.
     '''
     contextkey = 'yum_bin'
     if contextkey not in __context__:
