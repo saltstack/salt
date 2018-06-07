@@ -1660,7 +1660,8 @@ def install(name=None,
             cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
             out = _call_yum(cmd, scope=(salt.utils.systemd.has_scope(__context__)
-                                        and __salt__['config.get']('systemd.scope', True)))
+                                        and __salt__['config.get']('systemd.scope', True)),
+                            ignore_retcode=False, redirect_stderr=True)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
