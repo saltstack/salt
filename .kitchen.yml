@@ -56,7 +56,7 @@ provisioner:
         - match: grain
         - prep_windows
       "*":
-        - git.salt
+        - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
   pillars:
     top.sls:
       base:
