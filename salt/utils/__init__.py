@@ -1959,6 +1959,7 @@ def get_module_environment(env=None):
         physical_name = os.path.basename(fname).split('.')[0]
         section = os.path.basename(os.path.dirname(fname))
         for m_name in set([env.get('__virtualname__'), physical_name]):
-            result.update(env_src.get('system-environment', {}).get('salt.{sn}.{mn}'.format(sn=section, mn=m_name), {}))
+            result.update(env_src.get('system-environment', {}).get(
+                'salt.{sn}.{mn}'.format(sn=section, mn=m_name), {}).copy())
 
     return result
