@@ -558,9 +558,10 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=*', '--enablerepo=good',
                      '--branch=foo', '--setopt', 'obsoletes=0',
-                     '--setopt', 'plugins=0', 'install', 'foo'],
+                     '--setopt', 'plugins=0', 'install', 'foo'], env={},
                     output_loglevel='trace',
                     python_shell=False,
+                    ignore_retcode=False,
                     redirect_stderr=True)
 
             # without fromrepo
@@ -575,10 +576,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=bad', '--enablerepo=good',
                      '--branch=foo', '--setopt', 'obsoletes=0',
-                     '--setopt', 'plugins=0', 'install', 'foo'],
+                     '--setopt', 'plugins=0', 'install', 'foo'], env={},
                     output_loglevel='trace',
                     python_shell=False,
-                    redirect_stderr=True)
+                    ignore_retcode=False,
+                    redirect_stderr=True,
+                )
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \
