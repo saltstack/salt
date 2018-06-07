@@ -333,8 +333,8 @@ def compare_params(defined, existing, return_old_value=False):
     :param defined: Zabbix object definition taken from sls file.
     :param existing: Existing Zabbix object taken from result of an API call.
     :param return_old_value: Default False. If True, returns dict("old"=old_val, "new"=new_val) for rollback purpose.
-    :return: Params that are different from existing object. Result extended by object ID can be passed directly to
-    Zabbix API update method.
+    :return: Params that are different from existing object. Result extended by
+        object ID can be passed directly to Zabbix API update method.
     '''
     # Comparison of data types
     if not isinstance(defined, type(existing)):
