@@ -44,6 +44,7 @@ import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
+from salt.utils import get_module_environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -156,6 +157,24 @@ def _check_apt():
         raise CommandExecutionError(
             'Error: \'python-apt\' package not installed'
         )
+
+
+def _call_apt(args, **kwargs):
+    '''
+    Call apt* utilities.
+    '''
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(args)
+
+    params = {'output_loglevel': 'trace',
+              'ignore_retcode': True,
+              'python_shell': False,
+              'env': get_module_environment(globals())}
+    params.update(kwargs)
+
+    return __salt__['cmd.run_all'](cmd, **params)
 
 
 def _warn_software_properties(repo):
