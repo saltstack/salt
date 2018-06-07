@@ -718,3 +718,15 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
 
+    def test_call_yum_with_kwargs(self):
+        '''
+        Call Yum/Dnf with the optinal keyword arguments.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock()}):
+            yumpkg._call_yum(['-y', '--do-something'],
+                             python_shell=True, output_loglevel='quiet', ignore_retcode=False,
+                             username='Darth Vader')
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=False,
+                output_loglevel='quiet', python_shell=True, username='Darth Vader')
