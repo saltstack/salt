@@ -43,14 +43,13 @@ provisioner:
     repo: git
     testingdir: /testing
   salt_copy_filter:
+    - __pycache__
+    - '*.pyc'
     - .bundle
+    - .tox
     - .kitchen
-    - .kitchen.yml
     - artifacts
-    - Gemfile
     - Gemfile.lock
-    - README.rst
-    - .travis.yml
   state_top:
     base:
       "os:Windows":
