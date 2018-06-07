@@ -153,8 +153,6 @@ def _yum():
 def _call_yum(args, scope=False, **kwargs):
     '''
     Call yum/dnf.
-
-    :return:
     '''
     params = {'output_loglevel': 'trace',
               'ignore_retcode': True,
