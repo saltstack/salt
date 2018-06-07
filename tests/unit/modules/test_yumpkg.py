@@ -21,6 +21,11 @@ from salt.exceptions import CommandExecutionError
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 LIST_REPOS = {
     'base': {
         'file': '/etc/yum.repos.d/CentOS-Base.repo',
@@ -670,3 +675,24 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         with patch('yum.YumBase') as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
             self.assertRaises(CommandExecutionError, yumpkg._get_yum_config)
+
+
+@skipIf(pytest is None, 'PyTest is missing')
+class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    Yum/Dnf utils tests.
+    '''
+    def setup_loader_modules(self):
+        return {
+            yumpkg: {
+                '__context__': {
+                    'yum_bin': 'fake-yum',
+                },
+                '__grains__': {
+                    'osarch': 'x86_64',
+                    'os_family': 'RedHat',
+                    'osmajorrelease': 7,
+                },
+            }
+        }
+
