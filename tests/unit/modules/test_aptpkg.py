@@ -490,3 +490,14 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 ['apt-get', 'install', 'emacs'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
 
+    @patch('salt.utils.systemd.has_scope', MagicMock(return_value=True))
+    def test_call_apt_in_scope(self):
+        '''
+        Call apt within the scope.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
+            aptpkg._call_apt(['apt-get', 'purge', 'vim']),
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['systemd-run', '--scope', 'apt-get', 'purge', 'vim'], env={}, ignore_retcode=True,
+                output_loglevel='trace', python_shell=False)
