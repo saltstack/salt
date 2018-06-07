@@ -501,3 +501,16 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
             aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
                 ['systemd-run', '--scope', 'apt-get', 'purge', 'vim'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
+
+    def test_call_apt_with_kwargs(self):
+        '''
+        Call apt with the optinal keyword arguments.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            aptpkg._call_apt(['dpkg', '-l', 'python'],
+                             python_shell=True, output_loglevel='quiet', ignore_retcode=False,
+                             username='Darth Vader')
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['dpkg', '-l', 'python'], env={}, ignore_retcode=False,
+                output_loglevel='quiet', python_shell=True, username='Darth Vader')
