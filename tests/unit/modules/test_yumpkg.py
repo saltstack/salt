@@ -299,23 +299,19 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
                     yumpkg.list_repo_pkgs('foo')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     # Check args from first call
-                    self.assertEqual(
-                        cmd.mock_calls[1][1],
-                        (['yum', '--quiet', 'list', 'available'],)
-                    )
+                    assert cmd.mock_calls[1][1] == (['yum', '--quiet', 'list', 'available'],)
+
                     # Check kwargs from first call
-                    self.assertEqual(cmd.mock_calls[1][2], kwargs)
+                    assert cmd.mock_calls[1][2] == kwargs
 
                     # Check args from second call
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', 'list', 'installed'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', 'list', 'installed'],)
+
                     # Check kwargs from second call
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
             # Test with really old yum. The fromrepo argument has no effect on
             # the yum commands we'd run.
@@ -325,23 +321,19 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
                     yumpkg.list_repo_pkgs('foo')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     # Check args from first call
-                    self.assertEqual(
-                        cmd.mock_calls[1][1],
-                        (['yum', '--quiet', '--showduplicates', 'list', 'available'],)
-                    )
+                    assert cmd.mock_calls[1][1] == (['yum', '--quiet', '--showduplicates', 'list', 'available'],)
+
                     # Check kwargs from first call
-                    self.assertEqual(cmd.mock_calls[1][2], kwargs)
+                    assert cmd.mock_calls[1][2] == kwargs
 
                     # Check args from second call
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', '--showduplicates', 'list', 'installed'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', '--showduplicates', 'list', 'installed'],)
+
                     # Check kwargs from second call
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
             # Test with newer yum. We should run one yum command per repo, so
             # fromrepo would limit how many calls we make.
@@ -353,16 +345,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
                     yumpkg.list_repo_pkgs('foo', fromrepo='base')
                     # We should have called cmd.run_all once
-                    self.assertEqual(len(cmd.mock_calls), 1)
+                    assert len(cmd.mock_calls) == 1
 
                     # Check args
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', '--showduplicates',
-                          'repository-packages', 'base', 'list', 'foo'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', '--showduplicates',
+                                                     'repository-packages', 'base', 'list', 'foo'],)
                     # Check kwargs
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
                 # Test enabling base-source and disabling updates. We should
                 # get two calls, one for each enabled repo. Because dict
@@ -377,20 +366,16 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                         enablerepo='base-source',
                         disablerepo='updates')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     for repo in ('base', 'base-source'):
                         for index in (0, 1):
                             try:
                                 # Check args
-                                self.assertEqual(
-                                    cmd.mock_calls[index][1],
-                                    (['yum', '--quiet', '--showduplicates',
-                                      'repository-packages', repo, 'list',
-                                      'foo'],)
-                                )
+                                assert cmd.mock_calls[index][1] == (['yum', '--quiet', '--showduplicates',
+                                                                     'repository-packages', repo, 'list', 'foo'],)
                                 # Check kwargs
-                                self.assertEqual(cmd.mock_calls[index][2], kwargs)
+                                assert cmd.mock_calls[index][2] == kwargs
                                 break
                             except AssertionError:
                                 continue
