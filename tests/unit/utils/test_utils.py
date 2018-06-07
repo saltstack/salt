@@ -72,3 +72,18 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.get_module_environment(_globals) == expectation
 
+    def test_get_module_environment_sname_found(self):
+        '''
+        Test for salt.utils.get_module_environment
+        Section name and module name are found.
+        :return:
+        '''
+        expectation = {'msg': 'All operators are on strike due to broken coffee machine!'}
+        _globals = {
+            '__pillar__': {'system-environment': {'salt.jumping.interference': expectation}},
+            '__file__': '/route/flapping/at_the_nap.py'
+        }
+        assert salt.utils.get_module_environment(_globals) == {}
+
+        _globals['__file__'] = '/route/jumping/interference.py'
+        assert salt.utils.get_module_environment(_globals) == expectation
