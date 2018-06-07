@@ -278,7 +278,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'stdout': APT_Q_UPDATE
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
                 self.assertEqual(aptpkg.refresh_db(), refresh_db)
 
     def test_refresh_db_failed(self):
@@ -291,7 +291,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'stdout': APT_Q_UPDATE_ERROR
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
                 self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
     def test_autoremove(self):
