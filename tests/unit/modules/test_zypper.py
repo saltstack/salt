@@ -113,6 +113,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIn(pkg, upgrades)
                 self.assertEqual(upgrades[pkg], version)
 
+    @patch('salt.modules.zypper.get_module_environment', MagicMock(return_value={'SALT_RUNNING': "1"}))
     def test_zypper_caller(self):
         '''
         Test Zypper caller.
