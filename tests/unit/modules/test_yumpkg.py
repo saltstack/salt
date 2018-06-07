@@ -429,7 +429,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 branch='foo')
             cmd.assert_called_once_with(
                 ['yum', '--quiet', '--disablerepo=*', '--enablerepo=good',
-                 '--branch=foo', 'list', 'updates'],
+                 '--branch=foo', 'list', 'updates'], env={},
                 output_loglevel='trace',
                 ignore_retcode=True,
                 python_shell=False)
@@ -444,7 +444,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 branch='foo')
             cmd.assert_called_once_with(
                 ['yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
-                 '--branch=foo', 'list', 'updates'],
+                 '--branch=foo', 'list', 'updates'], env={},
                 output_loglevel='trace',
                 ignore_retcode=True,
                 python_shell=False)
