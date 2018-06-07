@@ -159,12 +159,12 @@ def _check_apt():
         )
 
 
-def _call_apt(args, **kwargs):
+def _call_apt(args, scope=True, **kwargs):
     '''
     Call apt* utilities.
     '''
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
+    if scope and salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.extend(args)
 
