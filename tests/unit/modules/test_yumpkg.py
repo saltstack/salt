@@ -707,3 +707,14 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
 
+    def test_call_yum_in_scope(self):
+        '''
+        Call Yum/Dnf within the scope.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock()}):
+            yumpkg._call_yum(['-y', '--do-something'], scope=True)
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
+                output_loglevel='trace', python_shell=False)
+
