@@ -1099,26 +1099,25 @@ def refresh_db(**kwargs):
         1: False,
     }
 
+    ret = True
     check_update_ = kwargs.pop('check_update', True)
-
     options = _get_options(**kwargs)
 
-    clean_cmd = [_yum(), '--quiet', '--assumeyes', 'clean', 'expire-cache']
-    update_cmd = [_yum(), '--quiet', '--assumeyes', 'check-update']
-
-    if __grains__.get('os_family') == 'RedHat' \
-            and __grains__.get('osmajorrelease') == 7:
-        # This feature is disabled because it is not used by Salt and adds a
-        # lot of extra time to the command with large repos like EPEL
-        update_cmd.append('--setopt=autocheck_running_kernel=false')
-
+    clean_cmd = ['--quiet', '--assumeyes', 'clean', 'expire-cache']
     clean_cmd.extend(options)
-    update_cmd.extend(options)
-
     _call_yum(clean_cmd)
+
     if check_update_:
-        return retcodes.get(_call_yum(update_cmd)['retcode'], False)
-    return True
+        update_cmd = ['--quiet', '--assumeyes', 'check-update']
+        if (__grains__.get('os_family') == 'RedHat'
+           and __grains__.get('osmajorrelease') == 7):
+            # This feature is disabled because it is not used by Salt and adds a
+            # lot of extra time to the command with large repos like EPEL
+            update_cmd.append('--setopt=autocheck_running_kernel=false')
+        update_cmd.extend(options)
+        ret = retcodes.get(_call_yum(update_cmd)['retcode'], False)
+
+    return ret
 
 
 def clean_metadata(**kwargs):
