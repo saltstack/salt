@@ -119,3 +119,18 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.get_module_environment(_globals) == expectation
 
+    def test_get_module_environment_vname_overridden(self):
+        '''
+        Test for salt.utils.get_module_environment
+        Virtual namespace overridden.
+
+        :return:
+        '''
+        expectation = {'msg': 'New management.'}
+        _globals = {
+            '__pillar__': {'system-environment': {'salt.funny.nonsense': {'msg': 'This is wrong'},
+                                                  'salt.funny.translation': expectation}},
+            '__virtualname__': 'nonsense',
+            '__file__': '/lost/in/funny/translation.py'
+        }
+        assert salt.utils.get_module_environment(_globals) == expectation
