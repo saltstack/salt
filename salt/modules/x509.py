@@ -964,7 +964,6 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
 
         rev = OpenSSL.crypto.Revoked()
-
         rev.set_serial(serial_number)
         rev.set_rev_date(rev_date)
 
