@@ -6,6 +6,7 @@ Sphinx documentation for Salt
 import functools
 import sys
 import os
+import re
 import types
 import time
 
@@ -151,6 +152,7 @@ MOCK_MODULES = [
     'ntsecuritycon',
     'napalm',
     'dson',
+    'hjson',
     'jnpr',
     'json',
     'lxml',
@@ -316,6 +318,9 @@ modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
 
+# strip git rev as there won't necessarily be a release based on it
+stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
+
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
@@ -352,7 +357,7 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=release)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {

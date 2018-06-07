@@ -1752,14 +1752,15 @@ def add_trigger(name=None,
     - 3 days (default)
 
     :param str delay: The time the trigger waits after its activation to start the task.
-    Valid values are:
-    - 15 seconds
-    - 30 seconds
-    - 1 minute
-    - 30 minutes
-    - 1 hour
-    - 8 hours
-    - 1 day
+        Valid values are:
+
+        - 15 seconds
+        - 30 seconds
+        - 1 minute
+        - 30 minutes
+        - 1 hour
+        - 8 hours
+        - 1 day
 
     **kwargs**
 
