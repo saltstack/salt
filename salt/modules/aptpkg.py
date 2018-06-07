@@ -109,7 +109,7 @@ def __virtual__():
     # grain to the minion.
     if __grains__.get('os_family') == 'Debian':
         return __virtualname__
-    return (False, 'The pkg module could not be loaded: unsupported OS family')
+    return False, 'The pkg module could not be loaded: unsupported OS family'
 
 
 def __init__(opts):
