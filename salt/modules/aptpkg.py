@@ -344,8 +344,7 @@ def refresh_db(cache_valid_time=0, failhard=False):
         except IOError as exp:
             log.warning("could not stat cache directory due to: %s", exp)
 
-    cmd = ['apt-get', '-q', 'update']
-    call = _call_apt(cmd)
+    call = _call_apt(['apt-get', '-q', 'update'], scope=False)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
@@ -764,7 +763,7 @@ def install(name=None,
             unhold(pkgs=to_unhold)
 
         for cmd in cmds:
-            out = _call_apt(cmd)
+            out = _call_apt(cmd, scope=False)
             if out['retcode'] != 0 and out['stderr']:
                 errors.append(out['stderr'])
 
@@ -806,11 +805,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
-    cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend(['apt-get', '-q', '-y', action])
+    cmd = ['apt-get', '-q', '-y', action]
     cmd.extend(targets)
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
@@ -1052,14 +1047,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         force_conf = '--force-confnew'
     else:
         force_conf = '--force-confold'
-    cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-
-    cmd.extend(['apt-get', '-q', '-y',
-                '-o', 'DPkg::Options::={0}'.format(force_conf),
-                '-o', 'DPkg::Options::=--force-confdef'])
+    cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
+           '-o', 'DPkg::Options::=--force-confdef']
 
     if kwargs.get('force_yes', False):
         cmd.append('--force-yes')
