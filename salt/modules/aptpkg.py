@@ -576,9 +576,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    use_scope = salt.utils.systemd.has_scope(__context__) \
-        and __salt__['config.get']('systemd.scope', True)
-    cmd_prefix = ['systemd-run', '--scope'] if use_scope else []
+    cmd_prefix = []
 
     old = list_pkgs()
     targets = []
@@ -763,7 +761,7 @@ def install(name=None,
             unhold(pkgs=to_unhold)
 
         for cmd in cmds:
-            out = _call_apt(cmd, scope=False)
+            out = _call_apt(cmd)
             if out['retcode'] != 0 and out['stderr']:
                 errors.append(out['stderr'])
 
@@ -862,16 +860,13 @@ def autoremove(list_only=False, purge=False):
         salt '*' pkg.autoremove purge=True
     '''
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
     if list_only:
         ret = []
         cmd.extend(['apt-get', '--assume-no'])
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
-        out = __salt__['cmd.run'](cmd, python_shell=False, ignore_retcode=True)
+        out = _call_apt(cmd)['stdout']
         found = False
         for line in out.splitlines():
             if found is True:
@@ -889,7 +884,7 @@ def autoremove(list_only=False, purge=False):
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
-        __salt__['cmd.run'](cmd, python_shell=False)
+        _call_apt(cmd)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         return salt.utils.data.compare_dicts(old, new)
