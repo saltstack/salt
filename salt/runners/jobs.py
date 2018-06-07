@@ -77,6 +77,7 @@ def active(display_progress=False):
 
     return ret
 
+
 def lookup_jid(jid,
                ext_source=None,
                returned=True,
