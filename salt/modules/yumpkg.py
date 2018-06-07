@@ -150,7 +150,7 @@ def _yum():
     return __context__[contextkey]
 
 
-def _call_yum(args, scope=False, **kwargs):
+def _call_yum(args, **kwargs):
     '''
     Call yum/dnf.
     '''
@@ -160,7 +160,7 @@ def _call_yum(args, scope=False, **kwargs):
               'env': get_module_environment(globals())}
     params.update(kwargs)
     cmd = []
-    if scope:
+    if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.append(_yum())
     cmd.extend(args)
@@ -1658,9 +1658,7 @@ def install(name=None,
             _add_common_args(cmd)
             cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
-            out = _call_yum(cmd, scope=(salt.utils.systemd.has_scope(__context__)
-                                        and __salt__['config.get']('systemd.scope', True)),
-                            ignore_retcode=False, redirect_stderr=True)
+            out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
@@ -1668,13 +1666,10 @@ def install(name=None,
     with _temporarily_unhold(to_downgrade, targets):
         if targets:
             cmd = ['-y']
-            if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
-                cmd.extend(['systemd-run', '--scope'])
             _add_common_args(cmd)
             cmd.append('downgrade')
             cmd.extend(targets)
-            out = _call_yum(cmd, scope=(salt.utils.systemd.has_scope(__context__)
-                                        and __salt__['config.get']('systemd.scope', True)))
+            out = _call_yum(cmd)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
@@ -1685,8 +1680,7 @@ def install(name=None,
             _add_common_args(cmd)
             cmd.append('reinstall')
             cmd.extend(targets)
-            out = _call_yum(cmd, scope=(salt.utils.systemd.has_scope(__context__)
-                                        and __salt__['config.get']('systemd.scope', True)))
+            out = _call_yum(cmd)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
@@ -1909,8 +1903,7 @@ def upgrade(name=None,
             # for yum we have to use update instead of upgrade
             cmd.append('update' if not minimal else 'update-minimal')
     cmd.extend(targets)
-    result = _call_yum(cmd, scope=(salt.utils.systemd.has_scope(__context__)
-                                   and __salt__['config.get']('systemd.scope', True)))
+    result = _call_yum(cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
@@ -2015,9 +2008,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
 
-    out = _call_yum(['-y', 'remove'] + targets, scope=(salt.utils.systemd.has_scope(__context__)
-                                                       and __salt__['config.get']('systemd.scope', True)))
-
+    out = _call_yum(['-y', 'remove'] + targets)
     if out['retcode'] != 0 and out['stderr']:
         errors = [out['stderr']]
     else:
