@@ -5,7 +5,8 @@ FreeBSD
 Installation
 ============
 
-Salt is available in the FreeBSD ports at `sysutils/py-salt. <https://www.freshports.org/sysutils/py-salt/>`__
+Salt is available in the FreeBSD ports tree at `sysutils/py-salt
+<https://www.freshports.org/sysutils/py-salt/>`_.
 
 
 FreeBSD binary repo

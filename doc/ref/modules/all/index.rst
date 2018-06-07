@@ -486,7 +486,6 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
     x509

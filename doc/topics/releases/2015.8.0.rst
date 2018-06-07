@@ -21,7 +21,6 @@ See the following links for instructions:
 - :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
 - :ref:`Debian 8 <installation-debian-repo>`
 - :ref:`Windows <windows-installer>`
-- :ref:`FreeBSD <freebsd-upstream>`
 
 Send Event on State Completion
 ==============================

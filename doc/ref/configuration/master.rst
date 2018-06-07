@@ -1140,7 +1140,7 @@ The ssh password to log in with.
 .. conf_master:: ssh_priv_passwd
 
 ``ssh_priv_passwd``
---------------
+-------------------
 
 Default: ``''``
 

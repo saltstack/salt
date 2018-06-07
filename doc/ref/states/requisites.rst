@@ -869,7 +869,7 @@ See :ref:`Reloading Modules <reloading-modules>`.
        - reload_grains: true
 
     grains_read:
-      module.run: 
+      module.run:
        - name: grains.items
 
 .. _unless-requisite:

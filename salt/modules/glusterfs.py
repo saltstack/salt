@@ -709,9 +709,12 @@ def get_op_version(name):
     .. versionadded:: Fluorine
 
     Returns the glusterfs volume op-version
+
     name
         Name of the glusterfs volume
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_op_version <volume>
@@ -778,9 +781,12 @@ def set_op_version(version):
     .. versionadded:: Fluorine
 
     Set the glusterfs volume op-version
+
     version
         Version to set the glusterfs volume op-version
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.set_op_version <volume>
