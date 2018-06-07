@@ -273,6 +273,22 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     output_loglevel='trace',
                     python_shell=False)
 
+            # without fromrepo, but within the scope
+            cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=True)}):
+                yumpkg.latest_version(
+                    'foo',
+                    refresh=False,
+                    enablerepo='good',
+                    disablerepo='bad',
+                    branch='foo')
+                cmd.assert_called_once_with(
+                    ['systemd-run', '--scope', 'yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
+                     '--branch=foo', 'list', 'available', 'foo'], env={},
+                    ignore_retcode=True,
+                    output_loglevel='trace',
+                    python_shell=False)
+
     def test_list_repo_pkgs_with_options(self):
         '''
         Test list_repo_pkgs with and without fromrepo
