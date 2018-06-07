@@ -2578,7 +2578,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                 cmd = 'dpkg --set-selections'
                 cmd_in = '{0} {1}'.format(_pkg, _state)
                 if not __opts__['test']:
-                    result = _call_apt(cmd, scope=False)
+                    result = _call_apt(cmd, scope=False, stdin=cmd_in)
                     if result['retcode'] != 0:
                         log.error(
                             'failed to set state %s for package %s',
