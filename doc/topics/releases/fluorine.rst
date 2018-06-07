@@ -32,6 +32,39 @@ in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
+Configurable module environment
+-------------------------------
+
+Each module (states, modules, returners etc) now can have its own environment.
+Configuration is applied either in the minion configuration or pillar. Syntax
+as follows:
+
+.. code-block:: yaml
+
+    system-environment:
+      <Python module>:
+        <key>: <value>
+
+The "python module" in this case is Salt module, either virtual or physical.
+For example, in order to let all modules for Package Management on all systems
+got one common variable while calling the package management, the following
+configuration required:
+
+.. code-block:: yaml
+
+    system-environment:
+      salt.modules.pkg:
+        LC_ALL: en_GB.UTF-8
+
+In this case Apt or Yum or Zypper will run their package management software
+with `LC_ALL=en_GB.UTF-8` system variable (as an example).
+
+Currently the following modules supporting this:
+
+- `salt.modules.aptpkg`
+- `salt.modules.yumpkg`
+- `salt.modules.zypper`
+- `salt.modules.pkg` (this will set the same variables for all of the above)
 
 "Virtual Package" Support Dropped for APT
 =========================================
