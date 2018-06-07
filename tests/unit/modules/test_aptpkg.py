@@ -21,6 +21,11 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.aptpkg as aptpkg
 
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 
 APT_KEY_LIST = r'''
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -464,3 +469,24 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aptpkg.show('foo*', refresh=True), {})
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
+
+
+@skipIf(pytest is None, 'PyTest is missing')
+class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    apt utils test case
+    '''
+    def setup_loader_modules(self):
+        return {aptpkg: {}}
+
+    def test_call_apt_default(self):
+        '''
+        Call default apt.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            aptpkg._call_apt(['apt-get', 'install', 'emacs'])
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['apt-get', 'install', 'emacs'], env={}, ignore_retcode=True,
+                output_loglevel='trace', python_shell=False)
+
