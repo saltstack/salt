@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 r'''
-===========================
 Manage the Windows registry
 ===========================
 Many python developers think of registry keys as if they were python keys in a
 dictionary which is not the case. The windows registry is broken down into the
 following components:
 
------
 Hives
 -----
 
@@ -18,14 +16,12 @@ This is the top level of the registry. They all begin with HKEY.
 - HKEY_USER (HKU)
 - HKEY_CURRENT_CONFIG
 
-----
 Keys
 ----
 
 Hives contain keys. These are basically the folders beneath the hives. They can
 contain any number of subkeys.
 
------------------
 Values or Entries
 -----------------
 
@@ -34,17 +30,18 @@ have a default name/data pair. It is usually "(Default)"="(value not set)". The
 actual value for the name and the date is Null. The registry editor will display
 "(Default)" and "(value not set)".
 
--------
 Example
 -------
 
 The following example is taken from the windows startup portion of the registry:
-```
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
-"RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
-"NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
-"BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
-```
+
+.. code-block:: text
+
+    [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+    "RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
+    "NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
+    "BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
+
 In this example these are the values for each:
 
 Hive: `HKEY_LOCAL_MACHINE`
@@ -52,8 +49,9 @@ Hive: `HKEY_LOCAL_MACHINE`
 Key and subkeys: `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
 
 Value:
-    - There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
-    - Each value name has a corresponding value
+
+- There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
+- Each value name has a corresponding value
 '''
 from __future__ import absolute_import
 
@@ -106,29 +104,30 @@ def present(name,
     Ensure a registry key or value is present.
 
     :param str name: A string value representing the full path of the key to
-    include the HIVE, Key, and all Subkeys. For example:
+        include the HIVE, Key, and all Subkeys. For example:
 
     ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
 
     Valid hive values include:
+
     - HKEY_CURRENT_USER or HKCU
     - HKEY_LOCAL_MACHINE or HKLM
     - HKEY_USERS or HKU
 
     :param str vname: The name of the value you'd like to create beneath the
-    Key. If this parameter is not passed it will assume you want to set the
-    (Default) value
+        Key. If this parameter is not passed it will assume you want to set the
+        (Default) value
 
     :param str vdata: The value you'd like to set. If a value name (vname) is
-    passed, this will be the data for that value name. If not, this will be the
-    (Default) value for the key.
+        passed, this will be the data for that value name. If not, this will be
+        the (Default) value for the key.
 
     The type for the (Default) value is always REG_SZ and cannot be changed.
     This parameter is optional. If not passed, the Key will be created with no
     associated item/value pairs.
 
     :param str vtype: The value type for the data you wish to store in the
-    registry. Valid values are:
+        registry. Valid values are:
 
     - REG_BINARY
     - REG_DWORD
@@ -137,8 +136,8 @@ def present(name,
     - REG_SZ (Default)
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+        Applies only to 64bit windows. 32bit Windows will ignore this
+        parameter.  Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -230,7 +229,7 @@ def absent(name, vname=None, use_32bit_registry=False):
     Ensure a registry value is removed. To remove a key use key_absent.
 
     :param str name: A string value representing the full path of the key to
-    include the HIVE, Key, and all Subkeys. For example:
+        include the HIVE, Key, and all Subkeys. For example:
 
     ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
 
@@ -241,12 +240,12 @@ def absent(name, vname=None, use_32bit_registry=False):
     - HKEY_USERS or HKU
 
     :param str vname: The name of the value you'd like to create beneath the
-    Key. If this parameter is not passed it will assume you want to set the
-    (Default) value
+        Key. If this parameter is not passed it will assume you want to set the
+        (Default) value
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+        Applies only to 64bit windows. 32bit Windows will ignore this
+        parameter.  Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -311,16 +310,16 @@ def key_absent(name, use_32bit_registry=False):
     entries it contains. It will fail if the key contains subkeys.
 
     :param str name: A string representing the full path to the key to be
-    removed to include the hive and the keypath. The hive can be any of the
-    following:
+        removed to include the hive and the keypath. The hive can be any of the
+        following:
 
     - HKEY_LOCAL_MACHINE or HKLM
     - HKEY_CURRENT_USER or HKCU
     - HKEY_USER or HKU
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+        Applies only to 64bit windows. 32bit Windows will ignore this
+        parameter.  Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict

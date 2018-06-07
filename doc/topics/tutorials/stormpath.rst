@@ -105,7 +105,6 @@ regardless of directory, application, or group.
 .. code-block:: bash
 
     salt myminion stormpath.list_accounts
-    '''
 
 stormpath.show_account
 ``````````````````````
