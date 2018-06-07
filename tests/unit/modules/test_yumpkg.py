@@ -286,7 +286,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         list_repos_mock = MagicMock(return_value=LIST_REPOS)
         kwargs = {'output_loglevel': 'trace',
                   'ignore_retcode': True,
-                  'python_shell': False}
+                  'python_shell': False,
+                  'env': {}}
 
         with patch.object(yumpkg, 'list_repos', list_repos_mock):
 
