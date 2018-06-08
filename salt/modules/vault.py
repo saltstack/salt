@@ -111,7 +111,7 @@ Functions to interact with Hashicorp Vault.
             .*:
                 - vault.generate_token
 
-.. _vault-setup
+.. _vault-setup:
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -129,14 +129,14 @@ def read_secret(path, key=None):
 
     .. code-block:: jinja
 
-            my-secret: {{ salt['vault'].read_secret('secret/my/secret', 'some-key') }}
+        my-secret: {{ salt['vault'].read_secret('secret/my/secret', 'some-key') }}
 
     .. code-block:: jinja
 
-            {% set supersecret = salt['vault'].read_secret('secret/my/secret') %}
-            secrets:
-                first: {{ supersecret.first }}
-                second: {{ supersecret.second }}
+        {% set supersecret = salt['vault'].read_secret('secret/my/secret') %}
+        secrets:
+            first: {{ supersecret.first }}
+            second: {{ supersecret.second }}
     '''
     log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
     try:
@@ -211,7 +211,7 @@ def delete_secret(path):
 
     .. code-block:: bash
 
-            salt '*' vault.delete_secret "secret/my/secret"
+        salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
     try:

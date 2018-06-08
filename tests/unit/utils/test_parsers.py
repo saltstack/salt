@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Denys Havrysh <denys.gavrysh@gmail.com>`
+    :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 '''
 
 # Import python libs

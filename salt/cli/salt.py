@@ -401,6 +401,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         retcode = 0
         # if there is a dict with retcode, use that
         if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+            if isinstance(ret.get('retcode', 0), dict):
+                return max(six.itervalues(ret.get('retcode', {0: 0})))
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:

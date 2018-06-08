@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Cisco UCS compatibility to Salt.
+Module to provide Cisco UCS compatibility to Salt
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -15,12 +15,13 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Cisco UCS Proxy Module <salt.proxy.cimc>`
+    :py:mod:`Cisco UCS Proxy Module <salt.proxy.cimc>`
 
 About
 =====
-This execution module was designed to handle connections to a Cisco UCS server. This module adds support to send
-connections directly to the device through the rest API.
+This execution module was designed to handle connections to a Cisco UCS server.
+This module adds support to send connections directly to the device through the
+rest API.
 
 '''
 
