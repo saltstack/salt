@@ -150,17 +150,13 @@ Why aren't my custom modules/states/etc. available on my Minions?
 Custom modules are synced to Minions when
 :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
 or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
-Custom modules are also synced by :mod:`state.apply` when run without
-any arguments.
 
+Similarly, custom states are synced to Minions when :mod:`saltutil.sync_states
+<salt.modules.saltutil.sync_states>`, or :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` is run.
 
-Similarly, custom states are synced to Minions
-when :mod:`state.apply <salt.modules.state.apply_>`,
-:mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
-:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
-
-Custom states are also synced by :mod:`state.apply<salt.modules.state.apply_>`
-when run without any arguments.
+They are both also synced when a :ref:`highstate <running-highstate>` is
+triggered.
 
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
 documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more

@@ -135,9 +135,9 @@ where it is necessary to invoke the same function from a custom :ref:`outputter
 <all-salt.output>`/returner, as well as an execution module.
 
 Utility modules placed in ``salt://_utils/`` will be synced to the minions when
-any of the following Salt functions are called:
+a :ref:`highstate <running-highstate>` is run, as well as when any of the
+following Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
 * :mod:`saltutil.sync_utils <salt.modules.saltutil.sync_utils>`
 * :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
 
