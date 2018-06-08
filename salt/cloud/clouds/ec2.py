@@ -4782,7 +4782,7 @@ def get_password_data(
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
             if HAS_M2:
-                key = RSA.load_key_string(rsa_key)
+                key = RSA.load_key_string(rsa_key.encode('ascii'))
                 password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
             else:
                 dsize = Crypto.Hash.SHA.digest_size
