@@ -275,13 +275,16 @@ def present(name,
     return ret
 
 
-def absent(name):
+def absent(name, only_if_empty=False):
     '''
     Ensure that the named group is absent
 
     Args:
         name (str):
             The name of the group to remove
+
+        only_if_empty (bool):
+            Delete only if there are no members in the group
 
     Example:
 
@@ -290,6 +293,13 @@ def absent(name):
         # Removes the local group `db_admin`
         db_admin:
           group.absent
+
+    .. code-block:: yaml
+
+        # Removes the local group `db_admin`, but only if there are no more members
+        db_admin:
+          group.absent:
+            - only_if_empty: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -297,12 +307,22 @@ def absent(name):
            'comment': ''}
     grp_info = __salt__['group.info'](name)
     if grp_info:
-        # Group already exists. Remove the group.
         if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Group {0} is set for removal'.format(name)
+            if only_if_empty and grp_info['members']:
+                ret['result'] = True
+                ret['comment'] = ('Group {0} would not be removed since members are '
+                                  'present and only_if_empty is set').format(name)
+            else:
+                ret['result'] = None
+                ret['comment'] = 'Group {0} is set for removal'.format(name)
             return ret
-        ret['result'] = __salt__['group.delete'](name)
+        if only_if_empty and grp_info['members']:
+            ret['comment'] = ('Group {0} was not removed since members are '
+                              'present and only_if_empty is set').format(name)
+            return ret
+        else:
+            # Group exists. Remove the group.
+            ret['result'] = __salt__['group.delete'](name)
         if ret['result']:
             ret['changes'] = {name: ''}
             ret['comment'] = 'Removed group {0}'.format(name)
