@@ -41,7 +41,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
-from salt.utils import get_module_environment
+from salt.utils.environment import get_module_environment
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)

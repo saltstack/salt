@@ -4,7 +4,7 @@ Test case for utils/__init__.py
 '''
 from __future__ import unicode_literals, print_function, absolute_import
 from tests.support.unit import TestCase, skipIf
-import salt.utils
+import salt.utils.environment
 
 try:
     import pytest
@@ -24,7 +24,7 @@ class UtilsTestCase(TestCase):
         with the correct type.
         :return:
         '''
-        out = salt.utils.get_module_environment({})
+        out = salt.utils.environment.get_module_environment({})
         assert out == {}
         assert isinstance(out, dict)
 
@@ -38,7 +38,7 @@ class UtilsTestCase(TestCase):
         _globals = {'__opts__': {'system-environment': {
             'salt.in.system': expectation}},
                     '__file__': '/daemons/loose/in/system.py'}
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_pillars(self):
         '''
@@ -50,7 +50,7 @@ class UtilsTestCase(TestCase):
         _globals = {'__pillar__': {'system-environment': {
             'salt.electric.interference': expectation}},
                     '__file__': '/piezo/electric/interference.py'}
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_pillar_override(self):
         '''
@@ -64,7 +64,7 @@ class UtilsTestCase(TestCase):
             '__opts__': {'system-environment': {'salt.electric.interference': {'msg': 'la!'}}},
             '__file__': '/piezo/electric/interference.py'
         }
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_sname_found(self):
         '''
@@ -77,10 +77,10 @@ class UtilsTestCase(TestCase):
             '__pillar__': {'system-environment': {'salt.jumping.interference': expectation}},
             '__file__': '/route/flapping/at_the_nap.py'
         }
-        assert salt.utils.get_module_environment(_globals) == {}
+        assert salt.utils.environment.get_module_environment(_globals) == {}
 
         _globals['__file__'] = '/route/jumping/interference.py'
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_mname_found(self):
         '''
@@ -94,9 +94,9 @@ class UtilsTestCase(TestCase):
             '__pillar__': {'system-environment': {'salt.jumping.nonsense': expectation}},
             '__file__': '/route/jumping/interference.py'
         }
-        assert salt.utils.get_module_environment(_globals) == {}
+        assert salt.utils.environment.get_module_environment(_globals) == {}
         _globals['__pillar__']['system-environment']['salt.jumping.interference'] = expectation
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_vname_found(self):
         '''
@@ -111,7 +111,7 @@ class UtilsTestCase(TestCase):
             '__virtualname__': 'nonsense',
             '__file__': '/lost/in/jumping/translation.py'
         }
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_vname_overridden(self):
         '''
@@ -127,4 +127,4 @@ class UtilsTestCase(TestCase):
             '__virtualname__': 'nonsense',
             '__file__': '/lost/in/funny/translation.py'
         }
-        assert salt.utils.get_module_environment(_globals) == expectation
+        assert salt.utils.environment.get_module_environment(_globals) == expectation

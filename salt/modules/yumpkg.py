@@ -54,7 +54,7 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.utils import get_module_environment
+from salt.utils.environment import get_module_environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )

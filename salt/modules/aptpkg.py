@@ -44,7 +44,7 @@ import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
-from salt.utils import get_module_environment
+from salt.utils.environment import get_module_environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
