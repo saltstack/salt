@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Megan Wilhite<mwilhite@saltstack.com>`
+    :codeauthor: Megan Wilhite<mwilhite@saltstack.com>
 '''
 
 # Import Python libs

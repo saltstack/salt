@@ -257,6 +257,33 @@ class StateRunnerTest(ShellCase):
         self.assertEqual(count('Succeeded: 1', ret), 1)
         self.assertEqual(count('Failed:    0', ret), 1)
 
+    def test_orchestrate_salt_function_return_false_failure(self):
+        '''
+        Ensure that functions that only return False in the return
+        are flagged as failed when run as orchestrations.
+
+        See https://github.com/saltstack/salt/issues/30367
+        '''
+        self.run_run('saltutil.sync_modules')
+        ret = salt.utils.json.loads(
+            '\n'.join(
+                self.run_run('state.orchestrate orch.issue30367 --out=json')
+            )
+        )
+        # Drill down to the changes dict
+        state_result = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['result']
+        func_ret = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['changes']
+
+        self.assertEqual(
+            state_result,
+            False,
+        )
+
+        self.assertEqual(
+            func_ret,
+            {'out': 'highstate', 'ret': {'minion': False}}
+        )
+
 
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
@@ -265,7 +292,7 @@ class OrchEventTest(ShellCase):
     '''
     def setUp(self):
         self.timeout = 60
-        self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
+        self.master_d_dir = os.path.join(self.config_dir, 'master.d')
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:

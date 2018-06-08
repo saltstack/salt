@@ -85,8 +85,10 @@ def mode(name):
     '''
     Verifies the mode SELinux is running in, can be set to enforcing,
     permissive, or disabled
-        Note: A change to or from disabled mode requires a system reboot.
-            You will need to perform this yourself.
+
+    .. note::
+        A change to or from disabled mode requires a system reboot. You will
+        need to perform this yourself.
 
     name
         The mode to run SELinux in, permissive, enforcing, or disabled.

@@ -376,7 +376,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return passphrase
+        return salt.utils.stringutils.to_str(passphrase)
     return f
 
 
@@ -437,8 +437,7 @@ def get_pem_entry(text, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----\\
-                MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
+        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
     '''
     text = _text_or_file(text)
     # Replace encoded newlines
@@ -757,9 +756,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.write_pem \\
-            "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." \\
-            path=/etc/pki/mycert.crt
+        salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
     with salt.utils.files.set_umask(0o077):
         text = get_pem_entry(text, pem_type=pem_type)
@@ -925,12 +922,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
     .. code-block:: bash
 
-        salt '*' x509.create_crl path=/etc/pki/mykey.key \\
-                signing_private_key=/etc/pki/ca.key \\
-                signing_cert=/etc/pki/ca.crt \\
-                revoked="{'compromized-web-key': \\
-                {'certificate': '/etc/pki/certs/www1.crt', \\
-                'revocation_date': '2015-03-01 00:00:00'}}"
+        salt '*' x509.create_crl path=/etc/pki/mykey.key signing_private_key=/etc/pki/ca.key signing_cert=/etc/pki/ca.crt revoked="{'compromized-web-key': {'certificate': '/etc/pki/certs/www1.crt', 'revocation_date': '2015-03-01 00:00:00'}}"
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these
     # functions because Client operations like creating CRLs shouldn't require
@@ -1029,8 +1021,7 @@ def sign_remote_certificate(argdic, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.sign_remote_certificate argdic="{'public_key': \\
-                '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
+        salt '*' x509.sign_remote_certificate argdic="{'public_key': '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
     '''
     if 'signing_policy' not in argdic:
         return 'signing_policy must be specified'
@@ -1219,7 +1210,7 @@ def create_certificate(
 
     extensions:
         The following arguments set X509v3 Extension values. If the value
-        starts with ``critical ``, the extension will be marked as critical.
+        starts with ``critical``, the extension will be marked as critical.
 
         Some special extensions are ``subjectKeyIdentifier`` and
         ``authorityKeyIdentifier``.
@@ -1345,8 +1336,7 @@ def create_certificate(
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt \\
-        signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
     if not path and not text and \
@@ -1589,8 +1579,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.create_csr path=/etc/pki/myca.csr \\
-                public_key='/etc/pki/myca.key' CN='My Cert
+        salt '*' x509.create_csr path=/etc/pki/myca.csr public_key='/etc/pki/myca.key' CN='My Cert'
     '''
 
     if not path and not text:
