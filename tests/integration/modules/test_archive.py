@@ -183,6 +183,21 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_list_unicode(self):
+        '''
+        Validate using the tar function to extract archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+        self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+
+        # Test list archive
+        ret = self.run_function('archive.list', name=self.arch)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
     @skipIf(not salt.utils.path.which('gzip'), 'Cannot find gzip executable')
     def test_gzip(self):
         '''
