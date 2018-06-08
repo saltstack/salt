@@ -50,7 +50,10 @@ def get_module_environment(env=None, function=None):
         fname = env.get('__file__', '')
         physical_name = os.path.basename(fname).split('.')[0]
         section = os.path.basename(os.path.dirname(fname))
-        for m_name in set([env.get('__virtualname__'), physical_name]):
+        m_names = [env.get('__virtualname__')]
+        if physical_name not in m_names:
+            m_names.append(physical_name)
+        for m_name in m_names:
             if not m_name:
                 continue
             result.update(env_src.get('system-environment', {}).get(
