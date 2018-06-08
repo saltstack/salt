@@ -106,7 +106,7 @@ class SaltCacheLoader(BaseLoader):
         name does not begin with './' or '../'.  When a template name
         begins with './' or '../' then the import will be relative to
         the importing file.
-        
+
         '''
         # FIXME: somewhere do seprataor replacement: '\\' => '/'
         _template = template
