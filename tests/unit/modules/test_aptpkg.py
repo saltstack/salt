@@ -303,14 +303,14 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             patch_kwargs = {
                 '__salt__': {
                     'config.get': MagicMock(return_value=True),
-                    'cmd.run': MagicMock(return_value=AUTOREMOVE)
+                    'cmd.run_all': MagicMock(return_value=MagicMock(return_value=AUTOREMOVE))
                 }
             }
             with patch.multiple(aptpkg, **patch_kwargs):
-                self.assertEqual(aptpkg.autoremove(), dict())
-                self.assertEqual(aptpkg.autoremove(purge=True), dict())
-                self.assertEqual(aptpkg.autoremove(list_only=True), list())
-                self.assertEqual(aptpkg.autoremove(list_only=True, purge=True), list())
+                assert aptpkg.autoremove() == {}
+                assert aptpkg.autoremove(purge=True) == {}
+                assert aptpkg.autoremove(list_only=True) == []
+                assert aptpkg.autoremove(list_only=True, purge=True) == []
 
     def test_remove(self):
         '''
