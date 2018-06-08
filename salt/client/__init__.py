@@ -1329,8 +1329,8 @@ class LocalClient(object):
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
 
-        if missing:
-            for minion in missing:
+        if set(missing) - found:
+            for minion in set(missing) - found:
                 yield {minion: {'failed': True}}
 
     def get_returns(
