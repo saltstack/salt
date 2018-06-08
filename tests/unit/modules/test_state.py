@@ -756,28 +756,25 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                           "whitelist=sls1.sls",
                                           pillar="A")
 
-                        mock = MagicMock(return_value=True)
-                        with patch.dict(state.__salt__,
-                                        {'config.option': mock}):
-                            mock = MagicMock(return_value="A")
+                        mock = MagicMock(return_value="A")
+                        with patch.object(state, '_filter_running',
+                                          mock):
+                            mock = MagicMock(return_value=True)
                             with patch.object(state, '_filter_running',
                                               mock):
                                 mock = MagicMock(return_value=True)
-                                with patch.object(state, '_filter_running',
+                                with patch.object(salt.payload, 'Serial',
                                                   mock):
-                                    mock = MagicMock(return_value=True)
-                                    with patch.object(salt.payload, 'Serial',
-                                                      mock):
-                                        with patch.object(os.path,
-                                                          'join', mock):
-                                            with patch.object(
-                                                              state,
-                                                              '_set'
-                                                              '_retcode',
-                                                              mock):
-                                                self.assertTrue(state.
-                                                                highstate
-                                                                (arg))
+                                    with patch.object(os.path,
+                                                      'join', mock):
+                                        with patch.object(
+                                                          state,
+                                                          '_set'
+                                                          '_retcode',
+                                                          mock):
+                                            self.assertTrue(state.
+                                                            highstate
+                                                            (arg))
 
     def test_clear_request(self):
         '''
@@ -918,17 +915,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                                     MockState.HighState.flag = False
                                     mock = MagicMock(return_value=True)
-                                    with patch.dict(state.__salt__,
-                                                    {'config.option':
-                                                     mock}):
-                                        mock = MagicMock(return_value=
-                                                         True)
-                                        with patch.object(
-                                                          state,
-                                                          '_filter_'
-                                                          'running',
-                                                          mock):
-                                            self.sub_test_sls()
+                                    with patch.object(state,
+                                                      '_filter_'
+                                                      'running',
+                                                      mock):
+                                        self.sub_test_sls()
 
     def sub_test_sls(self):
         '''
