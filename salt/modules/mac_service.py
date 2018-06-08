@@ -32,7 +32,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -274,13 +273,11 @@ def list_(name=None, runas=None):
         return launchctl('list',
                          label,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
                      return_stdout=True,
-                     output_loglevel='trace',
                      runas=runas)
 
 
@@ -535,7 +532,7 @@ def enabled(name, runas=None):
         return False
 
 
-def disabled(name, runas=None):
+def disabled(name, runas=None, domain='system'):
     '''
     Check if the specified service is not enabled. This is the opposite of
     ``service.enabled``
@@ -543,6 +540,8 @@ def disabled(name, runas=None):
     :param str name: The name to look up
 
     :param str runas: User to run launchctl commands
+
+    :param str domain: domain to check for disabled services. Default is system.
 
     :return: True if the specified service is NOT enabled, otherwise False
     :rtype: bool
@@ -553,8 +552,22 @@ def disabled(name, runas=None):
 
         salt '*' service.disabled org.cups.cupsd
     '''
-    # A service is disabled if it is not enabled
-    return not enabled(name, runas=runas)
+    ret = False
+    disabled = launchctl('print-disabled',
+                         domain,
+                         return_stdout=True,
+                         output_loglevel='trace',
+                         runas=runas)
+    for service in disabled.split("\n"):
+        if name in service:
+            srv_name = service.split("=>")[0].split("\"")[1]
+            status = service.split("=>")[1]
+            if name != srv_name:
+                pass
+            else:
+                return True if 'true' in status.lower() else False
+
+    return False
 
 
 def get_all(runas=None):

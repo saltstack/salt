@@ -43,7 +43,7 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range, zip
+from salt.ext.six.moves import range, zip, map
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -409,6 +409,19 @@ def _run(cmd,
             cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
+
+    if runas and salt.utils.platform.is_darwin():
+        # we need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that
+        # method doesn't work properly when run as root for certain commands.
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(map(_cmd_quote, cmd))
+
+        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
+        # set runas to None, because if you try to run `su -l` as well as
+        # simulate the environment macOS will prompt for the password of the
+        # user and will cause salt to hang.
+        runas = None
 
     if runas:
         # Save the original command before munging it
