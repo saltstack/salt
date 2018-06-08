@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     ====================================
@@ -29,13 +29,14 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import (
+    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
+)
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import salt.utils.json
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -97,9 +98,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                             script_name
                         )
                     )
-                sfh.write(
+                contents = (
                     '#!{0}\n'.format(sys.executable) +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
+                )
+                sfh.write(contents)
+                log.debug(
+                    'Wrote the following contents to temp script %s:\n%s',
+                    script_path, contents
                 )
             st = os.stat(script_path)
             os.chmod(script_path, st.st_mode | stat.S_IEXEC)
@@ -121,8 +127,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     data = '\n'.join(data)
                     self.assertIn('minion', data)
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        arg_str = '-c {0} -t {1} {2}'.format(self.config_dir, timeout, arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
                 catch_stderr=False, wipe=False, raw=False):
@@ -132,22 +138,33 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
-            self.get_config_dir(),
+            self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str
         )
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self,
+                arg_str,
+                with_retcode=False,
+                catch_stderr=False,
+                async=False,
+                timeout=60,
+                config_dir=None):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
-                                                 arg_str,
-                                                 timeout=timeout,
-                                                 async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(
+                config_dir or self.config_dir,
+                arg_str,
+                timeout=timeout,
+                async_flag=' --async' if async else '')
+        return self.run_script('salt-run',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
 
     def run_run_plus(self, fun, *arg, **kwargs):
         '''
@@ -195,7 +212,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-key
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script(
             'salt-key',
             arg_str,
@@ -207,12 +224,12 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-cp
         '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.get_config_dir(), arg_str)
+                                                    self.config_dir, arg_str)
 
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
@@ -220,7 +237,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def run_script(self,
@@ -230,9 +247,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    with_retcode=False,
                    # FIXME A timeout of zero or disabling timeouts may not return results!
                    timeout=15,
-                   raw=False):
+                   raw=False,
+                   log_output=None):
         '''
         Execute a script with the given argument string
+
+        The ``log_output`` argument is ternary, it can be True, False, or None.
+        If the value is boolean, then it forces the results to either be logged
+        or not logged. If it is None, then the return code of the subprocess
+        determines whether or not to log results.
         '''
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
@@ -276,10 +299,50 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
+        def format_return(retcode, stdout, stderr=None):
+            '''
+            DRY helper to log script result if it failed, and then return the
+            desired output based on whether or not stderr was desired, and
+            wither or not a retcode was desired.
+            '''
+            if log_output is True or \
+                    (log_output is None and (retcode is None or retcode != 0)):
+                if stderr is not None:
+                    log.debug(
+                        'run_script results for: %s %s\n'
+                        'return code: %s\n'
+                        'stdout:\n'
+                        '%s\n\n'
+                        'stderr:\n'
+                        '%s',
+                        script, arg_str, retcode, stdout, stderr
+                    )
+                else:
+                    log.debug(
+                        'run_script results for: %s %s\n'
+                        'return code: %s\n'
+                        'stdout:\n'
+                        '%s',
+                        script, arg_str, retcode, stdout
+                    )
+
+            if not raw:
+                stdout = stdout.splitlines()
+                if stderr is not None:
+                    stderr = stderr.splitlines()
+
+            ret = [stdout]
+            if catch_stderr:
+                ret.append(stderr)
+            if with_retcode:
+                ret.append(retcode)
+
+            return ret[0] if len(ret) == 1 else tuple(ret)
 
         process = subprocess.Popen(cmd, **popen_kwargs)
+
+        # Late import
+        import salt.utils.platform
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
@@ -287,40 +350,45 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             while True:
                 process.poll()
                 time.sleep(0.1)
-                if datetime.now() > stop_at:
+                if datetime.now() <= stop_at:
+                    # We haven't reached the timeout yet
+                    if process.returncode is not None:
+                        break
+                else:
+                    # We've reached the timeout
                     if term_sent is False:
                         # Kill the process group since sending the term signal
                         # would only terminate the shell, not the command
                         # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                         term_sent = True
                         continue
 
                     try:
                         # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
                             # If errno is not "no such process", raise
                             raise
 
-                    out = [
+                    return format_return(
+                        process.returncode,
                         'Process took more than {0} seconds to complete. '
-                        'Process Killed!'.format(timeout)
-                    ]
-                    if catch_stderr:
-                        err = ['Process killed, unable to catch stderr output']
-                        if with_retcode:
-                            return out, err, process.returncode
-                        else:
-                            return out, err
-                    if with_retcode:
-                        return out, process.returncode
-                    else:
-                        return out
+                        'Process Killed!'.format(timeout),
+                        'Process killed, unable to catch stderr output'
+                    )
 
-                if process.returncode is not None:
-                    break
         tmp_file.seek(0)
 
         if sys.version_info >= (3,):
@@ -355,25 +423,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 process.stdout.close()
             if process.stderr is not None:
                 process.stderr.close()
+
             # pylint: disable=maybe-no-member
             try:
-                if with_retcode:
-                    if out is not None and err is not None:
-                        if not raw:
-                            return out.splitlines(), err.splitlines(), process.returncode
-                        else:
-                            return out, err, process.returncode
-                    return out.splitlines(), [], process.returncode
-                else:
-                    if out is not None and err is not None:
-                        if not raw:
-                            return out.splitlines(), err.splitlines()
-                        else:
-                            return out, err
-                    if not raw:
-                        return out.splitlines(), []
-                    else:
-                        return out, []
+                return format_return(process.returncode, out, err or '')
             finally:
                 try:
                     if os.path.exists(tmp_file.name):
@@ -396,16 +449,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             process.stdout.close()
 
         try:
-            if with_retcode:
-                if not raw:
-                    return out.splitlines(), process.returncode
-                else:
-                    return out, process.returncode
-            else:
-                if not raw:
-                    return out.splitlines()
-                else:
-                    return out
+            return format_return(process.returncode, out)
         finally:
             try:
                 if os.path.exists(tmp_file.name):
@@ -441,7 +485,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt',
                               arg_str,
                               with_retcode=with_retcode,
@@ -462,15 +506,15 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_spm for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
-                timeout=60, wipe=True, raw=False):  # pylint: disable=W0221
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+                timeout=60, wipe=True, raw=False):
         '''
         Execute salt-ssh
         '''
         arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
-            self.get_config_dir(),
+            self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str)
@@ -483,11 +527,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_ssh for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=180, config_dir=None):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.config_dir,
                                                                arg_str,
                                                                timeout=timeout,
                                                                async_flag=' --async' if async else '')
@@ -543,7 +587,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-key
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt-key',
                               arg_str,
                               catch_stderr=catch_stderr,
@@ -558,7 +602,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         # Note: not logging result of run_cp because it will log a bunch of
         # bytes which will not be very helpful.
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp',
                                arg_str,
                                with_retcode=with_retcode,
@@ -570,7 +614,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         Execute salt-call.
         '''
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.get_config_dir(), arg_str)
+                                                    self.config_dir, arg_str)
         ret = self.run_script('salt-call',
                               arg_str,
                               with_retcode=with_retcode,
@@ -583,7 +627,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         ret = self.run_script('salt-cloud',
                               arg_str,
                               catch_stderr,
@@ -836,14 +880,18 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=90, wipe=True, raw=False, **kwargs):
+    def run_function(self, function, arg=(), timeout=180, wipe=True, raw=False, **kwargs):
         '''
-        We use a 90s timeout here, which some slower systems do end up needing
+        We use a 180s timeout here, which some slower systems do end up needing
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
                            wipe=wipe, raw=raw)
         log.debug('SSHCase run_function executed %s with arg %s', function, arg)
         log.debug('SSHCase JSON return: %s', ret)
+
+        # Late import
+        import salt.utils.json
+
         try:
             return salt.utils.json.loads(ret)['localhost']
         except Exception:

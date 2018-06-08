@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -30,6 +30,7 @@ import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.path
 import salt.grains.core as core
 
 # Import 3rd-party libs
@@ -52,6 +53,7 @@ IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
 IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
+SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -862,15 +864,6 @@ SwapTotal:       4789244 kB'''
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
-    def _run_dns_test(self, resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows',
-                          MagicMock(return_value=False)):
-            with patch.dict(core.__opts__, {'ipv6': False}):
-                with patch.object(salt.utils.dns, 'parse_resolv',
-                                  MagicMock(return_value=resolv_mock)):
-                    get_dns = core.dns()
-                    self.assertEqual(get_dns, ret)
-
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
@@ -889,4 +882,119 @@ SwapTotal:       4789244 kB'''
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
-            self.assertCountEqual(fqdns['fqdns'], ret['fqdns'])
+            self.assertIn('fqdns', fqdns)
+            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
+            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+
+    def test_core_virtual(self):
+        '''
+        test virtual grain with cmd virt-what
+        '''
+        virt = 'kvm'
+        with patch.object(salt.utils.platform, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils.path, 'which',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'cmd.run_all':
+                                                MagicMock(return_value={'pid': 78,
+                                                                        'retcode': 0,
+                                                                        'stderr': '',
+                                                                        'stdout': virt})}):
+                    osdata = {'kernel': 'test', }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret['virtual'], virt)
+
+    def test_solaris_sparc_s7zone(self):
+        '''
+        verify productname grain for s7 zone
+        '''
+        expectation = {
+                'productname': 'SPARC S7-2',
+                'product': 'SPARC S7-2',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.s7-zone')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_s7(self):
+        '''
+        verify productname grain for s7
+        '''
+        expectation = {
+                'productname': 'SPARC S7-2',
+                'product': 'SPARC S7-2',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.s7')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_t5220(self):
+        '''
+        verify productname grain for t5220
+        '''
+        expectation = {
+                'productname': 'SPARC Enterprise T5220',
+                'product': 'SPARC Enterprise T5220',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.t5220')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_t5220zone(self):
+        '''
+        verify productname grain for t5220 zone
+        '''
+        expectation = {
+                'productname': 'SPARC Enterprise T5220',
+                'product': 'SPARC Enterprise T5220',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.t5220-zone')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def _check_solaris_sparc_productname_grains(self, prtdata, expectation):
+        '''
+        verify product grains on solaris sparc
+        '''
+        import platform
+        path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/release'])
+        with patch.object(platform, 'uname',
+                  MagicMock(return_value=('SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'))):
+            with patch.object(salt.utils.platform, 'is_proxy',
+                      MagicMock(return_value=False)):
+                with patch.object(salt.utils.platform, 'is_linux',
+                          MagicMock(return_value=False)):
+                    with patch.object(salt.utils.platform, 'is_windows',
+                              MagicMock(return_value=False)):
+                        with patch.object(salt.utils.platform, 'is_smartos',
+                                  MagicMock(return_value=False)):
+                            with patch.object(salt.utils.path, 'which_bin',
+                                      MagicMock(return_value=None)):
+                                with patch.object(os.path, 'isfile', path_isfile_mock):
+                                    with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
+                                        os_release_content = os_release_file.readlines()
+                                        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
+                                            os_release_file.return_value.__iter__.return_value = os_release_content
+                                            with patch.object(core, '_sunos_cpudata',
+                                                      MagicMock(return_value={'cpuarch': 'sparcv9',
+                                                                              'num_cpus': '1',
+                                                                              'cpu_model': 'MOCK_CPU_MODEL',
+                                                                              'cpu_flags': []})):
+                                                with patch.object(core, '_memdata',
+                                                          MagicMock(return_value={'mem_total': 16384})):
+                                                    with patch.object(core, '_virtual',
+                                                              MagicMock(return_value={})):
+                                                        with patch.object(core, '_ps',
+                                                                  MagicMock(return_value={})):
+                                                            with patch.object(salt.utils.path, 'which',
+                                                                      MagicMock(return_value=True)):
+                                                                sparc_return_mock = MagicMock(return_value=prtdata)
+                                                                with patch.dict(core.__salt__, {'cmd.run': sparc_return_mock}):
+                                                                    os_grains = core.os_data()
+        grains = {k: v for k, v in os_grains.items()
+                  if k in set(['product', 'productname'])}
+        self.assertEqual(grains, expectation)

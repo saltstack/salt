@@ -48,6 +48,7 @@ def present(name,
     **Example:**
 
     .. code-block:: yaml
+
         example user present in influxdb:
           influxdb_user.present:
             - name: example
@@ -122,7 +123,7 @@ def present(name,
                         'following changes:'.format(name)
                 for k, v in ret['changes']:
                     ret['comment'] += '\n{0} => {1}'.format(k, v)
-                ret['changes'] = None
+                ret['changes'] = {}
             else:
                 ret['comment'] = 'Updated user {0}'.format(name)
 

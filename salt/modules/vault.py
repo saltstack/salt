@@ -32,6 +32,12 @@ Functions to interact with Hashicorp Vault.
                 - saltstack/minions
                 - saltstack/minion/{minion}
                 .. more policies
+            keys:
+                - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+                - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+                - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+                - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+                - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
 
     url
         Url to your Vault installation. Required.
@@ -92,6 +98,9 @@ Functions to interact with Hashicorp Vault.
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
 
+    keys
+        List of keys to use to unseal vault server with the vault.unseal runner.
+
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
@@ -102,7 +111,7 @@ Functions to interact with Hashicorp Vault.
             .*:
                 - vault.generate_token
 
-.. _vault-setup
+.. _vault-setup:
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -120,14 +129,14 @@ def read_secret(path, key=None):
 
     .. code-block:: jinja
 
-            my-secret: {{ salt['vault'].read_secret('secret/my/secret', 'some-key') }}
+        my-secret: {{ salt['vault'].read_secret('secret/my/secret', 'some-key') }}
 
     .. code-block:: jinja
 
-            {% set supersecret = salt['vault'].read_secret('secret/my/secret') %}
-            secrets:
-                first: {{ supersecret.first }}
-                second: {{ supersecret.second }}
+        {% set supersecret = salt['vault'].read_secret('secret/my/secret') %}
+        secrets:
+            first: {{ supersecret.first }}
+            second: {{ supersecret.second }}
     '''
     log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
     try:
@@ -160,7 +169,33 @@ def write_secret(path, **kwargs):
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('POST', url, json=data)
-        if response.status_code != 204:
+        if response.status_code == 200:
+            return response.json()['data']
+        elif response.status_code != 204:
+            response.raise_for_status()
+        return True
+    except Exception as err:
+        log.error('Failed to write secret! %s: %s', type(err).__name__, err)
+        return False
+
+
+def write_raw(path, raw):
+    '''
+    Set raw data at the path in vault. The vault policy used must allow this.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
+    '''
+    log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
+    try:
+        url = 'v1/{0}'.format(path)
+        response = __utils__['vault.make_request']('POST', url, json=raw)
+        if response.status_code == 200:
+            return response.json()['data']
+        elif response.status_code != 204:
             response.raise_for_status()
         return True
     except Exception as err:
@@ -176,7 +211,7 @@ def delete_secret(path):
 
     .. code-block:: bash
 
-            salt '*' vault.delete_secret "secret/my/secret"
+        salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
     try:

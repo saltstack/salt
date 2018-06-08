@@ -51,39 +51,45 @@ def to_bytes(s, encoding=None, errors='strict'):
         return to_str(s, encoding, errors)
 
 
-def to_str(s, encoding=None, errors='strict'):
+def to_str(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str, bytes, bytearray, or unicode (py2), return str
     '''
+    def _normalize(s):
+        try:
+            return unicodedata.normalize('NFC', s) if normalize else s
+        except TypeError:
+            return s
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
-        return s
+        return _normalize(s)
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
             if encoding:
-                return s.decode(encoding, errors)
+                return _normalize(s.decode(encoding, errors))
             else:
                 try:
                     # Try UTF-8 first
-                    return s.decode('utf-8', errors)
+                    return _normalize(s.decode('utf-8', errors))
                 except UnicodeDecodeError:
                     # Fall back to detected encoding
-                    return s.decode(__salt_system_encoding__, errors)
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             if encoding:
-                return s.encode(encoding, errors)
+                return _normalize(s).encode(encoding, errors)
             else:
                 try:
                     # Try UTF-8 first
-                    return s.encode('utf-8', errors)
+                    return _normalize(s).encode('utf-8', errors)
                 except UnicodeEncodeError:
                     # Fall back to detected encoding
-                    return s.encode(__salt_system_encoding__, errors)
+                    return _normalize(s).encode(__salt_system_encoding__, errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -184,19 +190,27 @@ def is_binary(data):
     '''
     Detects if the passed string of data is binary or text
     '''
-    if not data or not isinstance(data, six.string_types):
+    if not data or not isinstance(data, (six.string_types, six.binary_type)):
         return False
-    if '\0' in data:
+
+    if isinstance(data, six.binary_type):
+        if b'\0' in data:
+            return True
+    elif str('\0') in data:
         return True
 
     text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
     # Get the non-text characters (map each character to itself then use the
     # 'remove' option to get rid of the text characters.)
     if six.PY3:
-        trans = ''.maketrans('', '', text_characters)
-        nontext = data.translate(trans)
+        if isinstance(data, six.binary_type):
+            import salt.utils.data
+            nontext = data.translate(None, salt.utils.data.encode(text_characters))
+        else:
+            trans = ''.maketrans('', '', text_characters)
+            nontext = data.translate(trans)
     else:
-        if isinstance(data, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(data, six.text_type):
             trans_args = ({ord(x): None for x in text_characters},)
         else:
             trans_args = (None, str(text_characters))  # future lint: blacklisted-function
@@ -347,23 +361,46 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     in the blacklist, then the whitelist is checked. If the value isn't
     found in the whitelist, the function returns ``False``.
     '''
-    if blacklist is not None:
-        if not hasattr(blacklist, '__iter__'):
+    # Normalize the input so that we have a list
+    if blacklist:
+        if isinstance(blacklist, six.string_types):
             blacklist = [blacklist]
-        for expr in blacklist:
-            if expr_match(value, expr):
-                return False
+        if not hasattr(blacklist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable blacklist, but got {0} ({1})'.format(
+                    type(blacklist).__name__, blacklist
+                )
+            )
+    else:
+        blacklist = []
 
     if whitelist:
-        if not hasattr(whitelist, '__iter__'):
+        if isinstance(whitelist, six.string_types):
             whitelist = [whitelist]
-        for expr in whitelist:
-            if expr_match(value, expr):
-                return True
+        if not hasattr(whitelist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable whitelist, but got {0} ({1})'.format(
+                    type(whitelist).__name__, whitelist
+                )
+            )
     else:
-        return True
+        whitelist = []
 
-    return False
+    _blacklist_match = any(expr_match(value, expr) for expr in blacklist)
+    _whitelist_match = any(expr_match(value, expr) for expr in whitelist)
+
+    if blacklist and not whitelist:
+        # Blacklist but no whitelist
+        return not _blacklist_match
+    elif whitelist and not blacklist:
+        # Whitelist but no blacklist
+        return _whitelist_match
+    elif blacklist and whitelist:
+        # Both whitelist and blacklist
+        return not _blacklist_match and _whitelist_match
+    else:
+        # No blacklist or whitelist passed
+        return True
 
 
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):

@@ -235,7 +235,10 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_binary': MagicMock(return_value=False),
+                    'files.get_encoding': MagicMock(return_value='utf-8')
+                },
             }
         }
 
@@ -266,11 +269,13 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         quis leo.
         ''')
 
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
     def setUp(self):
         self.tfile = tempfile.NamedTemporaryFile(delete=False,
                                                  prefix='blockrepltmp',
-                                                 mode='w+')
-        self.tfile.write(self.MULTILINE_STRING)
+                                                 mode='w+b')
+        self.tfile.write(salt.utils.stringutils.to_bytes(self.MULTILINE_STRING))
         self.tfile.close()
 
     def tearDown(self):
@@ -773,6 +778,107 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
+    def test_get_diff(self):
+
+        text1 = textwrap.dedent('''\
+            foo
+            bar
+            baz
+            спам
+            ''')
+        text2 = textwrap.dedent('''\
+            foo
+            bar
+            baz
+            яйца
+            ''')
+        # The below two variables are 8 bytes of data pulled from /dev/urandom
+        binary1 = b'\xd4\xb2\xa6W\xc6\x8e\xf5\x0f'
+        binary2 = b',\x13\x04\xa5\xb0\x12\xdf%'
+
+        # pylint: disable=no-self-argument
+        class MockFopen(object):
+            '''
+            Provides a fake filehandle object that has just enough to run
+            readlines() as file.get_diff does. Any significant changes to
+            file.get_diff may require this class to be modified.
+            '''
+            def __init__(mockself, path, *args, **kwargs):  # pylint: disable=unused-argument
+                mockself.path = path
+
+            def readlines(mockself):  # pylint: disable=unused-argument
+                return {
+                    'text1': text1.encode('utf8'),
+                    'text2': text2.encode('utf8'),
+                    'binary1': binary1,
+                    'binary2': binary2,
+                }[mockself.path].splitlines(True)
+
+            def __enter__(mockself):
+                return mockself
+
+            def __exit__(mockself, *args):  # pylint: disable=unused-argument
+                pass
+        # pylint: enable=no-self-argument
+
+        fopen = MagicMock(side_effect=lambda x, *args, **kwargs: MockFopen(x))
+        cache_file = MagicMock(side_effect=lambda x, *args, **kwargs: x)
+
+        # Mocks for __utils__['files.is_text']
+        mock_text_text = MagicMock(side_effect=[True, True])
+        mock_bin_bin = MagicMock(side_effect=[False, False])
+        mock_text_bin = MagicMock(side_effect=[True, False])
+        mock_bin_text = MagicMock(side_effect=[False, True])
+
+        with patch.dict(filemod.__salt__, {'cp.cache_file': cache_file}), \
+                patch.object(salt.utils.files, 'fopen', fopen):
+
+            # Test diffing two text files
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_text_text}):
+
+                # Identical files
+                ret = filemod.get_diff('text1', 'text1')
+                self.assertEqual(ret, '')
+
+                # Non-identical files
+                ret = filemod.get_diff('text1', 'text2')
+                self.assertEqual(
+                    ret,
+                    textwrap.dedent('''\
+                        --- text1
+                        +++ text2
+                        @@ -1,4 +1,4 @@
+                         foo
+                         bar
+                         baz
+                        -спам
+                        +яйца
+                        ''')
+                )
+
+            # Test diffing two binary files
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_bin}):
+
+                # Identical files
+                ret = filemod.get_diff('binary1', 'binary1')
+                self.assertEqual(ret, '')
+
+                # Non-identical files
+                ret = filemod.get_diff('binary1', 'binary2')
+                self.assertEqual(ret, 'Replace binary file')
+
+            # Test diffing a text file with a binary file
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_text_bin}):
+
+                ret = filemod.get_diff('text1', 'binary1')
+                self.assertEqual(ret, 'Replace text file with binary file')
+
+            # Test diffing a binary file with a text file
+            with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_text}):
+
+                ret = filemod.get_diff('binary1', 'text1')
+                self.assertEqual(ret, 'Replace binary file with text file')
+
 
 @skipIf(pytest is None, 'PyTest required for this set of tests')
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):
@@ -828,6 +934,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
             self.assertIn('Cannot find text to {0}'.format(mode),
                           _log.warning.call_args_list[0][0][0])
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_delete_no_match(self):
+        '''
+        Tests that when calling file.line with ``mode=delete``,
+        with not matching pattern to delete returns False
+        :return:
+        '''
+        file_content = os.linesep.join([
+            'file_roots:',
+            '  base:',
+            '    - /srv/salt',
+            '    - /srv/custom'
+        ])
+        match = 'not matching'
+        for mode in ['delete', 'replace']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    self.assertFalse(filemod.line('foo', content='foo', match=match, mode=mode))
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -981,7 +1110,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/sugar'
         ])
         cfg_content = '- /srv/custom'
-        for before_line in ['/srv/salt', '/srv/sa.*t', '/sr.*']:
+        for before_line in ['/srv/salt', '/srv/sa.*t']:
             files_fopen = mock_open(read_data=file_content)
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
@@ -990,6 +1119,32 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(atomic_opener().write.call_args_list), 1)
                 self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
                                  file_modified)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_assert_exception_pattern(self):
+        '''
+        Test for file.line for exception on insert with too general pattern.
+
+        :return:
+        '''
+        file_content = os.linesep.join([
+            'file_roots:',
+            '  base:',
+            '    - /srv/salt',
+            '    - /srv/sugar'
+        ])
+        cfg_content = '- /srv/custom'
+        for before_line in ['/sr.*']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    with self.assertRaises(CommandExecutionError) as cm:
+                        filemod.line('foo', content=cfg_content, before=before_line, mode='insert')
+                    self.assertEqual(cm.exception.strerror,
+                                     'Found more than expected occurrences in "before" expression')
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1078,7 +1233,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '  base:',
             '    - /srv/salt',
             '    - /srv/sugar',
-            cfg_content
+            '    ' + cfg_content
         ])
         files_fopen = mock_open(read_data=file_content)
         with patch('salt.utils.files.fopen', files_fopen):
@@ -1114,6 +1269,33 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             atomic_opener = mock_open()
             with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
                 filemod.line('foo', content=cfg_content, before='exit 0', mode='ensure')
+            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
+            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
+                             file_modified)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_insert_ensure_before_first_line(self):
+        '''
+        Test for file.line for insertion ensuring the line is before first line
+        :return:
+        '''
+        cfg_content = '#!/bin/bash'
+        file_content = os.linesep.join([
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            cfg_content,
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        files_fopen = mock_open(read_data=file_content)
+        with patch('salt.utils.files.fopen', files_fopen):
+            atomic_opener = mock_open()
+            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
             self.assertEqual(len(atomic_opener().write.call_args_list), 1)
             self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
                              file_modified)

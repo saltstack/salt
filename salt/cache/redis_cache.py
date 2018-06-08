@@ -7,22 +7,21 @@ Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: 2017.7.0
 
-As Redis provides a simple mechanism for very fast key-value store,
-in order to privde the necessary features for the Salt
-caching subsystem, the following conventions are used:
+As Redis provides a simple mechanism for very fast key-value store, in order to
+privde the necessary features for the Salt caching subsystem, the following
+conventions are used:
 
-- a Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
-``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
-and ``stuff`` is the key name.
-- as the caching subsystem is organised as a tree, we need to store the
-caching path and identify the bank and its offspring.
-At the same time, Redis is linear
-and we need to avoid doing ``keys <pattern>`` which is very inefficient
-as it goes through all the keys on the remote Redis server.
-Instead, each bank hierarchy has a Redis SET associated
-which stores the list of sub-banks. By default, these keys begin with ``$BANK_``.
-- in addition, each key name is stored in a separate SET
-of all the keys within a bank. By default, these SETs begin with ``$BANKEYS_``.
+- A Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
+  ``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
+  and ``stuff`` is the key name.
+- As the caching subsystem is organised as a tree, we need to store the caching
+  path and identify the bank and its offspring.  At the same time, Redis is
+  linear and we need to avoid doing ``keys <pattern>`` which is very
+  inefficient as it goes through all the keys on the remote Redis server.
+  Instead, each bank hierarchy has a Redis SET associated which stores the list
+  of sub-banks. By default, these keys begin with ``$BANK_``.
+- In addition, each key name is stored in a separate SET of all the keys within
+  a bank. By default, these SETs begin with ``$BANKEYS_``.
 
 For example, to store the key ``my-key`` under the bank ``root-bank/sub-bank/leaf-bank``,
 the following hierarchy will be built:
@@ -74,7 +73,7 @@ cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
@@ -94,15 +93,20 @@ db: ``'0'``
     The database index.
 
     .. note::
-
         The database index must be specified as string not as integer value!
 
 password:
     Redis connection password.
 
+unix_socket_path:
+
+    .. versionadded:: 2018.3.1
+
+    Path to a UNIX socket for access. Overrides `host` / `port`.
+
 Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.host: localhost
     cache.redis.port: 6379
@@ -115,7 +119,7 @@ Configuration Example:
 
 Cluster Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.cluster_mode: true
     cache.redis.cluster.skip_full_coverage_check: true
@@ -205,6 +209,7 @@ def _get_redis_cache_opts():
     return {
         'host': __opts__.get('cache.redis.host', 'localhost'),
         'port': __opts__.get('cache.redis.port', 6379),
+        'unix_socket_path': __opts__.get('cache.redis.unix_socket_path', None),
         'db': __opts__.get('cache.redis.db', '0'),
         'password': __opts__.get('cache.redis.password', ''),
         'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
@@ -231,6 +236,7 @@ def _get_redis_server(opts=None):
     else:
         REDIS_SERVER = redis.StrictRedis(opts['host'],
                                    opts['port'],
+                                   unix_socket_path=opts['unix_socket_path'],
                                    db=opts['db'],
                                    password=opts['password'])
     return REDIS_SERVER
@@ -341,10 +347,7 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug(
-            'Setting the value for %s under %s (%s)',
-            key=key, bank=bank, redis_key=redis_key
-        )
+        log.debug('Setting the value for %s under %s (%s)', key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
         log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()

@@ -116,7 +116,7 @@ def state(name,
         sls=None,
         top=None,
         saltenv=None,
-        test=False,
+        test=None,
         pillar=None,
         pillarenv=None,
         expect_minions=True,
@@ -169,7 +169,10 @@ def state(name,
         containing a single sls file, or a list of sls files
 
     test
-        Pass ``test=true`` through to the state function
+        Pass ``test=true`` or ``test=false`` through to the state function. This
+        can be used to overide a test mode set in the minion's config file. If
+        left as the default of None and the 'test' mode is supplied on the
+        command line, that value is passed instead.
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
@@ -283,8 +286,8 @@ def state(name,
         state_ret['result'] = False
         return state_ret
 
-    if test or __opts__.get('test'):
-        cmd_kw['kwarg']['test'] = True
+    if test is not None or __opts__.get('test'):
+        cmd_kw['kwarg']['test'] = test if test is not None else __opts__.get('test')
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
@@ -547,6 +550,9 @@ def function(
                 mdata['ret'] = mdata.pop('return')
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+
+            if m_ret is False:
+                m_func = False
 
         if not m_func:
             if minion not in fail_minions:

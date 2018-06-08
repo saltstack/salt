@@ -275,9 +275,10 @@ def index_template_present(name, definition, check_definition=False):
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
             if check_definition:
-                definition_parsed = salt.utils.json.loads(definition)
+                definition_to_diff = {'aliases': {}, 'mappings': {}, 'settings': {}}
+                definition_to_diff.update(definition)
                 current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
-                diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
+                diff = __utils__['dictdiffer.deep_diff'](current_template, definition_to_diff)
                 if len(diff) != 0:
                     if __opts__['test']:
                         ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)

@@ -12,37 +12,35 @@ Connection module for Amazon VPC
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
+    vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
-        vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.region: us-east-1
 
-        vpc.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        region: us-east-1
 
 .. versionchanged:: 2015.8.0
     All methods now return a dictionary. Create and delete methods return:
@@ -134,8 +132,6 @@ import time
 import random
 
 # Import Salt libs
-import salt.utils.boto
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -279,7 +275,7 @@ def _create_resource(resource, name=None, tags=None, region=None, key=None,
             log.warning(e)
             return {'created': False, 'error': {'message': e}}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def _delete_resource(resource, name=None, resource_id=None, region=None,
@@ -323,7 +319,7 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
                 e = '{0} was not deleted.'.format(resource)
             return {'deleted': False, 'error': {'message': e}}
     except BotoServerError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def _get_resource(resource, name=None, resource_id=None, region=None,
@@ -451,7 +447,7 @@ def get_resource_id(resource, name=None, resource_id=None, region=None,
         return {'id': _get_resource_id(resource, name, region=region, key=key,
                                        keyid=keyid, profile=profile)}
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def resource_exists(resource, name=None, resource_id=None, tags=None,
@@ -478,7 +474,7 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
                                                key=key, keyid=keyid,
                                                profile=profile))}
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
@@ -570,7 +566,7 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
         return {'id': _get_id(vpc_name=name, cidr=cidr, tags=tags, region=region,
                               key=key, keyid=keyid, profile=profile)}
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
@@ -593,7 +589,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
         vpc_ids = _find_vpcs(vpc_id=vpc_id, vpc_name=name, cidr=cidr, tags=tags,
                              region=region, key=key, keyid=keyid, profile=profile)
     except BotoServerError as err:
-        boto_err = salt.utils.boto.get_error(err)
+        boto_err = __utils__['boto.get_error'](err)
         if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
             # VPC was not found: handle the error and return False.
             return {'exists': False}
@@ -643,7 +639,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
             log.warning('VPC was not created')
             return {'created': False}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
@@ -693,7 +689,7 @@ def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
             log.warning('VPC %s was not deleted.', vpc_id)
             return {'deleted': False}
     except BotoServerError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def describe(vpc_id=None, vpc_name=None, region=None, key=None,
@@ -722,7 +718,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     except BotoServerError as err:
-        boto_err = salt.utils.boto.get_error(err)
+        boto_err = __utils__['boto.get_error'](err)
         if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
             # VPC was not found: handle the error and return None.
             return {'vpc': None}
@@ -736,7 +732,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
     try:
         vpcs = conn.get_all_vpcs(**filter_parameters)
     except BotoServerError as err:
-        return {'error': salt.utils.boto.get_error(err)}
+        return {'error': __utils__['boto.get_error'](err)}
 
     if vpcs:
         vpc = vpcs[0]  # Found!
@@ -806,7 +802,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
             return {'vpcs': []}
 
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None):
@@ -845,7 +841,7 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
 
 def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
                   availability_zone=None, subnet_name=None, tags=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None, auto_assign_public_ipv4=False):
     '''
     Given a valid VPC ID or Name and a CIDR block, create a subnet for the VPC.
 
@@ -871,12 +867,17 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
         if not vpc_id:
             return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+    subnet_object_dict = _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
                             availability_zone=availability_zone,
                             cidr_block=cidr_block, region=region, key=key,
                             keyid=keyid, profile=profile)
+    # if auto_assign_public_ipv4 is requested set that to true using boto3
+    if auto_assign_public_ipv4:
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+        conn3.modify_subnet_attribute(MapPublicIpOnLaunch={'Value': True}, SubnetId=subnet_object_dict['id'])
+    return subnet_object_dict
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
@@ -934,7 +935,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     except BotoServerError as err:
-        return {'error': salt.utils.boto.get_error(err)}
+        return {'error': __utils__['boto.get_error'](err)}
 
     filter_parameters = {'filters': {}}
     if subnet_id:
@@ -952,7 +953,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
     try:
         subnets = conn.get_all_subnets(**filter_parameters)
     except BotoServerError as err:
-        boto_err = salt.utils.boto.get_error(err)
+        boto_err = __utils__['boto.get_error'](err)
         if boto_err.get('aws', {}).get('code') == 'InvalidSubnetID.NotFound':
             # Subnet was not found: handle the error and return False.
             return {'exists': False}
@@ -995,7 +996,7 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         # subnet_ids=subnets can accept either a string or a list
         subnets = conn.get_all_subnets(subnet_ids=subnets)
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
     # using a set to store vpc_ids - the use of set prevents duplicate
     # vpc_id values
@@ -1035,7 +1036,7 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
         subnet = _get_resource('subnet', name=subnet_name, resource_id=subnet_id,
                                region=region, key=key, keyid=keyid, profile=profile)
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
     if not subnet:
         return {'subnet': None}
@@ -1116,7 +1117,7 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
         return {'subnets': subnets_list}
 
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
@@ -1158,7 +1159,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
             )
         return r
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def delete_internet_gateway(internet_gateway_id=None,
@@ -1212,7 +1213,7 @@ def delete_internet_gateway(internet_gateway_id=None,
                                 region=region, key=key, keyid=keyid,
                                 profile=profile)
     except BotoServerError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def _find_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None, vpc_id=None, vpc_name=None,
@@ -1253,7 +1254,7 @@ def _find_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None, vp
 
     conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
     nat_gateways = []
-    for ret in salt.utils.boto3.paged_call(conn3.describe_nat_gateways,
+    for ret in __utils__['boto3.paged_call'](conn3.describe_nat_gateways,
                                            marker_flag='NextToken', marker_arg='NextToken',
                                            **filter_parameters):
         for gw in ret.get('NatGateways', []):
@@ -1376,7 +1377,7 @@ def create_nat_gateway(subnet_id=None,
         r = conn3.create_nat_gateway(SubnetId=subnet_id, AllocationId=allocation_id)
         return {'created': True, 'id': r.get('NatGateway', {}).get('NatGatewayId')}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def delete_nat_gateway(nat_gateway_id,
@@ -1452,7 +1453,7 @@ def delete_nat_gateway(nat_gateway_id,
                 conn3.release_address(AllocationId=addr.get('AllocationId'))
         return {'deleted': True}
     except BotoServerError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn,
@@ -1573,7 +1574,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
             )
         return r
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
@@ -1604,7 +1605,7 @@ def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         r = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
     if not r:
         return {'dhcp_options': None}
@@ -1667,7 +1668,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
                         dhcp_options_id, vpc_id)
             return {'associated': False, 'error': {'message': 'DHCP options could not be associated.'}}
     except BotoServerError as e:
-        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'associated': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def dhcp_options_exists(dhcp_options_id=None, name=None, dhcp_options_name=None,
@@ -1720,7 +1721,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
     try:
         vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
     if not vpc_id:
         return {'created': False,
@@ -1751,7 +1752,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             association_id = conn.associate_network_acl(r['id'], subnet_id)
         except BotoServerError as e:
-            return {'created': False, 'error': salt.utils.boto.get_error(e)}
+            return {'created': False, 'error': __utils__['boto.get_error'](e)}
         r['association_id'] = association_id
     return r
 
@@ -1866,7 +1867,7 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
                         network_acl_id, subnet_id)
             return {'associated': False, 'error': {'message': 'ACL could not be assocaited.'}}
     except BotoServerError as e:
-        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'associated': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_name=None,
@@ -1905,7 +1906,7 @@ def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_
         association_id = conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
         return {'disassociated': True, 'association_id': association_id}
     except BotoServerError as e:
-        return {'disassociated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'disassociated': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def _create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=None,
@@ -1958,7 +1959,7 @@ def _create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=No
             log.warning('Network ACL entry was not %s', rkey)
         return {rkey: created}
     except BotoServerError as e:
-        return {rkey: False, 'error': salt.utils.boto.get_error(e)}
+        return {rkey: False, 'error': __utils__['boto.get_error'](e)}
 
 
 def create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=None,
@@ -2041,7 +2042,7 @@ def delete_network_acl_entry(network_acl_id=None, rule_number=None, egress=None,
             log.warning('Network ACL was not deleted')
         return {'deleted': deleted}
     except BotoServerError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
@@ -2177,7 +2178,7 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
         log.warning('Route %s does not exist.', destination_cidr_block)
         return {'exists': False}
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def associate_route_table(route_table_id=None, subnet_id=None,
@@ -2229,7 +2230,7 @@ def associate_route_table(route_table_id=None, subnet_id=None,
                  route_table_id, subnet_id)
         return {'association_id': association_id}
     except BotoServerError as e:
-        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'associated': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
@@ -2256,7 +2257,7 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
             log.warning('Route table with association id %s has not been disassociated.', association_id)
             return {'disassociated': False}
     except BotoServerError as e:
-        return {'disassociated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'disassociated': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def replace_route_table_association(association_id, route_table_id, region=None, key=None, keyid=None, profile=None):
@@ -2278,7 +2279,7 @@ def replace_route_table_association(association_id, route_table_id, region=None,
                  route_table_id, association_id)
         return {'replaced': True, 'association_id': association_id}
     except BotoServerError as e:
-        return {'replaced': False, 'error': salt.utils.boto.get_error(e)}
+        return {'replaced': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def create_route(route_table_id=None, destination_cidr_block=None,
@@ -2309,10 +2310,10 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name, vpc_peering_connection_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
-                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+                                  'nat_gateway_subnet_id, nat_gateway_subnet_name or vpc_peering_connection_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2359,7 +2360,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
             nat_gateway_id = gws[0]['NatGatewayId']
 
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
     if not nat_gateway_id:
         return _create_resource('route', route_table_id=route_table_id,
@@ -2375,7 +2376,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                        NatGatewayId=nat_gateway_id)
         return {'created': True, 'id': ret.get('NatGatewayId')}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def delete_route(route_table_id=None, destination_cidr_block=None,
@@ -2408,7 +2409,7 @@ def delete_route(route_table_id=None, destination_cidr_block=None,
                 return {'created': False,
                         'error': {'message': 'route table {0} does not exist.'.format(route_table_name)}}
     except BotoServerError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
     return _delete_resource(resource='route', resource_id=route_table_id,
                             destination_cidr_block=destination_cidr_block,
@@ -2464,7 +2465,7 @@ def replace_route(route_table_id=None, destination_cidr_block=None,
             )
             return {'replaced': False}
     except BotoServerError as e:
-        return {'replaced': False, 'error': salt.utils.boto.get_error(e)}
+        return {'replaced': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def describe_route_table(route_table_id=None, route_table_name=None,
@@ -2525,7 +2526,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
         return route_table
 
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def describe_route_tables(route_table_id=None, route_table_name=None,
@@ -2611,7 +2612,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
         return tables
 
     except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': __utils__['boto.get_error'](e)}
 
 
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
@@ -2821,7 +2822,7 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
         return {'msg': msg}
     except botocore.exceptions.ClientError as err:
         log.error('Got an error while trying to request vpc peering')
-        return {'error': salt.utils.boto.get_error(err)}
+        return {'error': __utils__['boto.get_error'](err)}
 
 
 def _get_peering_connection_ids(name, conn):
@@ -2902,10 +2903,10 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
     :param conn_id: The ID to use. String type.
     :param name: The name of this VPC peering connection. String type.
     :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
+    :param key: The key to use for this connection. Type string.
+    :param keyid: The key id to use.
+    :param profile: The profile to use.
+    :param dry_run: The dry_run flag to set.
     :return: dict
 
     Warning: Please specify either the ``vpc_peering_connection_id`` or
@@ -2948,7 +2949,7 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
         return {'msg': 'VPC peering connection accepted.'}
     except botocore.exceptions.ClientError as err:
         log.error('Got an error while trying to accept vpc peering')
-        return {'error': salt.utils.boto.get_error(err)}
+        return {'error': __utils__['boto.get_error'](err)}
 
 
 def _vpc_peering_conn_id_for_name(name, conn):
@@ -3026,7 +3027,7 @@ def delete_vpc_peering_connection(conn_id=None, conn_name=None, region=None,
         conn.delete_vpc_peering_connection(DryRun=dry_run, VpcPeeringConnectionId=conn_id)
         return {'msg': 'VPC peering connection deleted.'}
     except botocore.exceptions.ClientError as err:
-        e = salt.utils.boto.get_error(err)
+        e = __utils__['boto.get_error'](err)
         log.error('Failed to delete VPC peering %s: %s', conn_name or conn_id, e)
         return {'error': e}
 

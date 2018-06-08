@@ -105,6 +105,7 @@ import salt.config as config
 import salt.loader
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.ext.six as six
 import salt.version
@@ -279,9 +280,11 @@ def get_conn(client_type):
     '''
     conn_kwargs = {}
 
-    conn_kwargs['subscription_id'] = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    conn_kwargs['subscription_id'] = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
 
     cloud_env = config.get_cloud_config_value(
@@ -326,13 +329,17 @@ def get_conn(client_type):
     return client
 
 
-def get_location(call=None):  # pylint: disable=unused-argument
+def get_location(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     Return the location that is configured for this provider
     '''
+    if not kwargs:
+        kwargs = {}
+    vm_dict = get_configured_provider()
+    vm_dict.update(kwargs)
     return config.get_cloud_config_value(
         'location',
-        get_configured_provider(), __opts__, search_global=False
+        vm_dict, __opts__, search_global=False
     )
 
 
@@ -763,20 +770,28 @@ def create_network_interface(call=None, kwargs=None):
         )
 
     if kwargs.get('network_resource_group') is None:
-        kwargs['resource_group'] = config.get_cloud_config_value(
+        kwargs['network_resource_group'] = config.get_cloud_config_value(
             'resource_group', vm_, __opts__, search_global=False
         )
-    else:
-        kwargs['resource_group'] = kwargs['network_resource_group']
 
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
-    subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['resource_group'],
-        virtual_network_name=kwargs['network'],
-        subnet_name=kwargs['subnet'],
-    )
+    try:
+        subnet_obj = netconn.subnets.get(
+            resource_group_name=kwargs['network_resource_group'],
+            virtual_network_name=kwargs['network'],
+            subnet_name=kwargs['subnet'],
+        )
+    except CloudError as exc:
+        raise SaltCloudSystemExit(
+            '{0} (Resource Group: "{1}", VNET: "{2}", Subnet: "{3}")'.format(
+                exc.message,
+                kwargs['network_resource_group'],
+                kwargs['network'],
+                kwargs['subnet']
+            )
+        )
 
     ip_kwargs = {}
     ip_configurations = None
@@ -1020,10 +1035,12 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = config.get_cloud_config_value(
-        'ssh_password', vm_, __opts__, search_global=True,
-        default=config.get_cloud_config_value(
-            'win_password', vm_, __opts__, search_global=True
+    vm_password = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'ssh_password', vm_, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'win_password', vm_, __opts__, search_global=True
+            )
         )
     )
 
@@ -1153,11 +1170,11 @@ def request_instance(vm_):
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
 
         if 'image' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.from_image
+            volume['create_option'] = 'from_image'
         elif 'attach' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.attach
+            volume['create_option'] = 'attach'
         else:
-            volume['create_option'] = DiskCreateOptionTypes.empty
+            volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
@@ -1372,10 +1389,10 @@ def create(vm_):
     __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'azurearm', vm_['driver']
     )
-    location = get_location(vm_)
-    vm_['location'] = location
+    if not vm_.get('location'):
+        vm_['location'] = get_location(kwargs=vm_)
 
-    log.info('Creating Cloud VM %s in %s', vm_['name'], location)
+    log.info('Creating Cloud VM %s in %s', vm_['name'], vm_['location'])
 
     vm_request = request_instance(vm_=vm_)
 

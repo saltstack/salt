@@ -6,10 +6,12 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
+import logging
 import os
 import shutil
 import signal
 import tempfile
+import time
 import textwrap
 import threading
 from salt.ext.six.moves import queue
@@ -30,6 +32,8 @@ import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 class StateRunnerTest(ShellCase):
@@ -152,8 +156,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: True']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -171,7 +175,7 @@ class StateRunnerTest(ShellCase):
         '''
         self.run_run('saltutil.sync_runners')
         self.run_run('saltutil.sync_wheel')
-        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode', timeout=120))
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
 
         for result in ('          ID: test_runner_success\n'
                        '    Function: salt.runner\n'
@@ -240,6 +244,46 @@ class StateRunnerTest(ShellCase):
 
         server_thread.join()
 
+    def test_orchestrate_subset(self):
+        '''
+        test orchestration state using subset
+        '''
+        ret = self.run_run('state.orchestrate orch.subset')
+
+        def count(thing, listobj):
+            return sum([obj.strip() == thing for obj in listobj])
+
+        self.assertEqual(count('ID: test subset', ret), 1)
+        self.assertEqual(count('Succeeded: 1', ret), 1)
+        self.assertEqual(count('Failed:    0', ret), 1)
+
+    def test_orchestrate_salt_function_return_false_failure(self):
+        '''
+        Ensure that functions that only return False in the return
+        are flagged as failed when run as orchestrations.
+
+        See https://github.com/saltstack/salt/issues/30367
+        '''
+        self.run_run('saltutil.sync_modules')
+        ret = salt.utils.json.loads(
+            '\n'.join(
+                self.run_run('state.orchestrate orch.issue30367 --out=json')
+            )
+        )
+        # Drill down to the changes dict
+        state_result = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['result']
+        func_ret = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['changes']
+
+        self.assertEqual(
+            state_result,
+            False,
+        )
+
+        self.assertEqual(
+            func_ret,
+            {'out': 'highstate', 'ret': {'minion': False}}
+        )
+
 
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
@@ -248,7 +292,7 @@ class OrchEventTest(ShellCase):
     '''
     def setUp(self):
         self.timeout = 60
-        self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
+        self.master_d_dir = os.path.join(self.config_dir, 'master.d')
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:
@@ -349,5 +393,87 @@ class OrchEventTest(ShellCase):
                         self.assertTrue('__jid__' in ret[job])
                     break
         finally:
+            del listener
+            signal.alarm(0)
+
+    def test_parallel_orchestrations(self):
+        '''
+        Test to confirm that the parallel state requisite works in orch
+        we do this by running 10 test.sleep's of 10 seconds, and insure it only takes roughly 10s
+        '''
+        self.write_conf({
+            'fileserver_backend': ['roots'],
+            'file_roots': {
+                'base': [self.base_env],
+            },
+        })
+
+        orch_sls = os.path.join(self.base_env, 'test_par_orch.sls')
+
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                {% for count in range(1, 20) %}
+
+                sleep {{ count }}:
+                    module.run:
+                        - name: test.sleep
+                        - length: 10
+                        - parallel: True
+
+                {% endfor %}
+
+                sleep 21:
+                    module.run:
+                        - name: test.sleep
+                        - length: 10
+                        - parallel: True
+                        - require:
+                            - module: sleep 1
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'test_par_orch.sls')
+
+        listener = salt.utils.event.get_event(
+            'master',
+            sock_dir=self.master_opts['sock_dir'],
+            transport=self.master_opts['transport'],
+            opts=self.master_opts)
+
+        start_time = time.time()
+        jid = self.run_run_plus(
+            'state.orchestrate',
+            'test_par_orch',
+            __reload_config=True).get('jid')
+
+        if jid is None:
+            raise Exception('jid missing from run_run_plus output')
+
+        signal.signal(signal.SIGALRM, self.alarm_handler)
+        signal.alarm(self.timeout)
+        received = False
+        try:
+            while True:
+                event = listener.get_event(full=True)
+                if event is None:
+                    continue
+
+                # if we receive the ret for this job before self.timeout (60),
+                # the test is implicitly sucessful; if it were happening in serial it would be
+                # atleast 110 seconds.
+                if event['tag'] == 'salt/run/{0}/ret'.format(jid):
+                    received = True
+                    # Don't wrap this in a try/except. We want to know if the
+                    # data structure is different from what we expect!
+                    ret = event['data']['return']['data']['master']
+                    for state in ret:
+                        data = ret[state]
+                        # we expect each duration to be greater than 10s
+                        self.assertTrue(data['duration'] > 10000)
+                    break
+
+                # self confirm that the total runtime is roughly 30s (left 10s for buffer)
+                self.assertTrue((time.time() - start_time) < 40)
+        finally:
+            self.assertTrue(received)
             del listener
             signal.alarm(0)

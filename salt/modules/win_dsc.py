@@ -649,57 +649,56 @@ def set_lcm_config(config_mode=None,
     For detailed descriptions of the parameters see:
     https://msdn.microsoft.com/en-us/PowerShell/DSC/metaConfig
 
-    Args:
+    config_mode (str): How the LCM applies the configuration. Valid values
+        are:
 
-        config_mode (str): How the LCM applies the configuration. Valid values
-            are:
+        - ApplyOnly
+        - ApplyAndMonitor
+        - ApplyAndAutoCorrect
 
-            - ApplyOnly
-            - ApplyAndMonitor
-            - ApplyAndAutoCorrect
+    config_mode_freq (int): How often, in minutes, the current configuration
+        is checked and applied. Ignored if config_mode is set to ApplyOnly.
+        Default is 15.
 
-        config_mode_freq (int): How often, in minutes, the current configuration
-            is checked and applied. Ignored if config_mode is set to ApplyOnly.
-            Default is 15.
+    refresh_mode (str): How the LCM gets configurations. Valid values are:
 
-        refresh_mode (str): How the LCM gets configurations. Valid values are:
+        - Disabled
+        - Push
+        - Pull
 
-            - Disabled
-            - Push
-            - Pull
+    refresh_freq (int): How often, in minutes, the LCM checks for updated
+        configurations. (pull mode only) Default is 30.
 
-        refresh_freq (int): How often, in minutes, the LCM checks for updated
-            configurations. (pull mode only) Default is 30.
+    reboot_if_needed (bool): Reboot the machine if needed after a
+        configuration is applied. Default is False.
 
-        .. note:: Either `config_mode_freq` or `refresh_freq` needs to be a
-            multiple of the other. See documentation on MSDN for more details.
+    action_after_reboot (str): Action to take after reboot. Valid values
+        are:
 
-        reboot_if_needed (bool): Reboot the machine if needed after a
-            configuration is applied. Default is False.
+        - ContinueConfiguration
+        - StopConfiguration
 
-        action_after_reboot (str): Action to take after reboot. Valid values
-            are:
+    certificate_id (guid): A GUID that specifies a certificate used to
+        access the configuration: (pull mode)
 
-            - ContinueConfiguration
-            - StopConfiguration
+    configuration_id (guid): A GUID that identifies the config file to get
+        from a pull server. (pull mode)
 
-        certificate_id (guid): A GUID that specifies a certificate used to
-            access the configuration: (pull mode)
+    allow_module_overwrite (bool): New configs are allowed to overwrite old
+        ones on the target node.
 
-        configuration_id (guid): A GUID that identifies the config file to get
-            from a pull server. (pull mode)
+    debug_mode (str): Sets the debug level. Valid values are:
 
-        allow_module_overwrite (bool): New configs are allowed to overwrite old
-            ones on the target node.
+        - None
+        - ForceModuleImport
+        - All
 
-        debug_mode (str): Sets the debug level. Valid values are:
+    status_retention_days (int): Number of days to keep status of the
+        current config.
 
-            - None
-            - ForceModuleImport
-            - All
-
-        status_retention_days (int): Number of days to keep status of the
-            current config.
+    .. note::
+        Either ``config_mode_freq`` or ``refresh_freq`` needs to be a
+        multiple of the other. See documentation on MSDN for more details.
 
     Returns:
         bool: True if successful, otherwise False
@@ -719,23 +718,24 @@ def set_lcm_config(config_mode=None,
                                'ApplyAndAutoCorrect'):
             error = 'config_mode must be one of ApplyOnly, ApplyAndMonitor, ' \
                     'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
-            SaltInvocationError(error)
-            return error
+            raise SaltInvocationError(error)
         cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
     if config_mode_freq:
         if not isinstance(config_mode_freq, int):
-            SaltInvocationError('config_mode_freq must be an integer')
-            return 'config_mode_freq must be an integer. Passed {0}'.\
-                format(config_mode_freq)
+            error = 'config_mode_freq must be an integer. Passed {0}'.format(
+                config_mode_freq
+            )
+            raise SaltInvocationError(error)
         cmd += '            ConfigurationModeFrequencyMins = {0};'.format(config_mode_freq)
     if refresh_mode:
         if refresh_mode not in ('Disabled', 'Push', 'Pull'):
-            SaltInvocationError('refresh_mode must be one of Disabled, Push, '
-                                'or Pull')
+            raise SaltInvocationError(
+                'refresh_mode must be one of Disabled, Push, or Pull'
+            )
         cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
     if refresh_freq:
         if not isinstance(refresh_freq, int):
-            SaltInvocationError('refresh_freq must be an integer')
+            raise SaltInvocationError('refresh_freq must be an integer')
         cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
         if not isinstance(reboot_if_needed, bool):
@@ -748,8 +748,10 @@ def set_lcm_config(config_mode=None,
     if action_after_reboot:
         if action_after_reboot not in ('ContinueConfiguration',
                                        'StopConfiguration'):
-            SaltInvocationError('action_after_reboot must be one of '
-                                'ContinueConfiguration or StopConfiguration')
+            raise SaltInvocationError(
+                'action_after_reboot must be one of '
+                'ContinueConfiguration or StopConfiguration'
+            )
         cmd += '            ActionAfterReboot = "{0}"'.format(action_after_reboot)
     if certificate_id is not None:
         if certificate_id == '':
@@ -761,7 +763,7 @@ def set_lcm_config(config_mode=None,
         cmd += '            ConfigurationID = "{0}";'.format(configuration_id)
     if allow_module_overwrite is not None:
         if not isinstance(allow_module_overwrite, bool):
-            SaltInvocationError('allow_module_overwrite must be a boolean value')
+            raise SaltInvocationError('allow_module_overwrite must be a boolean value')
         if allow_module_overwrite:
             allow_module_overwrite = '$true'
         else:
@@ -771,13 +773,14 @@ def set_lcm_config(config_mode=None,
         if debug_mode is None:
             debug_mode = 'None'
         if debug_mode not in ('None', 'ForceModuleImport', 'All'):
-            SaltInvocationError('debug_mode must be one of None, '
-                                'ForceModuleImport, ResourceScriptBreakAll, or '
-                                'All')
+            raise SaltInvocationError(
+                'debug_mode must be one of None, ForceModuleImport, '
+                'ResourceScriptBreakAll, or All'
+            )
         cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
         if not isinstance(status_retention_days, int):
-            SaltInvocationError('status_retention_days must be an integer')
+            raise SaltInvocationError('status_retention_days must be an integer')
         cmd += '            StatusRetentionTimeInDays = {0};'.format(status_retention_days)
     cmd += '        }}};'
     cmd += r'SaltConfig -OutputPath "{0}\SaltConfig"'.format(temp_dir)

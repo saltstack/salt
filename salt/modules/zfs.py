@@ -8,7 +8,7 @@ Module for running ZFS command
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -39,10 +39,10 @@ def __virtual__():
     '''
     Only load when the platform has zfs support
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
-        return (False, "The zfs module cannot be loaded: zfs not supported")
+        return False, "The zfs module cannot be loaded: zfs not supported"
 
 
 def exists(name, **kwargs):
@@ -378,7 +378,7 @@ def list_mount():
     '''
     List mounted zfs filesystems
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2018.3.1
 
     CLI Example:
 
@@ -418,11 +418,11 @@ def mount(name=None, **kwargs):
         the duration of the mount.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2018.3.1
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
+            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
 
     CLI Example:
 
@@ -451,7 +451,7 @@ def mount(name=None, **kwargs):
         if name == '-a':
             salt.utils.versions.warn_until(
                 'Sodium',
-                'Passing \'-a\' as name is deprecated as of Salt Flourine. This '
+                'Passing \'-a\' as name is deprecated as of Salt Fluorine. This '
                 'warning will be removed in Salt Sodium. Please pass name as '
                 '\'None\' instead to mount all filesystems.')
         flags.append('-a')
@@ -485,11 +485,11 @@ def unmount(name, **kwargs):
         Using ``-a`` for the name parameter will probably break your system, unless your rootfs is not on zfs.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2018.3.1
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
+            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
 
     CLI Example:
 
@@ -507,7 +507,7 @@ def unmount(name, **kwargs):
         flags.append('-f')
     if name in [None, '-a']:
         # NOTE: still accept '-a' as name for backwards compatibility
-        #       two versions after Flourine this should just simplify
+        #       two versions after Fluorine this should just simplify
         #       this to just set '-a' if name is not set.
         flags.append('-a')
         name = None
@@ -923,18 +923,18 @@ def hold(tag, *snapshot, **kwargs):
 
     tag : string
         name of tag
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         specifies that a hold with the given tag is applied recursively to
         the snapshots of all descendent file systems.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Flourine
+    .. versionchanged:: 2018.3.1
 
     .. warning::
 
-        As of Flourine the tag parameter no longer accepts a comma-separated value.
+        As of 2018.3.1 the tag parameter no longer accepts a comma-separated value.
         It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
@@ -949,7 +949,7 @@ def hold(tag, *snapshot, **kwargs):
     if ',' in tag:
         salt.utils.versions.warn_until(
             'Sodium',
-            'A comma-separated tag is no support as of Salt Flourine. '
+            'A comma-separated tag is no support as of Salt 2018.3.1 '
             'This warning will be removed in Salt Sodium.')
 
     ## Configure command
@@ -991,18 +991,18 @@ def release(tag, *snapshot, **kwargs):
 
     tag : string
         name of tag
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of
         all descendent file systems.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Flourine
+    .. versionchanged:: 2018.3.1
 
     .. warning::
 
-        As of Flourine the tag parameter no longer accepts a comma-seprated value.
+        As of 2018.3.1 the tag parameter no longer accepts a comma-separated value.
         It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
@@ -1017,7 +1017,7 @@ def release(tag, *snapshot, **kwargs):
     if ',' in tag:
         salt.utils.versions.warn_until(
             'Sodium',
-            'A comma-separated tag is no support as of Salt Flourine. '
+            'A comma-separated tag is no support as of Salt 2018.3.1 '
             'This warning will be removed in Salt Sodium.')
 
     ## Configure command
@@ -1050,7 +1050,7 @@ def snapshot(*snapshot, **kwargs):
     '''
     Creates snapshots with the given names.
 
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         recursively create snapshots of all descendent datasets.
@@ -1104,9 +1104,9 @@ def set(*dataset, **kwargs):
     '''
     Sets the property or list of properties to the given value(s) for each dataset.
 
-    *dataset : string
+    dataset : string
         name of snapshot(s), filesystem(s), or volume(s)
-    *properties : string
+    properties : string
         additional zfs properties pairs
 
     .. note::
@@ -1159,7 +1159,7 @@ def get(*dataset, **kwargs):
     '''
     Displays properties for the given datasets.
 
-    *dataset : string
+    dataset : string
         name of snapshot(s), filesystem(s), or volume(s)
     properties : string
         comma-separated list of properties to list, defaults to all
@@ -1180,7 +1180,6 @@ def get(*dataset, **kwargs):
         .. versionadded:: 2018.3.0
 
     .. note::
-
         If no datasets are specified, then the command displays properties
         for all datasets on the system.
 

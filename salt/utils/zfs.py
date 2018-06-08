@@ -9,7 +9,7 @@ These functions are for dealing with type conversion and basic execution
 :depends:       salt.utils.stringutils, salt.ext, salt.module.cmdmod
 :platform:      illumos,freebsd,linux
 
-.. versionadded:: Fluorine
+.. versionadded:: 2018.3.1
 
 '''
 
@@ -279,7 +279,6 @@ def _command(source, command, flags=None, opts=None,
     return ' '.join(cmd)
 
 
-@real_memoize
 def is_supported():
     '''
     Check the system for ZFS support
@@ -302,7 +301,7 @@ def is_supported():
         on_supported_platform = True
 
     # Additional check for the zpool command
-    return (_zpool_cmd() and on_supported_platform) is True
+    return (salt.utils.path.which('zpool') and on_supported_platform) is True
 
 
 @real_memoize

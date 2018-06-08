@@ -65,7 +65,7 @@ Event example:
 
 .. code-block:: json
 
-    napalm/syslog/junos/BGP_PREFIX_THRESH_EXCEEDED/vmx01    {
+    {
         "_stamp": "2017-05-26T10:03:18.653045",
         "error": "BGP_PREFIX_THRESH_EXCEEDED",
         "host": "vmx01",
@@ -118,17 +118,18 @@ Event example:
         "timestamp": "1495741841"
     }
 
-To consume the events and eventually react and deploy a configuration
-changes on the device(s) firing the event, one is able to
-identify the minion ID, using one of the following alternatives, but not limited to:
+To consume the events and eventually react and deploy a configuration changes
+on the device(s) firing the event, one is able to identify the minion ID, using
+one of the following alternatives, but not limited to:
 
 - :mod:`Host grains <salt.grains.napalm.host>` to match the event tag
 - :mod:`Host DNS grain <salt.grains.napalm.host_dns>` to match the IP address in the event data
 - :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the event tag
 - :ref:`Define static grains <static-custom-grains>`
 - :ref:`Write a grains module <writing-grains>`
-- :ref:`Targeting minions using pillar data <targeting-pillar>` -- the user
-can insert certain information in the pillar and then use it to identify minions
+- :ref:`Targeting minions using pillar data <targeting-pillar>` - The user can
+  configure certain information in the Pillar data and then use it to identify
+  minions
 
 Master configuration example, to match the event and react:
 
@@ -220,7 +221,7 @@ def _zmq(address, port, **kwargs):
         addr=address,
         port=port)
     )
-    socket.setsockopt(zmq.SUBSCRIBE, '')
+    socket.setsockopt(zmq.SUBSCRIBE, b'')
     return socket.recv
 
 
