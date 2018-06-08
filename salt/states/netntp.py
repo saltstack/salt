@@ -3,6 +3,8 @@
 Network NTP
 ===========
 
+.. versionadded: 2016.11.0
+
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
@@ -12,16 +14,16 @@ Manage the configuration of NTP peers and servers on the network devices through
 
 Dependencies
 ------------
-- Requires netaddr_ to be installed: `pip install netaddr` to check if IP Addresses are correctly specified
-- Requires dnspython_ to be installed: `pip install dnspython` to resolve the nameserver entities
-(in case the user does not configure the peers/servers using their IP addresses)
+- Requires netaddr_ to be installed: `pip install netaddr` to check if IP
+  Addresses are correctly specified
+- Requires dnspython_ to be installed: `pip install dnspython` to resolve the
+  nameserver entities (in case the user does not configure the peers/servers
+  using their IP addresses)
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
 
 .. _netaddr: https://pythonhosted.org/netaddr/
 .. _dnspython: http://www.dnspython.org/
-
-.. versionadded: 2016.11.0
 '''
 
 # Import Python libs

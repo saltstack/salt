@@ -6,6 +6,7 @@ Sphinx documentation for Salt
 import functools
 import sys
 import os
+import re
 import types
 import time
 
@@ -106,6 +107,7 @@ MOCK_MODULES = [
 
     'tornado',
     'tornado.concurrent',
+    'tornado.escape',
     'tornado.gen',
     'tornado.httpclient',
     'tornado.httpserver',
@@ -137,8 +139,8 @@ MOCK_MODULES = [
     'pymongo',
     'rabbitmq_server',
     'redis',
-    'requests',
-    'requests.exceptions',
+    #'requests',
+    #'requests.exceptions',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
@@ -150,6 +152,7 @@ MOCK_MODULES = [
     'ntsecuritycon',
     'napalm',
     'dson',
+    'hjson',
     'jnpr',
     'json',
     'lxml',
@@ -237,8 +240,7 @@ formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
-        'python2': ('http://docs.python.org/2', None),
-        'python3': ('http://docs.python.org/3', None)
+    'python': ('https://docs.python.org/3', None)
 }
 # <---- Intersphinx Settings -------------------------------------------------
 
@@ -316,6 +318,9 @@ modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
 
+# strip git rev as there won't necessarily be a release based on it
+stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
+
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
@@ -352,14 +357,13 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=release)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
-    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
+    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 

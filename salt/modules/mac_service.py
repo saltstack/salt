@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for macOS
+
 .. versionadded:: 2016.3.0
 
 This module has support for services in the following locations.
 
 .. code-block:: bash
+
     /System/Library/LaunchDaemons/
     /System/Library/LaunchAgents/
     /Library/LaunchDaemons/
@@ -15,10 +17,9 @@ This module has support for services in the following locations.
     /Users/foo/Library/LaunchAgents/
 
 .. note::
-
-    As of version "Fluorine", if a service is located in a ``LaunchAgent`` path
-    and a ``runas`` user is NOT specified the current console user will be used
-    to properly interact with the service.
+    As of the Fluorine release, if a service is located in a ``LaunchAgent``
+    path and a ``runas`` user is NOT specified, the current console user will
+    be used to properly interact with the service.
 
 '''
 from __future__ import absolute_import, unicode_literals, print_function
@@ -532,7 +533,7 @@ def enabled(name, runas=None):
         return False
 
 
-def disabled(name, runas=None):
+def disabled(name, runas=None, domain='system'):
     '''
     Check if the specified service is not enabled. This is the opposite of
     ``service.enabled``
@@ -540,6 +541,8 @@ def disabled(name, runas=None):
     :param str name: The name to look up
 
     :param str runas: User to run launchctl commands
+
+    :param str domain: domain to check for disabled services. Default is system.
 
     :return: True if the specified service is NOT enabled, otherwise False
     :rtype: bool
@@ -550,8 +553,22 @@ def disabled(name, runas=None):
 
         salt '*' service.disabled org.cups.cupsd
     '''
-    # A service is disabled if it is not enabled
-    return not enabled(name, runas=runas)
+    ret = False
+    disabled = launchctl('print-disabled',
+                         domain,
+                         return_stdout=True,
+                         output_loglevel='trace',
+                         runas=runas)
+    for service in disabled.split("\n"):
+        if name in service:
+            srv_name = service.split("=>")[0].split("\"")[1]
+            status = service.split("=>")[1]
+            if name != srv_name:
+                pass
+            else:
+                return True if 'true' in status.lower() else False
+
+    return False
 
 
 def get_all(runas=None):

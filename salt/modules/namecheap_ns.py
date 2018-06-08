@@ -1,45 +1,30 @@
 # -*- coding: utf-8 -*-
 '''
-Namecheap nameservers management
+Namecheap Nameserver Management
 
 .. versionadded:: 2017.7.0
 
- General Notes
- -------------
+Prerequisites
+-------------
 
- Use this module to manage nameservers through the namecheap
- api.  The Namecheap settings will be set in grains.
+This module uses the ``requests`` Python module to communicate to the namecheap
+API.
 
- Installation Prerequisites
- --------------------------
+Configuration
+-------------
 
- - This module uses the following python libraries to communicate to
-   the namecheap API:
+The Namecheap username, API key and URL should be set in the minion configuration
+file, or in the Pillar data.
 
-        * ``requests``
+.. code-block:: yaml
 
-        .. code-block:: bash
-
-            pip install requests
-
- - As saltstack depends on ``requests`` this shouldn't be a problem
-
- Prerequisite Configuration
- --------------------------
-
- - The namecheap username, api key and url should be set in a minion
-   configuration file or pillar
-
-   .. code-block:: yaml
-
-        namecheap.name: companyname
-        namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
-        namecheap.client_ip: 162.155.30.172
-        #Real url
-        namecheap.url: https://api.namecheap.com/xml.response
-        #Sandbox url
-        #namecheap.url: https://api.sandbox.namecheap.xml.response
-
+    namecheap.name: companyname
+    namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
+    namecheap.client_ip: 162.155.30.172
+    #Real url
+    namecheap.url: https://api.namecheap.com/xml.response
+    #Sandbox url
+    #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -66,21 +51,21 @@ def __virtual__():
 
 def get_info(sld, tld, nameserver):
     '''
-    Retrieves information about a registered nameserver
+    Retrieves information about a registered nameserver. Returns the following
+    information:
 
-    returns the following information in a dictionary
-        ipaddress set for the nameserver
-        domain name for which you are trying to get nameserver details
-        status an array of status about the nameservers
+    - IP Address set for the nameserver
+    - Domain name which was queried
+    - A list of nameservers and their statuses
 
     sld
-        string  SLD of the DomainName
+        SLD of the domain name
 
     tld
-        string  TLD of the DomainName
+        TLD of the domain name
 
     nameserver
-        string  Nameserver to retrieve
+        Nameserver to retrieve
 
     CLI Example:
 
@@ -104,24 +89,23 @@ def get_info(sld, tld, nameserver):
 
 def update(sld, tld, nameserver, old_ip, new_ip):
     '''
-    Deletes a nameserver
-
-    returns True if the nameserver was updated successfully
+    Deletes a nameserver. Returns ``True`` if the nameserver was updated
+    successfully.
 
     sld
-        string  SLD of the DomainName
+        SLD of the domain name
 
     tld
-        string  TLD of the DomainName
+        TLD of the domain name
 
     nameserver
-        string  Nameserver to create
+        Nameserver to create
 
     old_ip
-        string  existing ip address
+        Current ip address
 
     new_ip
-        string  new ip address
+        New ip address
 
     CLI Example:
 
@@ -146,18 +130,17 @@ def update(sld, tld, nameserver, old_ip, new_ip):
 
 def delete(sld, tld, nameserver):
     '''
-    Deletes a nameserver
-
-    returns True if the nameserver was deleted successfully
+    Deletes a nameserver. Returns ``True`` if the nameserver was deleted
+    successfully
 
     sld
-        string  SLD of the DomainName
+        SLD of the domain name
 
     tld
-        string  TLD of the DomainName
+        TLD of the domain name
 
     nameserver
-        string  Nameserver to create
+        Nameserver to delete
 
     CLI Example:
 
@@ -180,21 +163,20 @@ def delete(sld, tld, nameserver):
 
 def create(sld, tld, nameserver, ip):
     '''
-    Creates a new nameserver
-
-    returns True if the nameserver was created successfully
+    Creates a new nameserver. Returns ``True`` if the nameserver was created
+    successfully.
 
     sld
-        string  SLD of the DomainName
+        SLD of the domain name
 
     tld
-        string  TLD of the DomainName
+        TLD of the domain name
 
     nameserver
-        string  Nameserver to create
+        Nameserver to create
 
     ip
-        string  Nameserver IP address
+        Nameserver IP address
 
     CLI Example:
 

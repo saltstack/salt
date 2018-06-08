@@ -164,3 +164,13 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       days_valid=3650,
                                       days_remaining=0)
         self.assertIn(b'BEGIN CERTIFICATE', ret)
+
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypt is unavailble')
+    def test_create_key(self):
+        '''
+        Test that x509.create_key returns a private key
+        :return:
+        '''
+        ret = x509.create_private_key(text=True,
+                                      passphrase='super_secret_passphrase')
+        self.assertIn(b'BEGIN RSA PRIVATE KEY', ret)

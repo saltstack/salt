@@ -252,15 +252,24 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'exists', mock_f):
                         with patch.object(os.path, 'lexists', mock_t):
-                            comt = ('File exists where the backup target SALT'
-                                    ' should go')
+                            comt = (
+                                'Symlink & backup dest exists and Force not '
+                                'set. {0} -> {1} - backup: {2}'.format(
+                                    name,
+                                    target,
+                                    os.path.join(test_dir, 'SALT')
+                                )
+                            )
                             ret.update({'comment': comt,
                                         'result': False,
                                         'pchanges': {'new': name}})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group, backupname='SALT'),
-                                                 ret)
+                            self.assertDictEqual(
+                                filestate.symlink(
+                                    name, target, user=user,
+                                    group=group, backupname='SALT'
+                                ),
+                                ret
+                            )
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -270,17 +279,19 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.info': mock_empty,
                                              'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
-                with patch.object(os.path, 'isabs', mock_t):
-                    with patch.object(os.path, 'isabs', mock_f):
-                        comt = ('Backupname must be an absolute path '
-                                'or a file name: {0}').format('tmp/SALT')
-                        ret.update({'comment': comt,
-                                    'result': False,
-                                    'pchanges': {'new': name}})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='tmp/SALT'),
-                                             ret)
+                with patch.object(os.path, 'isfile', mock_t):
+                    comt = ('Backupname must be an absolute path '
+                            'or a file name: {0}').format('tmp/SALT')
+                    ret.update({'comment': comt,
+                                'result': False,
+                                'pchanges': {'new': name}})
+                    self.assertDictEqual(
+                        filestate.symlink(
+                            name, target, user=user,
+                            group=group, backupname='tmp/SALT'
+                        ),
+                        ret
+                    )
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,

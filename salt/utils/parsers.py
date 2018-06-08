@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.parsers
@@ -3022,6 +3022,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             '--priv',
             dest='ssh_priv',
             help='Ssh private key file.'
+        )
+        auth_group.add_option(
+            '--priv-passwd',
+            dest='ssh_priv_passwd',
+            default='',
+            help='Passphrase for ssh private key file.'
         )
         auth_group.add_option(
             '-i',

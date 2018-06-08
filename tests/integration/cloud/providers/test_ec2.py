@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Python Libs
@@ -10,26 +10,27 @@ import yaml
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+import salt.utils.cloud
 import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
-
-EC2_TIMEOUT = 1000
+HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
+TIMEOUT = 1200
 
 
 class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
-    TIMEOUT = 1000
 
     def _installer_name(self):
         '''
@@ -117,7 +118,7 @@ class EC2Test(ShellCase):
         self.INSTALLER = self._ensure_installer()
 
     def override_profile_config(self, name, data):
-        conf_path = os.path.join(self.get_config_dir(), 'cloud.profiles.d', 'ec2.conf')
+        conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
         with salt.utils.files.fopen(conf_path, 'r') as fp:
             conf = yaml.safe_load(fp)
         conf[name].update(data)
@@ -131,7 +132,7 @@ class EC2Test(ShellCase):
         returned.
         '''
         src = os.path.join(FILES, name)
-        dst = os.path.join(self.get_config_dir(), name)
+        dst = os.path.join(self.config_dir, name)
         with salt.utils.files.fopen(src, 'rb') as sfp:
             with salt.utils.files.fopen(dst, 'wb') as dfp:
                 dfp.write(sfp.read())
@@ -173,19 +174,17 @@ class EC2Test(ShellCase):
         '''
         # create the instance
         rename = INSTANCE_NAME + '-rename'
-        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME),
-                                  timeout=EC2_TIMEOUT)
+        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=EC2_TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=EC2_TIMEOUT)
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=TIMEOUT)
 
         check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
         exp_results = ['        {0}:'.format(rename), '            size:',
@@ -194,13 +193,11 @@ class EC2Test(ShellCase):
             for result in exp_results:
                 self.assertIn(result, check_rename[0])
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=EC2_TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(rename),
-                                timeout=EC2_TIMEOUT)
+        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=TIMEOUT)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -227,8 +224,9 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=800)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
         '''
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
@@ -240,10 +238,11 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
 
     def test_win2016_psexec(self):
         '''
@@ -260,8 +259,9 @@ class EC2Test(ShellCase):
                 'win_installer': self.copy_file(self.INSTALLER),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=800)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
+    @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
         '''
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
@@ -273,10 +273,11 @@ class EC2Test(ShellCase):
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.INSTALLER),
                 'winrm_ssl_verify': False,
+                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=500)
+        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
 
     def tearDown(self):
         '''
@@ -287,4 +288,4 @@ class EC2Test(ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=self.TIMEOUT)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
