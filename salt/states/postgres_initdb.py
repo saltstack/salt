@@ -67,17 +67,15 @@ def present(name,
         The transaction log (WAL) directory (default is to keep WAL
         inside the data directory)
 
+        .. versionadded:: Flourine
+
     checksums
         If True, the cluster will be created with data page checksums.
 
+        .. versionadded:: Flourine
+
     runas
         The system user the operation should be performed on behalf of
-
-    .. note:
-
-        The ``waldir`` and ``checksum`` options have been added in
-        version XXX. The ``checksum`` option requires PostgreSQL 9.3
-        or later.
     '''
     _cmt = 'Postgres data directory {0} is already present'.format(name)
     ret = {
