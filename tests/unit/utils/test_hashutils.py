@@ -8,8 +8,6 @@ from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils.hashutils
-import salt.utils.stringutils
-import salt.utils.platform
 
 
 class HashutilsTestCase(TestCase):
@@ -59,13 +57,9 @@ class HashutilsTestCase(TestCase):
             salt.utils.hashutils.base64_b64decode(self.str_b64encode_result),
             self.str
         )
-        try:
-            check_value = salt.utils.stringutils.to_unicode(self.bytes)
-        except UnicodeDecodeError:
-            check_value = self.bytes
         self.assertEqual(
             salt.utils.hashutils.base64_b64decode(self.bytes_b64encode_result),
-            check_value
+            self.bytes
         )
 
     def test_base64_encodestring(self):
@@ -92,13 +86,9 @@ class HashutilsTestCase(TestCase):
             salt.utils.hashutils.base64_decodestring(self.str_encodestring_result),
             self.str
         )
-        try:
-            check_value = salt.utils.stringutils.to_unicode(self.bytes)
-        except UnicodeDecodeError:
-            check_value = self.bytes
         self.assertEqual(
             salt.utils.hashutils.base64_decodestring(self.bytes_encodestring_result),
-            check_value
+            self.bytes
         )
 
     def test_md5_digest(self):
