@@ -6,9 +6,12 @@ The networking module for NI Linux Real-Time distro
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+from requests.structures import CaseInsensitiveDict
+import configparser
 import logging
 import time
 import os
+import re
 
 # Import salt libs
 import salt.utils.files
@@ -28,6 +31,12 @@ try:
 except ImportError:
     HAS_DBUS = False
 
+try:
+    import pyiface
+    HAS_PYIFACE = True
+except ImportError:
+    HAS_PYIFACE = False
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -35,7 +44,10 @@ __virtualname__ = 'ip'
 
 SERVICE_PATH = '/net/connman/service/'
 NIRTCFG_PATH = '/usr/local/natinst/bin/nirtcfg'
+INI_FILE = '/etc/natinst/share/ni-rt.ini'
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
+IFF_LOOPBACK = 0x8
+IFF_RUNNING = 0x40
 
 
 def __virtual__():
@@ -43,6 +55,8 @@ def __virtual__():
     Confine this module to NI Linux Real-Time based distros
     '''
     if __grains__['os_family'] == 'NILinuxRT':
+        if not HAS_PYIFACE:
+            return False, 'The python pyiface package is not installed'
         if not _is_older_nilrt():
             if not HAS_PYCONNMAN:
                 return False, 'The python package pyconnman is not installed'
@@ -234,22 +248,24 @@ def _get_requestmode_info(interface):
     '''
     return requestmode for given interface
     '''
-    ifacemod = __salt__['cmd.run']('{0} -l'.format(NIRTCFG_PATH)).lower()
-    if '[{0}]dhcpenabled=1'.format(interface) in ifacemod:
-        if '[{0}]linklocalenabled=1'.format(interface) in ifacemod:
-            return 'dhcp_linklocal'
+    with salt.utils.files.fopen(INI_FILE, 'r') as confg_file:
+        config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+        config_parser.read_file(confg_file)
+        link_local_enabled = "" if not config_parser.has_section("link_local_enabled") else \
+            config_parser.get(interface, 'linklocalenabled')
+        dhcp_enabled = "" if not config_parser.has_section("dhcpenabled") else \
+            config_parser.get(interface, 'dhcpenabled')
+
+        if dhcp_enabled == 1:
+            if link_local_enabled == 1:
+                return 'dhcp_linklocal'
+            else:
+                return 'dhcp_only'
         else:
-            return 'dhcp_only'
-    elif '[{0}]dhcpenabled=0'.format(interface) in ifacemod:
-        if '[{0}]linklocalenabled=1'.format(interface) in ifacemod:
-            return 'linklocal_only'
-        elif '[{0}]linklocalenabled=0'.format(interface) in ifacemod:
-            return 'static'
-    else:
-        if '[{0}]linklocalenabled=1'.format(interface) in ifacemod:
-            return 'linklocal_only'
-        elif '[{0}]linklocalenabled=0'.format(interface) in ifacemod:
-            return 'static'
+            if link_local_enabled == 1:
+                return 'linklocal_only'
+            elif link_local_enabled == 0:
+                return 'static'
 
     # some versions of nirtcfg don't set the dhcpenabled/linklocalenabled variables
     # when selecting "DHCP or Link Local" from MAX, so return it by default to avoid
@@ -261,40 +277,36 @@ def _get_interface_info(interface):
     '''
     return details about given interface
     '''
-    iface = __salt__['cmd.run']('ifconfig {0}'.format(interface)).strip().splitlines()
     data = {
-        'label': interface,
-        'connectionid': interface,
+        'label': interface.name,
+        'connectionid': interface.name,
         'up': False,
         'ipv4': {
             'supportedrequestmodes': ['dhcp_linklocal', 'dhcp_only', 'linklocal_only', 'static'],
-            'requestmode': _get_requestmode_info(interface)
-        }
+            'requestmode': _get_requestmode_info(interface.name)
+        },
+        'hwaddr': interface.hwaddr[:-1]
     }
-    while iface:
-        line = iface.pop(0)
-        if 'HWaddr' in line:
-            data['hwaddr'] = line.split()[4].strip()
-        if 'inet addr' in line:
-            data['up'] = True
-            split_line = line.split()
-            address = split_line[1].strip()
-            netmask = split_line[3].strip()
-            data['ipv4']['address'] = address.split(':')[1].strip()
-            data['ipv4']['netmask'] = netmask.split(':')[1].strip()
-            data['ipv4']['gateway'] = '0.0.0.0'
-            data['ipv4']['dns'] = _get_dns_info()
-        elif data['ipv4']['requestmode'] == 'static':
-            data['ipv4']['address'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
-                                                          format(NIRTCFG_PATH, interface, 'IP_Address'))
-            data['ipv4']['netmask'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
-                                                          format(NIRTCFG_PATH, interface, 'Subnet_Mask'))
-            data['ipv4']['gateway'] = __salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
-                                                          format(NIRTCFG_PATH, interface, 'Gateway'))
-            data['ipv4']['dns'] = [__salt__['cmd.run']('{0} --get section={1},token={2},value=0.0.0.0'.
-                                                       format(NIRTCFG_PATH, interface, 'DNS_Address'))]
-    iface_gateway_hex = __salt__['cmd.shell']("grep {0} /proc/net/route | awk '{{ if ($2 == '00000000') print $3}}'".
-                                              format(interface)).strip()
+    if interface.flags & IFF_RUNNING != 0:
+        data['up'] = True
+        data['ipv4']['address'] = interface.sockaddrToStr(interface.addr)
+        data['ipv4']['netmask'] = interface.sockaddrToStr(interface.netmask)
+        data['ipv4']['gateway'] = '0.0.0.0'
+        data['ipv4']['dns'] = _get_dns_info()
+    elif data['ipv4']['requestmode'] == 'static':
+        with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
+            config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+            config_parser.read_file(config_file)
+            data['ipv4']['address'] = config_parser.get(interface.name, 'IP_Address')
+            data['ipv4']['netmask'] = config_parser.get(interface.name, 'Subnet_Mask')
+            data['ipv4']['gateway'] = config_parser.get(interface.name, 'Gateway')
+            data['ipv4']['dns'] = [config_parser.get(interface.name, 'DNS_Address')]
+
+    with salt.utils.files.fopen('/proc/net/route', 'r') as route_file:
+        pattern = re.compile(r'^%s\t[0]{8}\t([0-9A-Z]{8})' % interface.name, re.MULTILINE)
+        match = pattern.search(route_file.read())
+        iface_gateway_hex = None if not match else match.group(1)
+
     if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
         data['ipv4']['gateway'] = '.'.join([str(int(iface_gateway_hex[i:i+2], 16)) for i in range(6, -1, -2)])
     return data
@@ -333,8 +345,8 @@ def get_interfaces_details():
         salt '*' ip.get_interfaces_details
     '''
     if _is_older_nilrt():
-        _interfaces = __salt__['cmd.shell']("ifconfig -a | sed 's/[ \t].*//;/^\(lo\|\)$/d'")
-        return {'interfaces': list(map(_get_interface_info, _interfaces.splitlines()))}
+        _interfaces = filter(lambda interface: interface.flags & IFF_LOOPBACK == 0, pyiface.getIfaces())
+        return {'interfaces': list(map(_get_interface_info, _interfaces))}
     return {'interfaces': list(map(_get_service_info, _get_services()))}
 
 
