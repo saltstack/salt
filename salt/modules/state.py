@@ -458,8 +458,7 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def apply_(mods=None,
-          **kwargs):
+def apply_(mods=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -599,6 +598,22 @@ def apply_(mods=None,
         .. code-block:: bash
 
             salt '*' state.apply test localconfig=/path/to/minion.yml
+
+    sync
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.apply test sync=states,modules
+            salt '*' state.apply test sync=all
+
+        .. note::
+            This option is ignored when no SLS files are specified, as a
+            :ref:`highstate <running-highstate>` automatically syncs all custom
+            module types.
+
+        .. versionadded:: 2017.7.7,2018.3.2,Fluorine
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -928,7 +943,7 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, test=None, exclude=None, queue=False, **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, sync=None, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -1019,6 +1034,17 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
         .. versionadded:: 2015.8.4
 
+    sync
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.sls test sync=states,modules
+            salt '*' state.sls test sync=all
+
+        .. versionadded:: 2017.7.7,2018.3.2,Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1085,6 +1111,28 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     cfn = os.path.join(
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
+            )
+
+    if sync is True:
+        sync = ['all']
+    if sync is not None:
+        sync = salt.utils.split_input(sync)
+    else:
+        sync = []
+
+    if 'all' in sync and sync != ['all']:
+        # Prevent unnecessary extra syncing
+        sync = ['all']
+
+    for module_type in sync:
+        try:
+            __salt__['saltutil.sync_{0}'.format(module_type)](
+                saltenv=opts['environment']
+            )
+        except KeyError:
+            log.warning(
+                'Invalid custom module type \'%s\', ignoring',
+                module_type
             )
 
     try:
