@@ -35,9 +35,18 @@ class UtilsTestCase(TestCase):
         :return:
         '''
         expectation = {'message': 'Melting hard drives'}
-        _globals = {'__opts__': {'system-environment': {
-            'salt.in.system': expectation}},
-                    '__file__': '/daemons/loose/in/system.py'}
+        _globals = {
+            '__opts__': {
+                'system-environment': {
+                    'modules': {
+                        'system': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+                '__file__': '/daemons/loose/modules/system.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_pillars(self):
@@ -47,9 +56,18 @@ class UtilsTestCase(TestCase):
         :return:
         '''
         expectation = {'message': 'The CPU has shifted, and become decentralized.'}
-        _globals = {'__pillar__': {'system-environment': {
-            'salt.electric.interference': expectation}},
-                    '__file__': '/piezo/electric/interference.py'}
+        _globals = {
+            '__opts__': {
+                'system-environment': {
+                    'electric': {
+                        'interference': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+                '__file__': '/piezo/electric/interference.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_pillar_override(self):
@@ -60,10 +78,26 @@ class UtilsTestCase(TestCase):
         '''
         expectation = {'msg': 'The CPU has shifted, and become decentralized.'}
         _globals = {
-            '__pillar__': {'system-environment': {'salt.electric.interference': expectation}},
-            '__opts__': {'system-environment': {'salt.electric.interference': {'msg': 'la!'}}},
-            '__file__': '/piezo/electric/interference.py'
-        }
+            '__opts__': {
+                'system-environment': {
+                    'electric': {
+                        'interference': {
+                            '_': {'msg': 'Trololo!'},
+                        },
+                    },
+                },
+            },
+            '__pillar__': {
+                'system-environment': {
+                    'electric': {
+                        'interference': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+            '__file__': '/piezo/electric/interference.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_sname_found(self):
@@ -74,9 +108,17 @@ class UtilsTestCase(TestCase):
         '''
         expectation = {'msg': 'All operators are on strike due to broken coffee machine!'}
         _globals = {
-            '__pillar__': {'system-environment': {'salt.jumping.interference': expectation}},
-            '__file__': '/route/flapping/at_the_nap.py'
-        }
+            '__opts__': {
+                'system-environment': {
+                    'jumping': {
+                        'interference': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+                '__file__': '/route/flapping/at_the_nap.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == {}
 
         _globals['__file__'] = '/route/jumping/interference.py'
@@ -91,11 +133,20 @@ class UtilsTestCase(TestCase):
         '''
         expectation = {'msg': 'All operators are on strike due to broken coffee machine!'}
         _globals = {
-            '__pillar__': {'system-environment': {'salt.jumping.nonsense': expectation}},
-            '__file__': '/route/jumping/interference.py'
-        }
+            '__pillar__': {
+                'system-environment': {
+                    'jumping': {
+                        'nonsense': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+                '__file__': '/route/jumping/interference.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == {}
-        _globals['__pillar__']['system-environment']['salt.jumping.interference'] = expectation
+        _globals['__pillar__']['system-environment']['jumping']['interference'] = {}
+        _globals['__pillar__']['system-environment']['jumping']['interference']['_'] = expectation
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_vname_found(self):
@@ -107,10 +158,18 @@ class UtilsTestCase(TestCase):
         '''
         expectation = {'msg': 'All operators are on strike due to broken coffee machine!'}
         _globals = {
-            '__pillar__': {'system-environment': {'salt.jumping.nonsense': expectation}},
             '__virtualname__': 'nonsense',
-            '__file__': '/lost/in/jumping/translation.py'
-        }
+            '__pillar__': {
+                'system-environment': {
+                    'jumping': {
+                        'nonsense': {
+                            '_': expectation,
+                            },
+                        },
+                    },
+                },
+                '__file__': '/route/jumping/translation.py',
+            }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
     def test_get_module_environment_vname_overridden(self):
@@ -122,9 +181,20 @@ class UtilsTestCase(TestCase):
         '''
         expectation = {'msg': 'New management.'}
         _globals = {
-            '__pillar__': {'system-environment': {'salt.funny.nonsense': {'msg': 'This is wrong'},
-                                                  'salt.funny.translation': expectation}},
             '__virtualname__': 'nonsense',
-            '__file__': '/lost/in/funny/translation.py'
-        }
+            '__pillar__': {
+                'system-environment': {
+                    'funny': {
+                        'translation': {
+                            '_': expectation,
+                        },
+                        'nonsense': {
+                            '_': {'msg': 'This is wrong'},
+                            },
+                        },
+                    },
+                },
+                '__file__': '/lost/in/funny/translation.py',
+            }
+
         assert salt.utils.environment.get_module_environment(_globals) == expectation
