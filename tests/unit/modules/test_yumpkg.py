@@ -704,7 +704,7 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
-            yumpkg._call_yum(['-y', '--do-something'])
+            yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
             yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
                 ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
@@ -716,7 +716,7 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
-            yumpkg._call_yum(['-y', '--do-something']),
+            yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
             yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
                 ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
                 output_loglevel='trace', python_shell=False)
@@ -729,7 +729,7 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
             yumpkg._call_yum(['-y', '--do-something'],
                              python_shell=True, output_loglevel='quiet', ignore_retcode=False,
-                             username='Darth Vader')
+                             username='Darth Vader')  # pylint: disable=W0106
             yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
                 ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=False,
                 output_loglevel='quiet', python_shell=True, username='Darth Vader')
