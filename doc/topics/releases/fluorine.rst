@@ -42,10 +42,18 @@ as follows:
 .. code-block:: yaml
 
     system-environment:
-      <Python module>:
-        <key>: <value>
+      <type>
+        <module>:
+          # Namespace for all functions in the module
+          _:
+            <key>: <value>
 
-The "python module" in this case is Salt module, either virtual or physical.
+          # Namespace only for particular function in the module
+          <function>:
+            <key>: <value>
+
+The "type" here is "pillars" or "modules" or "states" etc.
+The "module" in this case is a Salt module, either virtual or physical.
 For example, in order to let all modules for Package Management on all systems
 got one common variable while calling the package management, the following
 configuration required:
@@ -53,11 +61,20 @@ configuration required:
 .. code-block:: yaml
 
     system-environment:
-      salt.modules.pkg:
-        LC_ALL: en_GB.UTF-8
+      modules:
+        pkg:
+          _:
+            SOMETHING: for all
 
-In this case Apt or Yum or Zypper will run their package management software
-with `LC_ALL=en_GB.UTF-8` system variable (as an example).
+Adding a variable environment only to `salt.modules.pkg.install` is done this way:
+
+.. code-block:: yaml
+
+    system-environment:
+      modules:
+        pkg:
+          install:
+            LC_ALL: en_GB.UTF-8
 
 Currently the following modules supporting this:
 
