@@ -51,6 +51,8 @@ def get_module_environment(env=None, function=None):
         physical_name = os.path.basename(fname).split('.')[0]
         section = os.path.basename(os.path.dirname(fname))
         for m_name in set([env.get('__virtualname__'), physical_name]):
+            if not m_name:
+                continue
             result.update(env_src.get('system-environment', {}).get(
                 section, {}).get(m_name, {}).get('_', {}).copy())
             if function is not None:
