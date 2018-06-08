@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: Mike Place <mp@saltstack.com>
 '''
 
 # Import python libs
@@ -266,7 +266,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['beacons_before_connect'] = True
-            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
             try:
 
                 try:
@@ -290,7 +292,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['scheduler_before_connect'] = True
-            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
             try:
                 try:
                     minion.tune_in(start=True)

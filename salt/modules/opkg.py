@@ -119,7 +119,10 @@ def __virtual__():
                 os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.md5sum'))):
             _update_nilrt_module_dep_info()
         return __virtualname__
-    return (False, "Module opkg only works on nilrt based systems")
+
+    if os.path.isdir(OPKG_CONFDIR):
+        return __virtualname__
+    return False, "Module opkg only works on OpenEmbedded based systems"
 
 
 def latest_version(*names, **kwargs):
@@ -1105,7 +1108,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
     '''
-    Lists all repos on /etc/opkg/*.conf
+    Lists all repos on ``/etc/opkg/*.conf``
 
     CLI Example:
 
@@ -1143,7 +1146,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
 
 def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Display a repo from the /etc/opkg/*.conf
+    Display a repo from the ``/etc/opkg/*.conf``
 
     CLI Examples:
 
@@ -1217,7 +1220,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
 
 def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Delete a repo from /etc/opkg/*.conf
+    Delete a repo from ``/etc/opkg/*.conf``
 
     If the file does not contain any other repo configuration, the file itself
     will be deleted.

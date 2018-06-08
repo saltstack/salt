@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -48,8 +48,10 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
                                            {'vdata': 'a', 'success': True},
                                            {'vdata': 'a', 'success': True}])
         mock_t = MagicMock(return_value=True)
+        mock_cast = MagicMock(return_value=vdata)
         with patch.dict(reg.__utils__, {'reg.read_value': mock_read,
-                                       'reg.set_value': mock_t}):
+                                        'reg.set_value': mock_t,
+                                        'reg.cast_vdata': mock_cast}):
             self.assertDictEqual(reg.present(name,
                                              vname=vname,
                                              vdata=vdata), ret)
