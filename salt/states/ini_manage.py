@@ -86,7 +86,7 @@ def options_present(name, sections=None, separator='=', strict=False):
                 options_updated = __salt__['ini.set_option'](name, options, separator)
                 changes.update(options_updated)
             if strict:
-                for opt_to_remove in set(original_top_level_opts.keys()).difference(options.keys()):
+                for opt_to_remove in set(original_top_level_opts).difference(options):
                     if __opts__['test']:
                         ret['comment'] += 'Removed key {0}.\n'.format(opt_to_remove)
                         ret['result'] = None
