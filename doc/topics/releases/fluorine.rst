@@ -594,3 +594,33 @@ This release add an additional search using the ``groupattribute`` field as
 well.  The original ``accountattributename`` search is done first then the
 ``groupattribute`` allowing for backward compatibility with previous Salt
 releases.
+
+Jinja Include Relative Paths
+============================
+
+When a jinja include template name begins with ``./`` or
+``../`` then the import will be relative to the importing file.
+
+Prior practices required the following construct:
+
+.. code-block:: jinja
+
+    {% from tpldir ~ '/foo' import bar %}
+
+A more "natural" construct is now supported:
+
+.. code-block:: jinja
+
+    {% from './foo' import bar %}
+
+Comparatively when importing from a parent directory - prior practice:
+
+.. code-block:: jinja
+
+    {% from tpldir ~ '/../foo' import bar %}
+
+New style for including from a parent directory:
+
+.. code-block:: jinja
+
+    {% from '../foo' import bar %}
