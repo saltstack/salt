@@ -3126,14 +3126,14 @@ def datadir_init(name,
         The transaction log (WAL) directory (default is to keep WAL
         inside the data directory)
 
-        .. versionadded:: Flourine
+        .. versionadded:: Fluorine
 
     checksums
         If True, the cluster will be created with data page checksums.
 
         .. note::  Data page checksums are supported since PostgreSQL 9.3.
 
-        .. versionadded:: Flourine
+        .. versionadded:: Fluorine
 
     runas
         The system user the operation should be performed on behalf of
