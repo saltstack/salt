@@ -127,7 +127,7 @@ class ServiceModuleTest(ModuleCase):
             # currently upstart does not have a mechanism to report if disabling a service fails if does not exist
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         else:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 disable = self.run_function('service.disable', [srv_name])
                 self.assertTrue('error' in disable.lower())
             else:

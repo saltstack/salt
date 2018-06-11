@@ -957,7 +957,7 @@ def _check_touch(name, atime, mtime):
 
 
 def _get_symlink_ownership(path):
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         owner = salt.utils.win_dacl.get_owner(path)
         return owner, owner
     else:
@@ -972,7 +972,7 @@ def _check_symlink_ownership(path, user, group, win_owner):
     Check if the symlink ownership matches the specified user and group
     '''
     cur_user, cur_group = _get_symlink_ownership(path)
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_owner == cur_user
     else:
         return (cur_user == user) and (cur_group == group)
@@ -983,7 +983,7 @@ def _set_symlink_ownership(path, user, group, win_owner):
     Set the ownership of a symlink and return a boolean indicating
     success/failure
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         try:
             salt.utils.win_dacl.set_owner(path, win_owner)
         except CommandExecutionError:
@@ -1271,7 +1271,7 @@ def _makedirs(name,
     Raises:
         CommandExecutionError: If the drive is not mounted on Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Make sure the drive is mapped before trying to create the
         # path in windows
         drive, path = os.path.splitdrive(name)
@@ -1420,7 +1420,7 @@ def symlink(
         )
 
     preflight_errors = []
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Make sure the passed owner exists
         if not salt.utils.win_functions.get_sid_from_name(win_owner):
             preflight_errors.append('User {0} does not exist'.format(win_owner))
@@ -1505,7 +1505,7 @@ def symlink(
         else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     ret['comment'] = ('Symlink {0} is present and owned by {1}'
                                       ''.format(name, win_owner))
                 else:
@@ -1513,7 +1513,7 @@ def symlink(
                                       '{1}:{2}'.format(name, user, group))
             else:
                 if _set_symlink_ownership(name, user, group, win_owner):
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         ret['comment'] = ('Set ownership of symlink {0} to '
                                           '{1}'.format(name, win_owner))
                         ret['changes']['ownership'] = win_owner
@@ -1524,7 +1524,7 @@ def symlink(
                                                                        group)
                 else:
                     ret['result'] = False
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         ret['comment'] += (
                             'Failed to set ownership of symlink '
                             '{0} to {1}'.format(name, win_owner))
@@ -3603,7 +3603,7 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 win_owner = win_owner if win_owner else user
                 __salt__['file.makedirs_perms'](path=name,
                                                 owner=win_owner,
@@ -5001,7 +5001,7 @@ def append(name,
             except CommandExecutionError as exc:
                 return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 check_res, check_msg, ret['pchanges'] = _check_directory_win(dirname)
             else:
                 check_res, check_msg, ret['pchanges'] = _check_directory(dirname)
@@ -5283,7 +5283,7 @@ def prepend(name,
             except CommandExecutionError as exc:
                 return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 check_res, check_msg, ret['pchanges'] = _check_directory_win(dirname)
             else:
                 check_res, check_msg, ret['pchanges'] = _check_directory(dirname)
