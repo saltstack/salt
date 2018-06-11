@@ -39,9 +39,9 @@ def present(name,
         auth='password',
         encoding='UTF8',
         locale=None,
+        runas=None,
         waldir=None,
-        checksums=False,
-        runas=None):
+        checksums=False):
     '''
     Initialize the PostgreSQL data directory
 
