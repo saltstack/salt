@@ -399,6 +399,32 @@ def _sunos_cpudata():
     return grains
 
 
+def _aix_cpudata():
+    '''
+    Return CPU information for AIX systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    #   cpu_flags
+    grains = {}
+    cmd = salt.utils.path.which('prtconf')
+    if cmd:
+        data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+        for dest, regstring in (('cpuarch', r'(?im)^\s*Processor\s+Type:\s+(\S+)'),
+                                ('cpu_flags', r'(?im)^\s*Processor\s+Version:\s+(\S+)'),
+                                ('cpu_model', r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)'),
+                                ('num_cpus', r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)')):
+            for regex in [re.compile(r) for r in [regstring]]:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains[dest] = res.group(1).strip().replace("'", '')
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
+    return grains
+
+
 def _linux_memdata():
     '''
     Return the memory information for Linux-like systems
@@ -494,6 +520,34 @@ def _sunos_memdata():
     return grains
 
 
+def _aix_memdata():
+    '''
+    Return the memory information for AIX systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+    prtconf = salt.utils.path.which('prtconf')
+    if prtconf:
+        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+            comps = [x for x in line.strip().split(' ') if x]
+            if len(comps) > 2 and 'Memory' in comps[0] and 'Size' in comps[1]:
+                grains['mem_total'] = int(comps[2])
+                break
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
+
+    swap_cmd = salt.utils.path.which('swap')
+    if swap_cmd:
+        swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
+        try:
+            swap_total = (int(swap_data[-2]) + int(swap_data[-6])) * 4
+        except ValueError:
+            swap_total = None
+        grains['swap_total'] = swap_total
+    else:
+        log.error('The \'swap\' binary was not found in $PATH.')
+    return grains
+
+
 def _windows_memdata():
     '''
     Return the memory information for Windows systems
@@ -522,8 +576,29 @@ def _memdata(osdata):
         grains.update(_osx_memdata())
     elif osdata['kernel'] == 'SunOS':
         grains.update(_sunos_memdata())
+    elif osdata['kernel'] == 'AIX':
+        grains.update(_aix_memdata())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
         grains.update(_windows_memdata())
+    return grains
+
+
+def _aix_get_machine_id():
+    '''
+    Parse the output of lsattr -El sys0 for os_uuid
+    '''
+    grains = {}
+    cmd = salt.utils.path.which('lsattr')
+    if cmd:
+        data = __salt__['cmd.run']('{0} -El sys0'.format(cmd)) + os.linesep
+        uuid_regexes = [re.compile(r'(?im)^\s*os_uuid\s+(\S+)\s+(.*)')]
+        for regex in uuid_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['machine_id'] = res.group(1).strip()
+                break
+    else:
+        log.error('The \'lsattr\' binary was not found in $PATH.')
     return grains
 
 
@@ -1275,7 +1350,6 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
-    'nilrt-xfce': 'NILinuxRT-XFCE',
     'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
@@ -1348,10 +1422,10 @@ _OS_FAMILY_MAP = {
     'Cumulus': 'Debian',
     'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
+    'AIX': 'AIX',
 }
 
 
@@ -1712,8 +1786,11 @@ def os_data():
         # so that linux_distribution() does the /etc/lsb-release parsing, but
         # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
-            grains['osfullname'] = \
-                grains.get('lsb_distrib_id', osname).strip()
+            # If NI Linux RT distribution, set the grains['osfullname'] to 'nilrt'
+            if grains.get('lsb_distrib_id', '').lower().startswith('nilrt'):
+                grains['osfullname'] = 'nilrt'
+            else:
+                grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
         if 'osrelease' not in grains:
             # NOTE: This is a workaround for CentOS 7 os-release bug
             # https://bugs.centos.org/view.php?id=8359
@@ -1805,6 +1882,15 @@ def os_data():
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
+    elif grains['kernel'] == 'AIX':
+        osrelease = __salt__['cmd.run']('oslevel')
+        osrelease_techlevel = __salt__['cmd.run']('oslevel -r')
+        osname = __salt__['cmd.run']('uname')
+        grains['os'] = 'AIX'
+        grains['osfullname'] = osname
+        grains['osrelease'] = osrelease
+        grains['osrelease_techlevel'] = osrelease_techlevel
+        grains.update(_aix_cpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
@@ -2141,10 +2227,13 @@ def dns():
 
 def get_machine_id():
     '''
-    Provide the machine-id
+    Provide the machine-id for machine/virtualization combination
     '''
     # Provides:
     #   machine-id
+    if platform.system() == 'AIX':
+        return _aix_get_machine_id()
+
     locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
     existing_locations = [loc for loc in locations if os.path.exists(loc)]
     if not existing_locations:
@@ -2410,9 +2499,9 @@ def _hw_data(osdata):
 
         product_regexes = [
             re.compile(r) for r in [
-                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)',  # prtdiag
-                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
-                r'(?im)^\s*product-name:\s*(.*)',  # prtconf
+                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+[^\S\r\n]*(.*)',  # prtdiag
+                r'(?im)^[^\S\r\n]*banner-name:[^\S\r\n]*(.*)',  # prtconf
+                r'(?im)^[^\S\r\n]*product-name:[^\S\r\n]*(.*)',  # prtconf
             ]
         ]
 
@@ -2479,8 +2568,50 @@ def _hw_data(osdata):
         for regex in product_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains['product'] = res.group(1).strip().replace("'", "")
-                break
+                t_productname = res.group(1).strip().replace("'", "")
+                if t_productname:
+                    grains['product'] = t_productname
+                    grains['productname'] = t_productname
+                    break
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
+
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
 
     return grains
 

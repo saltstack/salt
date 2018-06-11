@@ -22,6 +22,7 @@ from zipimport import zipimporter
 # Import salt libs
 import salt.config
 import salt.syspaths
+import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -751,7 +752,7 @@ def grains(opts, force_refresh=False, proxy=None):
             # proxymodule for retrieving information from the connected
             # device.
             log.trace('Loading %s grain', key)
-            parameters = list(funcs[key].__code__.co_varnames)
+            parameters = salt.utils.args.get_function_argspec(funcs[key]).args
             kwargs = {}
             if 'proxy' in parameters:
                 kwargs['proxy'] = proxy
@@ -970,12 +971,14 @@ def executors(opts, functions=None, context=None, proxy=None):
     '''
     Returns the executor modules
     '''
-    return LazyLoader(
+    executors = LazyLoader(
         _module_dirs(opts, 'executors', 'executor'),
         opts,
         tag='executor',
         pack={'__salt__': functions, '__context__': context or {}, '__proxy__': proxy or {}},
     )
+    executors.pack['__executors__'] = executors
+    return executors
 
 
 def cache(opts, serial):

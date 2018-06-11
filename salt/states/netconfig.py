@@ -213,11 +213,11 @@ def managed(name,
         result after the template was rendered.
 
         .. note::
-
             This argument cannot be used directly on the command line. Instead,
-            it can be passed through the ``pillar`` variable when executing one
-            of the :ref:`salt.modules.state.sls` or :ref:`salt.modules.state.apply`
-            functions (see an example below).
+            it can be passed through the ``pillar`` variable when executing
+            either of the :py:func:`state.sls <salt.modules.state.sls>` or
+            :py:func:`state.apply <salt.modules.state.apply>` (see below for an
+            example).
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -225,7 +225,7 @@ def managed(name,
     defaults: None
         Default variables/context passed to the template.
 
-    **template_vars
+    template_vars
         Dictionary with the arguments/context to be used when the template is rendered. Do not explicitly specify this
         argument. This represents any other variable that will be sent to the template rendering system. Please
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
@@ -305,9 +305,12 @@ def managed(name,
 
     Raw output example (useful when the output is reused in other states/execution modules):
 
-    .. code-block:: python
+    .. code-block:: bash
 
         $ sudo salt --out=pprint 'juniper.device' state.sls router.config test=True debug=True
+
+    .. code-block:: python
+
         {
             'juniper.device': {
                 'netconfig_|-ntp_peers_example_using_pillar_|-ntp_peers_example_using_pillar_|-managed': {

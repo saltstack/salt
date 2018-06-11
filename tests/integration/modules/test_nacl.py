@@ -65,3 +65,65 @@ class NaclTest(ModuleCase):
             sk=sk,
         )
         self.assertEqual(unencrypted_data, ret)
+
+    def test_sealedbox_enc_dec(self):
+        '''
+        Generate keys, encrypt, then decrypt.
+        '''
+        # Store the data
+        ret = self.run_function(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret)
+        self.assertIn('sk', ret)
+        pk = ret['pk']
+        sk = ret['sk']
+
+        unencrypted_data = salt.utils.stringutils.to_bytes('hello')
+
+        # Encrypt with pk
+        ret = self.run_function(
+            'nacl.sealedbox_encrypt',
+            data=unencrypted_data,
+            pk=pk,
+        )
+        encrypted_data = ret
+
+        # Decrypt with sk
+        ret = self.run_function(
+            'nacl.sealedbox_decrypt',
+            data=encrypted_data,
+            sk=sk,
+        )
+        self.assertEqual(unencrypted_data, ret)
+
+    def test_secretbox_enc_dec(self):
+        '''
+        Generate keys, encrypt, then decrypt.
+        '''
+        # Store the data
+        ret = self.run_function(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret)
+        self.assertIn('sk', ret)
+        pk = ret['pk']
+        sk = ret['sk']
+
+        unencrypted_data = salt.utils.stringutils.to_bytes('hello')
+
+        # Encrypt with pk
+        ret = self.run_function(
+            'nacl.secretbox_encrypt',
+            data=unencrypted_data,
+            sk=sk,
+        )
+        encrypted_data = ret
+
+        # Decrypt with sk
+        ret = self.run_function(
+            'nacl.secretbox_decrypt',
+            data=encrypted_data,
+            sk=sk,
+        )
+        self.assertEqual(unencrypted_data, ret)

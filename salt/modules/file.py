@@ -61,6 +61,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -575,30 +576,26 @@ def lsattr(path):
     return results
 
 
-def chattr(*args, **kwargs):
+def chattr(*files, **kwargs):
     '''
     .. versionadded:: 2018.3.0
 
-    Change the attributes of files
-
-    *args
-        list of files to modify attributes of
-
-    **kwargs - the following are valid <key,value> pairs:
+    Change the attributes of files. This function accepts one or more files and
+    the following options:
 
     operator
-        add|remove
-        determines whether attributes should be added or removed from files
+        Can be wither ``add`` or ``remove``. Determines whether attributes
+        should be added or removed from files
 
     attributes
-        acdijstuADST
-        string of characters representing attributes to add/remove from files
+        One or more of the following characters: ``acdijstuADST``, representing
+        attributes to add to/remove from files
 
     version
-        a version number to assign to the files
+        a version number to assign to the file(s)
 
     flags
-        [RVf]
+        One or more of the following characters: ``RVf``, representing
         flags to assign to chattr (recurse, verbose, suppress most errors)
 
     CLI Example:
@@ -608,34 +605,34 @@ def chattr(*args, **kwargs):
         salt '*' file.chattr foo1.txt foo2.txt operator=add attributes=ai
         salt '*' file.chattr foo3.txt operator=remove attributes=i version=2
     '''
-    args = [arg if salt.utils.stringutils.is_quoted(arg) else '"{0}"'.format(arg)
-            for arg in args]
-
     operator = kwargs.pop('operator', None)
     attributes = kwargs.pop('attributes', None)
     flags = kwargs.pop('flags', None)
     version = kwargs.pop('version', None)
 
-    if (operator is None) or (operator not in ['add', 'remove']):
+    if (operator is None) or (operator not in ('add', 'remove')):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
         raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+
+    cmd = ['chattr']
 
     if operator == "add":
         attrs = '+{0}'.format(attributes)
     elif operator == "remove":
         attrs = '-{0}'.format(attributes)
 
-    flgs = ''
+    cmd.append(attrs)
+
     if flags is not None:
-        flgs = '-{0}'.format(flags)
+        cmd.append('-{0}'.format(flags))
 
-    vrsn = ''
     if version is not None:
-        vrsn = '-v {0}'.format(version)
+        cmd.extend(['-v', version])
 
-    cmd = 'chattr {0} {1} {2} {3}'.format(attrs, flgs, vrsn, ' '.join(args))
+    cmd.extend(files)
+
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
@@ -1722,18 +1719,19 @@ def _regex_to_static(src, regex):
         return None
 
     try:
-        src = re.search(regex, src, re.M)
+        compiled = re.compile(regex, re.DOTALL)
+        src = [line for line in src if compiled.search(line) or line.count(regex)]
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group().rstrip('\r') or regex
+    return src and src or []
 
 
-def _assert_occurrence(src, probe, target, amount=1):
+def _assert_occurrence(probe, target, amount=1):
     '''
     Raise an exception, if there are different amount of specified occurrences in src.
     '''
-    occ = src.count(probe)
+    occ = len(probe)
     if occ > amount:
         msg = 'more than'
     elif occ < amount:
@@ -1749,7 +1747,7 @@ def _assert_occurrence(src, probe, target, amount=1):
     return occ
 
 
-def _get_line_indent(src, line, indent):
+def _set_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
@@ -1762,7 +1760,36 @@ def _get_line_indent(src, line, indent):
             break
         idt.append(c)
 
-    return ''.join(idt) + line.strip()
+    return ''.join(idt) + line.lstrip()
+
+
+def _get_eol(line):
+    match = re.search('((?<!\r)\n|\r(?!\n)|\r\n)$', line)
+    return match and match.group() or ''
+
+
+def _set_line_eol(src, line):
+    '''
+    Add line ending
+    '''
+    line_ending = _get_eol(src) or os.linesep
+    return line.rstrip() + line_ending
+
+
+def _insert_line_before(idx, body, content, indent):
+    if not idx or (idx and _starts_till(body[idx - 1], content) < 0):
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx, cnd)
+    return body
+
+
+def _insert_line_after(idx, body, content, indent):
+    # No duplicates or append, if "after" is the last line
+    next_line = idx + 1 < len(body) and body[idx + 1] or None
+    if next_line is None or _starts_till(next_line, content) < 0:
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx + 1, cnd)
+    return body
 
 
 def line(path, content=None, match=None, mode=None, location=None,
@@ -1893,132 +1920,110 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.files.fopen(path, mode='r') as fp_:
-        body = salt.utils.stringutils.to_unicode(fp_.read())
-    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+        body = salt.utils.data.decode_list(fp_.readlines())
+    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
+    # Add empty line at the end if last line ends with eol.
+    # Allows simpler code
+    if body and _get_eol(body[-1]):
+        body.append('')
+
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
-        body = ''
-    elif mode == 'delete':
-        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
-    elif mode == 'replace':
-        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in body.split(os.linesep)])
+        body = []
+    elif mode == 'delete' and match:
+        body = [line for line in body if line != match[0]]
+    elif mode == 'replace' and match:
+        idx = body.index(match[0])
+        file_line = body.pop(idx)
+        body.insert(idx, _set_line_indent(file_line, content, indent))
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
 
         if not location:
             if before and after:
-                _assert_occurrence(body, before, 'before')
-                _assert_occurrence(body, after, 'after')
+                _assert_occurrence(before, 'before')
+                _assert_occurrence(after, 'after')
+
                 out = []
-                lines = body.split(os.linesep)
                 in_range = False
-                for line in lines:
-                    if line.find(after) > -1:
+                for line in body:
+                    if line == after[0]:
                         in_range = True
-                    elif line.find(before) > -1 and in_range:
-                        out.append(_get_line_indent(line, content, indent))
+                    elif line == before[0] and in_range:
+                        cnd = _set_line_indent(line, content, indent)
+                        out.append(cnd)
                     out.append(line)
-                body = os.linesep.join(out)
+                body = out
 
             if before and not after:
-                _assert_occurrence(body, before, 'before')
-                out = []
-                lines = body.split(os.linesep)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
-                    if _line.find(before) > -1:
-                        cnd = _get_line_indent(_line, content, indent)
-                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
-                            out.append(cnd)
-                    out.append(_line)
-                body = os.linesep.join(out)
+                _assert_occurrence(before, 'before')
+
+                idx = body.index(before[0])
+                body = _insert_line_before(idx, body, content, indent)
 
             elif after and not before:
-                _assert_occurrence(body, after, 'after')
-                out = []
-                lines = body.split(os.linesep)
-                for idx, _line in enumerate(lines):
-                    out.append(_line)
-                    cnd = _get_line_indent(_line, content, indent)
-                    # No duplicates or append, if "after" is the last line
-                    if (_line.find(after) > -1 and
-                            (lines[((idx + 1) < len(lines)) and idx + 1 or idx].strip() != cnd or
-                             idx + 1 == len(lines))):
-                        out.append(cnd)
-                body = os.linesep.join(out)
+                _assert_occurrence(after, 'after')
+
+                idx = body.index(after[0])
+                body = _insert_line_after(idx, body, content, indent)
 
         else:
             if location == 'start':
-                body = os.linesep.join((content, body))
+                if body:
+                    body.insert(0, _set_line_eol(body[0], content))
+                else:
+                    body.append(content + os.linesep)
             elif location == 'end':
-                body = os.linesep.join((body, _get_line_indent(body[-1], content, indent) if body else content))
+                body.append(_set_line_indent(body[-1], content, indent) if body else content)
 
     elif mode == 'ensure':
-        after = after and after.strip()
-        before = before and before.strip()
 
         if before and after:
-            _assert_occurrence(body, before, 'before')
-            _assert_occurrence(body, after, 'after')
+            _assert_occurrence(before, 'before')
+            _assert_occurrence(after, 'after')
 
-            is_there = bool(body.count(content))
+            is_there = bool([l for l in body if l.count(content)])
             if not is_there:
-                out = []
-                body = body.split(os.linesep)
-                for idx, line in enumerate(body):
-                    out.append(line)
-                    if line.find(content) > -1:
-                        is_there = True
-                    if not is_there:
-                        if idx < (len(body) - 1) and line.find(after) > -1 and body[idx + 1].find(before) > -1:
-                            out.append(content)
-                        elif line.find(after) > -1:
-                            raise CommandExecutionError('Found more than one line between '
-                                                        'boundaries "before" and "after".')
-                body = os.linesep.join(out)
+                idx = body.index(after[0])
+                if idx < (len(body) - 1) and body[idx + 1] == before[0]:
+                    cnd = _set_line_indent(body[idx], content, indent)
+                    body.insert(idx + 1, cnd)
+                else:
+                    raise CommandExecutionError('Found more than one line between '
+                                                'boundaries "before" and "after".')
 
         elif before and not after:
-            _assert_occurrence(body, before, 'before')
-            body = body.split(os.linesep)
-            out = []
-            for idx in range(len(body)):
-                if body[idx].find(before) > -1:
-                    prev = (idx > 0 and idx or 1) - 1
-                    out.append(_get_line_indent(body[idx], content, indent))
-                    if _starts_till(out[prev], content) > -1:
-                        del out[prev]
-                out.append(body[idx])
-            body = os.linesep.join(out)
+            _assert_occurrence(before, 'before')
+
+            idx = body.index(before[0])
+            body = _insert_line_before(idx, body, content, indent)
 
         elif not before and after:
-            _assert_occurrence(body, after, 'after')
-            body = body.split(os.linesep)
-            skip = None
-            out = []
-            for idx in range(len(body)):
-                if skip != body[idx]:
-                    out.append(body[idx])
+            _assert_occurrence(after, 'after')
 
-                if body[idx].find(after) > -1:
-                    next_line = idx + 1 < len(body) and body[idx + 1] or None
-                    if next_line is not None and _starts_till(next_line, content) > -1:
-                        skip = next_line
-                    out.append(_get_line_indent(body[idx], content, indent))
-            body = os.linesep.join(out)
+            idx = body.index(after[0])
+            body = _insert_line_after(idx, body, content, indent)
 
         else:
             raise CommandExecutionError("Wrong conditions? "
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
 
-    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+    if body:
+        for idx, line in enumerate(body):
+            if not _get_eol(line) and idx+1 < len(body):
+                prev = idx and idx-1 or 1
+                body[idx] = _set_line_eol(body[prev], line)
+        # We do not need empty line at the end anymore
+        if '' == body[-1]:
+            body.pop()
+
+    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
 
     if backup and changed and __opts__['test'] is False:
         try:
@@ -2032,12 +2037,9 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
-                path_content = [salt.utils.stringutils.to_unicode(x)
-                                for x in fp_.read().splitlines(True)]
+                path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
             changes_diff = ''.join(difflib.unified_diff(
-                path_content,
-                [salt.utils.stringutils.to_unicode(x)
-                 for x in body.splitlines(True)]
+                path_content, body
             ))
         if __opts__['test'] is False:
             fh_ = None
@@ -2045,7 +2047,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 # Make sure we match the file mode from salt.utils.files.fopen
                 mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(body)
+                fh_.write(''.join(body))
             finally:
                 if fh_:
                     fh_.close()
@@ -2097,8 +2099,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to

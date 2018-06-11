@@ -380,8 +380,8 @@ def present(name, params, static_host_list=True, **kwargs):
 
     :param name: Zabbix Template name
     :param params: Additional parameters according to Zabbix API documentation
-    :param static_host_list: If hosts assigned to the template are controlled only by this state or can be also
-    assigned externally
+    :param static_host_list: If hosts assigned to the template are controlled
+        only by this state or can be also assigned externally
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)

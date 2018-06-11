@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.call
@@ -233,20 +233,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
 
-            out = self.run_script(
+            _, timed_out = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
                 timeout=timeout,
+                catch_timeout=True,
             )
 
             try:
-                self.assertIn(
-                    'Process took more than {0} seconds to complete. '
-                    'Process Killed!'.format(timeout),
-                    out
-                )
+                self.assertTrue(timed_out)
             except AssertionError:
                 if os.path.isfile(minion_config_file):
                     os.unlink(minion_config_file)
@@ -378,7 +375,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             _ = self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -391,7 +388,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} --output-file-append test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -410,14 +407,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Let's create an initial output file with some data
                 self.run_script(
                     'salt-call',
-                    '-c {0} --output-file={1} -g'.format(
+                    '-c {0} --output-file={1} -l debug -g'.format(
                         self.get_config_dir(),
                         output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat1 = os.stat(output_file)
+                try:
+                    stat1 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
 
                 # Let's change umask
                 os.umask(0o777)  # pylint: disable=blacklisted-function
@@ -425,13 +425,16 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} --output-file-append -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat2 = os.stat(output_file)
+                try:
+                    stat2 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 self.assertEqual(stat1.st_mode, stat2.st_mode)
                 # Data was appeneded to file
                 self.assertTrue(stat1.st_size < stat2.st_size)
@@ -443,13 +446,16 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat3 = os.stat(output_file)
+                try:
+                    stat3 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 # Mode must have changed since we're creating a new log file
                 self.assertNotEqual(stat1.st_mode, stat3.st_mode)
             finally:

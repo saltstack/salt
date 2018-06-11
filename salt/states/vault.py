@@ -30,6 +30,7 @@ def policy_present(name, rules):
 
 
     .. code-block:: yaml
+
         demo-policy:
           vault.policy_present:
             - name: foo/bar
