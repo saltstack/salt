@@ -3906,7 +3906,7 @@ def remote_refs(url,
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     filter_ = kwargs.pop('filter', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     command = ['git', 'ls-remote']
     if heads:

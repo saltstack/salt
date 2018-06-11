@@ -29,6 +29,7 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
+from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 from ctypes.util import find_library
 # pylint: enable=E0611
 
@@ -73,7 +74,7 @@ else:
     # os.uname() not available on Windows.
     IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
 
-# Store a reference wether if we're running under Python 3 and above
+# Store a reference whether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
@@ -144,10 +145,6 @@ def _parse_requirements_file(requirements_file):
                 continue
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
-                    continue
-                if 'm2crypto' in line.lower() and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                    # In Windows, we're installing M2CryptoWin{32,64} which comes
-                    # compiled
                     continue
             if IS_PY3 and 'futures' in line.lower():
                 # Python 3 already has futures, installing it will only break
@@ -313,12 +310,6 @@ if WITH_SETUPTOOLS:
 
         def run(self):
             if IS_WINDOWS_PLATFORM:
-                if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                    # Install M2Crypto first
-                    self.distribution.salt_installing_m2crypto_windows = True
-                    self.run_command('install-m2crypto-windows')
-                    self.distribution.salt_installing_m2crypto_windows = None
-
                 # Download the required DLLs
                 self.distribution.salt_download_windows_dlls = True
                 self.run_command('download-windows-dlls')
@@ -335,30 +326,6 @@ if WITH_SETUPTOOLS:
 
             # Resume normal execution
             develop.run(self)
-
-
-class InstallM2CryptoWindows(Command):
-
-    description = 'Install M2CryptoWindows'
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, 'salt_installing_m2crypto_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
-            exit(1)
-        import platform
-        from pip.utils import call_subprocess
-        from pip.utils.logging import indent_log
-        platform_bits, _ = platform.architecture()
-        with indent_log():
-            call_subprocess(
-                ['pip', 'install', '--egg', 'M2CryptoWin{0}'.format(platform_bits[:2])]
-            )
 
 
 def uri_to_resource(resource_file):
@@ -398,12 +365,17 @@ class DownloadWindowsDlls(Command):
             print('This command is not meant to be called on it\'s own')
             exit(1)
         import platform
-        from pip.utils.logging import indent_log
+        import pip
+        # pip has moved many things to `_internal` starting with pip 10
+        if LooseVersion(pip.__version__) < LooseVersion('10.0'):
+            from pip.utils.logging import indent_log
+        else:
+            from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()
         url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
-            for fname in ('libeay32', 'ssleay32', 'libsodium', 'msvcr120'):
+            for fname in ('libeay32', 'ssleay32', 'msvcr120'):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
@@ -699,12 +671,6 @@ class Install(install):
             self.build_lib, 'salt', '_version.py'
         )
         if IS_WINDOWS_PLATFORM:
-            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                # Install M2Crypto first
-                self.distribution.salt_installing_m2crypto_windows = True
-                self.run_command('install-m2crypto-windows')
-                self.distribution.salt_installing_m2crypto_windows = None
-
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
             self.run_command('download-windows-dlls')
@@ -848,8 +814,6 @@ class SaltDistribution(distutils.dist.Distribution):
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
-            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
         if WITH_SETUPTOOLS:
             self.cmdclass.update({'develop': Develop})
