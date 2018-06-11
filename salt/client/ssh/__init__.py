@@ -1421,13 +1421,13 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
-                'Python version mismatched',
+                'Python interpreter is too old',
                 python_mismatch_options.get(
                     # check for major.minor first
-                    '%s.%s' % sys.version_info[0:2]
+                    '{ver[0]}.{ver[1]}'.format(ver=sys.version_info)
                 ) or python_mismatch_options.get(
                     # check for major.any
-                    '%s.x' % sys.version_info[0]
+                    '{ver[0]}.x'.format(ver=sys.version_info)
                     # show the default
                 ) or python_mismatch_options['default']
             ),
