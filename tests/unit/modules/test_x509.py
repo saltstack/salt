@@ -36,7 +36,7 @@ from tests.support.mock import (
 
 from salt.modules import x509
 import salt.utils.stringutils
-import salt.utils
+import salt.utils.files
 
 try:
     import M2Crypto  # pylint: disable=unused-import
@@ -232,7 +232,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                             days_valid=100,
                             digest='sha512')
 
-        with salt.utils.fopen(ca_crl_file.name, 'r') as crl_file:
+        with salt.utils.files.fopen(ca_crl_file.name, 'r') as crl_file:
             crl = crl_file.read()
 
         os.remove(ca_key_file.name)
