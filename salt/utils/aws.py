@@ -125,9 +125,15 @@ def creds(provider):
         __SecretAccessKey__ = data['SecretAccessKey']
         __Token__ = data['Token']
         __Expiration__ = data['Expiration']
-        return __AccessKeyId__, __SecretAccessKey__, __Token__
+        if provider['role_arn'] is None:
+            return __AccessKeyId__, __SecretAccessKey__, __Token__
+        else:
+            return assumed_creds(provider, role_arn=provider['role_arn'], location=None)
     else:
-        return provider['id'], provider['key'], ''
+        if provider['role_arn'] is None:
+            return provider['id'], provider['key'], ''
+        else:
+            return assumed_creds(provider, role_arn=provider['role_arn'], location=None)
 
 
 def sig2(method, endpoint, params, provider, aws_api_version):
