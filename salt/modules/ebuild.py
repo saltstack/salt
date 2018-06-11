@@ -20,6 +20,7 @@ import os
 import copy
 import logging
 import re
+import datetime
 
 # Import salt libs
 import salt.utils.args
@@ -446,6 +447,14 @@ def refresh_db():
     - emerge-webrsync
     - emerge --sync
 
+    To prevent the portage tree from being synced within one day of the
+    previous sync, add the following pillar data for this minion:
+
+    .. code-block:: yaml
+
+        portage:
+          sync_wait_one_day: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -458,6 +467,16 @@ def refresh_db():
 
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
+    # Option to prevent syncing package tree if done in the last 24 hours
+    if __salt__['pillar.get']('portage:sync_wait_one_day', False):
+        main_repo_root = __salt__['cmd.run']('portageq get_repo_path / gentoo')
+        day = datetime.timedelta(days=1)
+        now = datetime.datetime.now()
+        timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(main_repo_root))
+        if now - timestamp < day:
+            log.info('Did not sync package tree since last sync was done at'
+                     ' {0}, less than 1 day ago'.format(timestamp))
+            return False
 
     if has_emaint:
         return __salt__['cmd.retcode']('emaint sync -a') == 0
