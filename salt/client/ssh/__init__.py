@@ -1393,6 +1393,26 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
 
+        python_mismatch_options = {
+            '3.x': (
+                'Depending on the Python version on the target, you need to' +
+                ' install Python2.7 compatible salt on origin to add support for Python2.7 targets or' +
+                ' install Python2.6 compatible salt on origin to add support for Python2.6 targets or' +
+                ' upgrade to Python==3.x on target'
+            ),
+            '2.7': (
+                'Depending on the Python version on the target, you need to' +
+                ' upgrade to Python3 on origin to match Python3 on target or' +
+                ' install Python2.7 compatible Salt on origin to add support for Python2.7 targets or' +
+                ' install Python2.6 compatible Salt on origin to add support for Python2.6 targets'
+            ),
+            '2.6': (
+                'Upgrade Python on origin to match the Python version available on target' +
+                ' and install the corresponding Salt package(Python2 compatible Salt or Python3 compatible Salt).'
+            ),
+            'default': 'Matching Python>=2.6 version needed both on origin and target.'
+        }
+
         errors = [
             (
                 (),
@@ -1402,7 +1422,14 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
+                python_mismatch_options.get(
+                    # check for major.minor first
+                    '{ver[0]}.{ver[1]}'.format(ver=sys.version_info)
+                ) or python_mismatch_options.get(
+                    # check for major.any
+                    '{ver[0]}.x'.format(ver=sys.version_info)
+                    # show the default
+                ) or python_mismatch_options['default']
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
