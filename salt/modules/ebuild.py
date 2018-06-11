@@ -16,6 +16,7 @@ i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import os
 import copy
 import logging
 import re
@@ -437,7 +438,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def refresh_db():
     '''
-    Updates the portage tree (emerge --sync). Uses eix-sync if available.
+    Update the portage tree using the first available method from the following
+    list:
+
+    - emaint sync
+    - eix-sync
+    - emerge-webrsync
+    - emerge --sync
 
     CLI Example:
 
@@ -445,28 +452,27 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    has_emaint = os.path.isdir('/etc/portage/repos.conf')
+    has_eix = True if 'eix.sync' in __salt__ else False
+    has_webrsync = True if __salt__['makeconf.features_contains']('webrsync-gpg') else False
+
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    if 'eix.sync' in __salt__:
-        return __salt__['eix.sync']()
 
-    if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
-        # GPG sign verify is supported only for "webrsync"
+    if has_emaint:
+        return __salt__['cmd.retcode']('emaint sync -a') == 0
+    elif has_eix:
+        return __salt__['eix.sync']()
+    elif has_webrsync:
+        # GPG sign verify is supported only for 'webrsync'
         cmd = 'emerge-webrsync -q'
-        # We prefer 'delta-webrsync' to 'webrsync'
+        # Prefer 'delta-webrsync' to 'webrsync'
         if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd) == 0
     else:
-        if __salt__['cmd.retcode']('emerge --ask n --quiet --sync',
-                                   python_shell=False) == 0:
-            return True
-        # We fall back to "webrsync" if "rsync" fails for some reason
-        cmd = 'emerge-webrsync -q'
-        # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.path.which('emerge-delta-webrsync'):
-            cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        # Default to deprecated `emerge --sync` form
+        return __salt__['cmd.retcode']('emerge --ask n --quiet --sync') == 0
 
 
 def _flags_changed(inst_flags, conf_flags):
