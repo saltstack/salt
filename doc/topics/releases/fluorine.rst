@@ -626,12 +626,14 @@ New style for including from a parent directory:
     {% from '../foo' import bar %}
 
 salt-api
-============================
+========
 
 salt-api Windows support
---------------------------------
+------------------------
 
 Previously, salt-api was was not supported on the Microsoft Windows platforms. Now it is!
-salt-api is providing a RESTful interface to a running Salt system. It allows
+salt-api provides a RESTful interface to a running Salt system. It allows
 for viewing minions, runners, and jobs as well as running execution modules
 and runners of a running Salt system through a REST API that returns JSON.
+See Salt-API_ documentation.
+.. _Salt-API: https://docs.saltstack.com/en/latest/topics/netapi/index.html
