@@ -1410,9 +1410,11 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
                            'master and target machine',
             }
             major, minor = sys.version_info[:2]
-            help_msg = messages.get(major, {}).get(minor) \
-                or messages.get(major, {}).get('default') \
+            help_msg = (
+                messages.get(major, {}).get(minor)
+                or messages.get(major, {}).get('default')
                 or messages['default']
+            )
             return 'Python version error. Recommendation(s) follow:\n' + help_msg
 
         errors = [
