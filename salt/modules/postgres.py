@@ -199,9 +199,9 @@ def _run_initdb(name,
         password=None,
         encoding='UTF8',
         locale=None,
+        runas=None,
         waldir=None,
-        checksums=False,
-        runas=None):
+        checksums=False):
     '''
     Helper function to call initdb
     '''
