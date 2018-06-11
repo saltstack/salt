@@ -607,7 +607,9 @@ def build_interface(iface, iface_type, enable, **settings):
     Build an interface script for a network interface.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.build_interface eth0 eth <settings>
     '''
     if _is_older_nilrt():
@@ -638,7 +640,9 @@ def build_network_settings(**settings):
     Build the global network script.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.build_network_settings <settings>
     '''
     if _is_older_nilrt():
@@ -666,7 +670,9 @@ def get_network_settings():
     Return the contents of the global network script.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.get_network_settings
     '''
     if _is_older_nilrt():
@@ -684,7 +690,9 @@ def apply_network_settings(**settings):
     Apply global network configuration.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.apply_network_settings
     '''
     if _is_older_nilrt():

@@ -7,7 +7,6 @@ Many python developers think of registry keys as if they were python keys in a
 dictionary which is not the case. The windows registry is broken down into the
 following components:
 
------
 Hives
 -----
 
@@ -19,14 +18,12 @@ This is the top level of the registry. They all begin with HKEY.
     - HKEY_USER (HKU)
     - HKEY_CURRENT_CONFIG
 
-----
 Keys
 ----
 
 Hives contain keys. These are basically the folders beneath the hives. They can
 contain any number of subkeys.
 
------------------
 Values or Entries
 -----------------
 
@@ -34,13 +31,12 @@ Values or Entries are the name/data pairs beneath the keys and subkeys. All keys
 have a default name/data pair. The name is ``(Default)`` with a displayed value
 of ``(value not set)``. The actual value is Null.
 
--------
 Example
 -------
 
 The following example is taken from the windows startup portion of the registry:
 
-.. code-block:: bash
+.. code-block:: text
 
     [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
     "RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
@@ -56,13 +52,10 @@ Key and subkeys:
     ``SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run``
 
 Value:
-    - There are 3 value names:
-        - `RTHDVCPL`
-        - `NvBackend`
-        - `BTMTrayAgent`
-    - Each value name has a corresponding value
 
-:depends:   - salt.utils.win_reg
+- There are 3 value names: ``RTHDVCPL``, ``NvBackend``, and ``BTMTrayAgent``
+- Each value name has a corresponding value
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -410,7 +403,7 @@ def key_absent(name, use_32bit_registry=False):
     CLI Example:
 
         The following example will delete the ``SOFTWARE\DeleteMe`` key in the
-        ``HKEY_LOCAL_MACHINE` hive including all its subkeys and value pairs.
+        ``HKEY_LOCAL_MACHINE`` hive including all its subkeys and value pairs.
 
         .. code-block:: yaml
 

@@ -11,6 +11,8 @@ execution modules
         salt.modules.group
         salt.modules.kernelpkg
         salt.modules.pkg
+        salt.modules.service
+        salt.modules.shadow
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -95,7 +97,6 @@ execution modules
     cron
     csf
     cyg
-    cytest
     daemontools
     data
     datadog_api
@@ -497,5 +498,6 @@ execution modules
     znc
     zoneadm
     zonecfg
+    zookeeper
     zpool
     zypper

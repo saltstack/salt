@@ -28,8 +28,6 @@ The Virtualbox cloud module just needs to use the virtualbox driver for now. Vir
        driver: virtualbox
 
 
-.. _vmware-cloud-profile:
-
 Profiles
 ========
 

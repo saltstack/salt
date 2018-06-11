@@ -1,0 +1,41 @@
+.. _release-2015-8-8-2:
+
+=============================
+Salt 2015.8.8.2 Release Notes
+=============================
+
+Version 2015.8.8.2 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
+
+Fixes to 2015.8.8
+=================
+
+Salt 2015.8.8.2 includes fixes for the following known issues in 2015.8.8:
+
+- Key master with value [...] has an invalid type of list Error (:issue:`32044`)
+- Failed to import module win_dacl Error (:issue:`32004`)
+- Wrong validation type for file_ignore_glob key (:issue:`32114`)
+- Fix file.managed for windows (:issue:`31969`)
+
+.. important::
+   :issue:`32183` prevents Salt Cloud from installing the Salt minion on new
+   systems. To workaround this issue, call ``salt-cloud -u`` to update the
+   bootstrap script to the latest version.
+
+
+Changelog for v2015.8.8..v2015.8.8.2
+====================================
+
+*Generated at: 2018-05-28 00:29:12 UTC*
+
+* 403563e441 Change type check errors to debug loglevel
+
+* 8323005b3d Support multiple valid option types when performing type checks
+
+* 2f95082a96 Fixed validation type for file_ignore_glob Fixes `#32114`_
+
+* 2685e61d9e Move constant declaration into member variable to avoid issues when modules can't be loaded.
+
+* bc10d7dede Add apply_template_on_contents for windows
+
+.. _`#32114`: https://github.com/saltstack/salt/issues/32114

@@ -971,7 +971,7 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    Optional vm_ dict options for overwriting template:
+    Optional vm\_ dict options for overwriting template:
 
     region_id
         Optional - OpenNebula Zone ID

@@ -16,11 +16,7 @@ system has been greatly refined and many new features are available.
 Download!
 ---------
 
-The Salt source can be downloaded from the salt GitHub site:
-
-:download:`salt-0.9.3.tar.gz`
-
-Or from PyPI:
+The Salt source can be downloaded from PyPI:
 
 https://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
 

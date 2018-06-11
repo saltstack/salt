@@ -127,6 +127,7 @@ def update_git_repos(clean=False):
 def show_sls(name, saltenv='base'):
     r'''
     .. versionadded:: 2015.8.0
+
     Display the rendered software definition from a specific sls file in the
     local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
     the latest software definitions from the master.

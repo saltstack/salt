@@ -249,7 +249,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         alias for log_file
     conf_file : string
         optional path to alternative configuration file
-    **kwargs : boolean|string|int
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     .. note::

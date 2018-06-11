@@ -7,18 +7,19 @@ Connection module for Telemetry
 https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
 :configuration: This module accepts explicit telemetry credentials or
-    can also read api key credentials from a pillar. More Information available at::
+    can also read api key credentials from a pillar. More Information available
+    here__.
 
-    https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
+.. __: https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
-    In the minion's config file:
+In the minion's config file:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-       telemetry.telemetry_api_keys:
-         - abc123  # Key 1
-         - efg321  # Backup Key 1
-       telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
+   telemetry.telemetry_api_keys:
+     - abc123  # Key 1
+     - efg321  # Backup Key 1
+   telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 
 :depends: requests
 
