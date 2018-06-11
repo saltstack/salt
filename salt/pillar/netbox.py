@@ -1,129 +1,198 @@
 # -*- coding: utf-8 -*-
 '''
-A module that adds data to the Pillar structure from a NetBox API.
+Reads pillar information from Netbox
 
-
-Configuring the NetBox ext_pillar
-====================================
-
+============================
+Configuration
+--------------------
 .. code-block:: yaml
+    ext_pillar:
+      - netbox:
+          url: http://netbox.example.com/
+          token: <token> (Optional)
+          keyfile: <path to private key> (Optional)
+          proxy_config: True (Optional)
 
-  ext_pillar:
-    - netbox:
-        api_url: http://netbox_url.com/api/
+The ``url`` parameter is required and points to the netbox web server.
 
-The following are optional, and determine whether or not the module will
-attempt to configure the ``proxy`` pillar data for use with the napalm
-proxy-minion:
+If ``proxy_config`` is set to ``True``, then the proxy configuration will be added
+to the pillar. It will search for login credentials in Netbox secrets. If Nebtox secret not
+found it will search the salt confiuration for ``proxy_auth``, if found it will search
+for keys in the following order:
+    ``<minion_id>_username``
+    ``<minion_id>_password``
+    ``<napalm_proxy_type>_username``
+    ``<napalm_proxy_type>_password``
+    ``username``
+    ``password``
+If no password is found it will use ssh private key authentication
 
+Proxy Authentication Example:
 .. code-block:: yaml
-
-        proxy_return: True
-        proxy_username: admin
-        api_token: 123abc
-
-Create a token in your NetBox instance at
-http://netbox_url.com/user/api-tokens/
-
-By default, this module will query the NetBox API for the platform associated
-with the device, and use the 'NAPALM driver' field to set the napalm
-proxy-minion driver. (Currently only 'napalm' is supported for drivertype.)
-
-This module assumes you will use SSH keys to authenticate to the network device
-If password authentication is desired, it is recommended to create another
-``proxy`` key in pillar_roots (or git_pillar) with just the ``passwd`` key and
-use :py:func:`salt.renderers.gpg <salt.renderers.gpg>` to encrypt the value.
-If any additional options for the proxy setup are needed they should also be
-configured in pillar_roots.
+    proxy_auth:
+      router1_username: router1
+      router1_password: password
+      junos_username: junos
+      junos_password: password
+      username: username
+      password: password
 '''
 
-
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
-try:
-    import requests
-    import ipaddress
-    _HAS_DEPENDENCIES = True
-except ImportError:
-    _HAS_DEPENDENCIES = False
+import logging
 
 log = logging.getLogger(__name__)
 
+try:
+    import pynetbox
+    HAS_PYNETBOX = True
+except ImportError:
+    HAS_PYNETBOX = False
+    log.error('pynetbox must be installed')
+
+try:
+    import netaddr
+    HAS_NETADDR = True
+except ImportError:
+    HAS_NETADDR = False
+    log.error('netaddr must be installed')
+
+# Pull the following from Netbox
+DEVICE_FIELDS = [
+    'id',
+    'display_name',
+    'device_type',
+    'device_role',
+    'primary_ip',
+    'primary_ip4',
+    'primary_ip6',
+    'custom_fields'
+]
+
+INTERFACE_FIELDS = [
+    'id',
+    'name',
+    'enabled',
+    'mtu',
+    'mac_address',
+    'description',
+    'form_factor',
+    'is_connected',
+    'mgmt_only',
+    'lag'
+]
+
+IP_FIELDS = [
+    'id',
+    'address',
+    'role',
+    'description',
+    'tenant',
+    'vrf.name',
+    'vrf.rd'
+]
+
 
 def __virtual__():
-    return _HAS_DEPENDENCIES
+    if HAS_PYNETBOX and HAS_NETADDR:
+        return True
+    return False
 
 
-def ext_pillar(minion_id, pillar, *args, **kwargs):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               url,
+               token=None,
+               keyfile=None,
+               proxy_config=False):
     '''
-    Query NetBox API for minion data
+    Get pillar information from Netbox
     '''
 
-    # Pull settings from kwargs
-    api_url = kwargs['api_url'].rstrip('/')
+    nb_api = pynetbox.api(url, token=token, private_key_file=keyfile)
+    device = nb_api.dcim.devices.get(name=minion_id)
+    device_info = {}
+    if device:
+        device.platform.full_details()
+        napalm_driver = device.platform.napalm_driver
+        # If a netbox device has a primary_ip address, it's status is active and
+        # a napalm driver is assigned to the device platform then add it to salt
+        device_info['netbox'] = {}
+        if hasattr(device, 'primary_ip') and device.status.label == 'Active' and napalm_driver:
 
-    api_token = kwargs.get('api_token', None)
-    proxy_username = kwargs.get('proxy_username', None)
-    proxy_return = kwargs.get('proxy_return', True)
+            # If proxy_config enabled in config, then add proxy pillar information
+            if proxy_config:
+                device_info['proxy'] = {}
+                device_info['proxy']['proxytype'] = 'napalm'
+                device_info['proxy']['driver'] = napalm_driver
+                device_info['proxy']['host'] = str(device.primary_ip.address.ip)
 
+                # Try and pull username/password from Netbox Secrets
+                secret = nb_api.secrets.secrets.get(device=minion_id, role='login-credentials')
+                if hasattr(secret, 'plaintext'):
+                    device_info['proxy']['username'] = secret.name
+                    device_info['proxy']['passwd'] = secret.plaintext
+                else:
+                    # Use credentials in salt config under 'proxy_auth'. If username is configured without a password,
+                    # it will use ssh private key for authentication
+                    credentials = __salt__['config.get']('proxy_auth')
+                    if credentials:
+                        if minion_id + '_username' in credentials:
+                            device_info['proxy']['username'] = credentials[minion_id + '_username']
+                            if minion_id + '_password' in credentials:
+                                device_info['proxy']['passwd'] = credentials[minion_id + '_password']
+                        elif napalm_driver + '_username' in credentials:
+                            device_info['proxy']['username'] = credentials[napalm_driver + '_username']
+                            if napalm_driver + '_password' in credentials:
+                                device_info['proxy']['passwd'] = credentials[napalm_driver + '_password']
+                        elif 'username' in credentials:
+                            device_info['proxy']['username'] = credentials['username']
+                            if 'password' in credentials:
+                                device_info['proxy']['passwd'] = credentials['password']
+
+        # Get device information from Netbox and add to the pillar
+        device_info['netbox'] = get_netbox_info(device, DEVICE_FIELDS)
+
+        # Get interface information from Netbox and add to the pillar
+        interfaces = nb_api.dcim.interfaces.filter(device=minion_id)
+        device_info['netbox']['interfaces'] = {}
+        for interface in interfaces:
+            device_info['netbox']['interfaces'][interface.name] = get_netbox_info(interface, INTERFACE_FIELDS)
+
+            # Get interface ip address information from Netbox and add to the pillar
+            ip_addresses = nb_api.ipam.ip_addresses.filter(interface_id=interface.id)
+            device_info['netbox']['interfaces'][interface.name]['ip_addresses'] = []
+
+            for ip_address in ip_addresses:
+                device_info['netbox']['interfaces'][interface.name]['ip_addresses'].append(
+                    get_netbox_info(ip_address, IP_FIELDS)
+                )
+
+    return device_info
+
+
+def get_netbox_info(obj, attributes):
+    '''
+    Get netbox information fro pynetbox object
+    '''
     ret = {}
-
-    headers = {}
-    if api_token:
-        headers['Authorization'] = 'Token ' + api_token
-
-    # Fetch device from API
-    device_results = requests.get(
-        api_url + '/dcim/devices/',
-        params={'name': minion_id, },
-        headers=headers,
-    )
-
-    # Check status code for API call
-    if device_results.status_code != requests.codes.ok:
-        log.warn('API query failed for "%s", status code: %d',
-                 minion_id, device_results.status_code)
-
-    # Assign results from API call to "netbox" key
-    try:
-        devices = device_results.json()['results']
-        if len(devices) == 1:
-            ret['netbox'] = devices[0]
-        elif len(devices) > 1:
-            log.error('More than one device found for "%s"', minion_id)
-    except Exception:
-        log.error('Device not found for "%s"', minion_id)
-    if proxy_return:
-        # Attempt to add "proxy" key, based on platform API call
-        try:
-            # Fetch device from API
-            platform_results = requests.get(
-                ret['netbox']['platform']['url'],
-                headers=headers,
-            )
-
-            # Check status code for API call
-            if platform_results.status_code != requests.codes.ok:
-                log.info('API query failed for "%s", status code: %d',
-                         minion_id, platform_results.status_code)
-
-            # Assign results from API call to "proxy" key if the platform has a
-            # napalm_driver defined.
-            napalm_driver = platform_results.json().get('napalm_driver')
-            if napalm_driver:
-                ret['proxy'] = {
-                    'host': str(ipaddress.IPv4Interface(
-                                ret['netbox']['primary_ip4']['address']).ip),
-                    'driver': napalm_driver,
-                    'proxytype': 'napalm',
-                }
-
-                if proxy_username:
-                    ret['proxy']['username'] = proxy_username
-
-        except Exception:
-            log.debug(
-                'Could not create proxy config data for "%s"', minion_id)
-
+    for field in attributes:
+        ret[field] = get_nested_attr(obj, field)
+        if isinstance(ret[field], (pynetbox.ipam.IpAddresses, pynetbox.lib.response.Record, netaddr.ip.IPNetwork)):
+            ret[field] = str(ret[field])
     return ret
+
+
+def get_nested_attr(obj, attr):
+    '''
+    Get nested attribute
+    '''
+    if attr:
+        attributes = attr.split(".")
+        for i in attributes:
+            try:
+                obj = getattr(obj, i)
+            except AttributeError:
+                obj = None
+    return obj
