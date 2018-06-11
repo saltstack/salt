@@ -1,0 +1,36 @@
+pipeline {
+    agent { label 'lint' }
+    environment {
+        PYENV_ROOT = "/usr/local/pyenv"
+        PATH = "$PYENV_ROOT/bin:$PATH"
+    }
+    stages {
+        stage('pylint setup') {
+            steps {
+                sh 'eval "$(pyenv init -)"; pyenv install 2.7.14 || echo "We already have this python."; pyenv local 2.7.14; pyenv shell 2.7.14'
+                sh 'eval "$(pyenv init -)"; pip install pylint SaltPyLint'
+                sh 'eval "$(pyenv init -)"; which pylint; pylint --version'
+            }
+        }
+        stage('salt linting') {
+            steps {
+                sh 'eval "$(pyenv init -)"; pylint --rcfile=.testing.pylintrc --disable=W1307,str-format-in-logging setup.py salt/modules/nix.py | tee pylint-report.xml'
+                archiveArtifacts artifacts: 'pylint-report.xml'
+            }
+        }
+        stage('test linting') {
+            steps {
+                sh 'eval "$(pyenv init -)"; pylint --rcfile=.testing.pylintrc --disable=W0232,E1002,W1307,str-format-in-logging salt/modules/nix.py | tee pylint-report-tests.xml'
+                archiveArtifacts artifacts: 'pylint-report-tests.xml'
+            }
+        }
+    }
+    post {
+        success {
+            githubNotify description: "The lint job has passed", status: "SUCCESS"
+        }
+        failure {
+            githubNotify description: "The lint job has failed", status: "FAILURE"
+        }
+    }
+}
