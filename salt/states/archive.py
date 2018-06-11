@@ -66,14 +66,28 @@ def _gen_checksum(path):
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path.join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
-    return salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path.join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a different drive (Windows)
+        if six.text_type(exc).startswith('path is on'):
+            drive, path = os.path.splitdrive(path)
+            relpath = salt.utils.path.join(
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
+            )
+        else:
+            raise
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
