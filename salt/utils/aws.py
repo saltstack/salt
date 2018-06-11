@@ -132,8 +132,8 @@ def creds(provider):
     else:
         ret_credentials = provider['id'], provider['key'], ''
 
-    if provider['role_arn'] is not None:
-        ret_credentials = assumed_creds(provider, role_arn=provider['role_arn'], location=None)
+    if provider.get('role_arn') is not None:
+        ret_credentials = assumed_creds(provider, role_arn=provider.get('role_arn'), location=None)
 
     return ret_credentials
 
