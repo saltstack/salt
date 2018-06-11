@@ -16,9 +16,11 @@ To use the EC2 cloud module, set up the cloud configuration at
       # EC2 metadata set both id and key to 'use-instance-role-credentials'
       id: GKTADJGHEIQSXMKKRBJ08H
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
       # If 'role_arn' is specified the above credentials are used to
-      # to assume to the role.
-      role_arn: None
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # The ssh keyname to use
       keyname: default
       # The amazon security group
