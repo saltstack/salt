@@ -6708,7 +6708,7 @@ def call(name, function, *args, **kwargs):
 
 def apply_(name, mods=None, **kwargs):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: Fluorine
 
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, ``apply`` is intended to be the main gateway for
@@ -6848,7 +6848,7 @@ def highstate(name, saltenv='base', **kwargs):
     '''
     Apply a highstate to the running container
 
-    .. versionadded:: Flourine
+    .. versionadded:: Fluorine
 
     The container does not need to have Salt installed, but Python is required.
 
