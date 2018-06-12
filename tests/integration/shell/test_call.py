@@ -407,7 +407,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Let's create an initial output file with some data
                 self.run_script(
                     'salt-call',
-                    '-c {0} --output-file={1} -l debug -g'.format(
+                    '-c {0} --output-file={1} -l trace -g'.format(
                         self.get_config_dir(),
                         output_file
                     ),
