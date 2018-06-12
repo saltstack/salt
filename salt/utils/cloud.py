@@ -136,6 +136,48 @@ def __render_script(path, vm_=None, opts=None, minion=''):
         with salt.utils.files.fopen(path, 'r') as fp_:
             return six.text_type(fp_.read())
 
+def __ssh_gateway_arguments(kwargs):
+    extended_arguments = ""
+
+    if 'ssh_gateway' in kwargs:
+      ssh_gateway = kwargs['ssh_gateway']
+      ssh_gateway_port = 22
+      ssh_gateway_key = ''
+      ssh_gateway_user = 'root'
+      ssh_gateway_command = 'nc -q0 %h %p'
+      if ':' in ssh_gateway:
+          ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+      if 'ssh_gateway_port' in kwargs:
+          ssh_gateway_port = kwargs['ssh_gateway_port']
+      if 'ssh_gateway_key' in kwargs:
+          ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+      if 'ssh_gateway_user' in kwargs:
+          ssh_gateway_user = kwargs['ssh_gateway_user']
+      if 'ssh_gateway_command' in kwargs:
+          ssh_gateway_command = kwargs['ssh_gateway_command']
+
+      # Setup ProxyCommand
+      extended_arguments = '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
+              # Don't add new hosts to the host key database
+              '-oStrictHostKeyChecking=no',
+              # Set hosts key database path to /dev/null, i.e., non-existing
+              '-oUserKnownHostsFile=/dev/null',
+              # Don't re-use the SSH connection. Less failures.
+              '-oControlPath=none',
+              ssh_gateway_key,
+              ssh_gateway_user,
+              ssh_gateway,
+              ssh_gateway_port,
+              ssh_gateway_command
+          )
+
+      log.info(
+          'Using SSH gateway %s@%s:%s %s',
+          ssh_gateway_user, ssh_gateway, ssh_gateway_port, ssh_gateway_command
+      )
+
+    return extended_arguments
+
 
 def has_winexe():
     '''
@@ -2057,39 +2099,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if 'port' in kwargs:
             ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-        if 'ssh_gateway' in kwargs:
-            ssh_gateway = kwargs['ssh_gateway']
-            ssh_gateway_port = 22
-            ssh_gateway_key = ''
-            ssh_gateway_user = 'root'
-            ssh_gateway_command = 'nc -q0 %h %p'
-            if ':' in ssh_gateway:
-                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-            if 'ssh_gateway_port' in kwargs:
-                ssh_gateway_port = kwargs['ssh_gateway_port']
-            if 'ssh_gateway_key' in kwargs:
-                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-            if 'ssh_gateway_user' in kwargs:
-                ssh_gateway_user = kwargs['ssh_gateway_user']
-            if 'ssh_gateway_command' in kwargs:
-                ssh_gateway_command = kwargs['ssh_gateway_command']
-
-            ssh_args.append(
-                # Setup ProxyCommand
-                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
-                    # Don't add new hosts to the host key database
-                    '-oStrictHostKeyChecking=no',
-                    # Set hosts key database path to /dev/null, i.e., non-existing
-                    '-oUserKnownHostsFile=/dev/null',
-                    # Don't re-use the SSH connection. Less failures.
-                    '-oControlPath=none',
-                    ssh_gateway_key,
-                    ssh_gateway_user,
-                    ssh_gateway,
-                    ssh_gateway_port,
-                    ssh_gateway_command
-                )
-            )
+        ssh_args.append(__ssh_gateway_arguments(kwargs))
 
         try:
             if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
@@ -2196,39 +2206,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if 'port' in kwargs:
             ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-        if 'ssh_gateway' in kwargs:
-            ssh_gateway = kwargs['ssh_gateway']
-            ssh_gateway_port = 22
-            ssh_gateway_key = ''
-            ssh_gateway_user = 'root'
-            ssh_gateway_command = 'nc -q0 %h %p'
-            if ':' in ssh_gateway:
-                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-            if 'ssh_gateway_port' in kwargs:
-                ssh_gateway_port = kwargs['ssh_gateway_port']
-            if 'ssh_gateway_key' in kwargs:
-                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-            if 'ssh_gateway_user' in kwargs:
-                ssh_gateway_user = kwargs['ssh_gateway_user']
-            if 'ssh_gateway_command' in kwargs:
-                ssh_gateway_command = kwargs['ssh_gateway_command']
-
-            ssh_args.append(
-                # Setup ProxyCommand
-                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
-                    # Don't add new hosts to the host key database
-                    '-oStrictHostKeyChecking=no',
-                    # Set hosts key database path to /dev/null, i.e., non-existing
-                    '-oUserKnownHostsFile=/dev/null',
-                    # Don't re-use the SSH connection. Less failures.
-                    '-oControlPath=none',
-                    ssh_gateway_key,
-                    ssh_gateway_user,
-                    ssh_gateway,
-                    ssh_gateway_port,
-                    ssh_gateway_command
-                )
-            )
+        ssh_args.append(__ssh_gateway_arguments(kwargs))
 
         try:
             if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
@@ -2362,43 +2340,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     if 'ssh_timeout' in kwargs:
         ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        ssh_gateway_command = 'nc -q0 %h %p'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
-        if 'ssh_gateway_command' in kwargs:
-            ssh_gateway_command = kwargs['ssh_gateway_command']
-
-        ssh_args.extend([
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port,
-                ssh_gateway_command
-            )
-        ])
-        log.info(
-            'Using SSH gateway %s@%s:%s',
-            ssh_gateway_user, ssh_gateway, ssh_gateway_port
-        )
+    ssh_args.extend([__ssh_gateway_arguments(kwargs))
 
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
