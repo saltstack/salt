@@ -142,13 +142,10 @@ def __ssh_gateway_arguments(kwargs):
     if 'ssh_gateway' in kwargs:
       ssh_gateway = kwargs['ssh_gateway']
       ssh_gateway_port = 22
-      ssh_gateway_key = ''
       if ':' in ssh_gateway:
           ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
       ssh_gateway_port = kwargs.get('ssh_gateway_port', ssh_gateway_port)
-      if 'ssh_gateway_key' in kwargs:
-          ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-
+      ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key']) if 'ssh_gateway_key' in kwargs else ''
       ssh_gateway_user = kwargs.get('ssh_gateway_user', 'root')
       ssh_gateway_command = kwargs.get('ssh_gateway_command', 'nc -q0 %h %p')
 
