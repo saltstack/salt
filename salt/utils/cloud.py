@@ -139,11 +139,12 @@ def __render_script(path, vm_=None, opts=None, minion=''):
 def __ssh_gateway_arguments(kwargs):
     extended_arguments = ""
 
-    if 'ssh_gateway' in kwargs:
-      ssh_gateway = kwargs['ssh_gateway']
-      ssh_gateway_port = 22
-      if ':' in ssh_gateway:
-          ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+    ssh_gateway = kwargs.get('ssh_gateway', '')
+    ssh_gateway_port = 22
+    if ':' in ssh_gateway:
+        ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+
+    if ssh_gateway:
       ssh_gateway_port = kwargs.get('ssh_gateway_port', ssh_gateway_port)
       ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key']) if 'ssh_gateway_key' in kwargs else ''
       ssh_gateway_user = kwargs.get('ssh_gateway_user', 'root')
