@@ -87,6 +87,7 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
+import xml.dom
 from xml.dom import minidom
 import jinja2
 import jinja2.exceptions
@@ -2500,14 +2501,444 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
 
 def _capabilities(conn):
     '''
-    Return connection capabilities
-    It's a huge klutz to parse right,
-    so hide func for now and pass on the XML instead
+    Return connection capabilities as XML.
     '''
     caps = conn.getCapabilities()
     caps = minidom.parseString(caps)
 
     return caps
+
+
+def _get_xml_first_element_by_tag_name(node, name):
+    '''
+    Convenience function getting the first result of getElementsByTagName() or None.
+    '''
+    nodes = node.getElementsByTagName(name)
+    return nodes[0] if nodes else None
+
+
+def _get_xml_element_text(node):
+    '''
+    Get the text value of an XML element.
+    '''
+    return "".join([child.data for child in node.childNodes if child.nodeType == xml.dom.Node.TEXT_NODE])
+
+
+def _get_xml_child_text(node, name, default):
+    '''
+    Get the text value of the child named name of XML element node
+    '''
+    result = "".join([_get_xml_element_text(child) for child in node.childNodes
+                      if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == name])
+    return result if result else default
+
+
+def _caps_add_machine(machines, node):
+    '''
+    Parse the <machine> element of the host capabilities and add it
+    to the machines list.
+    '''
+    maxcpus = node.getAttribute('maxCpus')
+    canonical = node.getAttribute('canonical')
+    name = _get_xml_element_text(node)
+
+    alternate_name = ""
+    if canonical:
+        alternate_name = name
+        name = canonical
+
+    machine = machines.get(name)
+    if not machine:
+        machine = {'alternate_names': []}
+        if maxcpus:
+            machine['maxcpus'] = int(maxcpus)
+        machines[name] = machine
+    if alternate_name:
+        machine['alternate_names'].append(alternate_name)
+
+
+def _parse_caps_guest(guest):
+    '''
+    Parse the <guest> element of the connection capabilities XML
+    '''
+    arch_node = _get_xml_first_element_by_tag_name(guest, 'arch')
+    result = {
+        'os_type': _get_xml_element_text(guest.getElementsByTagName('os_type')[0]),
+        'arch': {
+            'name': arch_node.getAttribute('name'),
+            'machines': {},
+            'domains': {}
+        },
+    }
+
+    for child in arch_node.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+        if child.tagName == 'wordsize':
+            result['arch']['wordsize'] = int(_get_xml_element_text(child))
+        elif child.tagName == 'emulator':
+            result['arch']['emulator'] = _get_xml_element_text(child)
+        elif child.tagName == 'machine':
+            _caps_add_machine(result['arch']['machines'], child)
+        elif child.tagName == 'domain':
+            domain_type = child.getAttribute('type')
+            domain = {
+                'emulator': None,
+                'machines': {}
+            }
+            emulator_node = _get_xml_first_element_by_tag_name(child, 'emulator')
+            if emulator_node:
+                domain['emulator'] = _get_xml_element_text(emulator_node)
+            for machine in child.getElementsByTagName('machine'):
+                _caps_add_machine(domain['machines'], machine)
+            result['arch']['domains'][domain_type] = domain
+
+    # Note that some features have no default and toggle attributes.
+    # This may not be a perfect match, but represent them as enabled by default
+    # without possibility to toggle them.
+    features_node = _get_xml_first_element_by_tag_name(guest, 'features')
+    result['features'] = {child.tagName: {'toggle': True if child.getAttribute('toggle') == 'yes' else False,
+                                          'default': True if child.getAttribute('default') == 'no' else True}
+                          for child in features_node.childNodes if child.nodeType == xml.dom.Node.ELEMENT_NODE}
+
+    return result
+
+
+def _parse_caps_cell(cell):
+    '''
+    Parse the <cell> nodes of the connection capabilities XML output.
+    '''
+    result = {
+        'id': int(cell.getAttribute('id'))
+    }
+
+    mem_node = _get_xml_first_element_by_tag_name(cell, 'memory')
+    if mem_node:
+        unit = mem_node.getAttribute('unit') if mem_node.hasAttribute('unit') else 'KiB'
+        memory = _get_xml_element_text(mem_node)
+        result['memory'] = "{} {}".format(memory, unit)
+
+    pages = [{'size': "{} {}".format(page.getAttribute('size'),
+                                     page.getAttribute('unit') if page.getAttribute('unit') else 'KiB'),
+              'available': int(_get_xml_element_text(page))}
+             for page in cell.getElementsByTagName('pages')]
+    if pages:
+        result['pages'] = pages
+
+    distances = {int(distance.getAttribute('id')): int(distance.getAttribute('value'))
+                 for distance in cell.getElementsByTagName('sibling')}
+    if distances:
+        result['distances'] = distances
+
+    cpus = []
+    for cpu_node in cell.getElementsByTagName('cpu'):
+        cpu = {
+            'id': int(cpu_node.getAttribute('id'))
+        }
+        socket_id = cpu_node.getAttribute('socket_id')
+        if socket_id:
+            cpu['socket_id'] = int(socket_id)
+
+        core_id = cpu_node.getAttribute('core_id')
+        if core_id:
+            cpu['core_id'] = int(core_id)
+        siblings = cpu_node.getAttribute('siblings')
+        if siblings:
+            cpu['siblings'] = siblings
+        cpus.append(cpu)
+    if cpus:
+        result['cpus'] = cpus
+
+    return result
+
+
+def _parse_caps_bank(bank):
+    '''
+    Parse the <bank> element of the connection capabilities XML.
+    '''
+    result = {
+        'id': int(bank.getAttribute('id')),
+        'level': int(bank.getAttribute('level')),
+        'type': bank.getAttribute('type'),
+        'size': "{} {}".format(bank.getAttribute('size'), bank.getAttribute('unit')),
+        'cpus': bank.getAttribute('cpus')
+    }
+
+    controls = []
+    for control in bank.getElementsByTagName('control'):
+        unit = control.getAttribute('unit')
+        result_control = {
+            'granularity': "{} {}".format(control.getAttribute('granularity'), unit),
+            'type': control.getAttribute('type'),
+            'maxAllocs': int(control.getAttribute('maxAllocs'))
+        }
+
+        minimum = control.getAttribute('min')
+        if minimum:
+            result_control['min'] = "{} {}".format(minimum, unit)
+        controls.append(result_control)
+    if controls:
+        result['controls'] = controls
+
+    return result
+
+
+def _parse_caps_host(host):
+    '''
+    Parse the <host> element of the connection capabilities XML.
+    '''
+    result = {}
+    for child in host.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+
+        if child.tagName == 'uuid':
+            result['uuid'] = _get_xml_element_text(child)
+
+        elif child.tagName == 'cpu':
+            cpu = {
+                'arch': _get_xml_child_text(child, 'arch', None),
+                'model': _get_xml_child_text(child, 'model', None),
+                'vendor': _get_xml_child_text(child, 'vendor', None),
+                'features': [feature.getAttribute('name') for feature in child.getElementsByTagName('feature')],
+                'pages': [{'size': '{} {}'.format(page.getAttribute('size'),
+                                                  page.getAttribute('unit') if page.hasAttribute('unit') else 'KiB')}
+                          for page in child.getElementsByTagName('pages')]
+            }
+            # Parse the cpu tag
+            microcode = _get_xml_first_element_by_tag_name(child, 'microcode')
+            if microcode:
+                cpu['microcode'] = microcode.getAttribute('version')
+
+            topology = _get_xml_first_element_by_tag_name(child, 'topology')
+            if topology:
+                cpu['sockets'] = int(topology.getAttribute('sockets'))
+                cpu['cores'] = int(topology.getAttribute('cores'))
+                cpu['threads'] = int(topology.getAttribute('threads'))
+            result['cpu'] = cpu
+
+        elif child.tagName == "power_management":
+            result['power_management'] = [node.tagName for node in child.childNodes
+                                          if node.nodeType == xml.dom.Node.ELEMENT_NODE]
+
+        elif child.tagName == "migration_features":
+            result['migration'] = {
+                'live': bool(child.getElementsByTagName('live')),
+                'transports': [_get_xml_element_text(node) for node in child.getElementsByTagName('uri_transport')]
+            }
+
+        elif child.tagName == "topology":
+            result['topology'] = {
+                'cells': [_parse_caps_cell(cell) for cell in child.getElementsByTagName('cell')]
+            }
+
+        elif child.tagName == 'cache':
+            result['cache'] = {
+                'banks': [_parse_caps_bank(bank) for bank in child.getElementsByTagName('bank')]
+            }
+
+    result['security'] = [{
+            'model': _get_xml_child_text(secmodel, 'model', None),
+            'doi': _get_xml_child_text(secmodel, 'doi', None),
+            'baselabels': [{'type': label.getAttribute('type'), 'label': _get_xml_element_text(label)}
+                           for label in secmodel.getElementsByTagName('baselabel')]
+        }
+        for secmodel in host.getElementsByTagName('secmodel')]
+
+    return result
+
+
+def capabilities(**kwargs):
+    '''
+    Return the hypervisor connection capabilities.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.capabilities
+    '''
+    conn = __get_conn(**kwargs)
+    caps = _capabilities(conn)
+    conn.close()
+
+    return {
+        'host': _parse_caps_host(caps.getElementsByTagName('host')[0]),
+        'guests': [_parse_caps_guest(guest) for guest in caps.getElementsByTagName('guest')]
+    }
+
+
+def _parse_caps_enum(node):
+    '''
+    Return a tuple containing the name of the enum and the possible values
+    '''
+    return (node.getAttribute('name') or None,
+            [_get_xml_element_text(value) for value in node.getElementsByTagName('value')])
+
+
+def _parse_caps_cpu(node):
+    '''
+    Parse the <cpu> element of the domain capabilities
+    '''
+    result = {}
+    for mode in node.getElementsByTagName('mode'):
+        if not mode.getAttribute('supported') == 'yes':
+            continue
+
+        name = mode.getAttribute('name')
+        if name == 'host-passthrough':
+            result[name] = True
+
+        elif name == 'host-model':
+            host_model = {}
+            model_node = _get_xml_first_element_by_tag_name(mode, 'model')
+            if model_node:
+                model = {
+                    'name': _get_xml_element_text(model_node)
+                }
+
+                vendor_id = model_node.getAttribute('vendor_id')
+                if vendor_id:
+                    model['vendor_id'] = vendor_id
+
+                fallback = model_node.getAttribute('fallback')
+                if fallback:
+                    model['fallback'] = fallback
+                host_model['model'] = model
+
+            vendor = _get_xml_child_text(mode, 'vendor', None)
+            if vendor:
+                host_model['vendor'] = vendor
+
+            features = {feature.getAttribute('name'): feature.getAttribute('policy')
+                        for feature in mode.getElementsByTagName('feature')}
+            if features:
+                host_model['features'] = features
+
+            result[name] = host_model
+
+        elif name == 'custom':
+            custom_model = {}
+            models = {_get_xml_element_text(model): model.getAttribute('usable')
+                      for model in mode.getElementsByTagName('model')}
+            if models:
+                custom_model['models'] = models
+            result[name] = custom_model
+
+    return result
+
+
+def _parse_caps_devices_features(node):
+    '''
+    Parse the devices or features list of the domain capatilities
+    '''
+    result = {}
+    for child in node.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE or not child.getAttribute('supported') == 'yes':
+            continue
+        enums = [_parse_caps_enum(node) for node in child.getElementsByTagName('enum')]
+        result[child.tagName] = {item[0]: item[1] for item in enums if item[0]}
+    return result
+
+
+def _parse_caps_loader(node):
+    '''
+    Parse the <loader> element of the domain capabilities.
+    '''
+    enums = [_parse_caps_enum(enum) for enum in node.getElementsByTagName('enum')]
+    result = {item[0]: item[1] for item in enums if item[0]}
+
+    values = [_get_xml_element_text(child) for child in node.childNodes
+              if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == 'value']
+
+    if values:
+        result['values'] = values
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    '''
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    ..versionadded:: Fluorine
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided the libvirt default domain capabilities
+    will be returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    '''
+    conn = __get_conn(**kwargs)
+    caps = conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
+    caps = minidom.parseString(caps)
+    conn.close()
+
+    root_node = caps.getElementsByTagName('domainCapabilities')[0]
+
+    result = {
+        'emulator': _get_xml_child_text(root_node, 'path', None),
+        'domain': _get_xml_child_text(root_node, 'domain', None),
+        'machine': _get_xml_child_text(root_node, 'machine', None),
+        'arch': _get_xml_child_text(root_node, 'arch', None)
+    }
+
+    for child in root_node.childNodes:
+        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+
+        if child.tagName == 'vcpu' and child.getAttribute('max'):
+            result['max_vcpus'] = int(child.getAttribute('max'))
+
+        elif child.tagName == 'iothreads':
+            iothreads = child.getAttribute('supported') == 'yes'
+            if iothreads is not None:
+                result['iothreads'] = iothreads
+
+        elif child.tagName == 'os':
+            result['os'] = {}
+            loader_node = _get_xml_first_element_by_tag_name(child, 'loader')
+            if loader_node and loader_node.getAttribute('supported') == 'yes':
+                loader = _parse_caps_loader(loader_node)
+                result['os']['loader'] = loader
+
+        elif child.tagName == 'cpu':
+            cpu = _parse_caps_cpu(child)
+            if cpu:
+                result['cpu'] = cpu
+
+        elif child.tagName == 'devices':
+            devices = _parse_caps_devices_features(child)
+            if devices:
+                result['devices'] = devices
+
+        elif child.tagName == 'features':
+            features = _parse_caps_devices_features(child)
+            if features:
+                result['features'] = features
+
+    return result
 
 
 def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
