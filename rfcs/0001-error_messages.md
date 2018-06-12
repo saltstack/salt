@@ -11,7 +11,10 @@ Extract error messages in separate files to allow packagers to customize them
 # Motivation
 [motivation]: #motivation
 
-Sometimes we need to have custom error/suggestions messages in order to point to the right package names depending on the context (eg: OS)
+Having the errors spread everywhere makes it harder to maintain and document them.
+In addition to the above, sometimes the packagers need a way to have custom error/suggestions messages in order to point to the right package names depending on the context (eg: OS)
+An example of packge suggestion could be with salt-ssh cross-version (SUSE has own package names) and/or modules dependencies.
+(when some module needs a package to be installed in order to work it could point to the right name and make user's life easy)
 
 # Design
 [design]: #detailed-design
