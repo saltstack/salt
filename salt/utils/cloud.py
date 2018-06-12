@@ -143,18 +143,15 @@ def __ssh_gateway_arguments(kwargs):
       ssh_gateway = kwargs['ssh_gateway']
       ssh_gateway_port = 22
       ssh_gateway_key = ''
-      ssh_gateway_user = 'root'
-      ssh_gateway_command = 'nc -q0 %h %p'
       if ':' in ssh_gateway:
           ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
       if 'ssh_gateway_port' in kwargs:
           ssh_gateway_port = kwargs['ssh_gateway_port']
       if 'ssh_gateway_key' in kwargs:
           ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-      if 'ssh_gateway_user' in kwargs:
-          ssh_gateway_user = kwargs['ssh_gateway_user']
-      if 'ssh_gateway_command' in kwargs:
-          ssh_gateway_command = kwargs['ssh_gateway_command']
+
+      ssh_gateway_user = kwargs.get('ssh_gateway_user', 'root')
+      ssh_gateway_command = kwargs.get('ssh_gateway_command', 'nc -q0 %h %p')
 
       # Setup ProxyCommand
       extended_arguments = '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
