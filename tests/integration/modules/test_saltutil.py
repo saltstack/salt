@@ -198,7 +198,18 @@ class SaltUtilSyncPillarTest(ModuleCase):
                      '''))
 
         self.run_function('saltutil.refresh_pillar')
-        self.run_function('test.sleep', [5])
+
+        pillar = False
+        timeout = time.time() + 30
+        while not pillar:
+            post_pillar = self.run_function('pillar.raw')
+            try:
+                self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                pillar = True
+            except AssertionError:
+                if time.time() > timeout:
+                    self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                continue
 
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))

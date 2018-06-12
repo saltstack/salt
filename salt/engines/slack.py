@@ -18,10 +18,11 @@ the saltmaster's minion pillar.
 
 .. versionadded: 2016.3.0
 
-:configuration: Example configuration using only a 'default' group. The default group is not special.
-In addition, other groups are being loaded from pillars.
+:configuration: Example configuration using only a 'default' group. The default
+    group is not special.  In addition, other groups are being loaded from
+    pillars.
 
-.. code-block:: yaml
+.. code-block:: text
 
     engines:
       - slack:
@@ -42,7 +43,7 @@ In addition, other groups are being loaded from pillars.
                 list_jobs:
                   cmd: jobs.list_jobs
                 list_commands:
-                  cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+                  cmd: 'pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list'
               default_target:
                 target: saltmaster
                 tgt_type: glob
@@ -54,12 +55,14 @@ In addition, other groups are being loaded from pillars.
                   target: saltmaster
                   tgt_type: list
 
-:configuration: Example configuration using the 'default' group and a non-default group and a pillar that will be merged in
-    If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
+:configuration: Example configuration using the 'default' group and a
+    non-default group and a pillar that will be merged in If the user is '*'
+    (without the quotes) then the group's users or commands will match all
+    users as appropriate
 
 .. versionadded: 2017.7.0
 
-.. code-block:: yaml
+.. code-block:: text
 
     engines:
       - slack:
@@ -79,7 +82,7 @@ In addition, other groups are being loaded from pillars.
                 list_jobs:
                   cmd: jobs.list_jobs
                 list_commands:
-                  cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+                  cmd: 'pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list'
             gods:
               users:
                 - garethgreenaway
@@ -401,13 +404,16 @@ class SlackClient(object):
         input_valid_users = set
         input_valid_commands = set
 
-        When the trigger_string prefixes the message text, yields a dictionary of {
-            'message_data': m_data,
-            'cmdline': cmdline_list, # this is a list
-            'channel': channel,
-            'user': m_data['user'],
-            'slack_client': sc
-        }
+        When the trigger_string prefixes the message text, yields a dictionary
+        of::
+
+            {
+                'message_data': m_data,
+                'cmdline': cmdline_list, # this is a list
+                'channel': channel,
+                'user': m_data['user'],
+                'slack_client': sc
+            }
 
         else yields {'message_data': m_data} and the caller can handle that
 
@@ -526,17 +532,18 @@ class SlackClient(object):
         If no configured target is provided, the command line will be parsed
         for target=foo and tgt_type=bar
 
-        Test for this:
-        h = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
-            'default_target': {'target': '*', 'tgt_type': 'glob'},
-            'targets': {'pillar.get': {'target': 'you_momma', 'tgt_type': 'list'}},
-            'users': {'dmangot', 'jmickle', 'pcn'}}
-        f = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
-             'default_target': {}, 'targets': {},'users': {'dmangot', 'jmickle', 'pcn'}}
+        Test for this::
 
-        g = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
-             'default_target': {'target': '*', 'tgt_type': 'glob'},
-             'targets': {}, 'users': {'dmangot', 'jmickle', 'pcn'}}
+            h = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
+                'default_target': {'target': '*', 'tgt_type': 'glob'},
+                'targets': {'pillar.get': {'target': 'you_momma', 'tgt_type': 'list'}},
+                'users': {'dmangot', 'jmickle', 'pcn'}}
+            f = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
+                 'default_target': {}, 'targets': {},'users': {'dmangot', 'jmickle', 'pcn'}}
+
+            g = {'aliases': {}, 'commands': {'cmd.run', 'pillar.get'},
+                 'default_target': {'target': '*', 'tgt_type': 'glob'},
+                 'targets': {}, 'users': {'dmangot', 'jmickle', 'pcn'}}
 
         Run each of them through ``get_configured_target(('foo', f), 'pillar.get')`` and confirm a valid target
 

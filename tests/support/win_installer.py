@@ -54,7 +54,8 @@ def latest_version(repo=REPO):
     '''
     Return the latest version found on the salt repository webpage.
     '''
-    for name, md5 in iter_installers(requests.get(repo).content):
+    content = requests.get(repo).content.decode('utf-8')
+    for name, md5 in iter_installers(content):
         pass
     return split_installer(name)[0]
 

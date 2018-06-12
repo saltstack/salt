@@ -1,5 +1,5 @@
-salt.modules.libcloud_storage module
-================================
+salt.modules.libcloud_storage
+=============================
 
 .. automodule:: salt.modules.libcloud_storage
     :members:

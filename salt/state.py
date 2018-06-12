@@ -261,11 +261,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
@@ -2139,7 +2149,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.0001)
+            time.sleep(0.01)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2335,7 +2345,7 @@ class State(object):
             while True:
                 if self.reconcile_procs(run_dict):
                     break
-                time.sleep(0.0001)
+                time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
