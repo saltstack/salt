@@ -1065,9 +1065,9 @@ class DaemonMixInTestCase(TestCase):
         '''
         if salt.utils.platform.is_windows():
             patch_args = ('salt.utils.win_functions.is_admin',
-                          MagicMock(return_value=True))
+                          MagicMock(return_value=False))
         else:
-            patch_args = ('os.getuid', MagicMock(return_value=0))
+            patch_args = ('os.getuid', MagicMock(return_value=1000))
 
         with patch(*patch_args):
             self.daemon_mixin._mixin_before_exit()
