@@ -572,21 +572,20 @@ def _gen_xml(name,
 
 def _gen_vol_xml(vmname,
                  diskname,
+                 disktype,
                  size,
-                 hypervisor,
-                 **kwargs):
+                 pool):
     '''
     Generate the XML string to define a libvirt storage volume
     '''
     size = int(size) * 1024  # MB
-    disk_info = _get_image_info(hypervisor, vmname, **kwargs)
     context = {
         'name': vmname,
-        'filename': '{0}.{1}'.format(diskname, disk_info['disktype']),
+        'filename': '{0}.{1}'.format(diskname, disktype),
         'volname': diskname,
-        'disktype': disk_info['disktype'],
+        'disktype': disktype,
         'size': six.text_type(size),
-        'pool': disk_info['pool'],
+        'pool': pool,
     }
     fn_ = 'libvirt_volume.jinja'
     try:
@@ -782,25 +781,6 @@ def _qemu_image_create(vm_name,
             )
 
     return img_dest
-
-
-# TODO: this function is deprecated, should be merged and replaced
-# with _disk_profile()
-def _get_image_info(hypervisor, name, **kwargs):
-    '''
-    Determine disk image info, such as filename, image format and
-    storage pool, based on which hypervisor is used
-    '''
-    ret = {}
-    if hypervisor in ['esxi', 'vmware']:
-        ret['disktype'] = 'vmdk'
-        ret['filename'] = '{0}{1}'.format(name, '.vmdk')
-        ret['pool'] = '[{0}] '.format(kwargs.get('pool', '0'))
-    elif hypervisor in ['kvm', 'qemu']:
-        ret['disktype'] = 'qcow2'
-        ret['filename'] = '{0}{1}'.format(name, '.qcow2')
-        ret['pool'] = __salt__['config.option']('virt.images')
-    return ret
 
 
 def _disk_profile(profile, hypervisor, **kwargs):
@@ -1114,8 +1094,9 @@ def init(name,
                     vol_xml = _gen_vol_xml(
                         name,
                         disk_name,
+                        args['format'],
                         args['size'],
-                        hypervisor,
+                        args['pool']
                     )
                     define_vol_xml_str(vol_xml)
 
