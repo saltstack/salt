@@ -20,6 +20,15 @@ Sometimes we need to have custom error/suggestions messages in order to point to
 
 At the moment, the errors are spread within the code.
 
+Examples:
+
+- state.py:
+    - https://github.com/saltstack/salt/blob/713ae1dca7f100e6ce19a7a2b714e0b2e168d0c1/salt/state.py#L443
+    - https://github.com/saltstack/salt/blob/713ae1dca7f100e6ce19a7a2b714e0b2e168d0c1/salt/state.py#L478
+
+- salt-ssh:
+    - https://github.com/saltstack/salt/blob/develop/salt/client/ssh/__init__.py#L1396-L1457
+
 ### Proposed Design
 
 The simplest solution would be to extract all of them in a separate file.
@@ -38,11 +47,14 @@ Open for suggestions.
 ## Unresolved questions
 [unresolved]: #unresolved-questions
 
-N/A
+- how to allow modules to implement their own error messages?
+- how to handle the unique identifiers? should we have different scopes?
 
 # Drawbacks
 [drawbacks]: #drawbacks
 
 
 # Trade-offs
+
+- maintaining an index of unique error messages is not ~desired~ easy in a modular system
 
