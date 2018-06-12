@@ -286,24 +286,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0['source'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
 
-    def test_gen_vol_xml_for_kvm(self):
+    def test_gen_vol_xml(self):
         '''
-        Test virt._get_vol_xml(), KVM case
+        Test virt._get_vol_xml()
         '''
-        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
+        xml_data = virt._gen_vol_xml('vmname', 'system', 'qcow2', 8192, '/path/to/image/')
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
-        self.assertEqual(root.find('key').text, 'vmname/system')
-        self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
-        self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
-
-    def test_gen_vol_xml_for_esxi(self):
-        '''
-        Test virt._get_vol_xml(), ESXi case
-        '''
-        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'vmname/system.vmdk')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
