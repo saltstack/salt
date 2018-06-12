@@ -45,8 +45,8 @@ Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
 are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
 more information.
 
-Network Configuration in :py:func:`docker_container.running` States
-*******************************************************************
+Network Configuration in :py:func:`docker_container.running <salt.states.docker_container.running>` States
+**********************************************************************************************************
 
 A long-requested feature has finally been added! It is now possible to
 configure static IPv4/IPv6 addresses, as well as links and labels. See
@@ -54,9 +54,10 @@ configure static IPv4/IPv6 addresses, as well as links and labels. See
 information.
 
 .. note::
-    While the ``containers`` argument to :py:func:`docker_network.present`
-    will continue to be supported, it will no longer be the recommended way of
-    ensuring that a container is attached to a network.
+    While the ``containers`` argument to :py:func:`docker_network.present
+    <salt.states.docker_network.present>` will continue to be supported, it
+    will no longer be the recommended way of ensuring that a container is
+    attached to a network.
 
 Improved Handling of Images from Custom Registries
 **************************************************
