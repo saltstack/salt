@@ -275,19 +275,21 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
             # without fromrepo, but within the scope
             cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=True)}):
-                yumpkg.latest_version(
-                    'foo',
-                    refresh=False,
-                    enablerepo='good',
-                    disablerepo='bad',
-                    branch='foo')
-                cmd.assert_called_once_with(
-                    ['systemd-run', '--scope', 'yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
-                     '--branch=foo', 'list', 'available', 'foo'], env={},
-                    ignore_retcode=True,
-                    output_loglevel='trace',
-                    python_shell=False)
+            with patch('salt.utils.systemd.has_scope', MagicMock(return_value=True)):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd,
+                                                  'config.get': MagicMock(return_value=True)}):
+                    yumpkg.latest_version(
+                        'foo',
+                        refresh=False,
+                        enablerepo='good',
+                        disablerepo='bad',
+                        branch='foo')
+                    cmd.assert_called_once_with(
+                        ['systemd-run', '--scope', 'yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
+                         '--branch=foo', 'list', 'available', 'foo'], env={},
+                        ignore_retcode=True,
+                        output_loglevel='trace',
+                        python_shell=False)
 
     def test_list_repo_pkgs_with_options(self):
         '''
@@ -676,7 +678,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             sys.modules['yum'] = Mock()
         with patch('yum.YumBase') as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
-            self.assertRaises(CommandExecutionError, yumpkg._get_yum_config)
+            with pytest.raises(CommandExecutionError):
+                yumpkg._get_yum_config()
 
 
 @skipIf(pytest is None, 'PyTest is missing')
