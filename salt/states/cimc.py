@@ -2,7 +2,7 @@
 '''
 A state module to manage Cisco UCS chassis devices.
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -14,7 +14,7 @@ This state module was designed to handle connections to a Cisco Unified Computin
 relies on the CIMC proxy module to interface with the device.
 
 .. seealso::
-    :prox:`CIMC Proxy Module <salt.proxy.cimc>`
+    :py:mod:`CIMC Proxy Module <salt.proxy.cimc>`
 
 '''
 
