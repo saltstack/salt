@@ -2377,7 +2377,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
         if 'ssh_gateway_user' in kwargs:
             ssh_gateway_user = kwargs['ssh_gateway_user']
         if 'ssh_gateway_command' in kwargs:
-            ssh_gateway_command = kargs['ssh_gateway_command']
+            ssh_gateway_command = kwargs['ssh_gateway_command']
 
         ssh_args.extend([
             # Setup ProxyCommand
