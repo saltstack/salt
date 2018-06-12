@@ -968,9 +968,17 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     # Log error only when running salt-master as a root user.
                     # Otherwise this can be ignored, since salt-master is able to
                     # overwrite the PIDfile on the next start.
-                    if not os.getuid():
-                        logger.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
+                    def log_error():
+                        logger.info('PIDfile could not be deleted: %s',
+                                    six.text_type(self.config['pidfile']))
                         logger.debug(six.text_type(err))
+                    if salt.utils.platform.is_windows():
+                        user = salt.utils.win_functions.get_current_user()
+                        if salt.utils.win_functions.is_admin(user):
+                            log_error()
+                    else:
+                        if not os.getuid():
+                            log_error()
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
