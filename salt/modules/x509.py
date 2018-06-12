@@ -950,7 +950,6 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        # serial_number = str(int(serial_number, 16))
         serial_number = str(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
