@@ -2340,7 +2340,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     if 'ssh_timeout' in kwargs:
         ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
-    ssh_args.extend([__ssh_gateway_arguments(kwargs))
+    ssh_args.extend([__ssh_gateway_arguments(kwargs)])
 
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
