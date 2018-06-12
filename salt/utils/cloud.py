@@ -145,8 +145,7 @@ def __ssh_gateway_arguments(kwargs):
       ssh_gateway_key = ''
       if ':' in ssh_gateway:
           ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-      if 'ssh_gateway_port' in kwargs:
-          ssh_gateway_port = kwargs['ssh_gateway_port']
+      ssh_gateway_port = kwargs.get('ssh_gateway_port', ssh_gateway_port)
       if 'ssh_gateway_key' in kwargs:
           ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
 
