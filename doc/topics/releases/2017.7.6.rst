@@ -1,10 +1,9 @@
-========================================
-In Progress: Salt 2017.7.6 Release Notes
-========================================
+===========================
+Salt 2017.7.6 Release Notes
+===========================
 
-Version 2017.7.6 is an **unreleased** bugfix release for :ref:`2017.7.0
-<release-2017-7-0>`.  This release is still in progress and has not been
-released yet.
+Version 2017.7.6 is a bugfix release for :ref:`2017.7.0
+<release-2017-7-0>`.
 
 
 Statistics
