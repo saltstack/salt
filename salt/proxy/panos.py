@@ -319,6 +319,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'dev_pass':
             # Pass credentials without the target declaration
@@ -330,6 +331,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'pan_key':
             # Pass the api key with the target declaration
@@ -342,6 +344,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'pan_pass':
             # Pass credentials with the target declaration
@@ -355,12 +358,31 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
     except KeyError as err:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
 
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
+
+    if str(r['status']) not in ['200', '201', '204']:
+        if str(r['status']) == '400':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request due to a client error.")
+        elif str(r['status']) == '401':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request because it lacks valid authentication "
+                "credentials for the target resource.")
+        elif str(r['status']) == '403':
+            raise salt.exceptions.CommandExecutionError(
+                "The server refused to authorize the request.")
+        elif str(r['status']) == '404':
+            raise salt.exceptions.CommandExecutionError(
+                "The requested resource could not be found.")
+        else:
+            raise salt.exceptions.CommandExecutionError(
+                "Did not receive a valid response from host.")
 
     xmldata = ET.fromstring(r['text'])
 
