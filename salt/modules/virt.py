@@ -43,6 +43,8 @@ the remote libvirt machine.
 Per call connection setup
 -------------------------
 
+.. versionadded:: Fluorine
+
 All the calls requiring the libvirt connection configuration as mentioned above can
 override this configuration using ``connection``, ``username`` and ``password`` parameters.
 
@@ -55,17 +57,17 @@ whatever the ``virt:connection`` is.
 
 The calls not using the libvirt connection setup are:
 
- - get_profiles
- - seed_non_shared_migrate
- - virt_type
- - is_*hyper
- - all migration functions
+- ``get_profiles``
+- ``seed_non_shared_migrate``
+- ``virt_type``
+- ``is_*hyper``
+- all migration functions
 
 Reference:
 
- - http://libvirt.org/drvesx.html#uriformat
- - http://libvirt.org/uri.html#URI_config
- - http://libvirt.org/auth.html#Auth_client_config
+- `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
+- `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
+- `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
 :depends: libvirt Python module
 '''
@@ -174,6 +176,11 @@ def __get_conn(**kwargs):
     '''
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
@@ -243,6 +250,10 @@ def __get_conn(**kwargs):
 def _get_domain(conn, *vms, **kwargs):
     '''
     Return a domain object for the named VM or return domain object for all VMs.
+
+    :params conn: libvirt connection object
+    :param vms: list of domain names to look for
+    :param iterable: True to return an array in all cases
     '''
     ret = list()
     lookup_vms = list()
@@ -1010,6 +1021,47 @@ def init(name,
     '''
     Initialize a new vm
 
+    :param name: name of the virtual machine to create
+    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param image: Path to a disk image to use as the first disk (Default: ``None``).
+    :param nic: NIC profile to use (Default: ``'default'``).
+    :param hypervisor: the virtual machine type. By default the value will be computed according
+                       to the virtual host capabilities.
+    :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
+    :param disk: Disk profile to use (Default: ``'default'``).
+    :param saltenv: Fileserver environment (Default: ``'base'``).
+                    See :mod:`cp module for more details <salt.modules.cp>`
+    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
+                 (Default: ``True``)
+    :param install: install salt minion if absent (Default: ``True``)
+    :param pub_key: public key to seed with (Default: ``None``)
+    :param priv_key: public key to seed with (Default: ``None``)
+    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+    :param enable_vnc: ``True`` to setup a vnc display for the VM (Default: ``False``)
+    :param enable_qcow:
+        ``True`` to create a QCOW2 overlay image, rather than copying the image
+        (Default: ``False``).
+    :param pool: Path of the folder where the image files are located for vmware/esx hypervisors.
+    :param dmac:
+        Default MAC address to use for the network interfaces. By default MAC addresses are
+        automatically generated.
+    :param config: minion configuration to use when seeding.
+                   See :mod:`seed module for more details <salt.modules.seed>`
+    :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
+    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
+    :param telnet_port: Telnet port to use for serial device of type ``tcp``.
+    :param console: ``True`` to add a console device along with serial one (Default: ``True``)
+    :param connection: libvirt connection URI, overriding defaults
+
+                       .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+                     .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+                     .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1130,6 +1182,16 @@ def list_domains(**kwargs):
     '''
     Return a list of available domains.
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1147,6 +1209,16 @@ def list_domains(**kwargs):
 def list_active_vms(**kwargs):
     '''
     Return a list of names for active virtual machine on the minion
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1166,6 +1238,16 @@ def list_inactive_vms(**kwargs):
     '''
     Return a list of names for inactive virtual machine on the minion
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1184,6 +1266,17 @@ def vm_info(vm_=None, **kwargs):
     '''
     Return detailed information about the vms on this hyper in a
     list of dicts:
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: python
 
@@ -1238,6 +1331,17 @@ def vm_state(vm_=None, **kwargs):
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs.
 
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1283,6 +1387,16 @@ def node_info(**kwargs):
     '''
     Return a dict with information about this node
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1299,6 +1413,17 @@ def get_nics(vm_, **kwargs):
     '''
     Return info about the network interfaces of a named vm
 
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1314,6 +1439,17 @@ def get_nics(vm_, **kwargs):
 def get_macs(vm_, **kwargs):
     '''
     Return a list off MAC addresses from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1335,6 +1471,17 @@ def get_graphics(vm_, **kwargs):
     '''
     Returns the information on vnc for a given vm
 
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1350,6 +1497,17 @@ def get_graphics(vm_, **kwargs):
 def get_disks(vm_, **kwargs):
     '''
     Return the disks of a named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1368,8 +1526,18 @@ def setmem(vm_, memory, config=False, **kwargs):
     Changes the amount of memory allocated to VM. The VM must be shutdown
     for this to work.
 
-    memory is to be specified in MB
-    If config is True then we ask libvirt to modify the config as well
+    :param vm_: name of the domain
+    :param memory: memory amount to set in MB
+    :param config: if True then libvirt will be asked to modify the config as well
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1405,8 +1573,20 @@ def setvcpus(vm_, vcpus, config=False, **kwargs):
     Changes the amount of vcpus allocated to VM. The VM must be shutdown
     for this to work.
 
-    vcpus is an int representing the number to be assigned
     If config is True then we ask libvirt to modify the config as well
+
+    :param vm_: name of the domain
+    :param vcpus: integer representing the number of CPUs to be assigned
+    :param config: if True then libvirt will be asked to modify the config as well
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1452,6 +1632,16 @@ def freemem(**kwargs):
     Return an int representing the amount of memory (in MB) that has not
     been given to virtual machines on this node
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1480,6 +1670,16 @@ def freecpu(**kwargs):
     Return an int representing the number of unallocated cpus on this
     hypervisor
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1495,6 +1695,16 @@ def freecpu(**kwargs):
 def full_info(**kwargs):
     '''
     Return the node_info, vm_info and freemem
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1515,6 +1725,17 @@ def get_xml(vm_, **kwargs):
     '''
     Returns the XML for a given vm
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1533,8 +1754,19 @@ def get_profiles(hypervisor=None):
 
     Currently there are profiles for:
 
-     - nic
-     - disk
+    - nic
+    - disk
+
+    :param hypervisor: override the default machine type.
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1563,6 +1795,17 @@ def shutdown(vm_, **kwargs):
     '''
     Send a soft shutdown signal to the named vm
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1579,6 +1822,17 @@ def shutdown(vm_, **kwargs):
 def pause(vm_, **kwargs):
     '''
     Pause the named vm
+
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1597,6 +1851,17 @@ def resume(vm_, **kwargs):
     '''
     Resume the named vm
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1614,6 +1879,17 @@ def start(name, **kwargs):
     '''
     Start a defined domain
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1629,6 +1905,17 @@ def start(name, **kwargs):
 def stop(name, **kwargs):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the power.
+
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1646,6 +1933,17 @@ def reboot(name, **kwargs):
     '''
     Reboot a domain via ACPI request
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1661,6 +1959,17 @@ def reboot(name, **kwargs):
 def reset(vm_, **kwargs):
     '''
     Reset a VM by emulating the reset button on a physical machine
+
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1683,6 +1992,17 @@ def ctrl_alt_del(vm_, **kwargs):
     '''
     Sends CTRL+ALT+DEL to a VM
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1700,6 +2020,17 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Start a domain based on the XML passed to the function
 
+    :param xml: libvirt XML definition of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1715,6 +2046,17 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 def create_xml_path(path, **kwargs):
     '''
     Start a domain based on the XML-file path passed to the function
+
+    :param path: path to a file containing the libvirt XML definition of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1736,6 +2078,17 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Define a domain based on the XML passed to the function
 
+    :param xml: libvirt XML definition of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1751,6 +2104,17 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 def define_xml_path(path, **kwargs):
     '''
     Define a domain based on the XML-file path passed to the function
+
+    :param path: path to a file containing the libvirt XML definition of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1772,6 +2136,17 @@ def define_xml_path(path, **kwargs):
 def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Define a volume based on the XML passed to the function
+
+    :param xml: libvirt XML definition of the storage volume
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -1809,6 +2184,17 @@ def define_vol_xml_path(path, **kwargs):
     '''
     Define a volume based on the XML-file path passed to the function
 
+    :param path: path to a file containing the libvirt XML definition of the volume
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1829,6 +2215,10 @@ def define_vol_xml_path(path, **kwargs):
 def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
+
+    :param vm_: domain name
+    :param target: target libvirt host name
+    :param ssh: True to connect over ssh
 
     CLI Example:
 
@@ -1860,6 +2250,10 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
+    :param vm_: domain name
+    :param target: target libvirt host name
+    :param ssh: True to connect over ssh
+
     CLI Example:
 
     .. code-block:: bash
@@ -1889,6 +2283,10 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
 def migrate(vm_, target, ssh=False):
     '''
     Shared storage migration
+
+    :param vm_: domain name
+    :param target: target libvirt host name
+    :param ssh: True to connect over ssh
 
     CLI Example:
 
@@ -1921,6 +2319,10 @@ def seed_non_shared_migrate(disks, force=False):
     Non shared migration requires that the disks be present on the migration
     destination, pass the disks information via this function, to the
     migration destination before executing the migration.
+
+    :param disks: the list of disk data as provided by virt.get_disks
+    :param force: skip checking the compatibility of source and target disk
+                  images if True. (default: False)
 
     CLI Example:
 
@@ -1957,6 +2359,19 @@ def set_autostart(vm_, state='on', **kwargs):
     Set the autostart flag on a VM so that the VM will start with the host
     system on reboot.
 
+    :param vm_: domain name
+    :param state: 'on' to auto start the pool, anything else to mark the
+                  pool not to be started when the host boots
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1984,6 +2399,17 @@ def undefine(vm_, **kwargs):
     Remove a defined vm, this does not purge the virtual machine image, and
     this only works if the vm is powered down
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -2006,6 +2432,21 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
     Pass removables=False to avoid deleting cdrom and floppy images. To avoid
     disruption, the default but dangerous value is True. This will be changed
     to the safer False default value in Sodium.
+
+    :param vm_: domain name
+    :param dirs: pass True to remove containing directories
+    :param removables: pass True to remove removable devices
+
+        .. versionadded:: Fluorine
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -2119,6 +2560,17 @@ def vm_cputime(vm_=None, **kwargs):
     Return cputime used by the vms on this hyper in a
     list of dicts:
 
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. code-block:: python
 
         [
@@ -2170,6 +2622,17 @@ def vm_netstats(vm_=None, **kwargs):
     '''
     Return combined network counters used by the vms on this hyper in a
     list of dicts:
+
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: python
 
@@ -2240,6 +2703,17 @@ def vm_diskstats(vm_=None, **kwargs):
     '''
     Return disk usage counters used by the vms on this hyper in a
     list of dicts:
+
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: python
 
@@ -2336,6 +2810,17 @@ def list_snapshots(domain=None, **kwargs):
     '''
     List available snapshots for certain vm or for all.
 
+    :param domain: domain name
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. versionadded:: 2016.3.0
 
     CLI Example:
@@ -2358,13 +2843,21 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
     '''
     Create a snapshot of a VM.
 
-    Options:
+    :param domain: domain name
+    :param name: Name of the snapshot. If the name is omitted, then will be used original domain
+                 name with ISO 8601 time as a suffix.
 
-    * **name**: Name of the snapshot. If the name is omitted, then will be used original domain name with
-                ISO 8601 time as a suffix.
+    :param suffix: Add suffix for the new name. Useful in states, where such snapshots
+                   can be distinguished from manually created.
+    :param connection: libvirt connection URI, overriding defaults
 
-    * **suffix**: Add suffix for the new name. Useful in states, where such snapshots
-                  can be distinguished from manually created.
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. versionadded:: 2016.3.0
 
@@ -2398,9 +2891,17 @@ def delete_snapshots(name, *names, **kwargs):
     '''
     Delete one or more snapshots of the given VM.
 
-    Options:
+    :param name: domain name
+    :param names: names of the snapshots to remove
+    :param connection: libvirt connection URI, overriding defaults
 
-    * **all**: Remove all snapshots. Values: True or False (default False).
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. versionadded:: 2016.3.0
 
@@ -2430,9 +2931,18 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     '''
     Revert snapshot to the previous from current (if available) or to the specific.
 
-    Options:
+    :param name: domain name
+    :param vm_snapshot: name of the snapshot to revert
+    :param cleanup: Remove all newer than reverted snapshots. Values: True or False (default False).
+    :param connection: libvirt connection URI, overriding defaults
 
-    * **cleanup**: Remove all newer than reverted snapshots. Values: True or False (default False).
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. versionadded:: 2016.3.0
 
@@ -2756,7 +3266,7 @@ def capabilities(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -2867,7 +3377,7 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
     '''
     Return the domain capabilities given an emulator, architecture, machine or virtualization type.
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     :param emulator: return the capabilities for the given emulator binary
     :param arch: return the capabilities for the given CPU architecture
@@ -2950,6 +3460,15 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     :param full: Return all CPU features rather than the ones on top of the closest CPU model
     :param migratable: Exclude CPU features that are unmigratable (libvirt 2.13+)
     :param out: 'libvirt' (default) for usable libvirt XML definition, 'salt' for nice dict
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3030,12 +3549,17 @@ def net_define(name, bridge, forward, **kwargs):
     :param tag: Vlan tag
     :param autostart: Network autostart (default True)
     :param start: Network start (default True)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' virt.net_define network main bridge openvswitch
+
+    .. versionadded:: Fluorine
     '''
     conn = __get_conn(**kwargs)
     vport = kwargs.get('vport', None)
@@ -3088,7 +3612,7 @@ def list_networks(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3112,7 +3636,7 @@ def network_info(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3157,7 +3681,7 @@ def network_start(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3182,7 +3706,7 @@ def network_stop(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3207,7 +3731,7 @@ def network_undefine(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3235,7 +3759,7 @@ def network_set_autostart(name, state='on', **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3261,12 +3785,17 @@ def pool_define_build(name, **kwargs):
     :param source: Pool dev source
     :param autostart: Pool autostart (default True)
     :param start: Pool start (default True)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' virt.pool_define base logical base
+
+    .. versionadded:: Fluorine
     '''
     exist = False
     update = False
@@ -3336,7 +3865,7 @@ def list_pools(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3360,7 +3889,7 @@ def pool_info(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3400,7 +3929,7 @@ def pool_start(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3425,7 +3954,7 @@ def pool_build(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3450,7 +3979,7 @@ def pool_stop(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3475,7 +4004,7 @@ def pool_undefine(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3502,7 +4031,7 @@ def pool_delete(name, fast=True, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3530,7 +4059,7 @@ def pool_refresh(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3558,7 +4087,7 @@ def pool_set_autostart(name, state='on', **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -3583,7 +4112,7 @@ def pool_list_volumes(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    ..versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     CLI Example:
 
