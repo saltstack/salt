@@ -50,14 +50,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_libvirt = LibvirtMock()
         self.mock_conn = MagicMock()
         self.mock_libvirt.openAuth.return_value = self.mock_conn
+        self.mock_popen = MagicMock()
         self.addCleanup(delattr, self, 'mock_libvirt')
         self.addCleanup(delattr, self, 'mock_conn')
+        self.addCleanup(delattr, self, 'mock_popen')
+        mock_subprocess = MagicMock()
+        mock_subprocess.Popen.return_value = self.mock_popen  # pylint: disable=no-member
         loader_globals = {
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
             },
-            'libvirt': self.mock_libvirt
+            'libvirt': self.mock_libvirt,
+            'subprocess': mock_subprocess
         }
         return {virt: loader_globals, config: loader_globals}
 
@@ -608,11 +613,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
-    @patch('subprocess.Popen')
-    @patch('subprocess.Popen.communicate', return_value="")
-    def test_get_disks(self, mock_communicate, mock_popen):
+    def test_get_disks(self):
         '''
-        Test virt.get_discs()
+        Test virt.get_disks()
         '''
         xml = '''<domain type='kvm' id='7'>
               <name>test-vm</name>
@@ -633,20 +636,33 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
+        qemu_infos = '''image: test.qcow2
+file format: qcow2
+virtual size: 15G (16106127360 bytes)
+disk size: 196K
+cluster_size: 65536
+backing file: mybacking.qcow2 (actual path: /disks/mybacking.qcow2)
+Format specific information:
+    compat: 1.1
+    lazy refcounts: false
+    refcount bits: 16
+    corrupt: false'''
+
+        self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
         disks = virt.get_disks('test-vm')
         disk = disks.get('vda')
         self.assertEqual('/disks/test.qcow2', disk['file'])
         self.assertEqual('disk', disk['type'])
+        self.assertEqual('/disks/mybacking.qcow2', disk['backing file'])
         cdrom = disks.get('hda')
         self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
         self.assertEqual('cdrom', cdrom['type'])
+        self.assertFalse('backing file' in cdrom.keys())
 
-    @patch('subprocess.Popen')
-    @patch('subprocess.Popen.communicate', return_value="")
     @patch('salt.modules.virt.stop', return_value=True)
     @patch('salt.modules.virt.undefine')
     @patch('os.remove')
-    def test_purge_default(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+    def test_purge_default(self, mock_remove, mock_undefine, mock_stop):
         '''
         Test virt.purge() with default parameters
         '''
@@ -669,17 +685,28 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
+        qemu_infos = '''image: test.qcow2
+file format: qcow2
+virtual size: 15G (16106127360 bytes)
+disk size: 196K
+cluster_size: 65536
+Format specific information:
+    compat: 1.1
+    lazy refcounts: false
+    refcount bits: 16
+    corrupt: false'''
+
+        self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
+
         res = virt.purge('test-vm')
         self.assertTrue(res)
         mock_remove.assert_any_call('/disks/test.qcow2')
         mock_remove.assert_any_call('/disks/test-cdrom.iso')
 
-    @patch('subprocess.Popen')
-    @patch('subprocess.Popen.communicate', return_value="")
     @patch('salt.modules.virt.stop', return_value=True)
     @patch('salt.modules.virt.undefine')
     @patch('os.remove')
-    def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop, mock_communicate, mock_popen):
+    def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop):
         '''
         Test virt.purge(removables=False)
         '''
@@ -707,6 +734,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
         self.set_mock_vm("test-vm", xml)
+
+        qemu_infos = '''image: test.qcow2
+file format: qcow2
+virtual size: 15G (16106127360 bytes)
+disk size: 196K
+cluster_size: 65536
+Format specific information:
+    compat: 1.1
+    lazy refcounts: false
+    refcount bits: 16
+    corrupt: false'''
+
+        self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
         res = virt.purge('test-vm', removables=False)
         self.assertTrue(res)
