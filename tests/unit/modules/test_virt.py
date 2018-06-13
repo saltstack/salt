@@ -9,6 +9,7 @@ virt execution module unit tests
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os
+import datetime
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -613,6 +614,78 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
+    def test_parse_qemu_img_info(self):
+        '''
+        Make sure that qemu-img info output is properly parsed
+        '''
+        qemu_infos = '''{
+            "snapshots": [
+                {
+                    "vm-clock-nsec": 0,
+                    "name": "first-snap",
+                    "date-sec": 1528877587,
+                    "date-nsec": 380589000,
+                    "vm-clock-sec": 0,
+                    "id": "1",
+                    "vm-state-size": 1234
+                },
+                {
+                    "vm-clock-nsec": 0,
+                    "name": "second snap",
+                    "date-sec": 1528877592,
+                    "date-nsec": 933509000,
+                    "vm-clock-sec": 0,
+                    "id": "2",
+                    "vm-state-size": 4567
+                }
+            ],
+            "virtual-size": 25769803776,
+            "filename": "/disks/test.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 217088,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "full-backing-filename": "/disks/mybacking.qcow2",
+            "backing-filename": "mybacking.qcow2",
+            "dirty-flag": false
+        }'''
+
+        self.assertEqual(
+            {
+                'file': '/disks/test.qcow2',
+                'file format': 'qcow2',
+                'backing file': '/disks/mybacking.qcow2',
+                'disk size': 217088,
+                'virtual size': 25769803776,
+                'cluster size': 65536,
+                'snapshots': [
+                    {
+                        'id': '1',
+                        'tag': 'first-snap',
+                        'vmsize': 1234,
+                        'date': datetime.datetime.fromtimestamp(
+                            float("{}.{}".format(1528877587, 380589000))).isoformat(),
+                        'vmclock': '00:00:00'
+                    },
+                    {
+                        'id': '2',
+                        'tag': 'second snap',
+                        'vmsize': 4567,
+                        'date': datetime.datetime.fromtimestamp(
+                            float("{}.{}".format(1528877592, 933509000))).isoformat(),
+                        'vmclock': '00:00:00'
+                    }
+                ],
+            }, virt._parse_qemu_img_info(qemu_infos))
+
     def test_get_disks(self):
         '''
         Test virt.get_disks()
@@ -636,17 +709,25 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''image: test.qcow2
-file format: qcow2
-virtual size: 15G (16106127360 bytes)
-disk size: 196K
-cluster_size: 65536
-backing file: mybacking.qcow2 (actual path: /disks/mybacking.qcow2)
-Format specific information:
-    compat: 1.1
-    lazy refcounts: false
-    refcount bits: 16
-    corrupt: false'''
+        qemu_infos = '''{
+            "virtual-size": 25769803776,
+            "filename": "/disks/test.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 217088,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "full-backing-filename": "/disks/mybacking.qcow2",
+            "backing-filename": "mybacking.qcow2",
+            "dirty-flag": false
+        }'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
         disks = virt.get_disks('test-vm')
@@ -685,16 +766,23 @@ Format specific information:
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''image: test.qcow2
-file format: qcow2
-virtual size: 15G (16106127360 bytes)
-disk size: 196K
-cluster_size: 65536
-Format specific information:
-    compat: 1.1
-    lazy refcounts: false
-    refcount bits: 16
-    corrupt: false'''
+        qemu_infos = '''{
+            "virtual-size": 25769803776,
+            "filename": "/disks/test.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 217088,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "dirty-flag": false
+        }'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
@@ -735,16 +823,23 @@ Format specific information:
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''image: test.qcow2
-file format: qcow2
-virtual size: 15G (16106127360 bytes)
-disk size: 196K
-cluster_size: 65536
-Format specific information:
-    compat: 1.1
-    lazy refcounts: false
-    refcount bits: 16
-    corrupt: false'''
+        qemu_infos = '''{
+            "virtual-size": 25769803776,
+            "filename": "/disks/test.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 217088,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "dirty-flag": false
+        }'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
