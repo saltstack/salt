@@ -3,6 +3,8 @@
 virt execution module unit tests
 '''
 
+# pylint: disable=3rd-party-module-not-gated
+
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
@@ -723,6 +725,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_remove.assert_any_call('/disks/test.qcow2')
 
     def test_capabilities(self):
+        '''
+        Test the virt.capabilities parsing
+        '''
         xml = '''
 <capabilities>
   <host>
@@ -842,7 +847,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
 </capabilities>
         '''
-        self.mock_conn.getCapabilities.return_value = xml
+        self.mock_conn.getCapabilities.return_value = xml  # pylint: disable=no-member
         caps = virt.capabilities()
 
         expected = {
@@ -986,6 +991,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
 
     def test_domain_capabilities(self):
+        '''
+        Test the virt.domain_capabilities parsing
+        '''
         xml = '''
 <domainCapabilities>
   <path>/usr/bin/qemu-system-aarch64</path>
@@ -1085,7 +1093,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 </domainCapabilities>
         '''
 
-        self.mock_conn.getDomainCapabilities.return_value = xml
+        self.mock_conn.getDomainCapabilities.return_value = xml  # pylint: disable=no-member
         caps = virt.domain_capabilities()
 
         expected = {
@@ -1237,8 +1245,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.network_info() when the network can't be found
         '''
+        # pylint: disable=no-member
         self.mock_conn.networkLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Network not found")  # pylint: disable=no-member
+            self.mock_libvirt.libvirtError("Network not found")
+        # pylint: enable=no-member
         net = virt.network_info('foo')
         self.assertEqual({}, net)
 
@@ -1303,8 +1313,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.pool_info() when the pool can't be found
         '''
+        # pylint: disable=no-member
         self.mock_conn.storagePoolLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Pool not found")  # pylint: disable=no-member
+            self.mock_libvirt.libvirtError("Pool not found")
+        # pylint: enable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
 

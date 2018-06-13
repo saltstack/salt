@@ -367,8 +367,8 @@ def _get_graphics(dom):
            'listen': 'None',
            'port': 'None',
            'type': 'None'}
-    xml = dom.XMLDesc(0)
-    ssock = _StringIO(xml)
+    desc = dom.XMLDesc(0)
+    ssock = _StringIO(desc)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName('domain'):
         g_nodes = node.getElementsByTagName('graphics')
@@ -1059,13 +1059,13 @@ def init(name,
                 else:
                     # assume libvirt manages disks for us
                     log.debug('Generating libvirt XML for %s', _disk)
-                    xml = _gen_vol_xml(
+                    vol_xml = _gen_vol_xml(
                         name,
                         disk_name,
                         args['size'],
                         hypervisor,
                     )
-                    define_vol_xml_str(xml)
+                    define_vol_xml_str(vol_xml)
 
             elif hypervisor in ['qemu', 'kvm']:
 
@@ -1105,10 +1105,10 @@ def init(name,
 
     log.debug('Generating VM XML')
     kwargs['enable_vnc'] = enable_vnc
-    xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
     conn = __get_conn(**kwargs)
     try:
-        conn.defineXML(xml)
+        conn.defineXML(vm_xml)
     except libvirtError as err:
         # check if failure is due to this domain already existing
         if "domain '{}' already exists".format(name) in six.text_type(err):
@@ -1696,7 +1696,7 @@ def ctrl_alt_del(vm_, **kwargs):
     return ret
 
 
-def create_xml_str(xml, **kwargs):
+def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Start a domain based on the XML passed to the function
 
@@ -1732,7 +1732,7 @@ def create_xml_path(path, **kwargs):
         return False
 
 
-def define_xml_str(xml, **kwargs):
+def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Define a domain based on the XML passed to the function
 
@@ -1769,7 +1769,7 @@ def define_xml_path(path, **kwargs):
         return False
 
 
-def define_vol_xml_str(xml, **kwargs):
+def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
     Define a volume based on the XML passed to the function
 
@@ -2509,7 +2509,7 @@ def _capabilities(conn):
     return caps
 
 
-def _get_xml_first_element_by_tag_name(node, name):
+def _get_xml_first_element_by_tag_name(node, name):  # pylint: disable=invalid-name
     '''
     Convenience function getting the first result of getElementsByTagName() or None.
     '''
@@ -3042,7 +3042,7 @@ def net_define(name, bridge, forward, **kwargs):
     tag = kwargs.get('tag', None)
     autostart = kwargs.get('autostart', True)
     starting = kwargs.get('start', True)
-    xml = _gen_net_xml(
+    net_xml = _gen_net_xml(
         name,
         bridge,
         forward,
@@ -3050,7 +3050,7 @@ def net_define(name, bridge, forward, **kwargs):
         tag,
     )
     try:
-        conn.networkDefineXML(xml)
+        conn.networkDefineXML(net_xml)
     except libvirtError as err:
         log.warning(err)
         conn.close()
@@ -3276,14 +3276,14 @@ def pool_define_build(name, **kwargs):
     source = kwargs.pop('source', None)
     autostart = kwargs.pop('autostart', True)
     starting = kwargs.pop('start', True)
-    xml = _gen_pool_xml(
+    pool_xml = _gen_pool_xml(
         name,
         ptype,
         target,
         source,
     )
     try:
-        conn.storagePoolDefineXML(xml)
+        conn.storagePoolDefineXML(pool_xml)
     except libvirtError as err:
         log.warning(err)
         if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
@@ -3411,7 +3411,7 @@ def pool_start(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
-        ret = not bool(pool.create())
+        return not bool(pool.create())
     finally:
         conn.close()
 
