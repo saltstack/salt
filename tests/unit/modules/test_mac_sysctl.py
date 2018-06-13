@@ -96,7 +96,6 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
             '# Kernel sysctl configuration\n',
             '#\n',
             'net.inet.icmp.icmplim=50\n',
-            '\n',
         ])]
         with patch('salt.utils.files.fopen', mock_open(read_data=to_write)) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=True)):
