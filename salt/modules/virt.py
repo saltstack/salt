@@ -485,25 +485,26 @@ def _get_disks(dom):
                 qemu_target = '{0}:{1}'.format(
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
-            if qemu_target:
-                disks[target.getAttribute('dev')] = {
-                    'file': qemu_target,
-                    'type': elem.getAttribute('device')}
-    for dev in disks:
-        try:
-            hypervisor = __salt__['config.get']('libvirt:hypervisor', 'kvm')
-            if hypervisor not in ['qemu', 'kvm']:
-                break
+            if not qemu_target:
+                continue
 
-            stdout = subprocess.Popen(
-                        ['qemu-img', 'info', disks[dev]['file']],
-                        shell=False,
-                        stdout=subprocess.PIPE).communicate()[0]
-            qemu_output = salt.utils.stringutils.to_str(stdout)
-            output = _parse_qemu_img_info(qemu_output)
-            disks[dev].update(salt.utils.yaml.safe_load(output))
-        except TypeError:
-            disks[dev].update({'image': 'Does not exist'})
+            disk = {'file': qemu_target,
+                    'type': elem.getAttribute('device')}
+
+            driver = _get_xml_first_element_by_tag_name(elem, 'driver')
+            if driver and driver.getAttribute('type') == 'qcow2':
+                try:
+                    stdout = subprocess.Popen(
+                                ['qemu-img', 'info', disk['file']],
+                                shell=False,
+                                stdout=subprocess.PIPE).communicate()[0]
+                    qemu_output = salt.utils.stringutils.to_str(stdout)
+                    output = _parse_qemu_img_info(qemu_output)
+                    disk.update(salt.utils.yaml.safe_load(output))
+                except TypeError:
+                    disk.update({'image': 'Does not exist'})
+
+            disks[target.getAttribute('dev')] = disk
     return disks
 
 
