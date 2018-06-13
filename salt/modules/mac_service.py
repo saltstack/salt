@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for macOS
+
 .. versionadded:: 2016.3.0
 
 This module has support for services in the following locations.
 
 .. code-block:: bash
+
     /System/Library/LaunchDaemons/
     /System/Library/LaunchAgents/
     /Library/LaunchDaemons/
@@ -15,10 +17,9 @@ This module has support for services in the following locations.
     /Users/foo/Library/LaunchAgents/
 
 .. note::
-
-    As of version "Fluorine", if a service is located in a ``LaunchAgent`` path
-    and a ``runas`` user is NOT specified the current console user will be used
-    to properly interact with the service.
+    As of the Fluorine release, if a service is located in a ``LaunchAgent``
+    path and a ``runas`` user is NOT specified, the current console user will
+    be used to properly interact with the service.
 
 '''
 from __future__ import absolute_import, unicode_literals, print_function
