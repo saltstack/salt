@@ -1082,6 +1082,12 @@ def get_ssh_gateway_config(vm_):
         search_global=False
     )
 
+    # ssh_gateway_command
+    ssh_gateway_config['ssh_gateway_command'] = config.get_cloud_config_value(
+        'ssh_gateway_command', vm_, __opts__, default=None,
+        search_global=False
+    )
+
     # Check if private key exists
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
