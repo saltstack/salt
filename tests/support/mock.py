@@ -15,6 +15,7 @@
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 from __future__ import absolute_import
+import errno
 import fnmatch
 import sys
 
@@ -203,7 +204,7 @@ def mock_open(mock=None, read_data='', match=None):
             for pat in match:
                 if fnmatch.fnmatch(name, pat):
                     return DEFAULT
-            raise IOError(2, 'No such file or directory', name)
+            raise IOError(errno.ENOENT, 'No such file or directory', name)
 
         mock.side_effect = fopen_side_effect
 
