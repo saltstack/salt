@@ -3,11 +3,18 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import socket
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf
 from tests.support.unit import TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import (
+    MagicMock,
+    mock_open,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON,
+)
 
 # Import salt libs
 import salt.utils.network as network
@@ -146,6 +153,20 @@ class NetworkTestCase(TestCase):
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
+
+    def test__generate_minion_id_with_unicode_in_etc_hosts(self):
+        '''
+        Test that unicode in /etc/hosts doesn't raise an error when
+        _generate_minion_id() helper is called to gather the hosts.
+        '''
+        content = textwrap.dedent('''\
+        # 以下为主机名解析
+        ## ccc
+        127.0.0.1       localhost thisismyhostname     # 本机
+        ''')
+        fopen_mock = mock_open(read_data=content, match='/etc/hosts')
+        with patch('salt.utils.files.fopen', fopen_mock):
+            assert 'thisismyhostname' in network._generate_minion_id()
 
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
