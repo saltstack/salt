@@ -15,7 +15,7 @@ FreeBSD repo
 The FreeBSD pkgng repository is preconfigured on systems 10.x and above. No
 configuration is needed to pull from these repositories.
 
-.. code-block:: shell
+.. code-block:: bash
 
     pkg install py27-salt
 
@@ -32,7 +32,7 @@ following file to your system:
 
 **/usr/local/etc/pkg/repos/saltstack.conf:**
 
-.. code-block:: json
+.. code-block:: text
 
     saltstack: {
       url: "https://repo.saltstack.com/freebsd/${ABI}/",
@@ -41,7 +41,7 @@ following file to your system:
 
 You should now be able to install Salt from this new repository:
 
-.. code-block:: shell
+.. code-block:: bash
 
     pkg install py27-salt
 
@@ -56,7 +56,7 @@ Post-installation tasks
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
@@ -64,7 +64,7 @@ Copy the sample configuration file:
 
 Activate the Salt Master in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_master_enable="YES"
 
@@ -72,7 +72,7 @@ Activate the Salt Master in ``/etc/rc.conf``:
 
 Start the Salt Master as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_master start
 
@@ -80,7 +80,7 @@ Start the Salt Master as follows:
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
@@ -88,7 +88,7 @@ Copy the sample configuration file:
 
 Activate the Salt Minion in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_minion_enable="YES"
 
@@ -96,7 +96,7 @@ Activate the Salt Minion in ``/etc/rc.conf``:
 
 Start the Salt Minion as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_minion start
 

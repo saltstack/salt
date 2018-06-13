@@ -103,8 +103,8 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
-          
-- The ``junos`` state module is now available. It has all the functions 
+
+- The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
 
 - The ``junos`` state module is now available. It has all the functions
@@ -275,9 +275,9 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
-  
+
 Junos Module Changes
-===================
+====================
 
 - The following new functionalities were added to the junos module
 
@@ -288,6 +288,8 @@ Junos Module Changes
   - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
   - file_copy - Copy file from proxy to the Junos device.
 
+.. _release-2016-11-0-network-automation-napalm:
+
 Network Automation: NAPALM
 ==========================
 
@@ -296,7 +298,9 @@ of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napa
 library and provides facilities to manage the configuration and retrieve data
 from network devices running widely used operating systems such: JunOS, IOS-XR,
 eOS, IOS, NX-OS etc.
-- see `the complete list of supported devices <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
+
+- see `the complete list of supported devices
+  <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
 
 The connection is established via the :mod:`NAPALM proxy <salt.proxy.napalm>`.
 

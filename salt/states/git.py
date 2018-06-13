@@ -1986,7 +1986,7 @@ def present(name,
 
     template
         If a new repository is initialized, this argument will specify an
-        alternate `template directory`_
+        alternate template directory.
 
         .. versionadded:: 2015.8.0
 
@@ -2143,7 +2143,7 @@ def detached(name,
     .. versionadded:: 2016.3.0
 
     Make sure a repository is cloned to the given target directory and is
-    a detached HEAD checkout of the commit ID resolved from ``ref``.
+    a detached HEAD checkout of the commit ID resolved from ``rev``.
 
     name
         Address of the remote repository.

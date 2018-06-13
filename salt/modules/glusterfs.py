@@ -219,7 +219,7 @@ def peer(name):
 def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
            transport='tcp', start=False, force=False):
     '''
-    Create a glusterfs volume.
+    Create a glusterfs volume
 
     name
         Name of the gluster volume
@@ -251,7 +251,7 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     force
         Force volume creation, this works even if creating in root FS
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -388,7 +388,6 @@ def info(name=None):
     .. code-block:: bash
 
         salt '*' glusterfs.info
-
     '''
     cmd = 'volume info'
     if name is not None:
@@ -424,7 +423,7 @@ def info(name=None):
 
 def start_volume(name, force=False):
     '''
-    Start a gluster volume.
+    Start a gluster volume
 
     name
         Volume name
@@ -457,13 +456,14 @@ def start_volume(name, force=False):
 
 def stop_volume(name, force=False):
     '''
-    Stop a gluster volume.
+    Stop a gluster volume
 
     name
         Volume name
 
     force
         Force stop the volume
+
         .. versionadded:: 2015.8.4
 
     CLI Example:
@@ -494,8 +494,14 @@ def delete_volume(target, stop=True):
     target
         Volume to delete
 
-    stop
-        Stop volume before delete if it is started, True by default
+    stop : True
+        If ``True``, stop volume before delete
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.delete_volume <volume>
     '''
     volinfo = info()
     if target not in volinfo:
@@ -527,6 +533,12 @@ def add_volume_bricks(name, bricks):
 
     bricks
         List of bricks to add to the volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.add_volume_bricks <volume> <bricks>
     '''
 
     volinfo = info()
@@ -565,6 +577,12 @@ def enable_quota_volume(name):
 
     name
         Name of the gluster volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.enable_quota_volume <volume>
     '''
 
     cmd = 'volume quota {0} enable'.format(name)
@@ -579,6 +597,12 @@ def disable_quota_volume(name):
 
     name
         Name of the gluster volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.disable_quota_volume <volume>
     '''
 
     cmd = 'volume quota {0} disable'.format(name)
@@ -608,7 +632,6 @@ def set_quota_volume(name, path, size, enable_quota=False):
     .. code-block:: bash
 
         salt '*' glusterfs.set_quota_volume <volume> <path> <size> enable_quota=True
-
     '''
     cmd = 'volume quota {0}'.format(name)
     if path:
@@ -626,16 +649,19 @@ def set_quota_volume(name, path, size, enable_quota=False):
 
 def unset_quota_volume(name, path):
     '''
-    Unset quota to glusterfs volume.
+    Unset quota on glusterfs volume
+
     name
         Name of the gluster volume
+
     path
         Folder path for restriction in volume
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.unset_quota_volume <volume> <path>
-
     '''
     cmd = 'volume quota {0}'.format(name)
     if path:
@@ -648,10 +674,16 @@ def unset_quota_volume(name, path):
 
 def list_quota_volume(name):
     '''
-    List quotas of glusterfs volume.
+    List quotas of glusterfs volume
+
     name
         Name of the gluster volume
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.list_quota_volume <volume>
     '''
     cmd = 'volume quota {0}'.format(name)
     cmd += ' list'
