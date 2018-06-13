@@ -315,6 +315,20 @@ several new features:
 In addition, it is no longer necessary to specify what the hash of the patched
 file should be.
 
+New no_proxy Minion Configuration
+=================================
+
+Pass a list of hosts using the ``no_proxy`` minion config option to bypass an HTTP
+proxy.
+
+.. note::
+    This key does nothing unless proxy_host is configured and it does not support
+    any kind of wildcards.
+
+.. code-block:: yaml
+
+    no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
 
 Deprecations
 ============
