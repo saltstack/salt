@@ -137,6 +137,7 @@ def creds(provider):
 
     return ret_credentials
 
+
 def sig2(method, endpoint, params, provider, aws_api_version):
     '''
     Sign a query against AWS services using Signature Version 2 Signing
