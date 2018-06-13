@@ -36,13 +36,14 @@ import salt.utils.timed_subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
+import salt.utils.win_dacl
 import salt.utils.win_reg
 import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range, zip
+from salt.ext.six.moves import range, zip, map
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -409,6 +410,19 @@ def _run(cmd,
 
         return win_runas(cmd, runas, password, cwd)
 
+    if runas and salt.utils.platform.is_darwin():
+        # we need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that
+        # method doesn't work properly when run as root for certain commands.
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(map(_cmd_quote, cmd))
+
+        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
+        # set runas to None, because if you try to run `su -l` as well as
+        # simulate the environment macOS will prompt for the password of the
+        # user and will cause salt to hang.
+        runas = None
+
     if runas:
         # Save the original command before munging it
         try:
@@ -512,10 +526,18 @@ def _run(cmd,
                 for k, v in six.iteritems(env_runas)
             )
             env_runas.update(env)
+
             # Fix platforms like Solaris that don't set a USER env var in the
             # user's default environment as obtained above.
             if env_runas.get('USER') != runas:
                 env_runas['USER'] = runas
+
+            # Fix some corner cases where shelling out to get the user's
+            # environment returns the wrong home directory.
+            runas_home = os.path.expanduser('~{0}'.format(runas))
+            if env_runas.get('HOME') != runas_home:
+                env_runas['HOME'] = runas_home
+
             env = env_runas
         except ValueError as exc:
             log.exception('Error raised retrieving environment for user %s', runas)
@@ -542,6 +564,7 @@ def _run(cmd,
             env.setdefault('LC_TELEPHONE', 'C')
             env.setdefault('LC_MEASUREMENT', 'C')
             env.setdefault('LC_IDENTIFICATION', 'C')
+            env.setdefault('LANGUAGE', 'C')
         else:
             # On Windows set the codepage to US English.
             if python_shell:
@@ -1064,11 +1087,9 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1306,11 +1327,9 @@ def shell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1521,11 +1540,9 @@ def run_stdout(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1719,11 +1736,9 @@ def run_stderr(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1941,11 +1956,9 @@ def run_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2130,11 +2143,9 @@ def retcode(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2378,11 +2389,9 @@ def script(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2415,11 +2424,14 @@ def script(source,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
+    win_cwd = False
     if salt.utils.platform.is_windows() and runas and cwd is None:
+        # Create a temp working directory
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
-        __salt__['win_dacl.add_ace'](
-            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
-            'FOLDER&SUBFOLDERS&FILES')
+        win_cwd = True
+        salt.utils.win_dacl.set_permissions(obj_name=cwd,
+                                            principal=runas,
+                                            permissions='full_control')
 
     path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
@@ -2433,10 +2445,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            if salt.utils.platform.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2445,10 +2457,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            if salt.utils.platform.is_windows() and runas:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
                 _cleanup_tempfile(cwd)
-            else:
-                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2481,10 +2493,10 @@ def script(source,
                password=password,
                success_retcodes=success_retcodes,
                **kwargs)
-    if salt.utils.platform.is_windows() and runas:
+    _cleanup_tempfile(path)
+    # If a temp working directory was created (Windows), let's remove that
+    if win_cwd:
         _cleanup_tempfile(cwd)
-    else:
-        _cleanup_tempfile(path)
 
     if hide_output:
         ret['stdout'] = ret['stderr'] = ''
@@ -2621,11 +2633,9 @@ def script_retcode(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2944,7 +2954,8 @@ def run_chroot(root,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
-CLI Example:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3427,11 +3438,9 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -3731,11 +3740,9 @@ def powershell_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -3990,11 +3997,9 @@ def run_bg(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 

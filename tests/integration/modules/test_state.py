@@ -11,8 +11,9 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import TMP, TMP_PILLAR_TREE
+from tests.support.paths import FILES, TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -29,12 +30,50 @@ import logging
 log = logging.getLogger(__name__)
 
 
+DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
+
+
+def trim_line_end(line):
+    '''
+    Remove CRLF or LF from the end of line.
+    '''
+    if line[-2:] == salt.utils.stringutils.to_bytes('\r\n'):
+        return line[:-2]
+    elif line[-1:] == salt.utils.stringutils.to_bytes('\n'):
+        return line[:-1]
+    raise Exception("Invalid line ending")
+
+
+def reline(source, dest, force=False, ending=DEFAULT_ENDING):
+    '''
+    Normalize the line endings of a file.
+    '''
+    fp, tmp = tempfile.mkstemp()
+    os.close(fp)
+    with salt.utils.files.fopen(tmp, 'wb') as tmp_fd:
+        with salt.utils.files.fopen(source, 'rb') as fd:
+            lines = fd.readlines()
+            for line in lines:
+                line_noend = trim_line_end(line)
+                tmp_fd.write(line_noend + ending)
+    if os.path.exists(dest) and force:
+        os.remove(dest)
+    os.rename(tmp, dest)
+
+
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''
 
     maxDiff = None
+
+    def setUp(self):
+        super(StateModuleTest, self).setUp()
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
+        reline(destpath, destpath, force=True)
+        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
+        reline(destpath, destpath, force=True)
 
     def test_show_highstate(self):
         '''
@@ -199,21 +238,24 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.run_request')
         self.assertEqual(ret, {})
 
-    def test_issue_1896_file_append_source(self):
+    @with_tempdir()
+    def test_issue_1896_file_append_source(self, base_dir):
         '''
         Verify that we can append a file's contents
         '''
-        testfile = os.path.join(TMP, 'test.append')
-        if os.path.isfile(testfile):
-            os.unlink(testfile)
+        testfile = os.path.join(base_dir, 'test.append')
 
-        ret = self.run_function('state.sls', mods='testappend')
+        ret = self.run_state('file.touch', name=testfile)
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-1')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
@@ -236,14 +278,17 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             contents = os.linesep.join(new_contents)
             contents += os.linesep
 
-        self.assertMultiLineEqual(
-                contents, testfile_contents)
+        self.assertMultiLineEqual(contents, testfile_contents)
 
-        # Re-append switching order
-        ret = self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
         self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-1')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
@@ -884,13 +929,13 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'pip_|-another_non_changing_state_|-mock_|-installed': {
                 '__run_num__': 3,
                 'changes': False,
-                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
                 'result': True
             },
             'pip_|-non_changing_state_|-mock_|-installed': {
                 '__run_num__': 2,
                 'changes': False,
-                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
                 'result': True
             }
         }

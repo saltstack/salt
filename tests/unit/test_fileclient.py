@@ -50,3 +50,14 @@ class FileclientTestCase(TestCase):
                 with self.assertRaises(OSError):
                     with Client(self.opts)._cache_loc('testfile') as c_ref_itr:
                         assert c_ref_itr == '/__test__/files/base/testfile'
+
+    def test_extrn_path_with_long_filename(self):
+        safe_file_name = os.path.split(Client(self.opts)._extrn_path('https://test.com/' + ('A' * 254), 'base'))[-1]
+        assert safe_file_name == 'A' * 254
+
+        oversized_file_name = os.path.split(Client(self.opts)._extrn_path('https://test.com/' + ('A' * 255), 'base'))[-1]
+        assert len(oversized_file_name) < 256
+        assert oversized_file_name != 'A' * 255
+
+        oversized_file_with_query_params = os.path.split(Client(self.opts)._extrn_path('https://test.com/file?' + ('A' * 255), 'base'))[-1]
+        assert len(oversized_file_with_query_params) < 256

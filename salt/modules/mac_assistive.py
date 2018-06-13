@@ -31,7 +31,7 @@ def __virtual__():
     '''
     if not salt.utils.platform.is_darwin():
         return False, 'Must be run on macOS'
-    if not _LooseVersion(__grains__['osrelease']) >= salt.utils.stringutils.to_str('10.9'):
+    if _LooseVersion(__grains__['osrelease']) < salt.utils.stringutils.to_str('10.9'):
         return False, 'Must be run on macOS 10.9 or newer'
     return __virtualname__
 

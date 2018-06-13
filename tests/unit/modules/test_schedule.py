@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
@@ -95,6 +95,18 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                                  ('job1', function='test.ping', when='2400',
                                   cron='2'),
                                  {'comment': comment1, 'result': False})
+
+    # 'build_schedule_item_invalid_when' function tests: 1
+
+    def test_build_schedule_item_invalid_when(self):
+        '''
+        Test if it build a schedule job.
+        '''
+        comment = 'Schedule item garbage for "when" in invalid.'
+        with patch.dict(schedule.__opts__, {'job1': {}}):
+            self.assertDictEqual(schedule.build_schedule_item
+                                 ('job1', function='test.ping', when='garbage'),
+                                 {'comment': comment, 'result': False})
 
     # 'add' function tests: 1
 

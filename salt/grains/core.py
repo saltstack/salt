@@ -53,6 +53,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -398,6 +399,32 @@ def _sunos_cpudata():
     return grains
 
 
+def _aix_cpudata():
+    '''
+    Return CPU information for AIX systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    #   cpu_flags
+    grains = {}
+    cmd = salt.utils.path.which('prtconf')
+    if cmd:
+        data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+        for dest, regstring in (('cpuarch', r'(?im)^\s*Processor\s+Type:\s+(\S+)'),
+                                ('cpu_flags', r'(?im)^\s*Processor\s+Version:\s+(\S+)'),
+                                ('cpu_model', r'(?im)^\s*Processor\s+Implementation\s+Mode:\s+(.*)'),
+                                ('num_cpus', r'(?im)^\s*Number\s+Of\s+Processors:\s+(\S+)')):
+            for regex in [re.compile(r) for r in [regstring]]:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains[dest] = res.group(1).strip().replace("'", '')
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
+    return grains
+
+
 def _linux_memdata():
     '''
     Return the memory information for Linux-like systems
@@ -456,9 +483,13 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] == 'OpenBSD':
+        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
             swapctl = salt.utils.path.which('swapctl')
-            swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
+            swap_data = __salt__['cmd.run']('{0} -sk'.format(swapctl))
+            if swap_data == 'no swap devices configured':
+                swap_total = 0
+            else:
+                swap_total = swap_data.split(' ')[1]
         else:
             swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         grains['swap_total'] = int(swap_total) // 1024 // 1024
@@ -486,6 +517,34 @@ def _sunos_memdata():
     except ValueError:
         swap_total = None
     grains['swap_total'] = swap_total
+    return grains
+
+
+def _aix_memdata():
+    '''
+    Return the memory information for AIX systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+    prtconf = salt.utils.path.which('prtconf')
+    if prtconf:
+        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+            comps = [x for x in line.strip().split(' ') if x]
+            if len(comps) > 2 and 'Memory' in comps[0] and 'Size' in comps[1]:
+                grains['mem_total'] = int(comps[2])
+                break
+    else:
+        log.error('The \'prtconf\' binary was not found in $PATH.')
+
+    swap_cmd = salt.utils.path.which('swap')
+    if swap_cmd:
+        swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
+        try:
+            swap_total = (int(swap_data[-2]) + int(swap_data[-6])) * 4
+        except ValueError:
+            swap_total = None
+        grains['swap_total'] = swap_total
+    else:
+        log.error('The \'swap\' binary was not found in $PATH.')
     return grains
 
 
@@ -517,8 +576,29 @@ def _memdata(osdata):
         grains.update(_osx_memdata())
     elif osdata['kernel'] == 'SunOS':
         grains.update(_sunos_memdata())
+    elif osdata['kernel'] == 'AIX':
+        grains.update(_aix_memdata())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
         grains.update(_windows_memdata())
+    return grains
+
+
+def _aix_get_machine_id():
+    '''
+    Parse the output of lsattr -El sys0 for os_uuid
+    '''
+    grains = {}
+    cmd = salt.utils.path.which('lsattr')
+    if cmd:
+        data = __salt__['cmd.run']('{0} -El sys0'.format(cmd)) + os.linesep
+        uuid_regexes = [re.compile(r'(?im)^\s*os_uuid\s+(\S+)\s+(.*)')]
+        for regex in uuid_regexes:
+            res = regex.search(data)
+            if res and len(res.groups()) >= 1:
+                grains['machine_id'] = res.group(1).strip()
+                break
+    else:
+        log.error('The \'lsattr\' binary was not found in $PATH.')
     return grains
 
 
@@ -600,11 +680,7 @@ def _virtual(osdata):
     if not salt.utils.platform.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.path.which('virt-what'):
             _cmds = ['virt-what']
-        else:
-            log.debug(
-                'Please install \'virt-what\' to improve results of the '
-                '\'virtual\' grain.'
-            )
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
@@ -770,13 +846,6 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
             break
-        elif command == 'virt-what':
-            # if 'virt-what' returns nothing, it's either an undetected platform
-            # so we default just as virt-what to 'physical', otherwise use the
-            # platform detected/returned by virt-what
-            if output:
-                grains['virtual'] = output.lower()
-            break
         elif command == 'prtdiag':
             model = output.lower().split("\n")[0]
             if 'vmware' in model:
@@ -791,14 +860,6 @@ def _virtual(osdata):
         elif command == 'virtinfo':
             grains['virtual'] = 'LDOM'
             break
-    else:
-        if osdata['kernel'] not in skip_cmds:
-            log.debug(
-                'All tools for virtual hardware identification failed to '
-                'execute because they do not exist on the system running this '
-                'instance or the user does not have the necessary permissions '
-                'to execute them. Grains output might not be accurate.'
-            )
 
     choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
@@ -983,6 +1044,63 @@ def _virtual(osdata):
             'cannot execute it. Grains output might not be '
             'accurate.', command
         )
+    return grains
+
+
+def _virtual_hv(osdata):
+    '''
+    Returns detailed hypervisor information from sysfs
+    Currently this seems to be used only by Xen
+    '''
+    grains = {}
+
+    # Bail early if we're not running on Xen
+    try:
+        if 'xen' not in osdata['virtual']:
+            return grains
+    except KeyError:
+        return grains
+
+    # Try to get the exact hypervisor version from sysfs
+    try:
+        version = {}
+        for fn in ('major', 'minor', 'extra'):
+            with salt.utils.files.fopen('/sys/hypervisor/version/{}'.format(fn), 'r') as fhr:
+                version[fn] = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
+        grains['virtual_hv_version_info'] = [version['major'], version['minor'], version['extra']]
+    except (IOError, OSError, KeyError):
+        pass
+
+    # Try to read and decode the supported feature set of the hypervisor
+    # Based on https://github.com/brendangregg/Misc/blob/master/xen/xen-features.py
+    # Table data from include/xen/interface/features.h
+    xen_feature_table = {0: 'writable_page_tables',
+                         1: 'writable_descriptor_tables',
+                         2: 'auto_translated_physmap',
+                         3: 'supervisor_mode_kernel',
+                         4: 'pae_pgdir_above_4gb',
+                         5: 'mmu_pt_update_preserve_ad',
+                         7: 'gnttab_map_avail_bits',
+                         8: 'hvm_callback_vector',
+                         9: 'hvm_safe_pvclock',
+                        10: 'hvm_pirqs',
+                        11: 'dom0',
+                        12: 'grant_map_identity',
+                        13: 'memory_op_vnode_supported',
+                        14: 'ARM_SMCCC_supported'}
+    try:
+        with salt.utils.files.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
+            features = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        enabled_features = []
+        for bit, feat in six.iteritems(xen_feature_table):
+            if int(features, 16) & (1 << bit):
+                enabled_features.append(feat)
+        grains['virtual_hv_features'] = features
+        grains['virtual_hv_features_list'] = enabled_features
+    except (IOError, OSError, KeyError):
+        pass
+
     return grains
 
 
@@ -1232,7 +1350,7 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
-    'nilrt-xfce': 'NILinuxRT-XFCE',
+    'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
@@ -1304,10 +1422,10 @@ _OS_FAMILY_MAP = {
     'Cumulus': 'Debian',
     'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
+    'AIX': 'AIX',
 }
 
 
@@ -1668,8 +1786,11 @@ def os_data():
         # so that linux_distribution() does the /etc/lsb-release parsing, but
         # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
-            grains['osfullname'] = \
-                grains.get('lsb_distrib_id', osname).strip()
+            # If NI Linux RT distribution, set the grains['osfullname'] to 'nilrt'
+            if grains.get('lsb_distrib_id', '').lower().startswith('nilrt'):
+                grains['osfullname'] = 'nilrt'
+            else:
+                grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
         if 'osrelease' not in grains:
             # NOTE: This is a workaround for CentOS 7 os-release bug
             # https://bugs.centos.org/view.php?id=8359
@@ -1761,6 +1882,15 @@ def os_data():
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
+    elif grains['kernel'] == 'AIX':
+        osrelease = __salt__['cmd.run']('oslevel')
+        osrelease_techlevel = __salt__['cmd.run']('oslevel -r')
+        osname = __salt__['cmd.run']('uname')
+        grains['os'] = 'AIX'
+        grains['osfullname'] = osname
+        grains['osrelease'] = osrelease
+        grains['osrelease_techlevel'] = osrelease_techlevel
+        grains.update(_aix_cpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
@@ -1792,7 +1922,7 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os_family') == 'RedHat':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
-    elif grains.get('os_family') == 'NILinuxRT':
+    elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
             if line.startswith('arch'):
@@ -1812,6 +1942,7 @@ def os_data():
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
+    grains.update(_virtual_hv(grains))
     grains.update(_ps(grains))
 
     if grains.get('osrelease', ''):
@@ -1934,7 +2065,7 @@ def fqdns():
         try:
             fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
         except socket.herror as err:
-            if err.errno == 1:
+            if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
@@ -2096,10 +2227,13 @@ def dns():
 
 def get_machine_id():
     '''
-    Provide the machine-id
+    Provide the machine-id for machine/virtualization combination
     '''
     # Provides:
     #   machine-id
+    if platform.system() == 'AIX':
+        return _aix_get_machine_id()
+
     locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
     existing_locations = [loc for loc in locations if os.path.exists(loc)]
     if not existing_locations:
@@ -2225,7 +2359,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = ifile.read().strip()
+                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:
@@ -2263,6 +2397,7 @@ def _hw_data(osdata):
         hwdata = {
             'manufacturer': 'manufacturer',
             'serialnumber': 'serial#',
+            'productname': 'DeviceDesc',
         }
         for grain_name, cmd_key in six.iteritems(hwdata):
             result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
@@ -2364,9 +2499,9 @@ def _hw_data(osdata):
 
         product_regexes = [
             re.compile(r) for r in [
-                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+\s(.*)',  # prtdiag
-                r'(?im)^\s*banner-name:\s*(.*)',  # prtconf
-                r'(?im)^\s*product-name:\s*(.*)',  # prtconf
+                r'(?im)^\s*System\s+Configuration:\s*.*?sun\d\S+[^\S\r\n]*(.*)',  # prtdiag
+                r'(?im)^[^\S\r\n]*banner-name:[^\S\r\n]*(.*)',  # prtconf
+                r'(?im)^[^\S\r\n]*product-name:[^\S\r\n]*(.*)',  # prtconf
             ]
         ]
 
@@ -2433,8 +2568,50 @@ def _hw_data(osdata):
         for regex in product_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains['product'] = res.group(1).strip().replace("'", "")
-                break
+                t_productname = res.group(1).strip().replace("'", "")
+                if t_productname:
+                    grains['product'] = t_productname
+                    grains['productname'] = t_productname
+                    break
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
+
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
 
     return grains
 
@@ -2456,9 +2633,8 @@ def get_server_id():
     if py_ver >= (3, 3):
         # Python 3.3 enabled hash randomization, so we need to shell out to get
         # a reliable hash.
-        py_bin = 'python{0}.{1}'.format(*py_ver)
         id_hash = __salt__['cmd.run'](
-            [py_bin, '-c', 'print(hash("{0}"))'.format(id_)],
+            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
             env={'PYTHONHASHSEED': '0'}
         )
         try:

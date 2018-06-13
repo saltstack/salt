@@ -971,7 +971,7 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    Optional vm_ dict options for overwriting template:
+    Optional vm\_ dict options for overwriting template:
 
     region_id
         Optional - OpenNebula Zone ID
@@ -4570,7 +4570,7 @@ def _list_nodes(full=False):
                 pass
 
         vms[name]['id'] = vm.find('ID').text
-        if vm.find('TEMPLATE').find('TEMPLATE_ID'):
+        if 'TEMPLATE_ID' in vm.find('TEMPLATE'):
             vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
         vms[name]['name'] = name
         vms[name]['size'] = {'cpu': cpu_size, 'memory': memory_size}

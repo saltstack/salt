@@ -542,7 +542,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
     network
         network to list subnets of
 
-    .. code-block::
+    .. code-block:: bash
 
         salt-cloud -f list_subnets myopenstack network=salt-net
 
@@ -597,6 +597,7 @@ def _clean_create_kwargs(**kwargs):
         'volume_size': int,
         'nat_destination': six.string_types,
         'group': six.string_types,
+        'userdata': six.string_types,
     }
     extra = kwargs.pop('extra', {})
     for key, value in six.iteritems(kwargs.copy()):

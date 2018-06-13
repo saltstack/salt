@@ -11,6 +11,8 @@ execution modules
         salt.modules.group
         salt.modules.kernelpkg
         salt.modules.pkg
+        salt.modules.service
+        salt.modules.shadow
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -96,7 +98,6 @@ execution modules
     cron
     csf
     cyg
-    cytest
     daemontools
     data
     datadog_api
@@ -148,6 +149,7 @@ execution modules
     git
     github
     glance
+    glanceng
     glusterfs
     gnomedesktop
     gpg
@@ -189,7 +191,7 @@ execution modules
     iwtools
     jboss7
     jboss7_cli
-    jenkins
+    jenkinsmod
     junos
     k8s
     kapacitor
@@ -199,6 +201,7 @@ execution modules
     key
     keyboard
     keystone
+    keystoneng
     kmod
     kubernetes
     launchctl
@@ -283,6 +286,7 @@ execution modules
     netscaler
     network
     neutron
+    neutronng
     nfs3
     nftables
     nginx
@@ -482,7 +486,6 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
     x509
@@ -499,5 +502,6 @@ execution modules
     znc
     zoneadm
     zonecfg
+    zookeeper
     zpool
     zypper

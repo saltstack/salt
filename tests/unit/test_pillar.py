@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
-
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
 
     tests.unit.pillar_test
     ~~~~~~~~~~~~~~~~~~~~~~
@@ -442,8 +441,8 @@ class PillarTestCase(TestCase):
             'renderer_blacklist': [],
             'renderer_whitelist': [],
             'state_top': '',
-            'pillar_roots': [],
-            'file_roots': [],
+            'pillar_roots': {},
+            'file_roots': {},
             'extension_modules': ''
         }
         grains = {
@@ -454,7 +453,9 @@ class PillarTestCase(TestCase):
             'osrelease': '13.04',
             'kernel': 'Linux'
         }
-        with patch('salt.pillar.compile_template') as compile_template:
+        with patch('salt.pillar.compile_template') as compile_template, \
+                patch.object(salt.pillar.Pillar, '_Pillar__gather_avail',
+                             MagicMock(return_value={'base': ['blah', 'foo']})):
 
             # Test with option set to True
             opts['pillar_includes_override_sls'] = True
@@ -653,7 +654,7 @@ foo1:
         self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub2_sls.write(b'''
 foo2:
-  bar2 
+  bar2
 ''')
         sub2_sls.flush()
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: Mike Place <mp@saltstack.com>
 '''
 
 # Import python libs
@@ -54,20 +54,30 @@ class LocalClientTestCase(TestCase,
                 self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
-                                                    kwarg=None, tgt_type='list',
+                                                    kwarg=None, tgt_type='list', full_return=False,
                                                     ret='')
                 except AssertionError:
                     cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
-                                                    kwarg=None, tgt_type='list',
+                                                    kwarg=None, tgt_type='list', full_return=False,
                                                     ret='')
                 self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
-                                                    kwarg=None, tgt_type='list',
+                                                    kwarg=None, tgt_type='list', full_return=False,
                                                     ret='')
                 except AssertionError:
                     cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
-                                                    kwarg=None, tgt_type='list',
+                                                    kwarg=None, tgt_type='list', full_return=False,
+                                                    ret='')
+
+                ret = self.client.cmd_subset('*', 'first.func', sub=1, cli=True, full_return=True)
+                try:
+                    cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list', full_return=True,
+                                                    ret='')
+                except AssertionError:
+                    cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list', full_return=True,
                                                     ret='')
 
     @skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')

@@ -8,7 +8,7 @@ Module for running ZFS zpool command
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
   consistancy in output.
 
@@ -247,7 +247,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         display data in pythonc values (True, False, Bytes,...)
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2018.3.1
 
         Added ```parsable``` parameter that defaults to True
 
@@ -470,14 +470,13 @@ def get(zpool, prop=None, show_source=False, parsable=True):
 
     '''
     ret = OrderedDict()
-    value_properties = ['property', 'value', 'source']
+    value_properties = ['name', 'property', 'value', 'source']
 
     ## collect get output
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='get',
             flags=['-H'],
-            opts={'-o': ','.join(value_properties)},
             property_name=prop if prop else 'all',
             target=zpool,
         ),
@@ -502,6 +501,9 @@ def get(zpool, prop=None, show_source=False, parsable=True):
             value_properties,
             [x for x in line.strip().split('\t') if x not in ['']],
         )))
+
+        # NOTE: older zfs does not have -o, fall back to manually stipping the name field
+        del prop_data['name']
 
         # NOTE: normalize values
         if parsable:
@@ -634,6 +636,8 @@ def scrub(zpool, stop=False, pause=False):
 
         .. note::
 
+            Pause is only available on recent versions of ZFS.
+
             If both ``pause`` and ``stop`` are ``True``, then ``stop`` will
             win.
 
@@ -705,6 +709,9 @@ def create(zpool, *vdevs, **kwargs):
         create a boot partition
 
         .. versionadded:: 2018.3.0
+
+        .. warning:
+          This is only available on illumos and Solaris
 
     CLI Examples:
 
@@ -1473,7 +1480,7 @@ def clear(zpool, device=None):
     device : string
         (optional) specific device to clear
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2018.3.1
 
     CLI Example:
 

@@ -49,7 +49,9 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__tag__',
     '__user__',
     'username',
-    'password'
+    'password',
+    'full_return',
+    'print_event'
 ])
 
 

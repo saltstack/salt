@@ -3,8 +3,7 @@ Salt 0.8.8 release notes
 ========================
 
 Salt 0.8.8 is here! This release adds a great deal of code and some serious new
-features. The latest release can be downloaded here:
-:download:`salt-0.8.8.tar.gz`
+features.
 
 Improved Documentation has been set up for salt using sphinx thanks to the
 efforts of Seth House. This new documentation system will act as the back end
@@ -73,6 +72,5 @@ maintaining supreme usability and simplicity.
 If you would like a more complete overview of Salt please watch the Salt
 presentation:
 Slides:
-:download:`Salt.pdf`
 
 -Thomas S Hatch
