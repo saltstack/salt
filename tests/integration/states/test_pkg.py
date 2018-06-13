@@ -270,13 +270,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         except AssertionError:
             self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=pkg_targets))
 
-        ret = self.run_state('pkg.installed',
-                             name=None,
-                             pkgs=pkg_targets,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=None,
+                                 pkgs=pkg_targets,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains=None):
@@ -318,13 +320,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
 
-        ret = self.run_state('pkg.installed',
-                             name=None,
-                             pkgs=pkgs,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=None,
+                                 pkgs=pkgs,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
     def test_pkg_005_installed_32bit(self, grains=None):
