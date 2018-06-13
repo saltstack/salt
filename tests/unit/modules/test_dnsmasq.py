@@ -5,6 +5,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -98,13 +99,14 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         test for generic function for parsing dnsmasq files including includes.
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
-            text_file_data = salt.utils.stringutils.to_str(
-                    '\n'.join(["line here", "second line", "A=B", "#"]))
+            text_file_data = textwrap.dedent('''\
+                line here
+                second line
+                A=B
+                #''')
             with patch('salt.utils.files.fopen',
-                       mock_open(read_data=text_file_data),
-                       create=True) as m:
-                m.return_value.__iter__.return_value = text_file_data.splitlines()
+                       mock_open(read_data=text_file_data)):
                 self.assertDictEqual(dnsmasq._parse_dnamasq('filename'),
                                      {'A': 'B',
-                                      'unparsed': ['line here',
-                                                   'second line']})
+                                      'unparsed': ['line here\n',
+                                                   'second line\n']})

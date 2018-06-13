@@ -179,12 +179,12 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
                     rest = rest[len(rest_v):]
                 if rest_v == value:
                     return 'Already set'
-                new_line = '{0}={1}'.format(name, value)
+                new_line = '{0}={1}\n'.format(name, value)
                 nlines.append(new_line)
                 nlines.append('\n')
                 edited = True
     if not edited:
-        nlines.append('{0}={1}'.format(name, value))
+        nlines.append('{0}={1}\n'.format(name, value))
         nlines.append('\n')
     nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
     with salt.utils.files.fopen(config, 'w+') as ofile:

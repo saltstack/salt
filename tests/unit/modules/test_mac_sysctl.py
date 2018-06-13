@@ -91,7 +91,13 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful write to existing sysctl file
         '''
         to_write = '#\n# Kernel sysctl configuration\n#\n'
-        m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50', '\n'])]
+        m_calls_list = [call.writelines([
+            '#\n',
+            '# Kernel sysctl configuration\n',
+            '#\n',
+            'net.inet.icmp.icmplim=50\n',
+            '\n',
+        ])]
         with patch('salt.utils.files.fopen', mock_open(read_data=to_write)) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
