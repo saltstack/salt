@@ -3080,6 +3080,177 @@ def net_define(name, bridge, forward, **kwargs):
     return True
 
 
+def list_networks(**kwargs):
+    '''
+    List all virtual networks.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' virt.list_networks
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return [net.name() for net in conn.listAllNetworks()]
+    finally:
+        conn.close()
+
+
+def network_info(name, **kwargs):
+    '''
+    Return informations on a virtual network provided its name.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_info default
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        leases = net.DHCPLeases()
+        for lease in leases:
+            if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
+                lease['type'] = 'ipv4'
+            elif lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV6:
+                lease['type'] = 'ipv6'
+            else:
+                lease['type'] = 'unknown'
+
+        result = {
+            'uuid': net.UUIDString(),
+            'bridge': net.bridgeName(),
+            'autostart': net.autostart(),
+            'active': net.isActive(),
+            'persistent': net.isPersistent(),
+            'leases': leases
+        }
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def network_start(name, **kwargs):
+    '''
+    Start a defined virtual network.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_start default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.create())
+    finally:
+        conn.close()
+
+
+def network_stop(name, **kwargs):
+    '''
+    Stop a defined virtual network.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_stop default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.destroy())
+    finally:
+        conn.close()
+
+
+def network_undefine(name, **kwargs):
+    '''
+    Remove a defined virtual network. This does not stop the virtual network.
+
+    :param name: virtual network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_undefine default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.undefine())
+    finally:
+        conn.close()
+
+
+def network_set_autostart(name, state='on', **kwargs):
+    '''
+    Set the autostart flag on a virtual network so that the network
+    will start with the host system on reboot.
+
+    :param name: virtual network name
+    :param state: 'on' to auto start the network, anything else to mark the
+                  virtual network not to be started when the host boots
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.network_set_autostart <pool> <on | off>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        net = conn.networkLookupByName(name)
+        return not bool(net.setAutostart(1 if state == 'on' else 0))
+    finally:
+        conn.close()
+
+
 def pool_define_build(name, **kwargs):
     '''
     Create libvirt pool.
@@ -3155,3 +3326,274 @@ def pool_define_build(name, **kwargs):
         return (True, 'Pool exist')
 
     return True
+
+
+def list_pools(**kwargs):
+    '''
+    List all storage pools.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_pools
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return [pool.name() for pool in conn.listAllStoragePools()]
+    finally:
+        conn.close()
+
+
+def pool_info(name, **kwargs):
+    '''
+    Return informations on a storage pool provided its name.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_info default
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        infos = pool.info()
+        states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        state = states[infos[0]] if infos[0] < len(states) else 'unknown'
+        result = {
+            'uuid': pool.UUIDString(),
+            'state': state,
+            'capacity': infos[1],
+            'allocation': infos[2],
+            'free': infos[3],
+            'autostart': pool.autostart(),
+            'persistent': pool.isPersistent()
+        }
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def pool_start(name, **kwargs):
+    '''
+    Start a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_start default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        ret = not bool(pool.create())
+    finally:
+        conn.close()
+
+
+def pool_build(name, **kwargs):
+    '''
+    Build a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_build default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.build())
+    finally:
+        conn.close()
+
+
+def pool_stop(name, **kwargs):
+    '''
+    Stop a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_stop default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.destroy())
+    finally:
+        conn.close()
+
+
+def pool_undefine(name, **kwargs):
+    '''
+    Remove a defined libvirt storage pool. The pool needs to be stopped before calling.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_undefine default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.undefine())
+    finally:
+        conn.close()
+
+
+def pool_delete(name, fast=True, **kwargs):
+    '''
+    Delete the resources of a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param fast: if set to False, zeroes out all the data.
+                 Default value is True.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_delete default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        flags = libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
+        if fast:
+            flags = libvirt.VIR_STORAGE_POOL_DELETE_ZEROED
+        return not bool(pool.delete(flags))
+    finally:
+        conn.close()
+
+
+def pool_refresh(name, **kwargs):
+    '''
+    Refresh a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_refresh default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.refresh())
+    finally:
+        conn.close()
+
+
+def pool_set_autostart(name, state='on', **kwargs):
+    '''
+    Set the autostart flag on a libvirt storage pool so that the storage pool
+    will start with the host system on reboot.
+
+    :param name: libvirt storage pool name
+    :param state: 'on' to auto start the pool, anything else to mark the
+                  pool not to be started when the host boots
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.pool_set_autostart <pool> <on | off>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return not bool(pool.setAutostart(1 if state == 'on' else 0))
+    finally:
+        conn.close()
+
+
+def pool_list_volumes(name, **kwargs):
+    '''
+    List the volumes contained in a defined libvirt storage pool.
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    ..versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.pool_list_volumes <pool>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        return pool.listVolumes()
+    finally:
+        conn.close()
