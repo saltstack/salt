@@ -143,20 +143,24 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = (
-        '<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">'
-        "<inConfig>{3}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=True,
-        headers=DETAILS["headers"],
-    )
+    payload = "<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">" \
+              "<inConfig>{3}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
+    r = __utils__["http.query"](DETAILS["url"],
+                                data=payload,
+                                method="POST",
+                                decode_type="plain",
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=True,
+                                status=True,
+                                headers=DETAILS["headers"])
+
+    if str(r["status"]) not in ["200", "201", "202", "204"]:
+        log.debug("Received error HTTP status code: %s" % str(r["status"]))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+        logout(cookie)
+
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
     logout(cookie)
@@ -177,23 +181,26 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>'.format(
-        cookie, h, cid
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=True,
-        headers=DETAILS["headers"],
-    )
+    payload = "<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>".format(cookie, h, cid)
+    r = __utils__["http.query"](DETAILS["url"],
+                                data=payload,
+                                method="POST",
+                                decode_type="plain",
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=True,
+                                status=True,
+                                headers=DETAILS["headers"])
 
+    if str(r["status"]) not in ["200", "201", "202", "204"]:
+        log.debug("Received error HTTP status code: %s" % str(r["status"]))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+        logout(cookie)
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
     logout(cookie)
+
     for item in items:
         ret[item.tag] = prepare_return(item)
     return ret
@@ -204,19 +211,25 @@ def logon():
     Logs into the cimc device and returns the session cookie.
     """
     content = {}
-    payload = "<aaaLogin inName='{0}' inPassword='{1}'></aaaLogin>".format(
-        DETAILS["username"], DETAILS["password"]
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=False,
-        headers=DETAILS["headers"],
-    )
+    payload = "<aaaLogin inName='{0}' inPassword='{1}'></aaaLogin>".format(DETAILS['username'], DETAILS['password'])
+    r = __utils__["http.query"](DETAILS["url"],
+                                data=payload,
+                                method="POST",
+                                decode_type="plain",
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=False,
+                                status=True,
+                                headers=DETAILS["headers"])
+
+    if str(r["status"]) not in ["200", "201", "202", "204"]:
+        log.debug("Received error HTTP status code: %s" % str(r["status"]))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+
+    answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
+    items = ET.fromstring(answer)
+    logout(cookie)
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
     for item in items.attrib:
