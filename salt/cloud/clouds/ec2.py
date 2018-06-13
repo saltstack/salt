@@ -48,6 +48,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Optional
       ssh_gateway_username: root
 
+      # Default to nc -q0 %h %p
+      # Optional
+      ssh_gateway_command: "-W %h:%p"
+
       # One authentication method is required. If both
       # are specified, Private key wins.
 
