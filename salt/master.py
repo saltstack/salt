@@ -349,8 +349,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     A process from which to update any dynamic fileserver backends
     '''
-    def __init__(self, opts, log_queue=None):
-        super(FileserverUpdate, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(FileserverUpdate, self).__init__(**kwargs)
         self.opts = opts
         self.update_threads = {}
         # Avoid circular import
@@ -363,11 +363,17 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
         return {'opts': self.opts,
-                'log_queue': self.log_queue}
+                'log_queue': self.log_queue,
+                'log_queue_level': self.log_queue_level
+        }
 
     def fill_buckets(self):
         '''

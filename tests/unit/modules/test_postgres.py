@@ -1497,4 +1497,3 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(postgres._pg_is_older_ext_ver('1.2.3.4', '1.2.3.5'))
         self.assertTrue(postgres._pg_is_older_ext_ver('10dev', '10next'))
         self.assertFalse(postgres._pg_is_older_ext_ver('10next', '10dev'))
-
