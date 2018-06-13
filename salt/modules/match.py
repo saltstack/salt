@@ -362,7 +362,7 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set roles = salt.match.search_by({
             'web': ['G@os_family:Debian not nodeX'],

@@ -169,12 +169,18 @@ fields, separated by the pipe (``|``) character:
     sku: Such as 14.04.5-LTS or 2012-R2-Datacenter
     version: Such as 14.04.201612050 or latest
 
-It is possible to specify the URL of a custom image that you have access to,
-such as:
+It is possible to specify the URL or resource ID path of a custom image that you
+have access to, such as:
 
 .. code-block:: yaml
 
     https://<mystorage>.blob.core.windows.net/system/Microsoft.Compute/Images/<mystorage>/template-osDisk.01234567-890a-bcdef0123-4567890abcde.vhd
+
+or:
+
+.. code-block:: yaml
+
+    /subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/myRG/providers/Microsoft.Compute/images/myImage
 
 size
 ----
@@ -289,11 +295,13 @@ Optional. If set, the VM will be added to the specified availability set.
 
 volumes
 -------
-Optional. A list of dictionaries describing data disks to attach to the instance can
-be specified using this setting. The data disk dictionaries are passed entirely to the
-`Azure DataDisk object
- <https://docs.microsoft.com/en-us/python/api/azure.mgmt.compute.v2017_12_01.models.datadisk?view=azure-python>`_
-, so ad-hoc options can be handled as long as they are valid properties of the object.
+
+Optional. A list of dictionaries describing data disks to attach to the
+instance can be specified using this setting. The data disk dictionaries are
+passed entirely to the `Azure DataDisk object
+<https://docs.microsoft.com/en-us/python/api/azure.mgmt.compute.v2017_12_01.models.datadisk?view=azure-python>`_,
+so ad-hoc options can be handled as long as they are valid properties of the
+object.
 
 .. code-block:: yaml
 
@@ -328,7 +336,7 @@ Optional. Default is ``False``. Normally when a VM is deleted, its associated
 interfaces and IPs are retained. This is useful if you expect the deleted VM
 to be recreated with the same name and network settings. If you would like
 interfaces and IPs to be deleted when their associated VM is deleted, set this
-to ``True``. 
+to ``True``.
 
 userdata
 --------
@@ -347,14 +355,14 @@ How this is used depends on the operating system that is being deployed. If
 used, any ``userdata`` setting will be ignored.
 
 userdata_sendkeys
--------------
+-----------------
 Optional. Set to ``True`` in order to generate salt minion keys and provide
 them as variables to the userdata script when running it through the template
 renderer. The keys can be referenced as ``{{opts['priv_key']}}`` and
 ``{{opts['pub_key']}}``.
 
 userdata_template
--------------
+-----------------
 Optional. Enter the renderer, such as ``jinja``, to be used for the userdata
 script template.
 
