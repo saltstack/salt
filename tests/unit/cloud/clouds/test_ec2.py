@@ -17,7 +17,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, PropertyMock
 from tests.support.paths import TMP
 from tests.unit.test_crypt import PRIVKEY_DATA
 
-
 PASS_DATA = (
     b'qOjCKDlBdcNEbJ/J8eRl7sH+bYIIm4cvHHY86gh2NEUnufFlFo0gGVTZR05Fj0cw3n/w7gR'
     b'urNXz5JoeSIHVuNI3YTwzL9yEAaC0kuy8EbOlO2yx8yPGdfml9BRwOV7A6b8UFo9co4H7fz'
@@ -34,17 +33,12 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setUp(self):
-        super(EC2TestCase, self).setUp()
         with tempfile.NamedTemporaryFile(dir=TMP, suffix='.pem', delete=True) as fp:
             self.key_file = fp.name
 
     def tearDown(self):
-        super(EC2TestCase, self).tearDown()
         if os.path.exists(self.key_file):
             os.remove(self.key_file)
-
-    def setup_loader_modules(self):
-        return {ec2: {'__opts__': {}}}
 
     def test__validate_key_path_and_mode(self):
 
@@ -80,6 +74,8 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         _get_node.return_value = {'instanceId': 'i-abcdef'}
         get_location.return_value = 'us-west2'
         get_provider.return_value = 'ec2'
+        ec2.__opts__ = {}  # pylint: disable=unmocked-patch-dunder
+        ec2.__active_provider_name__ = None  # pylint: disable=unmocked-patch
         with salt.utils.files.fopen(self.key_file, 'w') as fp:
             fp.write(PRIVKEY_DATA)
         ret = ec2.get_password_data(
