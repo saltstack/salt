@@ -102,6 +102,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
@@ -287,48 +288,33 @@ def _get_domain(conn, *vms, **kwargs):
 
 def _parse_qemu_img_info(info):
     '''
-    Parse qemu-img info output into disk infos YAML
+    Parse qemu-img info JSON output into disk infos dictionary
     '''
-    output = []
-    snapshots = False
-    columns = None
-    lines = info.strip().split('\n')
-    for line in lines:
-        if line.startswith('Snapshot list:'):
-            snapshots = True
-            continue
+    raw_infos = salt.utils.json.loads(info)
+    output = {
+                'file': raw_infos['filename'],
+                'file format': raw_infos['format'],
+                'disk size': raw_infos['actual-size'],
+                'virtual size': raw_infos['virtual-size'],
+                'cluster size': raw_infos['cluster-size']
+             }
 
-        # If this is a copy-on-write image, then the backing file
-        # represents the base image
-        #
-        # backing file: base.qcow2 (actual path: /var/shared/base.qcow2)
-        elif line.startswith('backing file'):
-            matches = re.match(r'.*\(actual path: (.*?)\)', line)
-            if matches:
-                output.append('backing file: {0}'.format(matches.group(1)))
-            continue
+    if 'full-backing-filename' in raw_infos.keys():
+        output['backing file'] = format(raw_infos['full-backing-filename'])
 
-        elif snapshots:
-            if line.startswith('ID'):  # Do not parse table headers
-                line = line.replace('VM SIZE', 'VMSIZE')
-                line = line.replace('VM CLOCK', 'TIME VMCLOCK')
-                columns = re.split(r'\s+', line)
-                columns = [c.lower() for c in columns]
-                output.append('snapshots:')
-                continue
-            fields = re.split(r'\s+', line)
-            for i, field in enumerate(fields):
-                sep = ' '
-                if i == 0:
-                    sep = '-'
-                output.append(
-                    '{0} {1}: "{2}"'.format(
-                        sep, columns[i], field
-                    )
-                )
-            continue
-        output.append(line)
-    return '\n'.join(output)
+    if 'snapshots' in raw_infos.keys():
+        output['snapshots'] = [
+                {
+                    'id': snapshot['id'],
+                    'tag': snapshot['name'],
+                    'vmsize': snapshot['vm-state-size'],
+                    'date': datetime.datetime.fromtimestamp(
+                        float('{}.{}'.format(snapshot['date-sec'], snapshot['date-nsec']))).isoformat(),
+                    'vmclock': datetime.datetime.utcfromtimestamp(
+                        float('{}.{}'.format(snapshot['vm-clock-sec'], snapshot['vm-clock-nsec']))).time().isoformat()
+                } for snapshot in raw_infos['snapshots']]
+
+    return output
 
 
 def _get_uuid(dom):
@@ -495,14 +481,14 @@ def _get_disks(dom):
             if driver and driver.getAttribute('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
-                                ['qemu-img', 'info', disk['file']],
+                                ['qemu-img', 'info', '--output', 'json', disk['file']],
                                 shell=False,
                                 stdout=subprocess.PIPE).communicate()[0]
                     qemu_output = salt.utils.stringutils.to_str(stdout)
                     output = _parse_qemu_img_info(qemu_output)
-                    disk.update(salt.utils.yaml.safe_load(output))
+                    disk.update(output)
                 except TypeError:
-                    disk.update({'image': 'Does not exist'})
+                    disk.update({'file': 'Does not exist'})
 
             disks[target.getAttribute('dev')] = disk
     return disks
