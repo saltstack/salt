@@ -291,30 +291,40 @@ def _parse_qemu_img_info(info):
     Parse qemu-img info JSON output into disk infos dictionary
     '''
     raw_infos = salt.utils.json.loads(info)
-    output = {
-                'file': raw_infos['filename'],
-                'file format': raw_infos['format'],
-                'disk size': raw_infos['actual-size'],
-                'virtual size': raw_infos['virtual-size'],
-                'cluster size': raw_infos['cluster-size']
-             }
+    disks = []
+    for disk_infos in raw_infos:
+        disk = {
+                   'file': disk_infos['filename'],
+                   'file format': disk_infos['format'],
+                   'disk size': disk_infos['actual-size'],
+                   'virtual size': disk_infos['virtual-size'],
+                   'cluster size': disk_infos['cluster-size']
+               }
 
-    if 'full-backing-filename' in raw_infos.keys():
-        output['backing file'] = format(raw_infos['full-backing-filename'])
+        if 'full-backing-filename' in disk_infos.keys():
+            disk['backing file'] = format(disk_infos['full-backing-filename'])
 
-    if 'snapshots' in raw_infos.keys():
-        output['snapshots'] = [
-                {
-                    'id': snapshot['id'],
-                    'tag': snapshot['name'],
-                    'vmsize': snapshot['vm-state-size'],
-                    'date': datetime.datetime.fromtimestamp(
-                        float('{}.{}'.format(snapshot['date-sec'], snapshot['date-nsec']))).isoformat(),
-                    'vmclock': datetime.datetime.utcfromtimestamp(
-                        float('{}.{}'.format(snapshot['vm-clock-sec'], snapshot['vm-clock-nsec']))).time().isoformat()
-                } for snapshot in raw_infos['snapshots']]
+        if 'snapshots' in disk_infos.keys():
+            disk['snapshots'] = [
+                    {
+                        'id': snapshot['id'],
+                        'tag': snapshot['name'],
+                        'vmsize': snapshot['vm-state-size'],
+                        'date': datetime.datetime.fromtimestamp(
+                            float('{}.{}'.format(snapshot['date-sec'], snapshot['date-nsec']))).isoformat(),
+                        'vmclock': datetime.datetime.utcfromtimestamp(
+                            float('{}.{}'.format(snapshot['vm-clock-sec'],
+                                                 snapshot['vm-clock-nsec']))).time().isoformat()
+                    } for snapshot in disk_infos['snapshots']]
+        disks.append(disk)
 
-    return output
+    for disk in disks:
+        if 'backing file' in disk.keys():
+            candidates = [info for info in disks if 'file' in info.keys() and info['file'] == disk['backing file']]
+            if candidates:
+                disk['backing file'] = candidates[0]
+
+    return disks[0]
 
 
 def _get_uuid(dom):
@@ -481,7 +491,7 @@ def _get_disks(dom):
             if driver and driver.getAttribute('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
-                                ['qemu-img', 'info', '--output', 'json', disk['file']],
+                                ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
                                 shell=False,
                                 stdout=subprocess.PIPE).communicate()[0]
                     qemu_output = salt.utils.stringutils.to_str(stdout)

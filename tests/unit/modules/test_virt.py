@@ -618,7 +618,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Make sure that qemu-img info output is properly parsed
         '''
-        qemu_infos = '''{
+        qemu_infos = '''[{
             "snapshots": [
                 {
                     "vm-clock-nsec": 0,
@@ -656,13 +656,62 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "full-backing-filename": "/disks/mybacking.qcow2",
             "backing-filename": "mybacking.qcow2",
             "dirty-flag": false
-        }'''
+        },
+        {
+            "virtual-size": 25769803776,
+            "filename": "/disks/mybacking.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 393744384,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "full-backing-filename": "/disks/root.qcow2",
+            "backing-filename": "root.qcow2",
+            "dirty-flag": false
+        },
+        {
+            "virtual-size": 25769803776,
+            "filename": "/disks/root.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 196872192,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "dirty-flag": false
+        }]'''
 
         self.assertEqual(
             {
                 'file': '/disks/test.qcow2',
                 'file format': 'qcow2',
-                'backing file': '/disks/mybacking.qcow2',
+                'backing file': {
+                    'file': '/disks/mybacking.qcow2',
+                    'file format': 'qcow2',
+                    'disk size': 393744384,
+                    'virtual size': 25769803776,
+                    'cluster size': 65536,
+                    'backing file': {
+                        'file': '/disks/root.qcow2',
+                        'file format': 'qcow2',
+                        'disk size': 196872192,
+                        'virtual size': 25769803776,
+                        'cluster size': 65536,
+                    }
+                },
                 'disk size': 217088,
                 'virtual size': 25769803776,
                 'cluster size': 65536,
@@ -709,7 +758,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''{
+        qemu_infos = '''[{
             "virtual-size": 25769803776,
             "filename": "/disks/test.qcow2",
             "cluster-size": 65536,
@@ -727,14 +776,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "full-backing-filename": "/disks/mybacking.qcow2",
             "backing-filename": "mybacking.qcow2",
             "dirty-flag": false
-        }'''
+        },
+        {
+            "virtual-size": 25769803776,
+            "filename": "/disks/mybacking.qcow2",
+            "cluster-size": 65536,
+            "format": "qcow2",
+            "actual-size": 393744384,
+            "format-specific": {
+                "type": "qcow2",
+                "data": {
+                    "compat": "1.1",
+                    "lazy-refcounts": false,
+                    "refcount-bits": 16,
+                    "corrupt": false
+                }
+            },
+            "dirty-flag": false
+        }]'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
         disks = virt.get_disks('test-vm')
         disk = disks.get('vda')
         self.assertEqual('/disks/test.qcow2', disk['file'])
         self.assertEqual('disk', disk['type'])
-        self.assertEqual('/disks/mybacking.qcow2', disk['backing file'])
+        self.assertEqual('/disks/mybacking.qcow2', disk['backing file']['file'])
         cdrom = disks.get('hda')
         self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
         self.assertEqual('cdrom', cdrom['type'])
@@ -766,7 +832,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''{
+        qemu_infos = '''[{
             "virtual-size": 25769803776,
             "filename": "/disks/test.qcow2",
             "cluster-size": 65536,
@@ -782,7 +848,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
             "dirty-flag": false
-        }'''
+        }]'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
@@ -823,7 +889,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.set_mock_vm("test-vm", xml)
 
-        qemu_infos = '''{
+        qemu_infos = '''[{
             "virtual-size": 25769803776,
             "filename": "/disks/test.qcow2",
             "cluster-size": 65536,
@@ -839,7 +905,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
             "dirty-flag": false
-        }'''
+        }]'''
 
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
