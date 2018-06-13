@@ -150,7 +150,15 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
                                 decode=True,
                                 verify_ssl=False,
                                 raise_error=True,
+                                status=True,
                                 headers=DETAILS['headers'])
+
+    if str(r['status']) not in ['200', '201', '202', '204']:
+        log.debug("Received error HTTP status code: %s" % str(r['status']))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+        logout(cookie)
+
     answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
@@ -179,11 +187,18 @@ def get_config_resolver_class(cid=None, hierarchical=False):
                                 decode=True,
                                 verify_ssl=False,
                                 raise_error=True,
+                                status=True,
                                 headers=DETAILS['headers'])
 
+    if str(r['status']) not in ['200', '201', '202', '204']:
+        log.debug("Received error HTTP status code: %s" % str(r['status']))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+        logout(cookie)
     answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
+
     for item in items:
         ret[item.tag] = prepare_return(item)
     return ret
@@ -202,7 +217,17 @@ def logon():
                                 decode=True,
                                 verify_ssl=False,
                                 raise_error=False,
+                                status=True,
                                 headers=DETAILS['headers'])
+
+    if str(r['status']) not in ['200', '201', '202', '204']:
+        log.debug("Received error HTTP status code: %s" % str(r['status']))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+
+    answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
+    items = ET.fromstring(answer)
+    logout(cookie)
     answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     for item in items.attrib:
