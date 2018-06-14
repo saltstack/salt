@@ -155,7 +155,6 @@ def _call_yum(args, **kwargs):
     Call yum/dnf.
     '''
     params = {'output_loglevel': 'trace',
-              'ignore_retcode': True,
               'python_shell': False,
               'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)

@@ -169,7 +169,6 @@ def _call_apt(args, scope=True, **kwargs):
     cmd.extend(args)
 
     params = {'output_loglevel': 'trace',
-              'ignore_retcode': True,
               'python_shell': False,
               'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)
