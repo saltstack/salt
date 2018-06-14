@@ -41,7 +41,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
-from salt.utils.environment import get_module_environment
+import salt.utils.environment
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class _Zypper(object):
         self.__exit_code = 0
         self.__call_result = dict()
         self.__error_msg = ''
-        self.__env = get_module_environment(globals())
+        self.__env = salt.utils.environment.get_module_environment(globals())
 
         # Call config
         self.__xml = False

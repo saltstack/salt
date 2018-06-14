@@ -44,7 +44,7 @@ import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
-from salt.utils.environment import get_module_environment
+import salt.utils.environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -171,7 +171,7 @@ def _call_apt(args, scope=True, **kwargs):
     params = {'output_loglevel': 'trace',
               'ignore_retcode': True,
               'python_shell': False,
-              'env': get_module_environment(globals())}
+              'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)
 
     return __salt__['cmd.run_all'](cmd, **params)

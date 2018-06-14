@@ -54,7 +54,7 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.utils.environment import get_module_environment
+import salt.utils.environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -157,7 +157,7 @@ def _call_yum(args, **kwargs):
     params = {'output_loglevel': 'trace',
               'ignore_retcode': True,
               'python_shell': False,
-              'env': get_module_environment(globals())}
+              'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)
     cmd = []
     if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
