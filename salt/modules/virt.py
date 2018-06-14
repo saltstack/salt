@@ -57,7 +57,6 @@ whatever the ``virt:connection`` is.
 
 The calls not using the libvirt connection setup are:
 
-- ``get_profiles``
 - ``seed_non_shared_migrate``
 - ``virt_type``
 - ``is_*hyper``
@@ -130,8 +129,6 @@ VIRT_STATE_NAME_MAP = {0: 'running',
                        4: 'shutdown',
                        5: 'shutdown',
                        6: 'crashed'}
-
-VIRT_DEFAULT_HYPER = 'kvm'
 
 
 def __virtual__():
@@ -246,6 +243,14 @@ def __get_conn(**kwargs):
             )
         )
     return conn
+
+
+def _get_domain_types(**kwargs):
+    '''
+    Return the list of possible values for the <domain> type attribute.
+    '''
+    caps = capabilities(**kwargs)
+    return sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
 
 
 def _get_domain(conn, *vms, **kwargs):
@@ -566,7 +571,6 @@ def _gen_xml(name,
     '''
     Generate the XML string to define a libvirt VM
     '''
-    hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
     mem = int(mem) * 1024  # MB
     context = {
         'hypervisor': hypervisor,
@@ -576,7 +580,7 @@ def _gen_xml(name,
     }
     if hypervisor in ['qemu', 'kvm']:
         context['controller_model'] = False
-    elif hypervisor in ['esxi', 'vmware']:
+    elif hypervisor == 'vmware':
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
@@ -871,7 +875,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
     '''
     default = [{'system':
                 {'size': '8192'}}]
-    if hypervisor in ['esxi', 'vmware']:
+    if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
                    'pool': '[{0}] '.format(kwargs.get('pool', '0'))}
@@ -903,7 +907,6 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     overlays = {
             'kvm': kvm_overlay,
             'qemu': kvm_overlay,
-            'esxi': vmware_overlay,
             'vmware': vmware_overlay,
             }
 
@@ -1033,7 +1036,7 @@ def init(name,
          mem,
          image=None,
          nic='default',
-         hypervisor=VIRT_DEFAULT_HYPER,
+         hypervisor=None,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
          saltenv='base',
@@ -1106,7 +1109,24 @@ def init(name,
         virt:
             images: /data/my/vm/images/
     '''
+    hypervisors = _get_domain_types(**kwargs)
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+    if hypervisor is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'libvirt:hypervisor\' configuration property has been deprecated. '
+            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+            'stop being used in {version}.'
+        )
+    else:
+        # Use the machine types as possible values
+        # Prefer 'kvm' over the others if available
+        hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+
+    # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
+    hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
+
     log.debug('Using hyperisor %s', hypervisor)
 
     nicp = _nic_profile(nic, hypervisor, **kwargs)
@@ -1128,7 +1148,7 @@ def init(name,
 
         for disk_name, args in six.iteritems(_disk):
 
-            if hypervisor in ['esxi', 'vmware']:
+            if hypervisor == 'vmware':
                 if 'image' in args:
                     # TODO: we should be copying the image file onto the ESX host
                     raise SaltInvocationError(
@@ -1780,7 +1800,7 @@ def get_xml(vm_, **kwargs):
     return xml_desc
 
 
-def get_profiles(hypervisor=None):
+def get_profiles(hypervisor=None, **kwargs):
     '''
     Return the virt profiles for hypervisor.
 
@@ -1808,10 +1828,24 @@ def get_profiles(hypervisor=None):
         salt '*' virt.get_profiles hypervisor=esxi
     '''
     ret = {}
-    if hypervisor:
-        hypervisor = hypervisor
-    else:
-        hypervisor = __salt__['config.get']('libvirt:hypervisor', VIRT_DEFAULT_HYPER)
+
+    hypervisors = _get_domain_types(**kwargs)
+    default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+
+    if not hypervisor:
+        hypervisor = __salt__['config.get']('libvirt:hypervisor')
+        if hypervisor is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                '\'libvirt:hypervisor\' configuration property has been deprecated. '
+                'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+                'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+                'stop being used in {version}.'
+            )
+        else:
+            # Use the machine types as possible values
+            # Prefer 'kvm' over the others if available
+            hypervisor = default_hypervisor
     virtconf = __salt__['config.get']('virt', {})
     for typ in ['disk', 'nic']:
         _func = getattr(sys.modules[__name__], '_{0}_profile'.format(typ))
