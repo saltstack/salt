@@ -21,7 +21,6 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.dnsmasq as dnsmasq
-import salt.utils.stringutils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
