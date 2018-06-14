@@ -991,6 +991,7 @@ VALID_OPTS = {
     'ssh_identities_only': bool,
     'ssh_log_file': six.string_types,
     'ssh_config_file': six.string_types,
+    'ssh_merge_pillar': bool,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -1501,6 +1502,7 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
+    'ssh_merge_pillar': True
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1773,6 +1775,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_jid_forward_cache_hwm': 100,
     'regen_thin': False,
     'ssh_passwd': '',
+    'ssh_priv_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
     'ssh_sudo_user': '',
@@ -2108,7 +2111,7 @@ def _validate_ssh_minion_opts(opts):
 
     for opt_name in list(ssh_minion_opts):
         if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
-                or 'pillar' in opt_name \
+                or ('pillar' in opt_name and not 'ssh_merge_pillar' == opt_name) \
                 or opt_name in ('fileserver_backend',):
             log.warning(
                 '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
@@ -3335,7 +3338,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if isinstance(vm_[name], types.GeneratorType):
             value = next(vm_[name], '')
         else:
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(vm_[name], dict):
                 value.update(vm_[name].copy())
             else:
                 value = deepcopy(vm_[name])

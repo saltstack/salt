@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 NAPALM Network
-===============
+==============
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
@@ -833,12 +833,12 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns IP addresses configured on the device.
 
-
-    :return:   A dictionary with the IPv4 and IPv6 addresses of the interfaces.\
-    Returns all configured IP addresses on all interfaces as a dictionary of dictionaries.\
-    Keys of the main dictionary represent the name of the interface.\
-    Values of the main dictionary represent are dictionaries that may consist of two keys\
-    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries with the IP addresses as keys.\
+    :return:   A dictionary with the IPv4 and IPv6 addresses of the interfaces.
+        Returns all configured IP addresses on all interfaces as a dictionary
+        of dictionaries.  Keys of the main dictionary represent the name of the
+        interface.  Values of the main dictionary represent are dictionaries
+        that may consist of two keys 'ipv4' and 'ipv6' (one, both or none)
+        which are themselvs dictionaries with the IP addresses as keys.
 
     CLI Example:
 
@@ -893,8 +893,8 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns details of the interfaces on the device.
 
-    :return: Returns a dictionary of dictionaries. \
-    The keys for the first dictionary will be the interfaces in the devices.
+    :return: Returns a dictionary of dictionaries. The keys for the first
+        dictionary will be the interfaces in the devices.
 
     CLI Example:
 
@@ -941,8 +941,9 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
     Returns a detailed view of the LLDP neighbors.
 
     :param interface: interface name to filter on
-    :return:          A dictionary with the LLDL neighbors.\
-    The keys are the interfaces with LLDP activated on.
+
+    :return:          A dictionary with the LLDL neighbors. The keys are the
+        interfaces with LLDP activated on.
 
     CLI Example:
 
@@ -1074,19 +1075,18 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
 
-    Return the whole configuration of the network device.
-    By default, it will return all possible configuration
-    sources supported by the network device.
+    Return the whole configuration of the network device. By default, it will
+    return all possible configuration sources supported by the network device.
     At most, there will be:
 
     - running config
     - startup config
     - candidate config
 
-    To return only one of the configurations, you can use
-    the ``source`` argument.
+    To return only one of the configurations, you can use the ``source``
+    argument.
 
-    source (optional)
+    source
         Which configuration type you want to display, default is all of them.
 
         Options:
@@ -1457,26 +1457,26 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
-    **template_vars
+    template_vars
         Dictionary with the arguments/context to be used when the template is rendered.
 
         .. note::
 
-            Do not explicitly specify this argument.
-            This represents any other variable that will be sent
-            to the template rendering system.
+            Do not explicitly specify this argument. This represents any other
+            variable that will be sent to the template rendering system.
             Please see the examples below!
 
     :return: a dictionary having the following keys:
 
-    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
-    the ``already_configured`` flag (example below)
-    * comment (str): a message for the user
-    * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
-    to be set as ``True``
-    * diff (str): returns the config changes applied
+    - result (bool): if the config was applied successfully. It is ``False``
+      only in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still ``True`` and so will be
+      the ``already_configured`` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - loaded_config (str): the configuration loaded on the device, after
+      rendering the template. Requires ``debug`` to be set as ``True``
+    - diff (str): returns the config changes applied
 
     The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
 

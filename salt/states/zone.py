@@ -266,16 +266,17 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
         unique resource identifier
     resource_selector_value : string
         value for resource selection
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     .. warning::
-        Both resource_selector_property and resource_selector_value must be provided, some properties
-        like ```name``` are already reserved by salt in there states.
+        Both resource_selector_property and resource_selector_value must be
+        provided, some properties like ``name`` are already reserved by salt in
+        states.
 
     .. note::
-        You can set both resource_selector_property and resource_selector_value to None for
-        resources that do not require them.
+        You can set both resource_selector_property and resource_selector_value
+        to None for resources that do not require them.
 
     '''
     ret = {'name': name,

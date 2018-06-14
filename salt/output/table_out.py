@@ -62,9 +62,9 @@ class TableDisplay(object):
     '''
 
     _JUSTIFY_MAP = {
-        'center': str.center,
-        'right': str.rjust,
-        'left': str.ljust
+        'center': six.text_type.center,
+        'right': six.text_type.rjust,
+        'left': six.text_type.ljust
     }
 
     def __init__(self,
@@ -147,7 +147,7 @@ class TableDisplay(object):
                 for item in row
             ]
             rows = []
-            for item in map(None, *new_rows):
+            for item in map(lambda *args: args, *new_rows):
                 if isinstance(item, (tuple, list)):
                     rows.append([substr or '' for substr in item])
                 else:
@@ -159,7 +159,7 @@ class TableDisplay(object):
             for row in rows
         ]
 
-        columns = map(None, *reduce(operator.add, logical_rows))
+        columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
         max_widths = [
             max([len(six.text_type(item)) for item in column])
@@ -315,11 +315,11 @@ def output(ret, **kwargs):
         * nested_indent: integer, specify the left alignment.
         * has_header: boolean specifying if header should be displayed. Default: True.
         * row_delimiter: character to separate rows. Default: ``_``.
-        * delim: character to separate columns. Default: `` | ``.
+        * delim: character to separate columns. Default: ``" | "``.
         * justify: text alignment. Default: ``center``.
         * separate_rows: boolean specifying if row separator will be displayed between consecutive rows. Default: True.
-        * prefix: character at the beginning of the row. Default: ``| ``.
-        * suffix: character at the end of the row. Default: `` |``.
+        * prefix: character at the beginning of the row. Default: ``"| "``.
+        * suffix: character at the end of the row. Default: ``" |"``.
         * width: column max width. Default: ``50``.
         * rows_key: display the rows under a specific key.
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
@@ -363,7 +363,7 @@ def output(ret, **kwargs):
             )
         )
 
-    return '\n'.join(table.display(ret,
+    return '\n'.join(table.display(salt.utils.data.decode(ret),
                                    base_indent,
                                    out,
                                    rows_key=rows_key,

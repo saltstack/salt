@@ -329,13 +329,17 @@ def get_conn(client_type):
     return client
 
 
-def get_location(call=None):  # pylint: disable=unused-argument
+def get_location(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     Return the location that is configured for this provider
     '''
+    if not kwargs:
+        kwargs = {}
+    vm_dict = get_configured_provider()
+    vm_dict.update(kwargs)
     return config.get_cloud_config_value(
         'location',
-        get_configured_provider(), __opts__, search_global=False
+        vm_dict, __opts__, search_global=False
     )
 
 
@@ -540,7 +544,7 @@ def list_nodes_full(call=None):
             try:
                 node['image'] = node['storage_profile']['os_disk']['image']['uri']
             except (TypeError, KeyError):
-                node['image'] = None
+                node['image'] = node.get('storage_profile', {}).get('image_reference', {}).get('id')
         try:
             netifaces = node['network_profile']['network_interfaces']
             for index, netiface in enumerate(netifaces):
@@ -766,20 +770,28 @@ def create_network_interface(call=None, kwargs=None):
         )
 
     if kwargs.get('network_resource_group') is None:
-        kwargs['resource_group'] = config.get_cloud_config_value(
+        kwargs['network_resource_group'] = config.get_cloud_config_value(
             'resource_group', vm_, __opts__, search_global=False
         )
-    else:
-        kwargs['resource_group'] = kwargs['network_resource_group']
 
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
-    subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['resource_group'],
-        virtual_network_name=kwargs['network'],
-        subnet_name=kwargs['subnet'],
-    )
+    try:
+        subnet_obj = netconn.subnets.get(
+            resource_group_name=kwargs['network_resource_group'],
+            virtual_network_name=kwargs['network'],
+            subnet_name=kwargs['subnet'],
+        )
+    except CloudError as exc:
+        raise SaltCloudSystemExit(
+            '{0} (Resource Group: "{1}", VNET: "{2}", Subnet: "{3}")'.format(
+                exc.message,
+                kwargs['network_resource_group'],
+                kwargs['network'],
+                kwargs['subnet']
+            )
+        )
 
     ip_kwargs = {}
     ip_configurations = None
@@ -1158,26 +1170,29 @@ def request_instance(vm_):
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
 
         if 'image' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.from_image
+            volume['create_option'] = 'from_image'
         elif 'attach' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.attach
+            volume['create_option'] = 'attach'
         else:
-            volume['create_option'] = DiskCreateOptionTypes.empty
+            volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
+    img_ref = None
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
         if vm_['image'].startswith('http'):
             source_image = VirtualHardDisk(vm_['image'])
-            img_ref = None
         else:
             source_image = None
-            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
-            img_ref = ImageReference(
-                publisher=img_pub,
-                offer=img_off,
-                sku=img_sku,
-                version=img_ver,
-            )
+            if '|' in vm_['image']:
+                img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+                img_ref = ImageReference(
+                    publisher=img_pub,
+                    offer=img_off,
+                    sku=img_sku,
+                    version=img_ver,
+                )
+            elif vm_['image'].startswith('/subscriptions'):
+                img_ref = ImageReference(id=vm_['image'])
         if win_installer:
             os_type = 'Windows'
         else:
@@ -1198,19 +1213,22 @@ def request_instance(vm_):
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
     else:
-        img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
         os_disk = OSDisk(
             create_option=DiskCreateOptionTypes.from_image,
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
-        img_ref = ImageReference(
-            publisher=img_pub,
-            offer=img_off,
-            sku=img_sku,
-            version=img_ver,
-        )
+        if '|' in vm_['image']:
+            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+            img_ref = ImageReference(
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
+            )
+        elif vm_['image'].startswith('/subscriptions'):
+            img_ref = ImageReference(id=vm_['image'])
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
@@ -1377,10 +1395,10 @@ def create(vm_):
     __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'azurearm', vm_['driver']
     )
-    location = get_location(vm_)
-    vm_['location'] = location
+    if not vm_.get('location'):
+        vm_['location'] = get_location(kwargs=vm_)
 
-    log.info('Creating Cloud VM %s in %s', vm_['name'], location)
+    log.info('Creating Cloud VM %s in %s', vm_['name'], vm_['location'])
 
     vm_request = request_instance(vm_=vm_)
 
