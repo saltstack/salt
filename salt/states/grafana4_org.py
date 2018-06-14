@@ -77,9 +77,12 @@ def present(name,
 
     users
         Optional - Dict of user/role associated with the org. Example:
-        users:
-          foo: Viewer
-          bar: Editor
+
+        .. code-block:: yaml
+
+            users:
+              foo: Viewer
+              bar: Editor
 
     theme
         Optional - Selected theme for the org.
