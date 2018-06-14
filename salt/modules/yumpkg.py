@@ -481,7 +481,7 @@ def latest_version(*names, **kwargs):
     cmd.extend(options)
     cmd.extend(['list', 'available'])
     cmd.extend(names)
-    out = _call_yum(cmd)
+    out = _call_yum(cmd, ignore_retcode=True)
     if out['retcode'] != 0:
         if out['stderr']:
             # Check first if this is just a matter of the packages being
@@ -897,7 +897,7 @@ def list_repo_pkgs(*args, **kwargs):
         cmd_prefix.append('list')
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
-            out = _call_yum(cmd_prefix + [pkg_src])
+            out = _call_yum(cmd_prefix + [pkg_src], ignore_retcode=True)
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
     # The --showduplicates option is added in 3.2.13, but the
@@ -909,7 +909,7 @@ def list_repo_pkgs(*args, **kwargs):
         cmd_prefix.append('list')
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
-            out = _call_yum(cmd_prefix + [pkg_src])
+            out = _call_yum(cmd_prefix + [pkg_src], ignore_retcode=True)
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
     else:
@@ -919,7 +919,7 @@ def list_repo_pkgs(*args, **kwargs):
                 cmd.append('-C')
             # Can't concatenate because args is a tuple, using list.extend()
             cmd.extend(args)
-            out = _call_yum(cmd)
+            out = _call_yum(cmd, ignore_retcode=True)
             if out['retcode'] != 0 and 'Error:' in out['stdout']:
                 continue
             _parse_output(out['stdout'])
@@ -973,7 +973,7 @@ def list_upgrades(refresh=True, **kwargs):
     cmd = ['--quiet']
     cmd.extend(options)
     cmd.extend(['list', 'upgrades' if _yum() == 'dnf' else 'updates'])
-    out = _call_yum(cmd)
+    out = _call_yum(cmd, ignore_retcode=True)
     if out['retcode'] != 0 and 'Error:' in out:
         return {}
 
@@ -1104,7 +1104,7 @@ def refresh_db(**kwargs):
 
     clean_cmd = ['--quiet', '--assumeyes', 'clean', 'expire-cache']
     clean_cmd.extend(options)
-    _call_yum(clean_cmd)
+    _call_yum(clean_cmd, ignore_retcode=True)
 
     if check_update_:
         update_cmd = ['--quiet', '--assumeyes', 'check-update']
@@ -1114,7 +1114,7 @@ def refresh_db(**kwargs):
             # lot of extra time to the command with large repos like EPEL
             update_cmd.append('--setopt=autocheck_running_kernel=false')
         update_cmd.extend(options)
-        ret = retcodes.get(_call_yum(update_cmd)['retcode'], False)
+        ret = retcodes.get(_call_yum(update_cmd, ignore_retcode=True)['retcode'], False)
 
     return ret
 
