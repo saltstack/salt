@@ -487,7 +487,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
             aptpkg._call_apt(['apt-get', 'install', 'emacs'])  # pylint: disable=W0106
             aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
-                ['apt-get', 'install', 'emacs'], env={}, ignore_retcode=True,
+                ['apt-get', 'install', 'emacs'], env={},
                 output_loglevel='trace', python_shell=False)
 
     @patch('salt.utils.systemd.has_scope', MagicMock(return_value=True))
@@ -499,7 +499,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
             aptpkg._call_apt(['apt-get', 'purge', 'vim'])  # pylint: disable=W0106
             aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
-                ['systemd-run', '--scope', 'apt-get', 'purge', 'vim'], env={}, ignore_retcode=True,
+                ['systemd-run', '--scope', 'apt-get', 'purge', 'vim'], env={},
                 output_loglevel='trace', python_shell=False)
 
     def test_call_apt_with_kwargs(self):
