@@ -275,9 +275,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         # Skip all the /etc/*-release stuff (not pertinent)
         #  - Mock linux_distribution to give us the OS name that we want.
         # Mock the osarch
-	distro_mock = MagicMock(return_value=os_release_map['linux_distribution'])
+        distro_mock = MagicMock(return_value=os_release_map['linux_distribution'])
         with patch.object(salt.utils.platform, 'is_proxy', MagicMock(return_value=False)), \
-		patch.object(core, '_linux_bin_exists', MagicMock(return_value=False)), \
+                patch.object(core, '_linux_bin_exists', MagicMock(return_value=False)), \
                 patch.object(os.path, 'exists', path_isfile_mock), \
                 patch('{0}.__import__'.format(built_in), side_effect=_import_mock), \
                 patch.object(os.path, 'isfile', path_isfile_mock), \
