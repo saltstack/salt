@@ -865,7 +865,7 @@ def autoremove(list_only=False, purge=False):
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
-        out = _call_apt(cmd)['stdout']
+        out = _call_apt(cmd, ignore_retcode=True)['stdout']
         found = False
         for line in out.splitlines():
             if found is True:
@@ -883,7 +883,7 @@ def autoremove(list_only=False, purge=False):
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
-        _call_apt(cmd)
+        _call_apt(cmd, ignore_retcode=True)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         return salt.utils.data.compare_dicts(old, new)
@@ -1543,7 +1543,7 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         salt '*' pkg.list_repo_pkgs
         salt '*' pkg.list_repo_pkgs foo bar baz
     '''
-    out = _call_apt(['apt-cache', 'dump'], scope=False)
+    out = _call_apt(['apt-cache', 'dump'], scope=False, ignore_retcode=True)
     ret = {}
     pkg_name = None
     skip_pkg = False
