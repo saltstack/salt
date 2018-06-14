@@ -601,7 +601,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
                      '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
-                    ignore_retcode=True,
                     python_shell=False)
 
             # without fromrepo
@@ -620,7 +619,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
                      '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
-                    ignore_retcode=True,
                     python_shell=False)
 
     def test_info_installed_with_all_versions(self):
@@ -709,7 +707,7 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
             yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
             yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
-                ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
+                ['fake-yum', '-y', '--do-something'], env={},
                 output_loglevel='trace', python_shell=False)
 
     @patch('salt.utils.systemd.has_scope', MagicMock(return_value=True))
@@ -721,7 +719,7 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
             yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
             yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
-                ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={}, ignore_retcode=True,
+                ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={},
                 output_loglevel='trace', python_shell=False)
 
     def test_call_yum_with_kwargs(self):
