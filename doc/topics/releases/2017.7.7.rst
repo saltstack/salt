@@ -5,15 +5,38 @@ In Progress: Salt 2017.7.7 Release Notes
 Version 2017.7.7 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 This release is still in progress and has not been released yet.
 
-New win_snmp behavior
-=====================
+The ``2017.7.7`` release contains only a single fix for Issue `#48038`_, which
+is a critical bug that occurs in a multi-syndic setup where the same job is run
+multiple times on a minion.
 
-- :py:func:`win_snmp.get_community_names
-  <salt.modules.win_snmp.get_community_names>` now returns the SNMP settings
-  actually in effect on the box. If settings are managed via GroupPolicy, those
-  settings will be returned. Otherwise, normal settings are returned.
+Statistics
+==========
 
-- :py:func:`win_snmp.set_community_names
-  <salt.modules.win_snmp.set_community_names>` now raises an error when SNMP
-  settings are being managed by GroupPolicy.
+- Total Merges: **1**
+- Total Issue References: **1**
+- Total PR References: **2**
 
+- Contributors: **2** (`garethgreenaway`_, `rallytime`_)
+
+Changelog for v2017.7.6..v2017.7.7
+==================================
+
+*Generated at: 2018-06-14 15:43:34 UTC*
+
+* **ISSUE** `#48038`_: (`austinpapp`_) jobs are not dedup'ing minion side (refs: `#48075`_)
+
+* **PR** `#48098`_: (`rallytime`_) Back-port `#48075`_ to 2017.7.7
+  @ *2018-06-14 12:53:42 UTC*
+
+  * **PR** `#48075`_: (`garethgreenaway`_) [2017.7] Ensure that the shared list of jids is passed (refs: `#48098`_)
+
+  * 084de927fe Merge pull request `#48098`_ from rallytime/bp-48075-2017.7.7
+
+  * e4e62e8b3a Ensure that the shared list of jids is passed when creating the Minion.  Fixes an issue when minions are pointed at multiple syndics.
+
+.. _`#48038`: https://github.com/saltstack/salt/issues/48038
+.. _`#48075`: https://github.com/saltstack/salt/pull/48075
+.. _`#48098`: https://github.com/saltstack/salt/pull/48098
+.. _`austinpapp`: https://github.com/austinpapp
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`rallytime`: https://github.com/rallytime
