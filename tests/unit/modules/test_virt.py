@@ -242,7 +242,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
-            ret = virt._disk_profile('nonexistent', 'esxi')
+            ret = virt._disk_profile('nonexistent', 'vmware')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
@@ -270,7 +270,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
-            ret = virt._nic_profile('nonexistent', 'esxi')
+            ret = virt._nic_profile('nonexistent', 'vmware')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -347,17 +347,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_esxi_default_profile(self):
         '''
-        Test virt._gen_xml(), ESXi default profile case
+        Test virt._gen_xml(), ESXi/vmware default profile case
         '''
-        diskp = virt._disk_profile('default', 'esxi')
-        nicp = virt._nic_profile('default', 'esxi')
+        diskp = virt._disk_profile('default', 'vmware')
+        nicp = virt._nic_profile('default', 'vmware')
         xml_data = virt._gen_xml(
             'hello',
             1,
             512,
             diskp,
             nicp,
-            'esxi',
+            'vmware',
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
@@ -387,7 +387,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_esxi_custom_profile(self):
         '''
-        Test virt._gen_xml(), ESXi custom profile case
+        Test virt._gen_xml(), ESXi/vmware custom profile case
         '''
         diskp_yaml = '''
 - first:
@@ -417,15 +417,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.virt._disk_profile') as disk_profile:
             disk_profile.return_value = salt.utils.yaml.safe_load(diskp_yaml)
             nic_profile.return_value = salt.utils.yaml.safe_load(nicp_yaml)
-            diskp = virt._disk_profile('noeffect', 'esxi')
-            nicp = virt._nic_profile('noeffect', 'esxi')
+            diskp = virt._disk_profile('noeffect', 'vmware')
+            nicp = virt._nic_profile('noeffect', 'vmware')
             xml_data = virt._gen_xml(
                 'hello',
                 1,
                 512,
                 diskp,
                 nicp,
-                'esxi',
+                'vmware',
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'vmware')
@@ -487,17 +487,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_controller_for_esxi(self):
         '''
-        Test virt._gen_xml() generated device controller for ESXi
+        Test virt._gen_xml() generated device controller for ESXi/vmware
         '''
-        diskp = virt._disk_profile('default', 'esxi')
-        nicp = virt._nic_profile('default', 'esxi')
+        diskp = virt._disk_profile('default', 'vmware')
+        nicp = virt._nic_profile('default', 'vmware')
         xml_data = virt._gen_xml(
             'hello',
             1,
             512,
             diskp,
             nicp,
-            'esxi'
+            'vmware'
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
