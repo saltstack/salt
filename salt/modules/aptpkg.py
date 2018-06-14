@@ -2236,6 +2236,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         )
 
     full_comp_list = set(repo_comps)
+    no_proxy = __salt__['config.option']('no_proxy')
 
     if 'keyid' in kwargs:
         keyid = kwargs.pop('keyid', None)
@@ -2255,7 +2256,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if keyserver:
                 if not imported:
                     http_proxy_url = _get_http_proxy_url()
-                    if http_proxy_url:
+                    if http_proxy_url and keyserver not in no_proxy:
                         cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
                                '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', key]
                     else:

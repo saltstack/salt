@@ -2,22 +2,20 @@
 r'''
 Manage the Windows registry
 
------
 Hives
 -----
 Hives are the main sections of the registry and all begin with the word HKEY.
 
-    - HKEY_LOCAL_MACHINE
-    - HKEY_CURRENT_USER
-    - HKEY_USER
+- HKEY_LOCAL_MACHINE
+- HKEY_CURRENT_USER
+- HKEY_USER
 
-----
+
 Keys
 ----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
 can have a value assigned to them under the (Default)
 
------------------
 Values or Entries
 -----------------
 
@@ -25,7 +23,6 @@ Values or Entries are the name/data pairs beneath the keys and subkeys. All keys
 have a default name/data pair. The name is ``(Default)`` with a displayed value
 of ``(value not set)``. The actual value is Null.
 
--------
 Example
 -------
 

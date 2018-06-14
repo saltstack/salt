@@ -1,5 +1,5 @@
-salt.cache.localfs module
-=========================
+salt.cache.localfs
+==================
 
 .. automodule:: salt.cache.localfs
     :members:

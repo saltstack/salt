@@ -5,7 +5,7 @@
 
     Salt Tests CLI access classes
 
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
@@ -332,7 +332,7 @@ class SaltTestingParser(optparse.OptionParser):
                         os.path.basename(fpath).startswith('test_'):
                     self.options.name.append(fpath)
                     continue
-                self.exit(status=1, msg='\'{}\' is not a valid test module'.format(fpath))
+                self.exit(status=1, msg='\'{}\' is not a valid test module\n'.format(fpath))
 
         print_header(u'', inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()

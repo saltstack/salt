@@ -117,6 +117,41 @@ def __virtual__():
         )
 
 
+def _split_docker_uuid(uuid):
+    '''
+    Split a smartos docker uuid into repo and tag
+    '''
+    if uuid:
+        uuid = uuid.split(':')
+        if len(uuid) == 2:
+            tag = uuid[1]
+            repo = uuid[0]
+            if len(repo.split('/')) == 2:
+                return repo, tag
+    return None, None
+
+
+def _is_uuid(uuid):
+    '''
+    Check if uuid is a valid smartos uuid
+
+    Example: e69a0918-055d-11e5-8912-e3ceb6df4cf8
+    '''
+    if uuid and list((len(x) for x in uuid.split('-'))) == [8, 4, 4, 4, 12]:
+        return True
+    return False
+
+
+def _is_docker_uuid(uuid):
+    '''
+    Check if uuid is a valid smartos docker uuid
+
+    Example plexinc/pms-docker:plexpass
+    '''
+    repo, tag = _split_docker_uuid(uuid)
+    return not (not repo and not tag)
+
+
 def _load_config():
     '''
     Loads and parses /usbkey/config
@@ -251,7 +286,7 @@ def config_present(name, value):
         config[name] = value
 
     # apply change if needed
-    if not __opts__['test'] and len(ret['changes']) > 0:
+    if not __opts__['test'] and ret['changes']:
         ret['result'] = _write_config(config)
 
     return ret
@@ -286,8 +321,82 @@ def config_absent(name):
         ret['comment'] = 'property {0} is absent'.format(name)
 
     # apply change if needed
-    if not __opts__['test'] and len(ret['changes']) > 0:
+    if not __opts__['test'] and ret['changes']:
         ret['result'] = _write_config(config)
+
+    return ret
+
+
+def source_present(name, source_type='imgapi'):
+    '''
+    Ensure an image source is present on the computenode
+
+    name : string
+        source url
+    source_type : string
+        source type (imgapi or docker)
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name in __salt__['imgadm.sources']():
+        # source is present
+        ret['result'] = True
+        ret['comment'] = 'image source {0} is present'.format(name)
+    else:
+        # add new source
+        if __opts__['test']:
+            res = {}
+            ret['result'] = True
+        else:
+            res = __salt__['imgadm.source_add'](name, source_type)
+            ret['result'] = (name in res)
+
+        if ret['result']:
+            ret['comment'] = 'image source {0} added'.format(name)
+            ret['changes'][name] = 'added'
+        else:
+            ret['comment'] = 'image source {0} not added'.format(name)
+            if 'Error' in res:
+                ret['comment'] = '{0}: {1}'.format(ret['comment'], res['Error'])
+
+    return ret
+
+
+def source_absent(name):
+    '''
+    Ensure an image source is absent on the computenode
+
+    name : string
+        source url
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name not in __salt__['imgadm.sources']():
+        # source is absent
+        ret['result'] = True
+        ret['comment'] = 'image source {0} is absent'.format(name)
+    else:
+        # remove source
+        if __opts__['test']:
+            res = {}
+            ret['result'] = True
+        else:
+            res = __salt__['imgadm.source_delete'](name)
+            ret['result'] = (name not in res)
+
+        if ret['result']:
+            ret['comment'] = 'image source {0} deleted'.format(name)
+            ret['changes'][name] = 'deleted'
+        else:
+            ret['comment'] = 'image source {0} not deleted'.format(name)
+            if 'Error' in res:
+                ret['comment'] = '{0}: {1}'.format(ret['comment'], res['Error'])
 
     return ret
 
@@ -304,21 +413,44 @@ def image_present(name):
            'result': None,
            'comment': ''}
 
-    if name in __salt__['imgadm.list']():
-        # we're good
+    if _is_docker_uuid(name) and __salt__['imgadm.docker_to_uuid'](name):
+        # docker image was imported
+        ret['result'] = True
+        ret['comment'] = 'image {0} ({1}) is present'.format(
+            name,
+            __salt__['imgadm.docker_to_uuid'](name),
+        )
+    elif name in __salt__['imgadm.list']():
+        # image was already imported
         ret['result'] = True
         ret['comment'] = 'image {0} is present'.format(name)
     else:
         # add image
-        available_images = __salt__['imgadm.avail']()
+        if _is_docker_uuid(name):
+            # NOTE: we cannot query available docker images
+            available_images = [name]
+        else:
+            available_images = __salt__['imgadm.avail']()
+
         if name in available_images:
             if __opts__['test']:
                 ret['result'] = True
+                res = {}
+                if _is_docker_uuid(name):
+                    res['00000000-0000-0000-0000-000000000000'] = name
+                else:
+                    res[name] = available_images[name]
             else:
-                __salt__['imgadm.import'](name)
-                ret['result'] = (name in __salt__['imgadm.list']())
-            ret['comment'] = 'image {0} installed'.format(name)
-            ret['changes'][name] = available_images[name]
+                res = __salt__['imgadm.import'](name)
+                if _is_uuid(name):
+                    ret['result'] = (name in res)
+                elif _is_docker_uuid(name):
+                    ret['result'] = __salt__['imgadm.docker_to_uuid'](name) is not None
+            if ret['result']:
+                ret['comment'] = 'image {0} imported'.format(name)
+                ret['changes'] = res
+            else:
+                ret['comment'] = 'image {0} was unable to be imported'.format(name)
         else:
             ret['result'] = False
             ret['comment'] = 'image {0} does not exists'.format(name)
@@ -343,13 +475,19 @@ def image_absent(name):
            'result': None,
            'comment': ''}
 
-    if name not in __salt__['imgadm.list']():
-        # we're good
+    uuid = None
+    if _is_uuid(name):
+        uuid = name
+    if _is_docker_uuid(name):
+        uuid = __salt__['imgadm.docker_to_uuid'](name)
+
+    if not uuid or uuid not in __salt__['imgadm.list']():
+        # image not imported
         ret['result'] = True
         ret['comment'] = 'image {0} is absent'.format(name)
     else:
         # check if image in use by vm
-        if name in __salt__['vmadm.list'](order='image_uuid'):
+        if uuid in __salt__['vmadm.list'](order='image_uuid'):
             ret['result'] = False
             ret['comment'] = 'image {0} currently in use by a vm'.format(name)
         else:
@@ -357,9 +495,26 @@ def image_absent(name):
             if __opts__['test']:
                 ret['result'] = True
             else:
-                __salt__['imgadm.delete'](name)
-                ret['result'] = name not in __salt__['imgadm.list']()
-            ret['comment'] = 'image {0} deleted'.format(name)
+                image = __salt__['imgadm.get'](uuid)
+                image_count = 0
+                if image['manifest']['name'] == 'docker-layer':
+                    # NOTE: docker images are made of multiple layers, loop over them
+                    while image:
+                        image_count += 1
+                        __salt__['imgadm.delete'](image['manifest']['uuid'])
+                        if 'origin' in image['manifest']:
+                            image = __salt__['imgadm.get'](image['manifest']['origin'])
+                        else:
+                            image = None
+                else:
+                    # NOTE: normal images can just be delete
+                    __salt__['imgadm.delete'](uuid)
+
+            ret['result'] = uuid not in __salt__['imgadm.list']()
+            if image_count:
+                ret['comment'] = 'image {0} and {1} children deleted'.format(name, image_count)
+            else:
+                ret['comment'] = 'image {0} deleted'.format(name)
             ret['changes'][name] = None
 
     return ret
@@ -368,6 +523,11 @@ def image_absent(name):
 def image_vacuum(name):
     '''
     Delete images not in use or installed via image_present
+
+    .. warning::
+
+        Only image_present states that are included via the
+        top file will be detected.
     '''
     name = name.lower()
     ret = {'name': name,
@@ -392,28 +552,50 @@ def image_vacuum(name):
             continue
         # keep images installed via image_present
         if 'name' in state:
-            images.append(state['name'])
+            if _is_uuid(state['name']):
+                images.append(state['name'])
+            elif _is_docker_uuid(state['name']):
+                state['name'] = __salt__['imgadm.docker_to_uuid'](state['name'])
+                if not state['name']:
+                    continue
+                images.append(state['name'])
 
     # retrieve images in use by vms
     for image_uuid in __salt__['vmadm.list'](order='image_uuid'):
-        if image_uuid in images:
-            continue
-        images.append(image_uuid)
+        if image_uuid not in images:
+            images.append(image_uuid)
 
     # purge unused images
     ret['result'] = True
     for image_uuid in __salt__['imgadm.list']():
         if image_uuid in images:
             continue
-        if image_uuid in __salt__['imgadm.delete'](image_uuid):
-            ret['changes'][image_uuid] = None
-        else:
-            ret['result'] = False
-            ret['comment'] = 'failed to delete images'
 
-    if ret['result'] and len(ret['changes']) == 0:
+        image = __salt__['imgadm.get'](image_uuid)
+        if image['manifest']['name'] == 'docker-layer':
+            # NOTE: docker images are made of multiple layers, loop over them
+            while image:
+                image_uuid = image['manifest']['uuid']
+                if image_uuid in __salt__['imgadm.delete'](image_uuid):
+                    ret['changes'][image_uuid] = None
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'failed to delete images'
+                if 'origin' in image['manifest']:
+                    image = __salt__['imgadm.get'](image['manifest']['origin'])
+                else:
+                    image = None
+        else:
+            # NOTE: normal images can just be delete
+            if image_uuid in __salt__['imgadm.delete'](image_uuid):
+                ret['changes'][image_uuid] = None
+            else:
+                ret['result'] = False
+                ret['comment'] = 'failed to delete images'
+
+    if ret['result'] and not ret['changes']:
         ret['comment'] = 'no images deleted'
-    elif ret['result'] and len(ret['changes']) > 0:
+    elif ret['result'] and ret['changes']:
         ret['comment'] = 'images deleted'
 
     return ret
@@ -627,21 +809,20 @@ def vm_present(name, vmconfig, config=None):
                             update_cfg = {}
 
                             # handle changes
-                            if len(changed) > 0:
-                                for prop in changed:
-                                    update_cfg[prop] = state_cfg[prop]
+                            for prop in changed:
+                                update_cfg[prop] = state_cfg[prop]
 
                             # handle new properties
                             for prop in state_cfg:
                                 # skip empty props like ips, options,..
-                                if isinstance(state_cfg[prop], (list)) and len(state_cfg[prop]) == 0:
+                                if isinstance(state_cfg[prop], (list)) and not state_cfg[prop]:
                                     continue
 
                                 if prop not in current_cfg:
                                     update_cfg[prop] = state_cfg[prop]
 
                             # update instance
-                            if len(update_cfg) > 0:
+                            if update_cfg:
                                 # create update_ array
                                 if 'update_{0}'.format(instance) not in vmconfig['changed']:
                                     vmconfig['changed']['update_{0}'.format(instance)] = []
@@ -684,7 +865,7 @@ def vm_present(name, vmconfig, config=None):
 
         # update vm if we have pending changes
         kvm_needs_start = False
-        if not __opts__['test'] and len(vmconfig['changed']) > 0:
+        if not __opts__['test'] and vmconfig['changed']:
             # stop kvm if disk updates and kvm_reboot
             if vmconfig['current']['brand'] == 'kvm' and config['kvm_reboot']:
                 if 'add_disks' in vmconfig['changed'] or \
@@ -707,7 +888,7 @@ def vm_present(name, vmconfig, config=None):
             if __opts__['test']:
                 ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
-            if vmconfig['state']['hostname'] in ret['changes'] and len(ret['changes'][vmconfig['state']['hostname']]) > 0:
+            if vmconfig['state']['hostname'] in ret['changes'] and ret['changes'][vmconfig['state']['hostname']]:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
                     if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):

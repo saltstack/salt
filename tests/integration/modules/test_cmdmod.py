@@ -369,3 +369,13 @@ class CMDModuleTest(ModuleCase):
             hide_output=True)
         self.assertEqual(out['stdout'], '')
         self.assertEqual(out['stderr'], '')
+
+    def test_cmd_run_whoami(self):
+        '''
+        test return of whoami
+        '''
+        cmd = self.run_function('cmd.run', ['whoami'])
+        if salt.utils.platform.is_windows():
+            self.assertIn('administrator', cmd)
+        else:
+            self.assertEqual('root', cmd)

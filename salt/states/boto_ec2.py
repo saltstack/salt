@@ -665,8 +665,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     instance_initiated_shutdown_behavior
         (string) – Specifies whether the instance stops or terminates on
         instance-initiated shutdown. Valid values are:
-            - 'stop'
-            - 'terminate'
+
+        - 'stop'
+        - 'terminate'
+
     placement_group
         (string) – If specified, this is the name of the placement group in
         which the instance(s) will be launched.
@@ -715,22 +717,26 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
-            - instanceType - A valid instance type (m1.small)
-            - kernel - Kernel ID (None)
-            - ramdisk - Ramdisk ID (None)
-            - userData - Base64 encoded String (None)
-            - disableApiTermination - Boolean (true)
-            - instanceInitiatedShutdownBehavior - stop|terminate
-            - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
-            - sourceDestCheck - Boolean (true)
-            - groupSet - Set of Security Groups or IDs
-            - ebsOptimized - Boolean (false)
-            - sriovNetSupport - String - ie: ‘simple’
+
+        - instanceType - A valid instance type (m1.small)
+        - kernel - Kernel ID (None)
+        - ramdisk - Ramdisk ID (None)
+        - userData - Base64 encoded String (None)
+        - disableApiTermination - Boolean (true)
+        - instanceInitiatedShutdownBehavior - stop|terminate
+        - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
+        - sourceDestCheck - Boolean (true)
+        - groupSet - Set of Security Groups or IDs
+        - ebsOptimized - Boolean (false)
+        - sriovNetSupport - String - ie: ‘simple’
+
     target_state
         (string) - The desired target state of the instance.  Available options
         are:
-            - running
-            - stopped
+
+        - running
+        - stopped
+
         Note that this option is currently UNIMPLEMENTED.
     public_ip:
         (string) - The IP of a previously allocated EIP address, which will be
@@ -1017,7 +1023,6 @@ def instance_absent(name, instance_name=None, instance_id=None,
 
         - filters:
             vpc-id: vpc-abcdef12
-
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
