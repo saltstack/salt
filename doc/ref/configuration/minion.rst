@@ -1403,6 +1403,26 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
+.. conf_minion:: no_proxy
+
+``no_proxy``
+------------
+
+.. versionadded:: Fluorine
+
+Default: ``[]``
+
+List of hosts to bypass HTTP proxy
+
+.. note::
+    This key does nothing unless proxy_host etc is configured, it does not
+    support any kind of wildcards.
+
+.. code-block:: yaml
+
+    no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+
 .. conf_minion:: docker.compare_container_networks
 
 ``docker.compare_container_networks``
