@@ -1,8 +1,9 @@
-===========================
-Salt 2017.7.7 Release Notes
-===========================
+========================================
+In Progress: Salt 2017.7.7 Release Notes
+========================================
 
-Version 2017.7.7 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+Version 2017.7.7 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+This release is still in progress and has not been released yet.
 
 The ``2017.7.7`` release contains only a single fix for Issue `#48038`_, which
 is a critical bug that occurs in a multi-syndic setup where the same job is run
