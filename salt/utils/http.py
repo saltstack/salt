@@ -506,8 +506,8 @@ def query(url,
         # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
         # except we remove the valid ones if a url has a no_proxy hostname in it
         if urlparse(url_full).hostname in no_proxy:
-          proxy_host = None
-          proxy_port = None
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
