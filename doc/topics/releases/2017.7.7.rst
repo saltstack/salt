@@ -17,8 +17,8 @@ Statistics
 
 - Contributors: **2** (`garethgreenaway`_, `rallytime`_)
 
-Changelog for v2017.7.6..2017.7.7
-=================================
+Changelog for v2017.7.6..v2017.7.7
+==================================
 
 *Generated at: 2018-06-14 15:43:34 UTC*
 
