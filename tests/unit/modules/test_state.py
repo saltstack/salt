@@ -5,10 +5,15 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import os
+import shutil
+import tempfile
+import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -21,6 +26,9 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.config
 import salt.loader
+import salt.state
+import salt.utils.files
+import salt.utils.json
 import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
@@ -1179,3 +1187,82 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                   ({'force': False}, errors),
                                   ({}, errors)]:
                     assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+
+class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {
+            state: {
+                '__opts__': salt.config.minion_config(
+                    os.path.join(TMP_CONF_DIR, 'minion')
+                ),
+                '__salt__': {
+                    'saltutil.is_running': MagicMock(return_value=[]),
+                },
+            },
+        }
+
+    def setUp(self):
+        self.cachedir = tempfile.mkdtemp(dir=TMP)
+        self.fileserver_root = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, self.cachedir, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
+
+        self.saltenvs = ['base', 'foo', 'bar', 'baz']
+        self.saltenv_roots = {
+            x: os.path.join(self.fileserver_root, x)
+            for x in ('base', 'foo', 'bar', 'baz')
+        }
+        self.dunder_opts = salt.utils.yaml.safe_load(
+            textwrap.dedent('''\
+                file_client: local
+                default_top: base
+
+                file_roots:
+                  base:
+                    - {base}
+                  foo:
+                    - {foo}
+                  bar:
+                    - {bar}
+                  baz:
+                    - {baz}
+                '''.format(**self.saltenv_roots)
+            )
+        )
+        self.dunder_opts['env_order'] = self.saltenvs
+
+        # Write top files for all but the "baz" environment
+        for saltenv in self.saltenv_roots:
+            os.makedirs(self.saltenv_roots[saltenv])
+            if saltenv == 'baz':
+                continue
+            top_file = os.path.join(self.saltenv_roots[saltenv], 'top.sls')
+            with salt.utils.files.fopen(top_file, 'w') as fp_:
+                for env_name in self.saltenvs:
+                    fp_.write(textwrap.dedent('''\
+                        {env_name}:
+                          '*':
+                            - {saltenv}_{env_name}
+                        '''.format(env_name=env_name, saltenv=saltenv)))
+
+    def show_top(self, **kwargs):
+        local_opts = copy.deepcopy(self.dunder_opts)
+        local_opts.update(kwargs)
+        with patch.dict(state.__opts__, local_opts), \
+                patch.object(salt.state.State, '_gather_pillar',
+                             MagicMock(return_value={})):
+            ret = state.show_top()
+            # Lazy way of converting ordered dicts to regular dicts. We don't
+            # care about dict ordering for these tests.
+            return salt.utils.json.loads(salt.utils.json.dumps(ret))
+
+    def test_merge_strategy_same(self):
+        ret = self.show_top(top_file_merging_strategy='same')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['base_baz'],
+        }, ret
