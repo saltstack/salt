@@ -76,9 +76,9 @@ def get(key, profile=None):  # pylint: disable=W0613
 
     # Decrypt SDB data if specified in the profile
     if profile and profile.get('gpg', False):
-        return salt.utils.data.traverse_dict_and_list(_decrypt(data), key, None)
+        return salt.utils.data.traverse_dict_and_list(_decrypt(data), key, None, '/')
 
-    return salt.utils.data.traverse_dict_and_list(data, key, None)
+    return salt.utils.data.traverse_dict_and_list(data, key, None, '/')
 
 
 def _get_values(profile=None):
