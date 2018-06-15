@@ -209,7 +209,7 @@ def expand_classes_in_order(minion_dict,
             dict_merge(salt_data['__pillar__'], expanded_classes[klass].get('pillars', {}))
 
             # Now replace class element in classes_to_expand by expansion
-            if 'classes' in expanded_classes[klass]:
+            if expanded_classes[klass].get('classes'):
                 l_id = classes_to_expand.index(klass)
                 classes_to_expand[l_id:l_id] = expanded_classes[klass]['classes']
                 expand_classes_in_order(minion_dict,

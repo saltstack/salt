@@ -1866,6 +1866,9 @@ class State(object):
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
+        if '__env__' in low:
+            inject_globals['__env__'] = six.text_type(low['__env__'])
+
         if self.inject_globals:
             inject_globals.update(self.inject_globals)
 
@@ -1899,11 +1902,6 @@ class State(object):
                     # allow setting the OS environ also make use of the "env"
                     # keyword argument, which is not a string
                     inject_globals['__env__'] = six.text_type(cdata['kwargs']['env'])
-                elif '__env__' in low:
-                    # The user is passing an alternative environment using
-                    # __env__ which is also not the appropriate choice, still,
-                    # handle it
-                    inject_globals['__env__'] = six.text_type(low['__env__'])
 
             if '__env__' not in inject_globals:
                 # Let's use the default environment
