@@ -9,7 +9,7 @@ import logging
 import os
 import re
 import datetime
-from distutils.version import LooseVersion
+from salt.utils.versions import LooseVersion
 
 # Import Salt libs
 import salt.utils.decorators.path
