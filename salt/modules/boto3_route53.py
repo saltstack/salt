@@ -827,7 +827,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = []
-    next_rr_name = _aws_encode(StartRecordName.lower())
+    next_rr_name = aws_encode(StartRecordName.lower())
     next_rr_type = StartRecordType
     next_rr_id = None
     done = False
