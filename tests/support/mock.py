@@ -149,23 +149,51 @@ def mock_open(mock=None, read_data='', match=None):
     if six.PY2:
         read_data = salt.utils.stringutils.to_str(read_data)
 
+    empty_string = b'' if isinstance(read_data, six.binary_type) else ''
+
+    # We're using a list here so that we can replace the generator in the
+    # closures below with an updated one after we've read from it. This allows
+    # the mocked read funcs to more closely emulate an actual filehandle.
+    data = [_iterate_read_data(read_data)]
+
     def _readlines_side_effect(*args, **kwargs):
-        if handle.readlines.return_value is not None:
-            return handle.readlines.return_value
-        return list(_data)
+        ret = list(data[0])
+        # We've read everything in the file. Clear its contents so that further
+        # reads behave as expected.
+        data[0] = _iterate_read_data('')
+        return ret
 
     def _read_side_effect(*args, **kwargs):
-        if handle.read.return_value is not None:
-            return handle.read.return_value
-        joiner = b'' if isinstance(read_data, six.binary_type) else ''
-        return joiner.join(_data)
+        joined = empty_string.join(data[0])
+        if not args:
+            # read() called with no args, we want to return everything. If
+            # anything was in the generator, clear it
+            if joined:
+                # If there were any contents, clear them
+                data[0] = _iterate_read_data('')
+            return joined
+        else:
+            # read() called with an explicit size. Return a slice matching the
+            # requested size, but before doing so, reset data to reflect what
+            # we read.
+            size = args[0]
+            if not isinstance(size, six.integer_types):
+                raise TypeError('an integer is required')
+            data[0] = _iterate_read_data(joined[size:])
+            return joined[:size]
 
     def _readline_side_effect():
-        if handle.readline.return_value is not None:
-            while True:
-                yield handle.readline.return_value
-        for line in _data:
-            yield line
+        try:
+            return next(data[0])
+        except StopIteration:
+            return empty_string
+
+    def _iter_side_effect():
+        while True:
+            try:
+                yield next(data[0])
+            except StopIteration:
+                break
 
     global file_spec
     if file_spec is None:
@@ -181,19 +209,17 @@ def mock_open(mock=None, read_data='', match=None):
     handle = MagicMock(spec=file_spec)
     handle.__enter__.return_value = handle
 
-    _data = _iterate_read_data(read_data)
-
     handle.write.return_value = None
     handle.read.return_value = None
     handle.readline.return_value = None
     handle.readlines.return_value = None
 
     # Support iteration via for loop
-    handle.__iter__ = lambda x: _readline_side_effect()
+    handle.__iter__ = lambda x: _iter_side_effect()
 
     # This is salt specific and not in the upstream mock
     handle.read.side_effect = _read_side_effect
-    handle.readline.side_effect = _readline_side_effect()
+    handle.readline.side_effect = _readline_side_effect
     handle.readlines.side_effect = _readlines_side_effect
 
     if match is not None:
