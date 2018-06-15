@@ -244,17 +244,28 @@ def _get_dns_info():
     return dnsList
 
 
+def _remove_quotes(value):
+    '''
+    :param value:
+    :return:
+    '''
+    # nirtcfg writes values with quotes
+    if len(value) > 1 and value[0] == value[-1] == '\"':
+        value = value[1:-1]
+    return value
+
+
 def _get_requestmode_info(interface):
     '''
     return requestmode for given interface
     '''
-    with salt.utils.files.fopen(INI_FILE, 'r') as confg_file:
+    with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
         config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
-        config_parser.read_file(confg_file)
-        link_local_enabled = "" if not config_parser.has_section("link_local_enabled") else \
-            config_parser.get(interface, 'linklocalenabled')
-        dhcp_enabled = "" if not config_parser.has_section("dhcpenabled") else \
-            config_parser.get(interface, 'dhcpenabled')
+        config_parser.read_file(config_file)
+        link_local_enabled = "" if not config_parser.has_option(interface, "linklocalenabled") else \
+            int(_remove_quotes(config_parser.get(interface, 'linklocalenabled')))
+        dhcp_enabled = "" if not config_parser.has_option(interface, "dhcpenabled") else \
+            int(_remove_quotes(config_parser.get(interface, 'dhcpenabled')))
 
         if dhcp_enabled == 1:
             if link_local_enabled == 1:
@@ -297,10 +308,10 @@ def _get_interface_info(interface):
         with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
             config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
             config_parser.read_file(config_file)
-            data['ipv4']['address'] = config_parser.get(interface.name, 'IP_Address')
-            data['ipv4']['netmask'] = config_parser.get(interface.name, 'Subnet_Mask')
-            data['ipv4']['gateway'] = config_parser.get(interface.name, 'Gateway')
-            data['ipv4']['dns'] = [config_parser.get(interface.name, 'DNS_Address')]
+            data['ipv4']['address'] = _remove_quotes(config_parser.get(interface.name, 'IP_Address'))
+            data['ipv4']['netmask'] = _remove_quotes(config_parser.get(interface.name, 'Subnet_Mask'))
+            data['ipv4']['gateway'] = _remove_quotes(config_parser.get(interface.name, 'Gateway'))
+            data['ipv4']['dns'] = [_remove_quotes(config_parser.get(interface.name, 'DNS_Address'))]
 
     with salt.utils.files.fopen('/proc/net/route', 'r') as route_file:
         pattern = re.compile(r'^%s\t[0]{8}\t([0-9A-Z]{8})' % interface.name, re.MULTILINE)
