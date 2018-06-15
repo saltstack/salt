@@ -1214,6 +1214,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             x: os.path.join(self.fileserver_root, x)
             for x in ('base', 'foo', 'bar', 'baz')
         }
+        self.base_top_file = os.path.join(self.saltenv_roots['base'], 'top.sls')
         self.dunder_opts = salt.utils.yaml.safe_load(
             textwrap.dedent('''\
                 file_client: local
@@ -1240,6 +1241,8 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
                 continue
             top_file = os.path.join(self.saltenv_roots[saltenv], 'top.sls')
             with salt.utils.files.fopen(top_file, 'w') as fp_:
+                # Add a section for every environment to each top file, with
+                # the SLS target prefixed with the current saltenv.
                 for env_name in self.saltenvs:
                     fp_.write(textwrap.dedent('''\
                         {env_name}:
@@ -1258,7 +1261,156 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             # care about dict ordering for these tests.
             return salt.utils.json.loads(salt.utils.json.dumps(ret))
 
+    def use_limited_base_top_file(self):
+        '''
+        Overwrites the base top file so that it only contains sections for its
+        own saltenv.
+        '''
+        with salt.utils.files.fopen(self.base_top_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                base:
+                  '*':
+                    - base_base
+                '''))
+
+    def test_merge_strategy_merge(self):
+        '''
+        Base overrides everything
+        '''
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_limited_base(self):
+        '''
+        Test with a "base" top file containing only a "base" section. The "baz"
+        saltenv should not be in the return data because that env doesn't have
+        its own top file and there will be no "baz" section in the "base" env's
+        top file.
+
+        Next, append a "baz" section to the rewritten top file and we should
+        get results for that saltenv in the return data.
+        '''
+        self.use_limited_base_top_file()
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+        }, ret
+
+        # Add a "baz" section
+        with salt.utils.files.fopen(self.base_top_file, 'a') as fp_:
+            fp_.write(textwrap.dedent('''\
+                baz:
+                  '*':
+                    - base_baz
+                '''))
+
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_state_top_saltenv_base(self):
+        '''
+        This tests with state_top_saltenv=base, which should pull states *only*
+        from the base saltenv.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge',
+            state_top_saltenv='base')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_state_top_saltenv_foo(self):
+        '''
+        This tests with state_top_saltenv=foo, which should pull states *only*
+        from the foo saltenv. Since that top file is only authoritative for
+        its own saltenv, *only* the foo saltenv's matches from the foo top file
+        should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge',
+            state_top_saltenv='foo')
+        assert ret == {'foo': ['foo_foo']}, ret
+
+    def test_merge_strategy_merge_all(self):
+        '''
+        Include everything in every top file
+        '''
+        ret = self.show_top(top_file_merging_strategy='merge_all')
+        assert ret == {
+            'base': ['base_base', 'foo_base', 'bar_base'],
+            'foo': ['base_foo', 'foo_foo', 'bar_foo'],
+            'bar': ['base_bar', 'foo_bar', 'bar_bar'],
+            'baz': ['base_baz', 'foo_baz', 'bar_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_alternate_env_order(self):
+        '''
+        Use an alternate env_order. This should change the order in which the
+        SLS targets appear in the result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            env_order=['bar', 'foo', 'base'])
+        assert ret == {
+            'base': ['bar_base', 'foo_base', 'base_base'],
+            'foo': ['bar_foo', 'foo_foo', 'base_foo'],
+            'bar': ['bar_bar', 'foo_bar', 'base_bar'],
+            'baz': ['bar_baz', 'foo_baz', 'base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_state_top_saltenv_base(self):
+        '''
+        This tests with state_top_saltenv=base, which should pull states *only*
+        from the base saltenv. Since we are using the "merge_all" strategy, all
+        the states from that top file should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            state_top_saltenv='base')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_state_top_saltenv_foo(self):
+        '''
+        This tests with state_top_saltenv=foo, which should pull states *only*
+        from the foo saltenv. Since we are using the "merge_all" strategy, all
+        the states from that top file should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            state_top_saltenv='foo')
+        assert ret == {
+            'base': ['foo_base'],
+            'foo': ['foo_foo'],
+            'bar': ['foo_bar'],
+            'baz': ['foo_baz'],
+        }, ret
+
     def test_merge_strategy_same(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "base" since default_top=base and there is no
+        top file in the "baz" saltenv.
+        '''
         ret = self.show_top(top_file_merging_strategy='same')
         assert ret == {
             'base': ['base_base'],
@@ -1266,3 +1418,69 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             'bar': ['bar_bar'],
             'baz': ['base_baz'],
         }, ret
+
+    def test_merge_strategy_same_limited_base(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "base" since default_top=base and there is no
+        top file in the "baz" saltenv.
+        '''
+        self.use_limited_base_top_file()
+        ret = self.show_top(top_file_merging_strategy='same')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+        }, ret
+
+    def test_merge_strategy_same_default_top_foo(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "foo" since default_top=foo and there is no top
+        file in the "baz" saltenv.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            default_top='foo')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['foo_baz'],
+        }, ret
+
+    def test_merge_strategy_same_state_top_saltenv_base(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the base saltenv, with the "same" merging strategy. This should
+        result in just the base environment's states from the base top file
+        being in the merged result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='base')
+        assert ret == {'base': ['base_base']}, ret
+
+    def test_merge_strategy_same_state_top_saltenv_foo(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the foo saltenv, with the "same" merging strategy. This should
+        result in just the foo environment's states from the foo top file
+        being in the merged result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='foo')
+        assert ret == {'foo': ['foo_foo']}, ret
+
+    def test_merge_strategy_same_state_top_saltenv_baz(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the baz saltenv, with the "same" merging strategy. This should
+        result in an empty dictionary since there is no top file in that
+        environment.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='baz')
+        assert ret == {}, ret
