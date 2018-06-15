@@ -75,7 +75,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_default_dev(self):
         '''
-        Test virt_gen_xml() default boot device
+        Test virt._gen_xml() default boot device
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -92,7 +92,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_custom_dev(self):
         '''
-        Test virt_gen_xml() custom boot device
+        Test virt._gen_xml() custom boot device
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -110,7 +110,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_multiple_devs(self):
         '''
-        Test virt_gen_xml() multiple boot devices
+        Test virt._gen_xml() multiple boot devices
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -129,7 +129,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_serial_console(self):
         '''
-        Test virt_gen_xml() serial console
+        Test virt._gen_xml() serial console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -149,7 +149,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_console(self):
         '''
-        Test virt_gen_xml() telnet console
+        Test virt._gen_xml() telnet console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -171,7 +171,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         '''
-        Test virt_gen_xml() telnet console without any specified port
+        Test virt._gen_xml() telnet console without any specified port
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -192,7 +192,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_serial_no_console(self):
         '''
-        Test virt_gen_xml() with no serial console
+        Test virt._gen_xml() with no serial console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -212,7 +212,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_no_console(self):
         '''
-        Test virt_gen_xml() with no telnet console
+        Test virt._gen_xml() with no telnet console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
