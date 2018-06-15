@@ -187,9 +187,21 @@ def _check_pkg_version_format(pkg):
 def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
                         force_reinstall, upgrade, user, cwd, bin_env, env_vars,
                         pip_list=False, **kwargs):
-    # result: None means the command failed to run
-    # result: True means the package is installed
-    # result: False means the package is not installed
+    '''
+    Takes a package name and version specification (if any) and checks it is 
+    installed
+
+    Keyword arguments include:
+        pip_list: optional dict of installed pip packages, and their versions,
+            to search through to check if the package is installed. If not 
+            provided, one will be generated in this function by querying the 
+            system.
+
+    Returns:
+     result: None means the command failed to run
+     result: True means the package is installed
+     result: False means the package is not installed
+    ''' 
     ret = {'result': False, 'comment': None}
 
     # If we are not passed a pip list, get one:
