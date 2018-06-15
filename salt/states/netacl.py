@@ -174,13 +174,13 @@ def term(name,
         select a source just using the name, instead of specifying a destination_port and protocol.
         Allows the same options as ``source_service``.
 
-    **term_fields
-        Term attributes.
-        To see what fields are supported, please consult the list of supported keywords_.
-            Some platforms have few other optional_ keywords.
+    term_fields
+        Term attributes. To see what fields are supported, please consult the
+        list of supported keywords_. Some platforms have few other optional_
+        keywords.
 
-            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
-            .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
+        .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
+        .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
         The following fields are accepted:
@@ -305,8 +305,9 @@ def term(name,
                 - bgpd
 
     .. note::
-        The port fields ``source_port`` and ``destination_port`` can be used as above to select either
-        a single value, either a list of values, but also they can select port ranges. Example:
+        The port fields ``source_port`` and ``destination_port`` can be used as
+        above to select either a single value, either a list of values, but
+        also they can select port ranges. Example:
 
         .. code-block:: yaml
 
@@ -324,7 +325,7 @@ def term(name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.bjm01:
         ----------
@@ -537,7 +538,7 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.flw01:
         ----------
@@ -757,10 +758,10 @@ def managed(name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.bjm01:
-            ----------
+        -------------
                       ID: netacl_example
                 Function: netacl.managed
                   Result: None

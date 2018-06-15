@@ -103,8 +103,8 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
-          
-- The ``junos`` state module is now available. It has all the functions 
+
+- The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
 
 - The ``junos`` state module is now available. It has all the functions
@@ -275,9 +275,9 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
-  
+
 Junos Module Changes
-===================
+====================
 
 - The following new functionalities were added to the junos module
 

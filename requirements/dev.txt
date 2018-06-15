@@ -1,10 +1,6 @@
 -r base.txt
 
 mock>=2.0.0
-apache-libcloud>=0.14.0
-boto>=2.32.1
-boto3>=1.2.1
-moto>=0.3.6
 SaltPyLint>=v2017.3.6
 pytest>=3.5.0
 git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt

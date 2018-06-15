@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Joao Mesquita <jmesquita@sangoma.com>`
+    :codeauthor: Joao Mesquita <jmesquita@sangoma.com>
 '''
 
 # Import Python libs

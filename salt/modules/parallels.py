@@ -10,7 +10,7 @@ What has not been implemented yet can be accessed through ``parallels.prlctl``
 and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
 
-.. code-block::
+.. code-block:: bash
 
     salt '*' parallels.prlctl installtools macvm runas=macdev
     salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
@@ -77,11 +77,9 @@ def _find_guids(guid_string):
 
     Example data (this string contains two distinct GUIDs):
 
-    .. code-block::
-
-        PARENT_SNAPSHOT_ID                      SNAPSHOT_ID
-                                                {a5b8999f-5d95-4aff-82de-e515b0101b66}
-        {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
+    PARENT_SNAPSHOT_ID                      SNAPSHOT_ID
+                                            {a5b8999f-5d95-4aff-82de-e515b0101b66}
+    {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
     '''
     guids = []
     for found_guid in re.finditer(GUID_REGEX, guid_string):

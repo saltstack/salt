@@ -935,7 +935,7 @@ class Minion(MinionBase):
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
-        self.jid_queue = jid_queue or []
+        self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
 
         if io_loop is None:
@@ -1841,6 +1841,13 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    def beacons_refresh(self):
+        '''
+        Refresh the functions and returners.
+        '''
+        log.debug('Refreshing beacons.')
+        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+
     # TODO: only allow one future in flight at a time?
     @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
@@ -2007,6 +2014,8 @@ class Minion(MinionBase):
             yield self.pillar_refresh(
                 force_refresh=data.get('force_refresh', False)
             )
+        elif tag.startswith('beacons_refresh'):
+            self.beacons_refresh()
         elif tag.startswith('manage_schedule'):
             self.manage_schedule(tag, data)
         elif tag.startswith('manage_beacons'):

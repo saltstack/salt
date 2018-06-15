@@ -7,6 +7,7 @@ Salt Table of Contents
 .. toctree::
     :maxdepth: 2
 
+    topics/index
     topics/installation/index
     topics/configuration/index
     topics/using_salt
@@ -15,11 +16,15 @@ Salt Table of Contents
     topics/utils/index
     topics/event/index
     topics/orchestrate/index
+    topics/solaris/index
     topics/ssh/index
+    topics/thorium/index
     topics/cloud/index
     topics/proxyminion/index
     topics/virt/index
     ref/cli/index
+    ref/pillar/index
+    ref/tops/index
     ref/index
     topics/api
     topics/topology/index
@@ -28,3 +33,4 @@ Salt Table of Contents
     topics/development/index
     topics/releases/index
     topics/venafi/index
+    glossary
