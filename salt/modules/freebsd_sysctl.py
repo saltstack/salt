@@ -165,7 +165,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
     with salt.utils.files.fopen(config, 'w+') as ofile:
-        nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
+        nlines = [salt.utils.stringutils.to_str(_l) + '\n' for _l in nlines]
         ofile.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)

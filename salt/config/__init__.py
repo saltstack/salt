@@ -1091,6 +1091,8 @@ VALID_OPTS = {
     'proxy_username': six.string_types,
     'proxy_password': six.string_types,
     'proxy_port': int,
+    # Exclude list of hostnames from proxy
+    'no_proxy': list,
 
     # Minion de-dup jid cache max size
     'minion_jid_queue_hwm': int,
