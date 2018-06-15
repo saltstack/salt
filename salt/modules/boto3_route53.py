@@ -849,11 +849,15 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                 rr['Name'] = _aws_decode(rr['Name'])
                 # now iterate over the ResourceRecords and replace any encoded
                 # value strings with the decoded versions
-                x = 0
-                while x < len(rr['ResourceRecords']):
-                    if 'Value' in rr['ResourceRecords'][x]:
-                        rr['ResourceRecords'][x]['Value'] = _aws_decode(rr['ResourceRecords'][x]['Value'])
-                    x += 1
+                if 'ResourceRecords' in rr:
+                    x = 0
+                    while x < len(rr['ResourceRecords']):
+                        if 'Value' in rr['ResourceRecords'][x]:
+                            rr['ResourceRecords'][x]['Value'] = _aws_decode(rr['ResourceRecords'][x]['Value'])
+                        x += 1
+                # or if we are an AliasTarget then decode the DNSName
+                if 'AliasTarget' in rr:
+                    rr['AliasTarget']['DNSName'] = _aws_decode(rr['AliasTarget']['DNSName'])
                 if StartRecordName and rr['Name'].lower() != StartRecordName.lower():
                     done = True
                     break
