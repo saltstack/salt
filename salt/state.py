@@ -1982,7 +1982,8 @@ class State(object):
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
-        ret['__id__'] = low['__id__']
+        if '__id__' in low:
+            ret['__id__'] = low['__id__']
         log.info(
             'Completed state [%s] at time %s (duration_in_ms=%s)',
             low['name'].strip() if isinstance(low['name'], six.string_types)
