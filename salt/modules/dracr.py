@@ -150,6 +150,43 @@ def __execute_ret(command, host=None,
 
     return cmd
 
+def get_property(host=None,
+                     admin_username=None, admin_password=None, property=None):
+    '''
+    Return specific property
+    '''
+    if property is None:
+        raise SaltException('No property specified!')
+    ret = __execute_ret('get %s' % property, host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    return ret
+
+def set_property(host=None,
+                     admin_username=None, admin_password=None, property=None, value=None):
+    '''
+    Set specific property
+    '''
+    if property is None:
+        raise SaltException('No property specified!')
+    elif value is None:
+        raise SaltException('No value specified!')
+    ret = __execute_ret('set %s %s' % (property, value), host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    return ret
+
+def property_present(host=None, admin_username=None, admin_password=None, property=None, value=None):
+
+    '''
+    Ensure that property is set
+    '''
+    ret = get_property(host, admin_username, admin_password, property)
+    if ret['stdout'] == value:
+        return True
+
+    ret = set_property(host, admin_username, admin_password, property, value)
+    return ret
 
 def get_dns_dracname(host=None,
                      admin_username=None, admin_password=None):
