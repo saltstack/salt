@@ -567,6 +567,7 @@ def _gen_xml(name,
              diskp,
              nicp,
              hypervisor,
+             graphics=None,
              **kwargs):
     '''
     Generate the XML string to define a libvirt VM
@@ -584,7 +585,13 @@ def _gen_xml(name,
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
-    context['enable_vnc'] = bool(kwargs.get('enable_vnc', True))
+    # By default, set the graphics to listen to all addresses
+    if graphics:
+        if 'listen' not in graphics:
+            graphics['listen'] = {'type': 'address', 'address': '0.0.0.0'}
+        elif 'address' not in graphics['listen'] and graphics['listen']['type'] == 'address':
+            graphics['listen']['address'] = '0.0.0.0'
+    context['graphics'] = graphics
 
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []
@@ -1047,6 +1054,7 @@ def init(name,
          seed_cmd='seed.apply',
          enable_vnc=False,
          enable_qcow=False,
+         graphics=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1068,7 +1076,22 @@ def init(name,
     :param pub_key: public key to seed with (Default: ``None``)
     :param priv_key: public key to seed with (Default: ``None``)
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
-    :param enable_vnc: ``True`` to setup a vnc display for the VM (Default: ``False``)
+    :param enable_vnc:
+        ``True`` to setup a vnc display for the VM (Default: ``False``)
+
+        Deprecated in favor of the ``graphics`` parameter. Could be replaced with
+        the following:
+
+        .. code-block:: python
+
+            graphics={'type': 'vnc'}
+
+        .. deprecated:: Fluorine
+    :param graphics:
+        Dictionary providing details on the graphics device to create. (Default: ``None``)
+        See :ref:`init-graphics-def` for more details on the possible values.
+
+        .. versionadded:: Fluorine
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).
@@ -1092,7 +1115,34 @@ def init(name,
 
                      .. versionadded:: Fluorine
 
-    CLI Example:
+    .. _init-graphics-def:
+
+    .. rubric:: Graphics Definition
+
+    The graphics dictionnary can have the following properties:
+
+    type
+        Graphics type. The possible values are ``'spice'``, ``'vnc'`` and other values
+        allowed as a libvirt graphics type (Default: ``None``)
+
+        See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
+        for more details on the possible types
+
+    port
+        Port to export the graphics on for ``vnc``, ``spice`` and ``rdp`` types.
+
+    tls_port
+        Port to export the graphics over a secured connection for ``spice`` type.
+
+    listen
+        Dictionary defining on what address to listen on for ``vnc``, ``spice`` and ``rdp``.
+        It has a ``type`` property with ``address`` and ``None`` as possible values, and an
+        ``address`` property holding the IP or hostname to listen on.
+
+        By default, not setting the ``listen`` part of the dictionary will default to
+        listen on all addresses.
+
+    .. rubric:: CLI Example
 
     .. code-block:: bash
 
@@ -1204,8 +1254,16 @@ def init(name,
                 )
 
     log.debug('Generating VM XML')
-    kwargs['enable_vnc'] = enable_vnc
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
+
+    if enable_vnc:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'enable_vnc\' parameter has been deprecated in favor of '
+            '\'graphics\'. Use graphics={\'type\': \'vnc\'} for the same behavior. '
+            '\'enable_vnc\' will be removed in {version}. ')
+        graphics = {'type': 'vnc'}
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, graphics, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)

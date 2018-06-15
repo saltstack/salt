@@ -236,6 +236,94 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console'), None)
 
+    def test_gen_xml_nographics_default(self):
+        '''
+        Test virt._gen_xml() with default no graphics device
+        '''
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm'
+            )
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find('devices/graphics'))
+
+    def test_gen_xml_vnc_default(self):
+        '''
+        Test virt._gen_xml() with default vnc graphics device
+        '''
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            graphics={'type': 'vnc', 'port': 1234, 'tlsPort': 5678,
+                      'listen': {'type': 'address', 'address': 'myhost'}},
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('devices/graphics').attrib['type'], 'vnc')
+        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'no')
+        self.assertEqual(root.find('devices/graphics').attrib['port'], '1234')
+        self.assertFalse('tlsPort' in root.find('devices/graphics').attrib)
+        self.assertEqual(root.find('devices/graphics').attrib['listen'], 'myhost')
+        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
+        self.assertEqual(root.find('devices/graphics/listen').attrib['address'], 'myhost')
+
+    def test_gen_xml_spice_default(self):
+        '''
+        Test virt._gen_xml() with default spice graphics device
+        '''
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            graphics={'type': 'spice'},
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('devices/graphics').attrib['type'], 'spice')
+        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'yes')
+        self.assertEqual(root.find('devices/graphics').attrib['listen'], '0.0.0.0')
+        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
+        self.assertEqual(root.find('devices/graphics/listen').attrib['address'], '0.0.0.0')
+
+    def test_gen_xml_spice(self):
+        '''
+        Test virt._gen_xml() with spice graphics device
+        '''
+        diskp = virt._disk_profile('default', 'kvm')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            graphics={'type': 'spice', 'port': 1234, 'tls_port': 5678, 'listen': {'type': 'none'}},
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('devices/graphics').attrib['type'], 'spice')
+        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'no')
+        self.assertEqual(root.find('devices/graphics').attrib['port'], '1234')
+        self.assertEqual(root.find('devices/graphics').attrib['tlsPort'], '5678')
+        self.assertFalse('listen' in root.find('devices/graphics').attrib)
+        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'none')
+        self.assertFalse('address' in root.find('devices/graphics/listen').attrib)
+
     def test_default_disk_profile_hypervisor_esxi(self):
         '''
         Test virt._disk_profile() default ESXi profile
