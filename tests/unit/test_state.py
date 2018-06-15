@@ -5,7 +5,6 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import os
 import shutil
 import tempfile
@@ -24,7 +23,7 @@ from tests.support.paths import BASE_FILES
 # Import Salt libs
 import salt.exceptions
 import salt.state
-from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.odict import OrderedDict
 from salt.utils.decorators import state as statedecorators
 
 try:
