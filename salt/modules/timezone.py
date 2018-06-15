@@ -496,7 +496,7 @@ def set_hwclock(clock):
         salt '*' timezone.set_hwclock UTC
     '''
 
-    if salt.utils.which('timedatectl'):
+    if salt.utils.path.which('timedatectl'):
         cmd = ['timedatectl', 'set-local-rtc',
                'true' if clock == 'localtime' else 'false']
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
