@@ -57,7 +57,7 @@ import re
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.versions
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -717,74 +717,78 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
     Id = zone[0]['HostedZone']['Id']
     return delete_hosted_zone(Id=Id, region=region, key=key, keyid=keyid, profile=profile)
 
-def _to_aws_encoding(instring):
+
+def aws_encode(x):
     '''
-    A partial implememtation of the `AWS domain encoding`__ rules. The punycode section is
-    ignored for now, so you'll have to input any unicode characters already punycoded.
+    An implementation of the encoding required to suport AWS's domain name
+    rules defined here:
 
-    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+        .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
 
-    The only breakage is that we don't permit ASCII 92 ('backslash') in domain names, even though
-    AWS seems to allow it, becuase it's used to introduce octal escapes, and I can't think of a
-    good way to allow it while still parsing those escapes.  Imagine a domain name containing the
-    literal string '\134' - pathological to be sure, but allowed by AWS's rules.  If someone
-    dislikes this restriction, feel free to update this function to correctly handle such madness.
+    While AWS's documentation specifies individual ASCII characters which need
+    to be encoded, we instead just try to force the string to one of
+    escaped unicode or idna depending on whether there are non-ASCII characters
+    present.
 
-    Oh, and the idea of allowing '.' (period) within a domain component (e.g. not as a separator,
-    but as part of a field) is as stupid it sounds, and is also not supported by these functions.
-    Again, if you can figure out a sensible way to make it work, more power too you.  If you
-    REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
-    your DNS out in the real world though.
+    This means that we support things like ドメイン.テスト as a domain name string
+    per the idna documentation here in addition to ASCII
+
+        .. __: https://pypi.org/project/idna
+
+    This is a public method because we call it from the state in various places
     '''
-    instring = instring.lower()                                           # Always lowercase
-    send_as_is = list(range(97, 123))                   # a-z is 97-122 inclusive
-    send_as_is += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                                    '9', '-', '_', '.']]
-    send_as_octal = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
-                                      '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
-                                      '@', '[', ']', '^', '`', '{', '|', '}']]
-    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
-    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
-    # "Extended ASCII" stuff
-    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
-    # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
-    # with ASCII for the first 127 code-points...  Oh well.
-    outlist = []
-    for char in instring:
-        point = ord(char)
-        octal = '\\{:03o}'.format(point)
-        if point in send_as_is:
-            outlist += [char]
-        elif point in send_as_octal:
-            outlist += [octal]
-        elif point in acceptable_points_which_must_be_octalized:
-            outlist += [octal]
-        else:
-            raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
-                                      "{1}.  Do you need to punycode it?".format(octal, instring))
-    ret = ''.join(outlist)
-    log.debug('Name after massaging is: {}'.format(ret))
+    ret = None
+    try:
+        x.encode('ascii')
+        ret = re.sub(r'\\x([a-f0-8]{2})',
+                      _hexReplace, x.encode('unicode_escape'))
+    except UnicodeEncodeError:
+        ret = x.encode('idna')
+    except Exception as e:
+        log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs" % (x))
+        raise CommandExecutionError(e)
+    log.debug('AWS-encoded result for %s: %s', x, ret)
     return ret
 
-def _octalReplace(x):
-    '''
-    https://github.com/boto/boto/pull/1216
-    '''
-    c = int(x.group(1), 8)
-    if c > 0x20 and c < 0x2e or c > 0x2e and c < 0x7f:
-        return chr(c)
-    else:
-        return x.group(0)
 
-def _from_aws_encoding(value):
+def _aws_decode(x):
     '''
-    Similar to _to_aws_encoding except in reverse
-    ResourceRecords can come back with octal representations of the actual
-    characters.
-    This converts them back to ASCII for proper comparison against the original
-    strings which are input into the get_resource_records method
+    An implementation of the decoding required to suport AWS's domain name
+    rules defined here:
+
+        .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+
+    The important part is this:
+
+        If the domain name includes any characters other than a to z, 0 to 9, - (hyphen),
+        or _ (underscore), Route 53 API actions return the characters as escape codes.
+        This is true whether you specify the characters as characters or as escape
+        codes when you create the entity.
+        The Route 53 console displays the characters as characters, not as escape codes."
+
+        For a list of ASCII characters the corresponding octal codes, do an internet search on "ascii table".
+
+    We look for the existance of any escape codes which give us a clue that
+    we're received an escaped unicode string; or we assume it's idna encoded
+    and then decode as necessary
     '''
-    return re.sub(r'\\(\d{3})', _octalReplace, value)
+    if '\\' in x:
+        return x.decode('unicode_escape')
+    return x.decode('idna')
+
+
+def _hexReplace(x):
+    '''
+    Converts a hex code to a base 16 int then the octal of it, minus the leading
+    zero.
+
+    This is necessary because x.encode('unicode_escape') automatically assumes
+    you want a hex string, which AWS will accept but doesn't result in what
+    you really want unless it's an octal escape sequence
+    '''
+    c = int(x.group(1), 16)
+    return '\\' + str(oct(c))[1:]
+
 
 def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                          StartRecordType=None, PrivateZone=None,
@@ -817,13 +821,13 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
         args.update({'PrivateZone': PrivateZone}) if PrivateZone is not None else None
         zone = find_hosted_zone(**args)
         if not zone:
-            log.error("Couldn't resolve domain name {} to a hosted zone ID.".format(Name))
+            log.error("Couldn't resolve domain name %s to a hosted zone ID.", Name)
             return []
         HostedZoneId = zone[0]['HostedZone']['Id']
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = []
-    next_rr_name = _to_aws_encoding(StartRecordName)
+    next_rr_name = _aws_encode(StartRecordName.lower())
     next_rr_type = StartRecordType
     next_rr_id = None
     done = False
@@ -842,8 +846,15 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
             next_rr_type = r.get('NextRecordType')
             next_rr_id = r.get('NextRecordIdentifier')
             for rr in rrs:
-                rr['Name'] = _from_aws_encoding(rr['Name'])  # fix the character set
-                if StartRecordName and rr['Name'] != StartRecordName:
+                rr['Name'] = _aws_decode(rr['Name'])
+                # now iterate over the ResourceRecords and replace any encoded
+                # value strings with the decoded versions
+                x = 0
+                while x < len(rr['ResourceRecords']):
+                    if 'Value' in rr['ResourceRecords'][x]:
+                        rr['ResourceRecords'][x]['Value'] = _aws_decode(rr['ResourceRecords'][x]['Value'])
+                    x += 1
+                if StartRecordName and rr['Name'].lower() != StartRecordName.lower():
                     done = True
                     break
                 if StartRecordType and rr['Type'] != StartRecordType:
