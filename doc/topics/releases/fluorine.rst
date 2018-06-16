@@ -32,6 +32,78 @@ in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
+Configurable Module Environment
+===============================
+
+Salt modules (states, execution modules, returners, etc.) now can have custom
+environment variables applied when running shell commands. This can be
+configured by setting a ``system-environment`` key either in Grains or Pillar.
+The syntax is as follows:
+
+.. code-block:: yaml
+
+    system-environment:
+      <type>
+        <module>:
+          # Namespace for all functions in the module
+          _:
+            <key>: <value>
+
+          # Namespace only for particular function in the module
+          <function>:
+            <key>: <value>
+
+- ``<type>`` would be the type of module (i.e. ``states``, ``modules``, etc.).
+
+- ``<module>`` would be the module's name.
+
+  .. note::
+      The module name can be either the virtual name (e.g. ``pkg``), or the
+      physical name (e.g. ``yumpkg``).
+
+- ``<function>`` would be the function name within that module. To apply
+  environment variables to *all* functions in a given module, use an underscore
+  (i.e. ``_``) as the function name. For example, to set the same environment
+  variable for all package management functions, the following could be used:
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          pkg:
+            _:
+              SOMETHING: for_all
+
+  To set an environment variable in ``pkg.install`` only:
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          pkg:
+            install:
+              LC_ALL: en_GB.UTF-8
+
+  To set the same variable but only for SUSE minions (which use zypper for
+  package management):
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          zypper:
+            install:
+              LC_ALL: en_GB.UTF-8
+
+.. note::
+    This is not supported throughout Salt; the module must explicitly support
+    this feature (though this may change in the future). As of this release,
+    the only modules which support this are the following ``pkg`` virtual
+    modules:
+
+    - :py:mod:`aptpkg <salt.modules.aptpkg>`
+    - :py:mod:`yumpkg <salt.modules.yumpkg>`
+    - :py:mod:`zypper <salt.modules.zypper>`
 
 "Virtual Package" Support Dropped for APT
 =========================================
