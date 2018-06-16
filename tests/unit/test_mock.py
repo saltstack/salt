@@ -4,6 +4,7 @@ Tests for our mock_open helper
 '''
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
 import textwrap
 
 # Import Salt libs
@@ -19,6 +20,14 @@ What is your quest?
 What is the airspeed velocity of an unladen swallow?
 '''
 
+ANSWERS = '''\
+It is Arthur, King of the Britons.
+To seek the Holy Grail.
+What do you mean? An African or European swallow?
+'''
+
+log = logging.getLogger(__name__)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MockOpenTestCase(TestCase):
@@ -26,28 +35,39 @@ class MockOpenTestCase(TestCase):
     Tests for our mock_open helper to ensure that it behaves as closely as
     possible to a real filehandle.
     '''
+    contents = {'foo.txt': QUESTIONS, 'b*.txt': ANSWERS}
+
     def tearDown(self):
         '''
-        Each test should read the entire contents of the mocked filehandle.
+        Each test should read the entire contents of the mocked filehandle(s).
         This confirms that the other read functions return empty strings/lists,
         to simulate being at EOF.
         '''
-        result = self.fh.read(5)
-        assert not result, result
-        result = self.fh.read()
-        assert not result, result
-        result = self.fh.readline()
-        assert not result, result
-        result = self.fh.readlines()
-        assert not result, result
-        # Last but not least, try to read using a for loop. This should not
-        # read anything as we should hit EOF immediately, before the generator
-        # in the mocked filehandle has a chance to yield anything. So the
-        # exception will only be raised if we aren't at EOF already.
-        for line in self.fh:
-            raise Exception(
-                'Instead of EOF, read the following: {0}'.format(line)
-            )
+        for handle_name in ('fh', 'fh2', 'fh3'):
+            try:
+                fh = getattr(self, handle_name)
+            except AttributeError:
+                continue
+            log.debug('Running tearDown tests for self.%s', handle_name)
+            result = fh.read(5)
+            assert not result, result
+            result = fh.read()
+            assert not result, result
+            result = fh.readline()
+            assert not result, result
+            result = fh.readlines()
+            assert not result, result
+            # Last but not least, try to read using a for loop. This should not
+            # read anything as we should hit EOF immediately, before the generator
+            # in the mocked filehandle has a chance to yield anything. So the
+            # exception will only be raised if we aren't at EOF already.
+            for line in self.fh:
+                raise Exception(
+                    'Instead of EOF, read the following from {0}: {1}'.format(
+                        handle_name,
+                        line
+                    )
+                )
 
     def test_read(self):
         '''
@@ -55,24 +75,93 @@ class MockOpenTestCase(TestCase):
         '''
         with patch('salt.utils.files.fopen', mock_open(read_data=QUESTIONS)):
             with salt.utils.files.fopen('foo.txt') as self.fh:
-                result = self.fh.read(999999)
+                result = self.fh.read()
                 assert result == QUESTIONS, result
+
+    def test_read_multifile(self):
+        '''
+        Same as test_read, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                result = self.fh.read()
+                assert result == QUESTIONS, result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                result = self.fh2.read()
+                assert result == ANSWERS, result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                result = self.fh3.read()
+                assert result == ANSWERS, result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
 
     def test_read_explicit_size(self):
         '''
         Test reading with explicit sizes
         '''
-        with patch('salt.utils.files.fopen', mock_open(read_data='foobarbaz!')):
+        with patch('salt.utils.files.fopen', mock_open(read_data=QUESTIONS)):
             with salt.utils.files.fopen('foo.txt') as self.fh:
-                # Read 3 bytes
-                result = self.fh.read(3)
-                assert result == 'foo', result
-                # Read another 3 bytes
-                result = self.fh.read(3)
-                assert result == 'bar', result
+                # Read 10 bytes
+                result = self.fh.read(10)
+                assert result == QUESTIONS[:10], result
+                # Read another 10 bytes
+                result = self.fh.read(10)
+                assert result == QUESTIONS[10:20], result
                 # Read the rest
                 result = self.fh.read()
-                assert result == 'baz!', result
+                assert result == QUESTIONS[20:], result
+
+    def test_read_explicit_size_multifile(self):
+        '''
+        Same as test_read_explicit_size, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                # Read 10 bytes
+                result = self.fh.read(10)
+                assert result == QUESTIONS[:10], result
+                # Read another 10 bytes
+                result = self.fh.read(10)
+                assert result == QUESTIONS[10:20], result
+                # Read the rest
+                result = self.fh.read()
+                assert result == QUESTIONS[20:], result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                # Read 10 bytes
+                result = self.fh2.read(10)
+                assert result == ANSWERS[:10], result
+                # Read another 10 bytes
+                result = self.fh2.read(10)
+                assert result == ANSWERS[10:20], result
+                # Read the rest
+                result = self.fh2.read()
+                assert result == ANSWERS[20:], result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                # Read 10 bytes
+                result = self.fh3.read(10)
+                assert result == ANSWERS[:10], result
+                # Read another 10 bytes
+                result = self.fh3.read(10)
+                assert result == ANSWERS[10:20], result
+                # Read the rest
+                result = self.fh3.read()
+                assert result == ANSWERS[20:], result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
 
     def test_read_explicit_size_larger_than_file_size(self):
         '''
@@ -86,17 +175,74 @@ class MockOpenTestCase(TestCase):
                 result = self.fh.read(999999)
                 assert result == QUESTIONS, result
 
+    def test_read_explicit_size_larger_than_file_size_multifile(self):
+        '''
+        Same as test_read_explicit_size_larger_than_file_size, but using
+        multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                result = self.fh.read(999999)
+                assert result == QUESTIONS, result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                result = self.fh2.read(999999)
+                assert result == ANSWERS, result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                result = self.fh3.read(999999)
+                assert result == ANSWERS, result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
+
     def test_read_for_loop(self):
         '''
         Test reading the contents of the file line by line in a for loop
         '''
-        lines = QUESTIONS.splitlines(True)
         with patch('salt.utils.files.fopen', mock_open(read_data=QUESTIONS)):
+            lines = QUESTIONS.splitlines(True)
             with salt.utils.files.fopen('foo.txt') as self.fh:
                 index = 0
                 for line in self.fh:
                     assert line == lines[index], 'Line {0}: {1}'.format(index, line)
                     index += 1
+
+    def test_read_for_loop_multifile(self):
+        '''
+        Same as test_read_for_loop, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            lines = QUESTIONS.splitlines(True)
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                index = 0
+                for line in self.fh:
+                    assert line == lines[index], 'Line {0}: {1}'.format(index, line)
+                    index += 1
+
+            lines = ANSWERS.splitlines(True)
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                index = 0
+                for line in self.fh2:
+                    assert line == lines[index], 'Line {0}: {1}'.format(index, line)
+                    index += 1
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                index = 0
+                for line in self.fh3:
+                    assert line == lines[index], 'Line {0}: {1}'.format(index, line)
+                    index += 1
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
 
     def test_read_readline(self):
         '''
@@ -117,6 +263,57 @@ class MockOpenTestCase(TestCase):
                 result = self.fh.readline()
                 assert result == 'What is the airspeed velocity of an unladen swallow?\n', result
 
+    def test_read_readline_multifile(self):
+        '''
+        Same as test_read_readline, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                # Read the first 4 chars of line 1
+                result = self.fh.read(4)
+                assert result == 'What', result
+                # Use .readline() to read the remainder of the line
+                result = self.fh.readline()
+                assert result == ' is your name?\n', result
+                # Read and check the other two lines
+                result = self.fh.readline()
+                assert result == 'What is your quest?\n', result
+                result = self.fh.readline()
+                assert result == 'What is the airspeed velocity of an unladen swallow?\n', result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                # Read the first 4 chars of line 1
+                result = self.fh2.read(14)
+                assert result == 'It is Arthur, ', result
+                # Use .readline() to read the remainder of the line
+                result = self.fh2.readline()
+                assert result == 'King of the Britons.\n', result
+                # Read and check the other two lines
+                result = self.fh2.readline()
+                assert result == 'To seek the Holy Grail.\n', result
+                result = self.fh2.readline()
+                assert result == 'What do you mean? An African or European swallow?\n', result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                # Read the first 4 chars of line 1
+                result = self.fh3.read(14)
+                assert result == 'It is Arthur, ', result
+                # Use .readline() to read the remainder of the line
+                result = self.fh3.readline()
+                assert result == 'King of the Britons.\n', result
+                # Read and check the other two lines
+                result = self.fh3.readline()
+                assert result == 'To seek the Holy Grail.\n', result
+                result = self.fh3.readline()
+                assert result == 'What do you mean? An African or European swallow?\n', result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
+
     def test_readline_readlines(self):
         '''
         Test reading the first line using .readline(), then reading the rest of
@@ -134,6 +331,51 @@ class MockOpenTestCase(TestCase):
                     'What is the airspeed velocity of an unladen swallow?\n'
                 ], result
 
+    def test_readline_readlines_multifile(self):
+        '''
+        Same as test_readline_readlines, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                # Read the first line
+                result = self.fh.readline()
+                assert result == 'What is your name?\n', result
+                # Use .readlines() to read the remainder of the file
+                result = self.fh.readlines()
+                assert result == [
+                    'What is your quest?\n',
+                    'What is the airspeed velocity of an unladen swallow?\n'
+                ], result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                # Read the first line
+                result = self.fh2.readline()
+                assert result == 'It is Arthur, King of the Britons.\n', result
+                # Use .readlines() to read the remainder of the file
+                result = self.fh2.readlines()
+                assert result == [
+                    'To seek the Holy Grail.\n',
+                    'What do you mean? An African or European swallow?\n'
+                ], result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                # Read the first line
+                result = self.fh3.readline()
+                assert result == 'It is Arthur, King of the Britons.\n', result
+                # Use .readlines() to read the remainder of the file
+                result = self.fh3.readlines()
+                assert result == [
+                    'To seek the Holy Grail.\n',
+                    'What do you mean? An African or European swallow?\n'
+                ], result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
+
     def test_readlines(self):
         '''
         Test reading the entire file using .readlines
@@ -142,3 +384,27 @@ class MockOpenTestCase(TestCase):
             with salt.utils.files.fopen('foo.txt') as self.fh:
                 result = self.fh.readlines()
                 assert result == QUESTIONS.splitlines(True), result
+
+    def test_readlines_multifile(self):
+        '''
+        Same as test_readlines, but using multifile support
+        '''
+        with patch('salt.utils.files.fopen', mock_open(read_data=self.contents)):
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                result = self.fh.readlines()
+                assert result == QUESTIONS.splitlines(True), result
+
+            with salt.utils.files.fopen('bar.txt') as self.fh2:
+                result = self.fh2.readlines()
+                assert result == ANSWERS.splitlines(True), result
+
+            with salt.utils.files.fopen('baz.txt') as self.fh3:
+                result = self.fh3.readlines()
+                assert result == ANSWERS.splitlines(True), result
+
+            try:
+                with salt.utils.files.fopen('helloworld.txt'):
+                    raise Exception('No globs should have matched')
+            except IOError:
+                # An IOError is expected here
+                pass
