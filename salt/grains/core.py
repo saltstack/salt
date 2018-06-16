@@ -1371,6 +1371,17 @@ _OS_FAMILY_MAP = {
     'AIX': 'AIX'
 }
 
+# Matches any possible format:
+#     DISTRIB_ID="Ubuntu"
+#     DISTRIB_ID='Mageia'
+#     DISTRIB_ID=Fedora
+#     DISTRIB_RELEASE='10.10'
+#     DISTRIB_CODENAME='squeeze'
+#     DISTRIB_DESCRIPTION='Ubuntu 10.10'
+_LSB_REGEX = re.compile((
+    '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
+    '([\\w\\s\\.\\-_]+)(?:\'|")?'
+))
 
 def _linux_bin_exists(binary):
     '''
@@ -1402,6 +1413,23 @@ def _get_interfaces():
         _INTERFACES = salt.utils.network.interfaces()
     return _INTERFACES
 
+
+def _parse_lsb_release():
+    ret = {}
+    try:
+        log.trace('Attempting to parse /etc/lsb-release')
+        with salt.utils.files.fopen('/etc/lsb-release') as ifile:
+            for line in ifile:
+                try:
+                    key, value = _LSB_REGEX.match(line.rstrip('\n')).groups()[:2]
+                except AttributeError:
+                    pass
+                else:
+                    # Adds lsb_distrib_{id,release,codename,description}
+                    ret['lsb_{0}'.format(key.lower())] = value.rstrip()
+    except (IOError, OSError) as exc:
+        log.trace('Failed to parse /etc/lsb-release: %s', exc)
+    return ret
 
 def _parse_os_release(*os_release_files):
     '''
@@ -1590,32 +1618,10 @@ def os_data():
         # Catch a NameError to workaround possible breakage in lsb_release
         # See https://github.com/saltstack/salt/issues/37867
         except (ImportError, NameError):
-            # if the python library isn't available, default to regex
+            # if the python library isn't available, try to parse
+            # /etc/lsb-release using regex
             log.trace('lsb_release python bindings not available')
-            # Matches any possible format:
-            #     DISTRIB_ID="Ubuntu"
-            #     DISTRIB_ID='Mageia'
-            #     DISTRIB_ID=Fedora
-            #     DISTRIB_RELEASE='10.10'
-            #     DISTRIB_CODENAME='squeeze'
-            #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-            lsb_regex = re.compile((
-                '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
-                '([\\w\\s\\.\\-_]+)(?:\'|")?'
-            ))
-            try:
-                log.trace('Attempting to parse /etc/lsb-release')
-                with salt.utils.files.fopen('/etc/lsb-release') as ifile:
-                    for line in ifile:
-                        match = lsb_regex.match(line.rstrip('\n'))
-                        if match:
-                            # Adds:
-                            #   lsb_distrib_{id,release,codename,description}
-                            grains[
-                                'lsb_{0}'.format(match.groups()[0].lower())
-                            ] = match.groups()[1].rstrip()
-            except (IOError, OSError) as exc:
-                log.trace('Failed to parse /etc/lsb-release: %s', exc)
+            grains.update(_parse_lsb_release())
 
             if grains.get('lsb_distrib_description', '').lower().startswith('antergos'):
                 # Antergos incorrectly configures their /etc/lsb-release,
