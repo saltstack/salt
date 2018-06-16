@@ -263,7 +263,7 @@ def mock_open(mock=None, read_data=''):
         try:
             return next(data['filehandle'][filename])
         except StopIteration:
-            return empty_string
+            return _empty_string(data)
 
     def _iter_side_effect():
         filename = _filename(data)
