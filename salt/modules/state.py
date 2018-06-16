@@ -599,14 +599,14 @@ def apply_(mods=None, **kwargs):
 
             salt '*' state.apply test localconfig=/path/to/minion.yml
 
-    sync
+    sync_mods
         If specified, the desired custom module types will be synced prior to
         running the SLS files:
 
         .. code-block:: bash
 
-            salt '*' state.apply test sync=states,modules
-            salt '*' state.apply test sync=all
+            salt '*' state.apply test sync_mods=states,modules
+            salt '*' state.apply test sync_mods=all
 
         .. note::
             This option is ignored when no SLS files are specified, as a
@@ -943,7 +943,7 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, test=None, exclude=None, queue=False, sync=None, **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -1034,14 +1034,14 @@ def sls(mods, test=None, exclude=None, queue=False, sync=None, **kwargs):
 
         .. versionadded:: 2015.8.4
 
-    sync
+    sync_mods
         If specified, the desired custom module types will be synced prior to
         running the SLS files:
 
         .. code-block:: bash
 
-            salt '*' state.sls test sync=states,modules
-            salt '*' state.sls test sync=all
+            salt '*' state.sls test sync_mods=states,modules
+            salt '*' state.sls test sync_mods=all
 
         .. versionadded:: 2017.7.7,2018.3.2,Fluorine
 
@@ -1113,18 +1113,18 @@ def sls(mods, test=None, exclude=None, queue=False, sync=None, **kwargs):
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
-    if sync is True:
-        sync = ['all']
-    if sync is not None:
-        sync = salt.utils.split_input(sync)
+    if sync_mods is True:
+        sync_mods = ['all']
+    if sync_mods is not None:
+        sync_mods = salt.utils.split_input(sync_mods)
     else:
-        sync = []
+        sync_mods = []
 
-    if 'all' in sync and sync != ['all']:
+    if 'all' in sync_mods and sync_mods != ['all']:
         # Prevent unnecessary extra syncing
-        sync = ['all']
+        sync_mods = ['all']
 
-    for module_type in sync:
+    for module_type in sync_mods:
         try:
             __salt__['saltutil.sync_{0}'.format(module_type)](
                 saltenv=opts['environment']
