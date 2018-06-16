@@ -196,9 +196,7 @@ def mock_open(mock=None, read_data=''):
     # .__class__() function is used to preserve the dict class, in case
     # read_data is an OrderedDict.
     data = {
-        'filehandle': read_data.__class__(
-            [(x, _iterate_read_data(y)) for x, y in six.iteritems(read_data)]
-        ),
+        'filehandle': read_data.__class__(),
         'mock': mock,
     }
 
@@ -213,20 +211,6 @@ def mock_open(mock=None, read_data=''):
                 return key
         return '*'
 
-    def _get_read_data(filename):
-        return read_data[_match_glob(filename)]
-
-    def _empty_string(data):
-        filename = _filename(data)
-        try:
-            return data['empty_string'][filename]
-        except KeyError:
-            data.setdefault('empty_string', {})[filename] = (
-                b'' if isinstance(_get_read_data(filename), six.binary_type)
-                else ''
-            )
-            return data['empty_string'][filename]
-
     def _match_fn(data):
         filename = _filename(data)
         try:
@@ -235,23 +219,34 @@ def mock_open(mock=None, read_data=''):
             data.setdefault('glob_map', {})[filename] = _match_glob(filename)
             return data['glob_map'][filename]
 
+    def _empty_string(data):
+        filename = _filename(data)
+        try:
+            return data['empty_string'][filename]
+        except KeyError:
+            data.setdefault('empty_string', {})[filename] = (
+                b'' if isinstance(read_data[_match_fn(data)], six.binary_type)
+                else ''
+            )
+            return data['empty_string'][filename]
+
     def _readlines_side_effect(*args, **kwargs):
-        key = _match_fn(data)
-        ret = list(data['filehandle'][key])
+        filename = _filename(data)
+        ret = list(data['filehandle'][filename])
         # We've read everything in the file. Clear its contents so that further
         # reads behave as expected.
-        data['filehandle'][key] = _iterate_read_data('')
+        data['filehandle'][filename] = _iterate_read_data('')
         return ret
 
     def _read_side_effect(*args, **kwargs):
-        key = _match_fn(data)
-        joined = _empty_string(data).join(data['filehandle'][key])
+        filename = _filename(data)
+        joined = _empty_string(data).join(data['filehandle'][filename])
         if not args:
             # read() called with no args, we want to return everything. If
             # anything was in the generator, clear it
             if joined:
                 # If there were any contents, clear them
-                data['filehandle'][key] = _iterate_read_data('')
+                data['filehandle'][filename] = _iterate_read_data('')
             return joined
         else:
             # read() called with an explicit size. Return a slice matching the
@@ -260,32 +255,32 @@ def mock_open(mock=None, read_data=''):
             size = args[0]
             if not isinstance(size, six.integer_types):
                 raise TypeError('an integer is required')
-            data['filehandle'][key] = _iterate_read_data(joined[size:])
+            data['filehandle'][filename] = _iterate_read_data(joined[size:])
             return joined[:size]
 
     def _readline_side_effect():
-        key = _match_fn(data)
+        filename = _filename(data)
         try:
-            return next(data['filehandle'][key])
+            return next(data['filehandle'][filename])
         except StopIteration:
             return empty_string
 
     def _iter_side_effect():
-        key = _match_fn(data)
+        filename = _filename(data)
         while True:
             try:
-                yield next(data['filehandle'][key])
+                yield next(data['filehandle'][filename])
             except StopIteration:
                 break
 
     def _fopen_side_effect(name, *args, **kwargs):
+        key = _match_glob(name)
         try:
-            _get_read_data(name)
-            # If we reached this return statement then we know the filename
-            # matched a glob in read_data.
+            data['filehandle'][name] = _iterate_read_data(read_data[key])
             return DEFAULT
         except KeyError:
-            # No glob match
+            # No matching glob in read_data, treat this as a file that does
+            # not exist and raise the appropriate exception.
             raise IOError(errno.ENOENT, 'No such file or directory', name)
 
     handle = MagicMock(spec=file_spec)
