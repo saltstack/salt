@@ -5,7 +5,6 @@ Tests for our mock_open helper
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
-import textwrap
 
 # Import Salt libs
 import salt.utils.files
