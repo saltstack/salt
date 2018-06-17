@@ -88,11 +88,9 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', isfile_mock):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=config)
             # We only should have opened the one file
-            num_handles = len(m_open.handles)
+            num_handles = len(m_open.filehandles)
             assert num_handles == 1, num_handles
-            writes = []
-            for fh_ in m_open.handles[config]:
-                writes.extend(fh_.write_calls)
+            writes = m_open.write_calls()
             # We should have called .write() only once, with the expected
             # content
             num_writes = len(writes)
@@ -118,11 +116,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', isfile_mock):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=config)
             # We only should have opened the one file
-            num_handles = len(m_open.handles)
+            num_handles = len(m_open.filehandles)
             assert num_handles == 1, num_handles
-            writes = []
-            # We should have called .writelines() only once, with the expected
-            # content
-            for fh_ in m_open.handles[config]:
-                writes.extend(fh_.writelines_calls)
+            writes = m_open.writelines_calls()
             assert writes == writelines_calls, writes

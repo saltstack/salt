@@ -121,9 +121,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                {'salt.utils.systemd.booted': True,
                                 'salt.utils.systemd.version': 232}):
                 linux_sysctl.persist('net.ipv4.ip_forward', 1, config=config)
-                writes = []
-                for fh_ in m_open.handles[config]:
-                    writes.extend(fh_.write_calls)
+                writes = m_open.write_calls()
                 assert writes == [
                     '#\n# Kernel sysctl configuration\n#\n'
                 ], writes
