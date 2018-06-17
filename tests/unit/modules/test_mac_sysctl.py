@@ -9,6 +9,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Libs
 import salt.modules.mac_sysctl as mac_sysctl
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -67,9 +68,9 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests adding of config file failure
         '''
-        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+        read_data = IOError(13, 'Permission denied', '/file')
+        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)), \
                 patch('os.path.isfile', MagicMock(return_value=False)):
-            m_open.side_effect = IOError(13, 'Permission denied', '/file')
             self.assertRaises(CommandExecutionError,
                               mac_sysctl.persist,
                               'net.inet.icmp.icmplim',
@@ -77,14 +78,21 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_persist_no_conf_success(self):
         '''
-        Tests successful add of config file when previously not one
+        Tests successful add of config file when it did not already exist
         '''
         with patch('salt.utils.files.fopen', mock_open()) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=False)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50)
-            helper_open = m_open()
-            helper_open.write.assert_called_once_with(
-                '#\n# Kernel sysctl configuration\n#\n')
+            # We only should have opened one file
+            num_handles = len(m_open.handles)
+            assert num_handles == 1, num_handles
+            writes = []
+            for fh_ in next(six.itervalues(m_open.handles)):
+                writes.extend(fh_.write_calls)
+            # We should have called .write() only once, with the expected content
+            num_writes = len(writes)
+            assert num_writes == 1, num_writes
+            assert writes[0] == '#\n# Kernel sysctl configuration\n#\n', writes[0]
 
     def test_persist_success(self):
         '''
