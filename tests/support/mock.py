@@ -185,22 +185,16 @@ class MockFH(object):
         pass
 
 
-# reimplement mock_open to support multiple filehandles
-def mock_open(read_data=''):
+class MockOpen(object):
     '''
-    A helper function to create a mock to replace the use of `open`. It works
-    for "open" called directly or used as a context manager.
-
-    The "mock" argument is the mock object to configure. If "None" (the
-    default) then a "MagicMock" will be created for you, with the API limited
-    to methods or attributes available on standard file handles.
+    This class can be used to mock the use of "open()".
 
     "read_data" is a string representing the contents of the file to be read.
     By default, this is an empty string.
 
     Optionally, "read_data" can be a dictionary mapping fnmatch.fnmatch()
-    patterns to strings. This allows the mocked filehandle to serve content for
-    more than one file path.
+    patterns to strings (or optionally, exceptions). This allows the mocked
+    filehandle to serve content for more than one file path.
 
     .. code-block:: python
 
@@ -222,39 +216,76 @@ def mock_open(read_data=''):
     If the file path being opened does not match any of the glob expressions,
     an IOError will be raised to simulate the file not existing.
 
-    Glob expressions will be attempted in iteration order, so if a file path
-    matches more than one glob expression it will match whichever is iterated
-    first. If a specifc iteration order is desired (and you are not running
-    Python >= 3.6), consider passing "read_data" as an OrderedDict.
-
     Passing "read_data" as a string is equivalent to passing it with a glob
-    expression of "*".
+    expression of "*". That is to say, the below two invocations are
+    equivalent:
+
+    .. code-block:: python
+
+        mock_open(read_data='foo\n')
+        mock_open(read_data={'*': 'foo\n'})
+
+    Instead of a string representing file contents, "read_data" can map to an
+    exception, and that exception will be raised if a file matching that
+    pattern is opened:
+
+    .. code-block:: python
+
+        data = {
+            '/etc/*': IOError(errno.EACCES, 'Permission denied'),
+            '*': 'Hello world!\n',
+        }
+        with patch('salt.utils.files.fopen', mock_open(read_data=data):
+            do stuff
+
+    The above would raise an exception if any files within /etc are opened, but
+    would produce a mocked filehandle if any other file is opened.
+
+    Expressions will be attempted in dictionary iteration order (the exception
+    being "*" which is tried last), so if a file path matches more than one
+    fnmatch expression then the first match "wins". If your use case calls for
+    overlapping expressions, then an OrderedDict can be used to ensure that the
+    desired matching behavior occurs:
+
+    .. code-block:: python
+
+        data = OrderedDict()
+        data['/etc/foo.conf'] = 'Permission granted!'
+        data['/etc/*'] = IOError(errno.EACCES, 'Permission denied')
+        data['*'] = '*': 'Hello world!\n'
+        with patch('salt.utils.files.fopen', mock_open(read_data=data):
+            do stuff
     '''
-    # Normalize read_data, Python 2 filehandles should never produce unicode
-    # types on read.
-    if not isinstance(read_data, dict):
-        read_data = {'*': read_data}
+    def __init__(self, read_data=''):
+        # Normalize read_data, Python 2 filehandles should never produce unicode
+        # types on read.
+        if not isinstance(read_data, dict):
+            read_data = {'*': read_data}
 
-    if six.PY2:
-        # .__class__() used here to preserve the dict class in the event that
-        # an OrderedDict was used.
-        new_read_data = read_data.__class__()
-        for key, val in six.iteritems(read_data):
-            try:
-                val = salt.utils.stringutils.to_str(val)
-            except TypeError:
-                if not isinstance(val, BaseException):
-                    raise
-            new_read_data[key] = val
+        if six.PY2:
+            # .__class__() used here to preserve the dict class in the event that
+            # an OrderedDict was used.
+            new_read_data = read_data.__class__()
+            for key, val in six.iteritems(read_data):
+                try:
+                    val = salt.utils.stringutils.to_str(val)
+                except TypeError:
+                    if not isinstance(val, BaseException):
+                        raise
+                new_read_data[key] = val
 
-        read_data = new_read_data
-        del new_read_data
+            read_data = new_read_data
+            del new_read_data
 
-    mock = MagicMock(name='open', spec=open)
-    mock.handles = {}
+        self.read_data = read_data
+        self.filehandles = {}
 
-    def _fopen_side_effect(name, *args, **kwargs):
-        for pat in read_data:
+    def __call__(self, name, *args, **kwargs):
+        '''
+        Match the file being opened to the patterns in the read_data and spawn
+        a mocked filehandle with the corresponding file contents.
+        '''
+        for pat in self.read_data:
             if pat == '*':
                 continue
             if fnmatch.fnmatch(name, pat):
@@ -264,7 +295,7 @@ def mock_open(read_data=''):
             # No non-glob match in read_data, fall back to '*'
             matched_pattern = '*'
         try:
-            file_contents = read_data[matched_pattern]
+            file_contents = self.read_data[matched_pattern]
             try:
                 # Raise the exception if the matched file contents are an
                 # instance of an exception class.
@@ -274,12 +305,37 @@ def mock_open(read_data=''):
                 # mocked filehandle.
                 pass
             ret = MockFH(name, file_contents)
-            mock.handles.setdefault(name, []).append(ret)
+            self.filehandles.setdefault(name, []).append(ret)
             return ret
         except KeyError:
             # No matching glob in read_data, treat this as a file that does
             # not exist and raise the appropriate exception.
             raise IOError(errno.ENOENT, 'No such file or directory', name)
 
-    mock.side_effect = _fopen_side_effect
-    return mock
+    def write_calls(self, path=None):
+        '''
+        Returns the contents passed to all .write() calls. Use `path` to narrow
+        the results to files matching a given pattern.
+        '''
+        ret = []
+        for filename, handles in six.iteritems(self.filehandles):
+            if path is None or fnmatch.fnmatch(filename, path):
+                for fh_ in handles:
+                    ret.extend(fh_.write_calls)
+        return ret
+
+    def writelines_calls(self, path=None):
+        '''
+        Returns the contents passed to all .writelines() calls. Use `path` to
+        narrow the results to files matching a given pattern.
+        '''
+        ret = []
+        for filename, handles in six.iteritems(self.filehandles):
+            if path is None or fnmatch.fnmatch(filename, path):
+                for fh_ in handles:
+                    ret.extend(fh_.writelines_calls)
+        return ret
+
+
+# reimplement mock_open to support multiple filehandles
+mock_open = MockOpen
