@@ -1383,6 +1383,7 @@ _LSB_REGEX = re.compile((
     '([\\w\\s\\.\\-_]+)(?:\'|")?'
 ))
 
+
 def _linux_bin_exists(binary):
     '''
     Does a binary exist in linux (depends on which, type, or whereis)
@@ -1430,6 +1431,7 @@ def _parse_lsb_release():
     except (IOError, OSError) as exc:
         log.trace('Failed to parse /etc/lsb-release: %s', exc)
     return ret
+
 
 def _parse_os_release(*os_release_files):
     '''
