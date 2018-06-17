@@ -138,6 +138,13 @@ class MockFH(object):
         '''
         return [x[1][0] for x in self.write.mock_calls]
 
+    @property
+    def writelines_calls(self):
+        '''
+        Return a list of all calls to the .writelines() mock
+        '''
+        return [x[1][0] for x in self.writelines.mock_calls]
+
     def _read(self, size=0):
         if not isinstance(size, six.integer_types) or size < 0:
             raise TypeError('a positive integer is required')
