@@ -226,6 +226,9 @@ def mock_open(read_data=''):
              for x, y in six.iteritems(read_data)]
         )
 
+    mock = MagicMock(name='open', spec=open)
+    mock.handles = {}
+
     def _fopen_side_effect(name, *args, **kwargs):
         for pat in read_data:
             if pat == '*':
@@ -237,10 +240,13 @@ def mock_open(read_data=''):
             # No non-glob match in read_data, fall back to '*'
             matched_pattern = '*'
         try:
-            return MockFH(name, read_data[matched_pattern])
+            ret = MockFH(name, read_data[matched_pattern])
+            mock.handles.setdefault(name, []).append(ret)
+            return ret
         except KeyError:
             # No matching glob in read_data, treat this as a file that does
             # not exist and raise the appropriate exception.
             raise IOError(errno.ENOENT, 'No such file or directory', name)
 
-    return MagicMock(name='open', spec=open, side_effect=_fopen_side_effect)
+    mock.side_effect = _fopen_side_effect
+    return mock
