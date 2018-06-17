@@ -105,7 +105,7 @@ class MockFH(object):
         self.close = Mock()
         self.write = Mock()
         self.writelines = Mock()
-        self.tell = Mock()
+        self._loc = 0
 
     def _iterate_read_data(self, read_data):
         '''
@@ -146,6 +146,9 @@ class MockFH(object):
         '''
         return [x[1][0] for x in self.writelines.mock_calls]
 
+    def tell(self):
+        return self._loc
+
     def _read(self, size=0):
         if not isinstance(size, six.integer_types) or size < 0:
             raise TypeError('a positive integer is required')
@@ -153,22 +156,28 @@ class MockFH(object):
         joined = self.empty_string.join(self.read_data)
         if not size:
             # read() called with no args, return everything
+            self._loc += len(joined)
             return joined
         else:
             # read() called with an explicit size. Return a slice matching the
             # requested size, but before doing so, reset read_data to reflect
             # what we read.
             self.read_data = self._iterate_read_data(joined[size:])
+            self._loc += size
             return joined[:size]
 
     def _readlines(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
-        return list(self.read_data)
+        ret = list(self.read_data)
+        self._loc += sum(len(x) for x in ret)
+        return ret
 
     def _readline(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
         try:
-            return next(self.read_data)
+            ret = next(self.read_data)
+            self._loc += len(ret)
+            return ret
         except StopIteration:
             return self.empty_string
 
