@@ -99,6 +99,7 @@ class MockFH(object):
         self.filename = filename
         self.empty_string = b'' if isinstance(read_data, six.binary_type) else ''
         self.read_data = self._iterate_read_data(read_data)
+        self.close = Mock()
         self.write = Mock()
         self.writelines = Mock()
 
