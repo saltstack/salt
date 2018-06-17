@@ -105,6 +105,7 @@ class MockFH(object):
         self.close = Mock()
         self.write = Mock()
         self.writelines = Mock()
+        self.tell = Mock()
 
     def _iterate_read_data(self, read_data):
         '''
