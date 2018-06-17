@@ -99,6 +99,9 @@ class MockFH(object):
         self.filename = filename
         self.empty_string = b'' if isinstance(read_data, six.binary_type) else ''
         self.read_data = self._iterate_read_data(read_data)
+        self.read = Mock(side_effect=self._read)
+        self.readlines = Mock(side_effect=self._readlines)
+        self.readline = Mock(side_effect=self._readline)
         self.close = Mock()
         self.write = Mock()
         self.writelines = Mock()
@@ -128,7 +131,14 @@ class MockFH(object):
         for line in read_data:
             yield line
 
-    def read(self, size=0):
+    @property
+    def write_calls(self):
+        '''
+        Return a list of all calls to the .write() mock
+        '''
+        return [x[1][0] for x in self.write.mock_calls]
+
+    def _read(self, size=0):
         if not isinstance(size, six.integer_types) or size < 0:
             raise TypeError('a positive integer is required')
 
@@ -143,11 +153,11 @@ class MockFH(object):
             self.read_data = self._iterate_read_data(joined[size:])
             return joined[:size]
 
-    def readlines(self, size=None):  # pylint: disable=unused-argument
+    def _readlines(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
         return list(self.read_data)
 
-    def readline(self, size=None):  # pylint: disable=unused-argument
+    def _readline(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
         try:
             return next(self.read_data)
@@ -240,7 +250,16 @@ def mock_open(read_data=''):
             # No non-glob match in read_data, fall back to '*'
             matched_pattern = '*'
         try:
-            ret = MockFH(name, read_data[matched_pattern])
+            file_contents = read_data[matched_pattern]
+            try:
+                # Raise the exception if the matched file contents are an
+                # instance of an exception class.
+                raise file_contents
+            except TypeError:
+                # Contents were not an exception, so proceed with creating the
+                # mocked filehandle.
+                pass
+            ret = MockFH(name, file_contents)
             mock.handles.setdefault(name, []).append(ret)
             return ret
         except KeyError:
