@@ -238,10 +238,17 @@ def mock_open(read_data=''):
     if six.PY2:
         # .__class__() used here to preserve the dict class in the event that
         # an OrderedDict was used.
-        read_data = read_data.__class__(
-            [(x, salt.utils.stringutils.to_str(y))
-             for x, y in six.iteritems(read_data)]
-        )
+        new_read_data = read_data.__class__()
+        for key, val in six.iteritems(read_data):
+            try:
+                val = salt.utils.stringutils.to_str(val)
+            except TypeError:
+                if not isinstance(val, BaseException):
+                    raise
+            new_read_data[key] = val
+
+        read_data = new_read_data
+        del new_read_data
 
     mock = MagicMock(name='open', spec=open)
     mock.handles = {}
