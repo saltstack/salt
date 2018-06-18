@@ -15,6 +15,7 @@
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 from __future__ import absolute_import
+import collections
 import errno
 import fnmatch
 import sys
@@ -97,8 +98,7 @@ if NO_MOCK is False:
 class MockFH(object):
     def __init__(self, filename, read_data, *args, **kwargs):
         self.filename = filename
-        self.call_args = (filename,) + args
-        self.call_kwargs = kwargs
+        self.call = MockCall(filename, *args, **kwargs)
         self.empty_string = b'' if isinstance(read_data, six.binary_type) else ''
         self.read_data = self._iterate_read_data(read_data)
         self.read = Mock(side_effect=self._read)
@@ -197,6 +197,37 @@ class MockFH(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):  # pylint: disable=unused-argument
         pass
+
+
+class MockCall(object):
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def __repr__(self):
+        # future lint: disable=blacklisted-function
+        ret = str('MockCall(')
+        for arg in self.args:
+            ret += repr(arg) + str(', ')
+        if not self.kwargs:
+            if self.args:
+                # Remove trailing ', '
+                ret = ret[:-2]
+        else:
+            for key, val in six.iteritems(self.kwargs):
+                ret += str('{0}={1}').format(
+                    salt.utils.stringutils.to_str(key),
+                    repr(val)
+                )
+        ret += str(')')
+        return ret
+        # future lint: enable=blacklisted-function
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __eq__(self, other):
+        return self.args == other.args and self.kwargs == other.kwargs
 
 
 class MockOpen(object):
@@ -322,6 +353,7 @@ class MockOpen(object):
 
         self.read_data = read_data
         self.filehandles = {}
+        self.calls = []
         self.call_count = 0
 
     def __call__(self, name, *args, **kwargs):
@@ -329,6 +361,8 @@ class MockOpen(object):
         Match the file being opened to the patterns in the read_data and spawn
         a mocked filehandle with the corresponding file contents.
         '''
+        call = MockCall(name, *args, **kwargs)
+        self.calls.append(call)
         self.call_count += 1
         for pat in self.read_data:
             if pat == '*':

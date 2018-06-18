@@ -58,7 +58,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.utils.files.fopen', mock_open()) as m_open:
             ret = btmp.beacon(config)
-            call_args = next(six.itervalues(m_open.filehandles))[0].call_args
+            call_args = next(six.itervalues(m_open.filehandles))[0].call.args
             assert call_args == (btmp.BTMP, 'rb'), call_args
             assert ret == [], ret
 

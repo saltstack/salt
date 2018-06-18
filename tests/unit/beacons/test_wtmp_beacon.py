@@ -58,7 +58,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.utils.files.fopen', mock_open()) as m_open:
             ret = wtmp.beacon(config)
-            call_args = next(six.itervalues(m_open.filehandles))[0].call_args
+            call_args = next(six.itervalues(m_open.filehandles))[0].call.args
             assert call_args == (wtmp.WTMP, 'rb'), call_args
             assert ret == [], ret
 
