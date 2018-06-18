@@ -316,12 +316,14 @@ class MockOpen(object):
 
         self.read_data = read_data
         self.filehandles = {}
+        self.call_count = 0
 
     def __call__(self, name, *args, **kwargs):
         '''
         Match the file being opened to the patterns in the read_data and spawn
         a mocked filehandle with the corresponding file contents.
         '''
+        self.call_count += 1
         for pat in self.read_data:
             if pat == '*':
                 continue
