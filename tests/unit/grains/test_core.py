@@ -841,39 +841,41 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         import platform
         path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/release'])
-        with patch.object(platform, 'uname',
-                  MagicMock(return_value=('SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'))):
-            with patch.object(salt.utils.platform, 'is_proxy',
-                      MagicMock(return_value=False)):
-                with patch.object(salt.utils.platform, 'is_linux',
-                          MagicMock(return_value=False)):
-                    with patch.object(salt.utils.platform, 'is_windows',
-                              MagicMock(return_value=False)):
-                        with patch.object(salt.utils.platform, 'is_smartos',
-                                  MagicMock(return_value=False)):
-                            with patch.object(salt.utils.path, 'which_bin',
-                                      MagicMock(return_value=None)):
-                                with patch.object(os.path, 'isfile', path_isfile_mock):
-                                    with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
-                                        os_release_content = os_release_file.readlines()
-                                        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
-                                            os_release_file.return_value.__iter__.return_value = os_release_content
-                                            with patch.object(core, '_sunos_cpudata',
-                                                      MagicMock(return_value={'cpuarch': 'sparcv9',
-                                                                              'num_cpus': '1',
-                                                                              'cpu_model': 'MOCK_CPU_MODEL',
-                                                                              'cpu_flags': []})):
-                                                with patch.object(core, '_memdata',
-                                                          MagicMock(return_value={'mem_total': 16384})):
-                                                    with patch.object(core, '_virtual',
-                                                              MagicMock(return_value={})):
-                                                        with patch.object(core, '_ps',
-                                                                  MagicMock(return_value={})):
-                                                            with patch.object(salt.utils.path, 'which',
-                                                                      MagicMock(return_value=True)):
-                                                                sparc_return_mock = MagicMock(return_value=prtdata)
-                                                                with patch.dict(core.__salt__, {'cmd.run': sparc_return_mock}):
-                                                                    os_grains = core.os_data()
+        with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
+            os_release_content = os_release_file.readlines()
+        uname_mock = MagicMock(return_value=(
+            'SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'
+        ))
+        with patch.object(platform, 'uname', uname_mock), \
+                patch.object(salt.utils.platform, 'is_proxy',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_linux',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_windows',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_smartos',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.path, 'which_bin',
+                             MagicMock(return_value=None)), \
+                patch.object(os.path, 'isfile', path_isfile_mock), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=os_release_content)) as os_release_file, \
+                patch.object(core, '_sunos_cpudata',
+                             MagicMock(return_value={
+                                 'cpuarch': 'sparcv9',
+                                 'num_cpus': '1',
+                                 'cpu_model': 'MOCK_CPU_MODEL',
+                                 'cpu_flags': []})), \
+                patch.object(core, '_memdata',
+                             MagicMock(return_value={'mem_total': 16384})), \
+                patch.object(core, '_virtual',
+                             MagicMock(return_value={})), \
+                patch.object(core, '_ps', MagicMock(return_value={})), \
+                patch.object(salt.utils.path, 'which',
+                             MagicMock(return_value=True)), \
+                patch.dict(core.__salt__,
+                           {'cmd.run': MagicMock(return_value=prtdata)}):
+            os_grains = core.os_data()
         grains = {k: v for k, v in os_grains.items()
                   if k in set(['product', 'productname'])}
         self.assertEqual(grains, expectation)
