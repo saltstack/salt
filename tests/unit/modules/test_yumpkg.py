@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
 
@@ -20,6 +20,11 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
+
+try:
+    import pytest
+except ImportError:
+    pytest = None
 
 LIST_REPOS = {
     'base': {
@@ -239,7 +244,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
             # with fromrepo
             cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.latest_version(
                     'foo',
                     refresh=False,
@@ -247,14 +252,14 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     branch='foo')
                 cmd.assert_called_once_with(
                     ['yum', '--quiet', '--disablerepo=*', '--enablerepo=good',
-                     '--branch=foo', 'list', 'available', 'foo'],
+                     '--branch=foo', 'list', 'available', 'foo'], env={},
                     ignore_retcode=True,
                     output_loglevel='trace',
                     python_shell=False)
 
             # without fromrepo
             cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.latest_version(
                     'foo',
                     refresh=False,
@@ -263,10 +268,28 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     branch='foo')
                 cmd.assert_called_once_with(
                     ['yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
-                     '--branch=foo', 'list', 'available', 'foo'],
+                     '--branch=foo', 'list', 'available', 'foo'], env={},
                     ignore_retcode=True,
                     output_loglevel='trace',
                     python_shell=False)
+
+            # without fromrepo, but within the scope
+            cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch('salt.utils.systemd.has_scope', MagicMock(return_value=True)):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd,
+                                                  'config.get': MagicMock(return_value=True)}):
+                    yumpkg.latest_version(
+                        'foo',
+                        refresh=False,
+                        enablerepo='good',
+                        disablerepo='bad',
+                        branch='foo')
+                    cmd.assert_called_once_with(
+                        ['systemd-run', '--scope', 'yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
+                         '--branch=foo', 'list', 'available', 'foo'], env={},
+                        ignore_retcode=True,
+                        output_loglevel='trace',
+                        python_shell=False)
 
     def test_list_repo_pkgs_with_options(self):
         '''
@@ -281,7 +304,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         list_repos_mock = MagicMock(return_value=LIST_REPOS)
         kwargs = {'output_loglevel': 'trace',
                   'ignore_retcode': True,
-                  'python_shell': False}
+                  'python_shell': False,
+                  'env': {}}
 
         with patch.object(yumpkg, 'list_repos', list_repos_mock):
 
@@ -290,52 +314,44 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(yumpkg.__salt__, {'cmd.run': really_old_yum}):
 
                 cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                     yumpkg.list_repo_pkgs('foo')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     # Check args from first call
-                    self.assertEqual(
-                        cmd.mock_calls[1][1],
-                        (['yum', '--quiet', 'list', 'available'],)
-                    )
+                    assert cmd.mock_calls[1][1] == (['yum', '--quiet', 'list', 'available'],)
+
                     # Check kwargs from first call
-                    self.assertEqual(cmd.mock_calls[1][2], kwargs)
+                    assert cmd.mock_calls[1][2] == kwargs
 
                     # Check args from second call
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', 'list', 'installed'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', 'list', 'installed'],)
+
                     # Check kwargs from second call
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
             # Test with really old yum. The fromrepo argument has no effect on
             # the yum commands we'd run.
             with patch.dict(yumpkg.__salt__, {'cmd.run': older_yum}):
 
                 cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                     yumpkg.list_repo_pkgs('foo')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     # Check args from first call
-                    self.assertEqual(
-                        cmd.mock_calls[1][1],
-                        (['yum', '--quiet', '--showduplicates', 'list', 'available'],)
-                    )
+                    assert cmd.mock_calls[1][1] == (['yum', '--quiet', '--showduplicates', 'list', 'available'],)
+
                     # Check kwargs from first call
-                    self.assertEqual(cmd.mock_calls[1][2], kwargs)
+                    assert cmd.mock_calls[1][2] == kwargs
 
                     # Check args from second call
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', '--showduplicates', 'list', 'installed'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', '--showduplicates', 'list', 'installed'],)
+
                     # Check kwargs from second call
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
             # Test with newer yum. We should run one yum command per repo, so
             # fromrepo would limit how many calls we make.
@@ -344,19 +360,16 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 # When fromrepo is used, we would only run one yum command, for
                 # that specific repo.
                 cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                     yumpkg.list_repo_pkgs('foo', fromrepo='base')
                     # We should have called cmd.run_all once
-                    self.assertEqual(len(cmd.mock_calls), 1)
+                    assert len(cmd.mock_calls) == 1
 
                     # Check args
-                    self.assertEqual(
-                        cmd.mock_calls[0][1],
-                        (['yum', '--quiet', '--showduplicates',
-                          'repository-packages', 'base', 'list', 'foo'],)
-                    )
+                    assert cmd.mock_calls[0][1] == (['yum', '--quiet', '--showduplicates',
+                                                     'repository-packages', 'base', 'list', 'foo'],)
                     # Check kwargs
-                    self.assertEqual(cmd.mock_calls[0][2], kwargs)
+                    assert cmd.mock_calls[0][2] == kwargs
 
                 # Test enabling base-source and disabling updates. We should
                 # get two calls, one for each enabled repo. Because dict
@@ -365,26 +378,22 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 # mean that we will have to check both the first and second
                 # mock call both times.
                 cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+                with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                     yumpkg.list_repo_pkgs(
                         'foo',
                         enablerepo='base-source',
                         disablerepo='updates')
                     # We should have called cmd.run_all twice
-                    self.assertEqual(len(cmd.mock_calls), 2)
+                    assert len(cmd.mock_calls) == 2
 
                     for repo in ('base', 'base-source'):
                         for index in (0, 1):
                             try:
                                 # Check args
-                                self.assertEqual(
-                                    cmd.mock_calls[index][1],
-                                    (['yum', '--quiet', '--showduplicates',
-                                      'repository-packages', repo, 'list',
-                                      'foo'],)
-                                )
+                                assert cmd.mock_calls[index][1] == (['yum', '--quiet', '--showduplicates',
+                                                                     'repository-packages', repo, 'list', 'foo'],)
                                 # Check kwargs
-                                self.assertEqual(cmd.mock_calls[index][2], kwargs)
+                                assert cmd.mock_calls[index][2] == kwargs
                                 break
                             except AssertionError:
                                 continue
@@ -398,21 +407,21 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__context__, {'yum_bin': 'dnf'}):
             # with fromrepo
             cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.list_upgrades(
                     refresh=False,
                     fromrepo='good',
                     branch='foo')
                 cmd.assert_called_once_with(
                     ['dnf', '--quiet', '--disablerepo=*', '--enablerepo=good',
-                     '--branch=foo', 'list', 'upgrades'],
+                     '--branch=foo', 'list', 'upgrades'], env={},
                     output_loglevel='trace',
                     ignore_retcode=True,
                     python_shell=False)
 
             # without fromrepo
             cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.list_upgrades(
                     refresh=False,
                     enablerepo='good',
@@ -420,7 +429,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     branch='foo')
                 cmd.assert_called_once_with(
                     ['dnf', '--quiet', '--disablerepo=bad', '--enablerepo=good',
-                     '--branch=foo', 'list', 'upgrades'],
+                     '--branch=foo', 'list', 'upgrades'], env={},
                     output_loglevel='trace',
                     ignore_retcode=True,
                     python_shell=False)
@@ -431,21 +440,21 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # with fromrepo
         cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
             yumpkg.list_upgrades(
                 refresh=False,
                 fromrepo='good',
                 branch='foo')
             cmd.assert_called_once_with(
                 ['yum', '--quiet', '--disablerepo=*', '--enablerepo=good',
-                 '--branch=foo', 'list', 'updates'],
+                 '--branch=foo', 'list', 'updates'], env={},
                 output_loglevel='trace',
                 ignore_retcode=True,
                 python_shell=False)
 
         # without fromrepo
         cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
             yumpkg.list_upgrades(
                 refresh=False,
                 enablerepo='good',
@@ -453,7 +462,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 branch='foo')
             cmd.assert_called_once_with(
                 ['yum', '--quiet', '--disablerepo=bad', '--enablerepo=good',
-                 '--branch=foo', 'list', 'updates'],
+                 '--branch=foo', 'list', 'updates'], env={},
                 output_loglevel='trace',
                 ignore_retcode=True,
                 python_shell=False)
@@ -466,81 +475,76 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             # then a separate cmd.retcode to check for updates.
 
             # with fromrepo
-            clean_cmd = Mock()
-            update_cmd = MagicMock(return_value=0)
-            with patch.dict(yumpkg.__salt__, {'cmd.run': clean_cmd,
-                                              'cmd.retcode': update_cmd}):
+            yum_call = MagicMock()
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': yum_call, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.refresh_db(
                     check_update=True,
                     fromrepo='good',
                     branch='foo')
-                clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=*',
-                     '--enablerepo=good', '--branch=foo'],
-                    python_shell=False)
-                update_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'check-update',
-                     '--setopt=autocheck_running_kernel=false', '--disablerepo=*',
-                     '--enablerepo=good', '--branch=foo'],
-                    output_loglevel='trace',
-                    ignore_retcode=True,
-                    python_shell=False)
+
+                assert yum_call.call_count == 2
+                yum_call.assert_any_call(['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=*',
+                                          '--enablerepo=good', '--branch=foo'],
+                                         env={}, ignore_retcode=True, output_loglevel='trace', python_shell=False)
+                yum_call.assert_any_call(['yum', '--quiet', '--assumeyes', 'check-update',
+                                          '--setopt=autocheck_running_kernel=false', '--disablerepo=*',
+                                          '--enablerepo=good', '--branch=foo'],
+                                          output_loglevel='trace', env={},
+                                          ignore_retcode=True,
+                                          python_shell=False)
 
             # without fromrepo
-            clean_cmd = Mock()
-            update_cmd = MagicMock(return_value=0)
-            with patch.dict(yumpkg.__salt__, {'cmd.run': clean_cmd,
-                                              'cmd.retcode': update_cmd}):
+            yum_call = MagicMock()
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': yum_call, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.refresh_db(
                     check_update=True,
                     enablerepo='good',
                     disablerepo='bad',
                     branch='foo')
-                clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=bad',
-                     '--enablerepo=good', '--branch=foo'],
-                    python_shell=False)
-                update_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'check-update',
-                     '--setopt=autocheck_running_kernel=false', '--disablerepo=bad',
-                     '--enablerepo=good', '--branch=foo'],
-                    output_loglevel='trace',
-                    ignore_retcode=True,
-                    python_shell=False)
+                assert yum_call.call_count == 2
+                yum_call.assert_any_call(
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=bad', '--enablerepo=good',
+                     '--branch=foo'], env={}, ignore_retcode=True, output_loglevel='trace', python_shell=False)
+                yum_call.assert_any_call(
+                    ['yum', '--quiet', '--assumeyes', 'check-update', '--setopt=autocheck_running_kernel=false',
+                     '--disablerepo=bad', '--enablerepo=good', '--branch=foo'],
+                    output_loglevel='trace', env={}, ignore_retcode=True, python_shell=False)
 
             # With check_update=False we will just do a cmd.run for the clean_cmd
 
             # with fromrepo
-            clean_cmd = Mock()
-            with patch.dict(yumpkg.__salt__, {'cmd.run': clean_cmd}):
+            yum_call = MagicMock()
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': yum_call, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.refresh_db(
                     check_update=False,
                     fromrepo='good',
                     branch='foo')
-                clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=*',
-                     '--enablerepo=good', '--branch=foo'],
-                    python_shell=False)
+                assert yum_call.call_count == 1
+                yum_call.assert_called_once_with(
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache',
+                     '--disablerepo=*', '--enablerepo=good', '--branch=foo'],
+                    env={}, output_loglevel='trace', ignore_retcode=True, python_shell=False)
 
             # without fromrepo
-            clean_cmd = Mock()
-            with patch.dict(yumpkg.__salt__, {'cmd.run': clean_cmd}):
+            yum_call = MagicMock()
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': yum_call, 'config.get': MagicMock(return_value=False)}):
                 yumpkg.refresh_db(
                     check_update=False,
                     enablerepo='good',
                     disablerepo='bad',
                     branch='foo')
-                clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=bad',
-                     '--enablerepo=good', '--branch=foo'],
-                    python_shell=False)
+                assert yum_call.call_count == 1
+                yum_call.assert_called_once_with(
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache',
+                     '--disablerepo=bad', '--enablerepo=good', '--branch=foo'],
+                    env={}, output_loglevel='trace', ignore_retcode=True, python_shell=False)
 
     def test_install_with_options(self):
         parse_targets = MagicMock(return_value=({'foo': None}, 'repository'))
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \
                 patch.object(yumpkg, 'list_holds', MagicMock(return_value=[])), \
                 patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': parse_targets}), \
-                patch('salt.utils.systemd.has_scope', MagicMock(return_value=False)):
+             patch('salt.utils.systemd.has_scope', MagicMock(return_value=False)):
 
             # with fromrepo
             cmd = MagicMock(return_value={'retcode': 0})
@@ -553,9 +557,10 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=*', '--enablerepo=good',
                      '--branch=foo', '--setopt', 'obsoletes=0',
-                     '--setopt', 'plugins=0', 'install', 'foo'],
+                     '--setopt', 'plugins=0', 'install', 'foo'], env={},
                     output_loglevel='trace',
                     python_shell=False,
+                    ignore_retcode=False,
                     redirect_stderr=True)
 
             # without fromrepo
@@ -570,10 +575,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 cmd.assert_called_once_with(
                     ['yum', '-y', '--disablerepo=bad', '--enablerepo=good',
                      '--branch=foo', '--setopt', 'obsoletes=0',
-                     '--setopt', 'plugins=0', 'install', 'foo'],
+                     '--setopt', 'plugins=0', 'install', 'foo'], env={},
                     output_loglevel='trace',
                     python_shell=False,
-                    redirect_stderr=True)
+                    ignore_retcode=False,
+                    redirect_stderr=True,
+                )
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \
@@ -592,7 +599,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     ['yum', '--quiet', '-y', '--disablerepo=*',
                      '--enablerepo=good', '--branch=foo',
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
-                     '--exclude=kernel*', 'upgrade'],
+                     '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
                     python_shell=False)
 
@@ -610,7 +617,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     ['yum', '--quiet', '-y', '--disablerepo=bad',
                      '--enablerepo=good', '--branch=foo',
                      '--setopt', 'obsoletes=0', '--setopt', 'plugins=0',
-                     '--exclude=kernel*', 'upgrade'],
+                     '--exclude=kernel*', 'upgrade'], env={},
                     output_loglevel='trace',
                     python_shell=False)
 
@@ -669,4 +676,61 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             sys.modules['yum'] = Mock()
         with patch('yum.YumBase') as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
-            self.assertRaises(CommandExecutionError, yumpkg._get_yum_config)
+            with pytest.raises(CommandExecutionError):
+                yumpkg._get_yum_config()
+
+
+@skipIf(pytest is None, 'PyTest is missing')
+class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    Yum/Dnf utils tests.
+    '''
+    def setup_loader_modules(self):
+        return {
+            yumpkg: {
+                '__context__': {
+                    'yum_bin': 'fake-yum',
+                },
+                '__grains__': {
+                    'osarch': 'x86_64',
+                    'os_family': 'RedHat',
+                    'osmajorrelease': 7,
+                },
+            }
+        }
+
+    def test_call_yum_default(self):
+        '''
+        Call default Yum/Dnf.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['fake-yum', '-y', '--do-something'], env={},
+                output_loglevel='trace', python_shell=False)
+
+    @patch('salt.utils.systemd.has_scope', MagicMock(return_value=True))
+    def test_call_yum_in_scope(self):
+        '''
+        Call Yum/Dnf within the scope.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
+            yumpkg._call_yum(['-y', '--do-something'])  # pylint: disable=W0106
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['systemd-run', '--scope', 'fake-yum', '-y', '--do-something'], env={},
+                output_loglevel='trace', python_shell=False)
+
+    def test_call_yum_with_kwargs(self):
+        '''
+        Call Yum/Dnf with the optinal keyword arguments.
+        :return:
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            yumpkg._call_yum(['-y', '--do-something'],
+                             python_shell=True, output_loglevel='quiet', ignore_retcode=False,
+                             username='Darth Vader')  # pylint: disable=W0106
+            yumpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['fake-yum', '-y', '--do-something'], env={}, ignore_retcode=False,
+                output_loglevel='quiet', python_shell=True, username='Darth Vader')

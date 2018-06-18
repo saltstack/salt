@@ -16,6 +16,11 @@ To use the EC2 cloud module, set up the cloud configuration at
       # EC2 metadata set both id and key to 'use-instance-role-credentials'
       id: GKTADJGHEIQSXMKKRBJ08H
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+      # If 'role_arn' is specified the above credentials are used to
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # The ssh keyname to use
       keyname: default
       # The amazon security group
@@ -47,6 +52,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Defaults to root
       # Optional
       ssh_gateway_username: root
+
+      # Default to nc -q0 %h %p
+      # Optional
+      ssh_gateway_command: "-W %h:%p"
 
       # One authentication method is required. If both
       # are specified, Private key wins.
@@ -1075,6 +1084,12 @@ def get_ssh_gateway_config(vm_):
     # ssh_gateway_password
     ssh_gateway_config['ssh_gateway_password'] = config.get_cloud_config_value(
         'ssh_gateway_password', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_command
+    ssh_gateway_config['ssh_gateway_command'] = config.get_cloud_config_value(
+        'ssh_gateway_command', vm_, __opts__, default=None,
         search_global=False
     )
 
