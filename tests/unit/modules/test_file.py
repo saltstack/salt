@@ -1103,7 +1103,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.atomicfile.atomic_open',
                           mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, after=after_line, mode='insert', indent=False)
-                handles = atomic_open_mock.handles[name]
+                handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
