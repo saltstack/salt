@@ -20,8 +20,8 @@ New win_snmp behavior
 Option Added to Disable Docker Mine Updates
 ===========================================
 
-When a docker container is added or removed, the results of a
-:py:func:`docker.ps verbose=True all=True host=True
+When a docker container is added, removed, started, stopped, etc., the results
+of a :py:func:`docker.ps verbose=True all=True host=True
 <salt.modules.dockermod.ps>` are sent to the :ref:`mine <salt-mine>`, to be
 used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`.
 

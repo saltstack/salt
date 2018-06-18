@@ -1176,11 +1176,11 @@ Docker Configuration
 
 Default: ``True``
 
-If enabled, when containers are added or removed the :ref:`mine <salt-mine>`
-will be updated with the results of :py:func:`docker.ps verbose=True all=True
-host=True <salt.modules.dockermod.ps>`. This mine data is used by
-:py:func:`mine.get_docker <salt.modules.mine.get_docker>`. Set this option to
-``False`` to keep Salt from updating the mine with this information.
+If enabled, when containers are added, removed, stopped, started, etc., the
+:ref:`mine <salt-mine>` will be updated with the results of :py:func:`docker.ps
+verbose=True all=True host=True <salt.modules.dockermod.ps>`. This mine data is
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`. Set this
+option to ``False`` to keep Salt from updating the mine with this information.
 
 .. note::
     This option can also be set in Grains or Pillar data, with Grains

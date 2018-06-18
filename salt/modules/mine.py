@@ -375,8 +375,9 @@ def flush():
 def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     '''
     .. versionchanged:: 2017.7.7,2018.3.3
-        When :conf_minion:`docker.update_mine` is set to ``False``, no mine
-        data will be populated
+        When :conf_minion:`docker.update_mine` is set to ``False`` for a given
+        minion, no mine data will be populated for that minion, and thus none
+        will be returned for it.
     .. versionchanged:: Fluorine
         :conf_minion:`docker.update_mine` now defaults to ``False``
 
