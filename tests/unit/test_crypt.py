@@ -10,7 +10,6 @@ import shutil
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import(
     patch,
-    call,
     mock_open,
     NO_MOCK,
     NO_MOCK_REASON,
