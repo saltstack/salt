@@ -200,13 +200,13 @@ class MockFH(object):
 
 
 class MockOpen(object):
-    '''
-    This class can be used to mock the use of "open()".
+    r'''
+    This class can be used to mock the use of ``open()``.
 
-    "read_data" is a string representing the contents of the file to be read.
+    ``read_data`` is a string representing the contents of the file to be read.
     By default, this is an empty string.
 
-    Optionally, "read_data" can be a dictionary mapping fnmatch.fnmatch()
+    Optionally, ``read_data`` can be a dictionary mapping ``fnmatch.fnmatch()``
     patterns to strings (or optionally, exceptions). This allows the mocked
     filehandle to serve content for more than one file path.
 
@@ -230,7 +230,7 @@ class MockOpen(object):
     If the file path being opened does not match any of the glob expressions,
     an IOError will be raised to simulate the file not existing.
 
-    Passing "read_data" as a string is equivalent to passing it with a glob
+    Passing ``read_data`` as a string is equivalent to passing it with a glob
     expression of "*". That is to say, the below two invocations are
     equivalent:
 
@@ -239,7 +239,7 @@ class MockOpen(object):
         mock_open(read_data='foo\n')
         mock_open(read_data={'*': 'foo\n'})
 
-    Instead of a string representing file contents, "read_data" can map to an
+    Instead of a string representing file contents, ``read_data`` can map to an
     exception, and that exception will be raised if a file matching that
     pattern is opened:
 
@@ -249,14 +249,37 @@ class MockOpen(object):
             '/etc/*': IOError(errno.EACCES, 'Permission denied'),
             '*': 'Hello world!\n',
         }
-        with patch('salt.utils.files.fopen', mock_open(read_data=data):
+        with patch('salt.utils.files.fopen', mock_open(read_data=data)):
             do stuff
 
     The above would raise an exception if any files within /etc are opened, but
     would produce a mocked filehandle if any other file is opened.
 
+    To simulate file contents changing upon subsequent opens, the file contents
+    can be a list of strings/exceptions. For example:
+
+    .. code-block:: python
+
+        data = {
+            '/etc/foo.conf': [
+                'before\n',
+                'after\n',
+            ],
+            '/etc/bar.conf': [
+                IOError(errno.ENOENT, 'No such file or directory', '/etc/bar.conf'),
+                'Hey, the file exists now!',
+            ],
+        }
+        with patch('salt.utils.files.fopen', mock_open(read_data=data):
+            do stuff
+
+    The first open of ``/etc/foo.conf`` would return "before\n" when read,
+    while the second would return "after\n" when read. For ``/etc/bar.conf``,
+    the first read would raise an exception, while the second would open
+    successfully and read the specified string.
+
     Expressions will be attempted in dictionary iteration order (the exception
-    being "*" which is tried last), so if a file path matches more than one
+    being ``*`` which is tried last), so if a file path matches more than one
     fnmatch expression then the first match "wins". If your use case calls for
     overlapping expressions, then an OrderedDict can be used to ensure that the
     desired matching behavior occurs:
@@ -282,7 +305,7 @@ class MockOpen(object):
             new_read_data = read_data.__class__()
             for key, val in six.iteritems(read_data):
                 try:
-                    val = salt.utils.stringutils.to_str(val)
+                    val = salt.utils.data.decode(val, to_str=True)
                 except TypeError:
                     if not isinstance(val, BaseException):
                         raise
@@ -309,7 +332,21 @@ class MockOpen(object):
             # No non-glob match in read_data, fall back to '*'
             matched_pattern = '*'
         try:
-            file_contents = self.read_data[matched_pattern]
+            matched_contents = self.read_data[matched_pattern]
+            try:
+                # Assuming that the value for the matching expression is a
+                # list, pop the first element off of it.
+                file_contents = matched_contents.pop(0)
+            except AttributeError:
+                # The value for the matching expression is a string (or exception)
+                file_contents = matched_contents
+            except IndexError:
+                # We've run out of file contents, abort!
+                raise RuntimeError(
+                    'File matching expression \'{0}\' opened more times than '
+                    'expected'.format(matched_pattern)
+                )
+
             try:
                 # Raise the exception if the matched file contents are an
                 # instance of an exception class.
@@ -318,6 +355,7 @@ class MockOpen(object):
                 # Contents were not an exception, so proceed with creating the
                 # mocked filehandle.
                 pass
+
             ret = MockFH(name, file_contents, *args, **kwargs)
             self.filehandles.setdefault(name, []).append(ret)
             return ret
