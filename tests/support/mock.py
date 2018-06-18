@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import collections
+import copy
 import errno
 import fnmatch
 import sys
@@ -331,6 +332,10 @@ class MockOpen(object):
       objects, representing the individual times that a given file was opened.
     '''
     def __init__(self, read_data=''):
+        # If the read_data contains lists, we will be popping it. So, don't
+        # modify the original value passed.
+        read_data = copy.copy(read_data)
+
         # Normalize read_data, Python 2 filehandles should never produce unicode
         # types on read.
         if not isinstance(read_data, dict):
