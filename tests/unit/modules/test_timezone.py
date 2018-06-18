@@ -326,21 +326,6 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert timezone.get_hwclock() == hwclock
 
     @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.path.which', MagicMock(return_value=True))
-    def test_set_hwclock_timedatectl(self):
-        '''
-        Test set hwclock with timedatectl
-        :return:
-        '''
-        timezone.set_hwclock('UTC')
-        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
-        assert args == (['timedatectl', 'set-local-rtc', 'false'],)
-
-        timezone.set_hwclock('localtime')
-        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[1]
-        assert args == (['timedatectl', 'set-local-rtc', 'true'],)
-
-    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
     @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
