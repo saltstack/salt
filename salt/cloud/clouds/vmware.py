@@ -130,6 +130,7 @@ import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
@@ -990,100 +991,54 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
 
 def _valid_ip(ip_address):
     '''
-    Check if the IP address is valid
+    Check if the IP address is valid and routable
     Return either True or False
     '''
 
-    # Make sure IP has four octets
-    octets = ip_address.split('.')
-    if len(octets) != 4:
+    try:
+        address = ipaddress.IPv4Address(ip_address)
+    except ipaddress.AddressValueError:
         return False
 
-    # convert octet from string to int
-    for i, octet in enumerate(octets):
-
-        try:
-            octets[i] = int(octet)
-        except ValueError:
-            # couldn't convert octet to an integer
-            return False
-
-    # map variables to elements of octets list
-    first_octet, second_octet, third_octet, fourth_octet = octets
-
-    # Check first_octet meets conditions
-    if first_octet < 1 or first_octet > 223 or first_octet == 127:
+    if address.is_unspecified:
+        return False
+    elif address.is_loopback:
+        return False
+    elif address.is_link_local:
+        return False
+    elif address.is_multicast:
+        return False
+    elif address.is_reserved:
         return False
 
-    # Check 169.254.X.X condition
-    if first_octet == 169 and second_octet == 254:
-        return False
-
-    # Check 2nd - 4th octets
-    for octet in (second_octet, third_octet, fourth_octet):
-        if (octet < 0) or (octet > 255):
-            return False
-    # Passed all of the checks
     return True
 
 
 def _valid_ip6(ip_address):
     '''
-    Check if the IPv6 address is valid
+    Check if the IPv6 address is valid and routable
     Return either True or False
     '''
 
-    # Make sure IP has at least 3 but at most 8 octets
-    in_octets = ip_address.split(':')
-    if 3 <= len(in_octets) <= 8:
+    # Validate IPv6 address
+    try:
+        address = ipaddress.IPv6Address(ip_address)
+    except ipaddress.AddressValueError:
         return False
 
-    offset = 0
-    octets = [0] * 8
-
-    # convert octet from string to int
-    for i, octet in enumerate(in_octets):
-
-        if len(octet) > 4:
-            return False
-
-        if len(octet) == 0:
-            if offset == 0:
-                offset = 8 - len(in_octets)
-            else:
-                # parse error
-                return False
-
-        try:
-            octets[i + offset] = int(octet, 16)
-        except ValueError:
-            # couldn't convert octet to an integer
-            return False
-
-    # map variables to elements of octets list
-    first_octet, second_octet, third_octet, fourth_octet, fifth_octet, sixth_octet, seventh_octet, eight_octet = octets
-
-    # Check first_octet meets conditions
-    if first_octet == 0:
-        if second_octet == 0 and third_octet == 0 and fourth_octet == 0 and fifth_octet == 0:
-            if sixth_octet == 0 and seventh_octet == 0:
-                # Unspecified Address
-                if eight_octet == 0:
-                    return False
-                # Loopback Address
-                elif eight_octet == 1:
-                    return False
-            # IPv4-mapped Address
-            elif sixth_octet == 0xFFFF:
-                return False
-    # Link-Local Unicast
-    elif 0xFE80 <= first_octet <= 0xFEBF:
+    if address.is_unspecified:
         return False
-    # Multicast
-    elif 0xFF00 <= first_octet <= 0xFFFF:
+    elif address.is_loopback:
+        return False
+    elif address.ipv4_mapped is not None:
+        return False
+    elif address.is_link_local:
+        return False
+    elif address.is_multicast:
+        return False
+    elif address.is_reserved:
         return False
 
-    # Passed all of the checks
     return True
 
 
