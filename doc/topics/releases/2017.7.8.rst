@@ -16,3 +16,16 @@ New win_snmp behavior
 - :py:func:`win_snmp.set_community_names
   <salt.modules.win_snmp.set_community_names>` now raises an error when SNMP
   settings are being managed by GroupPolicy.
+
+Option Added to Disable Docker Mine Updates
+===========================================
+
+When a docker container is added or removed, the results of a
+:py:func:`docker.ps verbose=True all=True host=True
+<salt.modules.dockermod.ps>` are sent to the :ref:`mine <salt-mine>`, to be
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`.
+
+A new config option (:conf_minion:`docker.update_mine`) has been added.  When
+set to ``False``, Salt will not send this information to the mine. This is
+useful in cases where sensitive information is stored in the container's
+environment.
