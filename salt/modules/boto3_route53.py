@@ -58,6 +58,7 @@ import re
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext import six
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -243,7 +244,7 @@ def get_hosted_zones_by_domain(Name, region=None, key=None, keyid=None, profile=
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     zones = [z for z in _collect_results(conn.list_hosted_zones, 'HostedZones', {})
-            if z['Name'] == Name]
+            if z['Name'] == aws_encode(Name)]
     ret = []
     for z in zones:
         ret += get_hosted_zone(Id=z['Id'], region=region, key=key, keyid=keyid, profile=profile)
@@ -344,6 +345,7 @@ def create_hosted_zone(Name, VPCId=None, VPCName=None, VPCRegion=None, CallerRef
     '''
     if not Name.endswith('.'):
         raise SaltInvocationError('Domain must be fully-qualified, complete with trailing period.')
+    Name = aws_encode(Name)
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     deets = find_hosted_zone(Name=Name, PrivateZone=PrivateZone,
                              region=region, key=key, keyid=keyid, profile=profile)
@@ -717,7 +719,6 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
     Id = zone[0]['HostedZone']['Id']
     return delete_hosted_zone(Id=Id, region=region, key=key, keyid=keyid, profile=profile)
 
-
 def aws_encode(x):
     '''
     An implementation of the encoding required to suport AWS's domain name
@@ -749,6 +750,23 @@ def aws_encode(x):
         raise CommandExecutionError(e)
     log.debug('AWS-encoded result for %s: %s', x, ret)
     return ret
+
+def _aws_encode_changebatch(o):
+    '''
+    helper method to process a change batch & encode the bits which need encoding
+    '''
+    change_idx = 0
+    while change_idx < len(o['Changes']):
+        o['Changes'][change_idx]['ResourceRecordSet']['Name'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['Name'])
+        if 'ResourceRecords' in o['Changes'][change_idx]['ResourceRecordSet']:
+            rr_idx = 0
+            while rr_idx < len(o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords']):
+                o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords'][rr_idx]['Value'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords'][rr_idx]['Value'])
+                rr_idx += 1
+        if 'AliasTarget' in o['Changes'][change_idx]['ResourceRecordSet']:
+            o['Changes'][change_idx]['ResourceRecordSet']['AliasTarget']['DNSName'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['AliasTarget']['DNSName'])
+        change_idx += 1
+    return o
 
 
 def _aws_decode(x):
@@ -827,7 +845,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = []
-    next_rr_name = aws_encode(StartRecordName.lower())
+    next_rr_name = StartRecordName
     next_rr_type = StartRecordType
     next_rr_id = None
     done = False
@@ -835,7 +853,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
         if done:
             return ret
         args = {'HostedZoneId': HostedZoneId}
-        args.update({'StartRecordName': next_rr_name}) if next_rr_name else None
+        args.update({'StartRecordName': aws_encode(next_rr_name)}) if next_rr_name else None
         # Grrr, can't specify type unless name is set...  We'll do this via filtering later instead
         args.update({'StartRecordType': next_rr_type}) if next_rr_name and next_rr_type else None
         args.update({'StartRecordIdentifier': next_rr_id}) if next_rr_id else None
@@ -858,7 +876,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                 # or if we are an AliasTarget then decode the DNSName
                 if 'AliasTarget' in rr:
                     rr['AliasTarget']['DNSName'] = _aws_decode(rr['AliasTarget']['DNSName'])
-                if StartRecordName and rr['Name'].lower() != StartRecordName.lower():
+                if StartRecordName and rr['Name'] != StartRecordName:
                     done = True
                     break
                 if StartRecordType and rr['Type'] != StartRecordType:
@@ -961,7 +979,8 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
             return []
         HostedZoneId = zone[0]['HostedZone']['Id']
 
-    args = {'HostedZoneId': HostedZoneId, 'ChangeBatch': ChangeBatch}
+    args = {'HostedZoneId': HostedZoneId, 'ChangeBatch': _aws_encode_changebatch(ChangeBatch)}
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     tries = 20  # A bit more headroom
     while tries:

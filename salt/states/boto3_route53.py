@@ -132,7 +132,6 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             bound account, in which case you'll need to provide an explicit value for VPCRegion.
     '''
     Name = Name if Name else name
-    Name = __salt__['boto3_route53.aws_encode'](Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -315,7 +314,6 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
 
     '''
     Name = Name if Name else name
-    Name = __salt__['boto3_route53.aws_encode'](Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -530,7 +528,6 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = __salt__['boto3_route53.aws_encode'](Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
@@ -735,7 +732,6 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = __salt__['boto3_route53.aws_encode'](Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when deleting resource records.")
