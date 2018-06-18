@@ -163,8 +163,9 @@ class MockFH(object):
             # requested size, but before doing so, reset read_data to reflect
             # what we read.
             self.read_data = self._iterate_read_data(joined[size:])
-            self._loc += size
-            return joined[:size]
+            ret = joined[:size]
+            self._loc += len(ret)
+            return ret
 
     def _readlines(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
