@@ -4,9 +4,11 @@ Tests for our mock_open helper
 '''
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import errno
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 
 # Import Salt Testing Libs
@@ -34,7 +36,18 @@ class MockOpenTestCase(TestCase):
     Tests for our mock_open helper to ensure that it behaves as closely as
     possible to a real filehandle.
     '''
-    contents = {'foo.txt': QUESTIONS, 'b*.txt': ANSWERS}
+    @classmethod
+    def setUpClass(cls):
+        cls.contents = {'foo.txt': QUESTIONS, 'b*.txt': ANSWERS}
+        cls.read_data_as_list = [
+            'foo', 'bar', 'спам',
+            IOError(errno.EACCES, 'Permission denied')
+        ]
+        cls.normalized_read_data_as_list = salt.utils.data.decode(
+            cls.read_data_as_list,
+            to_str=True
+        )
+        cls.read_data_as_list_bytes = salt.utils.data.encode(cls.read_data_as_list)
 
     def tearDown(self):
         '''
@@ -60,13 +73,14 @@ class MockOpenTestCase(TestCase):
             # read anything as we should hit EOF immediately, before the generator
             # in the mocked filehandle has a chance to yield anything. So the
             # exception will only be raised if we aren't at EOF already.
-            for line in self.fh:
+            for line in fh:
                 raise Exception(
                     'Instead of EOF, read the following from {0}: {1}'.format(
                         handle_name,
                         line
                     )
                 )
+            del fh
 
     def test_read(self):
         '''
@@ -407,3 +421,52 @@ class MockOpenTestCase(TestCase):
             except IOError:
                 # An IOError is expected here
                 pass
+
+    def test_read_data_converted_to_dict(self):
+        '''
+        Test that a non-dict value for read_data is converted to a dict mapping
+        '*' to that value.
+        '''
+        contents = 'спам'
+        normalized = salt.utils.stringutils.to_str(contents)
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=contents)) as m_open:
+            assert m_open.read_data == {'*': normalized}, m_open.read_data
+
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=self.read_data_as_list)) as m_open:
+            assert m_open.read_data == {
+                '*': self.normalized_read_data_as_list,
+            }, m_open.read_data
+
+    def test_read_data_list(self):
+        '''
+        Test read_data when it is a list
+        '''
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=self.read_data_as_list)):
+            for value in self.normalized_read_data_as_list:
+                try:
+                    with salt.utils.files.fopen('foo.txt') as self.fh:
+                        result = self.fh.read()
+                        assert result == value, result
+                except IOError:
+                    # Don't raise the exception if it was expected
+                    if not isinstance(value, IOError):
+                        raise
+
+    def test_read_data_list_bytes(self):
+        '''
+        Test read_data when it is a list and the value is a bytestring
+        '''
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=self.read_data_as_list_bytes)):
+            for value in self.read_data_as_list_bytes:
+                try:
+                    with salt.utils.files.fopen('foo.txt') as self.fh:
+                        result = self.fh.read()
+                        assert result == value, result
+                except IOError:
+                    # Don't raise the exception if it was expected
+                    if not isinstance(value, IOError):
+                        raise
