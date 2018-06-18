@@ -191,6 +191,7 @@ __virtualname__ = 'pgjsonb'
 
 PG_SAVE_LOAD_SQL = '''INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)'''
 
+
 def __virtual__():
     if not HAS_PG:
         return False, 'Could not import pgjsonb returner; python-psycopg2 is not installed.'
