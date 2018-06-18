@@ -189,7 +189,9 @@ class MockFH(object):
     def __iter__(self):
         while True:
             try:
-                yield next(self.read_data)
+                ret = next(self.read_data)
+                self._loc += len(ret)
+                yield ret
             except StopIteration:
                 break
 
