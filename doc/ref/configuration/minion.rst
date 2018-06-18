@@ -1170,7 +1170,7 @@ Docker Configuration
 ``docker.update_mine``
 ----------------------
 
-.. versionadded:: 2017.7.7,2018.3.3
+.. versionadded:: 2017.7.8,2018.3.3
 .. versionchanged:: Fluorine
     The default value is now ``False``
 
