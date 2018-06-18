@@ -57,7 +57,7 @@ def __virtual__():
     if __grains__['os_family'] == 'NILinuxRT':
         if not HAS_PYIFACE:
             return False, 'The python pyiface package is not installed'
-        if not _is_older_nilrt():
+        if not __grains__['lsb_distrib_id'] == 'nilrt'
             if not HAS_PYCONNMAN:
                 return False, 'The python package pyconnman is not installed'
             if not HAS_DBUS:
@@ -70,15 +70,6 @@ def __virtual__():
                 return False, six.text_type(exc)
         return __virtualname__
     return False, 'The nilrt_ip module could not be loaded: unsupported OS family'
-
-
-def _is_older_nilrt():
-    '''
-    If this is an older version of NILinuxRT, return True. Otherwise, return False.
-    '''
-    if os.path.exists('/usr/local/natinst/bin/nisafemodeversion'):
-        return True
-    return False
 
 
 def _get_state():
@@ -355,7 +346,7 @@ def get_interfaces_details():
 
         salt '*' ip.get_interfaces_details
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         _interfaces = filter(lambda interface: interface.flags & IFF_LOOPBACK == 0, pyiface.getIfaces())
         return {'interfaces': list(map(_get_interface_info, _interfaces))}
     return {'interfaces': list(map(_get_service_info, _get_services()))}
@@ -375,7 +366,7 @@ def up(interface, iface_type=None):
 
         salt '*' ip.up interface-label
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         out = __salt__['cmd.run_all']('ip link set {0} up'.format(interface))
         if out['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t enable interface {0}. Error: {1}'.format(interface, out['stderr']))
@@ -424,7 +415,7 @@ def down(interface, iface_type=None):
 
         salt '*' ip.down interface-label
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         out = __salt__['cmd.run_all']('ip link set {0} down'.format(interface))
         if out['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t disable interface {0}. Error: {1}'.format(interface, out['stderr']))
@@ -473,7 +464,7 @@ def set_dhcp_linklocal_all(interface):
 
         salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal  for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
@@ -512,7 +503,7 @@ def set_dhcp_only_all(interface):
 
         salt '*' ip.dhcp_only_all interface-label
     '''
-    if not _is_older_nilrt():
+    if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
     if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp only for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
@@ -537,7 +528,7 @@ def set_linklocal_only_all(interface):
 
         salt '*' ip.linklocal_only_all interface-label
     '''
-    if not _is_older_nilrt():
+    if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
     if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set linklocal only for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
@@ -574,7 +565,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
         raise salt.exceptions.CommandExecutionError(msg)
     if not isinstance(nameservers, list):
         nameservers = nameservers.split(' ')
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
@@ -635,7 +626,7 @@ def build_interface(iface, iface_type, enable, **settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version.')
     if iface_type != 'eth':
         raise salt.exceptions.CommandExecutionError('Interface type not supported: {0}:'.format(iface_type))
@@ -668,7 +659,7 @@ def build_network_settings(**settings):
 
         salt '*' ip.build_network_settings <settings>
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version.')
     changes = []
     if 'networking' in settings:
@@ -698,7 +689,7 @@ def get_network_settings():
 
         salt '*' ip.get_network_settings
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version.')
     settings = []
     networking = 'no' if _get_state() == 'offline' else "yes"
@@ -718,7 +709,7 @@ def apply_network_settings(**settings):
 
         salt '*' ip.apply_network_settings
     '''
-    if _is_older_nilrt():
+    if __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version.')
     if 'require_reboot' not in settings:
         settings['require_reboot'] = False
