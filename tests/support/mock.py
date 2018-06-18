@@ -292,6 +292,12 @@ class MockOpen(object):
         data['*'] = '*': 'Hello world!\n'
         with patch('salt.utils.files.fopen', mock_open(read_data=data):
             do stuff
+
+    The following attributes are tracked for the life of a mock object:
+
+    * call_count - Tracks how many fopen calls were attempted
+    * filehandles - This is a dictionary mapping filenames to lists of MockFH
+      objects, representing the individual times that a given file was opened.
     '''
     def __init__(self, read_data=''):
         # Normalize read_data, Python 2 filehandles should never produce unicode
