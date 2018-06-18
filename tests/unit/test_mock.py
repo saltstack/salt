@@ -470,3 +470,56 @@ class MockOpenTestCase(TestCase):
                     # Don't raise the exception if it was expected
                     if not isinstance(value, IOError):
                         raise
+
+    def test_tell(self):
+        '''
+        Test the implementation of tell
+        '''
+        lines = QUESTIONS.splitlines(True)
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=self.contents)):
+            # Try with reading explicit sizes and then reading the rest of the
+            # file.
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                self.fh.read(5)
+                loc = self.fh.tell()
+                assert loc == 5, loc
+                self.fh.read(12)
+                loc = self.fh.tell()
+                assert loc == 17, loc
+                self.fh.read()
+                loc = self.fh.tell()
+                assert loc == len(QUESTIONS), loc
+
+            # Try reading way more content then actually exists in the file,
+            # tell() should return a value equal to the length of the content
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                self.fh.read(999999)
+                loc = self.fh.tell()
+                assert loc == len(QUESTIONS), loc
+
+            # Try reading a few bytes using .read(), then the rest of the line
+            # using .readline(), then the rest of the file using .readlines(),
+            # and check the location after each read.
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                # Read a few bytes
+                self.fh.read(5)
+                loc = self.fh.tell()
+                assert loc == 5, loc
+                # Read the rest of the line. Location should then be at the end
+                # of the first line.
+                self.fh.readline()
+                loc = self.fh.tell()
+                assert loc == len(lines[0]), loc
+                # Read the rest of the file using .readlines()
+                self.fh.readlines()
+                loc = self.fh.tell()
+                assert loc == len(QUESTIONS), loc
+
+            # Check location while iterating through the filehandle
+            with salt.utils.files.fopen('foo.txt') as self.fh:
+                index = 0
+                for _ in self.fh:
+                    index += 1
+                    loc = self.fh.tell()
+                    assert loc == sum(len(x) for x in lines[:index]), loc
