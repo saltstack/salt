@@ -206,7 +206,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open()) as m_open:
                 assert timezone.set_zone(self.TEST_TZ)
                 fh_ = m_open.filehandles['/etc/timezone'][0]
-                assert fh_.call_args == ('/etc/timezone', 'w'), fh_.call_args
+                assert fh_.call.args == ('/etc/timezone', 'w'), fh_.call.args
                 assert fh_.write_calls == ['UTC', '\n'], fh_.write_calls
 
     @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
@@ -223,7 +223,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open()) as m_open:
                 assert timezone.set_zone(self.TEST_TZ)
                 fh_ = m_open.filehandles['/etc/timezone'][0]
-                assert fh_.call_args == ('/etc/timezone', 'w'), fh_.call_args
+                assert fh_.call.args == ('/etc/timezone', 'w'), fh_.call.args
                 assert fh_.write_calls == ['UTC', '\n'], fh_.write_calls
 
     @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
