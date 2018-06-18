@@ -903,12 +903,11 @@ def _disk_profile(profile, hypervisor, **kwargs):
     return disklist
 
 
-def _nic_profile(profile_name, hypervisor, **kwargs):
+def _complete_nics(interfaces, hypervisor, dmac=None):
     '''
-    Compute NIC data based on profile
+    Complete missing data for network interfaces.
     '''
 
-    default = [{'eth0': {}}]
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
     kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
     overlays = {
@@ -916,6 +915,72 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             'qemu': kvm_overlay,
             'vmware': vmware_overlay,
             }
+
+    def _normalize_net_types(attributes):
+        '''
+        Guess which style of definition:
+
+            bridge: br0
+
+             or
+
+            network: net0
+
+             or
+
+            type: network
+            source: net0
+        '''
+        for type_ in ['bridge', 'network']:
+            if type_ in attributes:
+                attributes['type'] = type_
+                # we want to discard the original key
+                attributes['source'] = attributes.pop(type_)
+
+        attributes['type'] = attributes.get('type', None)
+        attributes['source'] = attributes.get('source', None)
+
+    def _apply_default_overlay(attributes):
+        '''
+        Apply the default overlay to attributes
+        '''
+        for key, value in six.iteritems(overlays[hypervisor]):
+            if key not in attributes or not attributes[key]:
+                attributes[key] = value
+
+    def _assign_mac(attributes, hypervisor):
+        '''
+        Compute mac address for NIC depending on hypervisor
+        '''
+        if dmac is not None:
+            log.debug('Default MAC address is %s', dmac)
+            if salt.utils.validate.net.mac(dmac):
+                attributes['mac'] = dmac
+            else:
+                msg = 'Malformed MAC address: {0}'.format(dmac)
+                raise CommandExecutionError(msg)
+        else:
+            if hypervisor in ['qemu', 'kvm']:
+                attributes['mac'] = salt.utils.network.gen_mac(
+                    prefix='52:54:00')
+            else:
+                attributes['mac'] = salt.utils.network.gen_mac()
+
+    for interface in interfaces:
+        _normalize_net_types(interface)
+        _assign_mac(interface, hypervisor)
+        if hypervisor in overlays:
+            _apply_default_overlay(interface)
+
+    return interfaces
+
+
+def _nic_profile(profile_name, hypervisor, dmac=None):
+    '''
+    Compute NIC data based on profile
+    '''
+
+    default = [{'eth0': {}}]
 
     # support old location
     config_data = __salt__['config.option']('virt.nic', {}).get(
@@ -978,64 +1043,8 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 else:
                     interfaces.append(interface)
 
-    def _normalize_net_types(attributes):
-        '''
-        Guess which style of definition:
-
-            bridge: br0
-
-             or
-
-            network: net0
-
-             or
-
-            type: network
-            source: net0
-        '''
-        for type_ in ['bridge', 'network']:
-            if type_ in attributes:
-                attributes['type'] = type_
-                # we want to discard the original key
-                attributes['source'] = attributes.pop(type_)
-
-        attributes['type'] = attributes.get('type', None)
-        attributes['source'] = attributes.get('source', None)
-
-    def _apply_default_overlay(attributes):
-        '''
-        Apply the default overlay to attributes
-        '''
-        for key, value in six.iteritems(overlays[hypervisor]):
-            if key not in attributes or not attributes[key]:
-                attributes[key] = value
-
-    def _assign_mac(attributes, hypervisor):
-        '''
-        Compute mac address for NIC depending on hypervisor
-        '''
-        dmac = kwargs.get('dmac', None)
-        if dmac is not None:
-            log.debug('DMAC address is %s', dmac)
-            if salt.utils.validate.net.mac(dmac):
-                attributes['mac'] = dmac
-            else:
-                msg = 'Malformed MAC address: {0}'.format(dmac)
-                raise CommandExecutionError(msg)
-        else:
-            if hypervisor in ['qemu', 'kvm']:
-                attributes['mac'] = salt.utils.network.gen_mac(
-                    prefix='52:54:00')
-            else:
-                attributes['mac'] = salt.utils.network.gen_mac()
-
-    for interface in interfaces:
-        _normalize_net_types(interface)
-        _assign_mac(interface, hypervisor)
-        if hypervisor in overlays:
-            _apply_default_overlay(interface)
-
-    return interfaces
+    # dmac can only be used from init()
+    return _complete_nics(interfaces, hypervisor, dmac=dmac)
 
 
 def init(name,
@@ -1043,6 +1052,7 @@ def init(name,
          mem,
          image=None,
          nic='default',
+         interfaces=None,
          hypervisor=None,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
@@ -1064,6 +1074,13 @@ def init(name,
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
     :param image: Path to a disk image to use as the first disk (Default: ``None``).
     :param nic: NIC profile to use (Default: ``'default'``).
+                The profile interfaces can be customized / extended with the interfaces parameter.
+    :param interfaces:
+        List of dictionaries providing details on the network interfaces to create.
+        These data are merged with the ones from the nic profile. The structure of
+        each dictionary is documented in :ref:`init-nic-def`.
+
+        .. versionadded:: Fluorine
     :param hypervisor: the virtual machine type. By default the value will be computed according
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
@@ -1099,6 +1116,18 @@ def init(name,
     :param dmac:
         Default MAC address to use for the network interfaces. By default MAC addresses are
         automatically generated.
+
+        Deprecated in favor of ``interfaces`` parameter. Add the following to the interfaces
+        definitions to force the mac address of a NIC:
+
+        .. code-block:: python
+
+            {
+                'name': 'name_of_nic_to_change',
+                'mac': 'MY:MA:CC:ADD:RE:SS'
+            }
+
+        .. deprecated:: Fluorine
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
@@ -1114,6 +1143,27 @@ def init(name,
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: Fluorine
+
+    .. _init-nic-def:
+
+    .. rubric:: Network Interfaces Definitions
+
+    Network interfaces dictionaries can contain the following properties:
+
+    name
+        Name of the network interface. This is only used as a key to merge with the profile data
+
+    type
+        Network type. One of ``'bridge'``, ``'network'``
+
+    source
+        The network source, typically the bridge or network name
+
+    mac
+        The desired mac address, computed if ``None`` (Default: ``None``).
+
+    model
+        The network card model (Default: depends on the hypervisor)
 
     .. _init-graphics-def:
 
@@ -1179,8 +1229,28 @@ def init(name,
 
     log.debug('Using hyperisor %s', hypervisor)
 
-    nicp = _nic_profile(nic, hypervisor, **kwargs)
+    # the NICs are computed as follows:
+    # 1 - get the default NICs from the profile
+    # 2 - Complete the users NICS
+    # 3 - Update the default NICS list to the users one, matching key is the name
+    dmac = kwargs.get('dmac', None)
+    if dmac:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'dmac\' parameter has been deprecated. Rather use the \'interfaces\' parameter '
+            'to properly define the desired MAC address. \'dmac\' will be removed in {version}.'
+        )
+    nicp = _nic_profile(nic, hypervisor, dmac=dmac)
     log.debug('NIC profile is %s', nicp)
+    if interfaces:
+        users_nics = _complete_nics(interfaces, hypervisor)
+        for unic in users_nics:
+            found = [nic for nic in nicp if nic['name'] == unic['name']]
+            if found:
+                found[0].update(unic)
+            else:
+                nicp.append(unic)
+        log.debug('Merged NICs: %s', nicp)
 
     diskp = _disk_profile(disk, hypervisor, **kwargs)
 
