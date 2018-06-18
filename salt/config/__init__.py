@@ -2787,7 +2787,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     apply_sdb(opts)
 
     # prepend root_dir
-    prepend_root_dirs = ['cachedir']
+    prepend_root_dirs = ['cachedir','log_file']
     prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options
