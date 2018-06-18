@@ -95,8 +95,10 @@ if NO_MOCK is False:
 
 
 class MockFH(object):
-    def __init__(self, filename, read_data):
+    def __init__(self, filename, read_data, *args, **kwargs):
         self.filename = filename
+        self.call_args = (filename,) + args
+        self.call_kwargs = kwargs
         self.empty_string = b'' if isinstance(read_data, six.binary_type) else ''
         self.read_data = self._iterate_read_data(read_data)
         self.read = Mock(side_effect=self._read)
@@ -316,7 +318,7 @@ class MockOpen(object):
                 # Contents were not an exception, so proceed with creating the
                 # mocked filehandle.
                 pass
-            ret = MockFH(name, file_contents)
+            ret = MockFH(name, file_contents, *args, **kwargs)
             self.filehandles.setdefault(name, []).append(ret)
             return ret
         except KeyError:
