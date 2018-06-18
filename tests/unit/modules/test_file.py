@@ -1066,6 +1066,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
+    def test_line_insert_multi_line_content_after_unicode(self):
+        '''
+        Test for file.line for insertion after specific line with Unicode
+
+        See issue #48113
+        :return:
+        '''
+        file_content = ("This is a line\nThis is another line")
+        file_modified = salt.utils.stringutils.to_str("This is a line\nThis is another line\nThis is a line with unicode Ŷ")
+        cfg_content = "This is a line with unicode Ŷ"
+        for after_line in ['This is another line']:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    filemod.line('foo', content=cfg_content, after=after_line, mode='insert', indent=False)
+            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
+            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
+                             file_modified)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
     def test_line_insert_before(self):
         '''
         Test for file.line for insertion before specific line, using pattern and no patterns.

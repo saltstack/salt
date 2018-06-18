@@ -20,7 +20,7 @@ from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import TMP
-from tests.support.helpers import flaky
+from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
@@ -479,6 +479,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @expensiveTest
     def test_orchestration_soft_kill(self):
         '''
         Test to confirm that the parallel state requisite works in orch
