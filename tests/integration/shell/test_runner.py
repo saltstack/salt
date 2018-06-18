@@ -208,7 +208,5 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         '''
         run_cmd = self.run_run('-a wrongeauth --username {0} --password {1}\
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
-        expect = ['The specified external authentication system "wrongeauth" is not available',
-                  'Available eauth types: auto, django, file, keystone, ldap, mysql, pam, ',
-                  'pki, rest, sharedsecret, yubico']
-        self.assertEqual(expect, run_cmd)
+        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
+        self.assertRegex("\t".join(run_cmd), expect)
