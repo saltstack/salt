@@ -614,7 +614,7 @@ class CkMinions(object):
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
+    def connected_ids(self, subset=None, show_ipv4=False):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -627,7 +627,11 @@ class CkMinions(object):
             if '127.0.0.1' in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=False)))
+            if '::1' in addrs:
+                # Add in the address of a possible locally-connected minion.
+                addrs.discard('::1')
+                addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
             if subset:
                 search = subset
             for id_ in search:
@@ -643,13 +647,16 @@ class CkMinions(object):
                     continue
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' and not include_localhost:
-                        continue
-                    if ipv4 == '0.0.0.0':
-                        continue
                     if ipv4 in addrs:
                         if show_ipv4:
                             minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
+                        break
+                for ipv6 in grains.get('ipv6', []):
+                    if ipv6 in addrs:
+                        if show_ipv4:
+                            minions.add((id_, ipv6))
                         else:
                             minions.add(id_)
                         break
