@@ -258,7 +258,7 @@ def _get_serv(ret=None, commit=False):
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
-    if conn.server_version is not None or conn.server_version >= 90500:
+    if conn.server_version is not None and conn.server_version >= 90500:
         global PG_SAVE_LOAD_SQL
         PG_SAVE_LOAD_SQL = '''INSERT INTO jids
                               (jid, load)
