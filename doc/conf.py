@@ -213,6 +213,7 @@ sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 # Define a fake version attribute for the following libs.
 sys.modules['cherrypy'].config = mock_decorator_with_params
+sys.modules['tornado'].version_info = (0, 0, 0)
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
