@@ -17,7 +17,6 @@ from tests.support.mock import (
     MagicMock,
     mock_open,
     patch,
-    call,
     NO_MOCK,
     NO_MOCK_REASON,
     DEFAULT
