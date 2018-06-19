@@ -614,7 +614,7 @@ class CkMinions(object):
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=None):
+    def connected_ids(self, subset=None, show_ip=False, show_ipv4=None, include_localhost=None):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -623,6 +623,13 @@ class CkMinions(object):
                 'Sodium',
                 'The \'include_localhost\' argument is no longer required; any'
                 'connected localhost minion will always be included.'
+            )
+        if show_ipv4 is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'show_ipv4\' argument has been renamed to \'show_ip\' as'
+                'it now also includes IPv6 addresses for IPv6-connected'
+                'minions.'
             )
         minions = set()
         if self.opts.get('minion_data_cache', False):
@@ -654,14 +661,14 @@ class CkMinions(object):
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 in addrs:
-                        if show_ipv4:
+                        if show_ip:
                             minions.add((id_, ipv4))
                         else:
                             minions.add(id_)
                         break
                 for ipv6 in grains.get('ipv6', []):
                     if ipv6 in addrs:
-                        if show_ipv4:
+                        if show_ip:
                             minions.add((id_, ipv6))
                         else:
                             minions.add(id_)
