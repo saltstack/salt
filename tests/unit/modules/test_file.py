@@ -272,6 +272,15 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
             filecontent = fp.read()
         self.assertIn('#ipsum', filecontent)
 
+    def test_comment_different_character(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum',
+                             '//')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('//ipsum', filecontent)
+
     def test_comment_not_found(self):
         filemod.comment_line(self.tfile.name,
                              '^sit')
