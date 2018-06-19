@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-C-YAML Renderer for Salt
+Strict YAML Renderer for Salt
 
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 '''
@@ -24,6 +24,11 @@ from salt.exceptions import SaltRenderError
 from salt.ext import six
 from salt.ext.six import string_types
 
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
+
 log = logging.getLogger(__name__)
 
 _ERROR_MAP = {
@@ -32,7 +37,7 @@ _ERROR_MAP = {
 }
 
 
-class CSafeLoader(yaml.CSafeLoader):
+class CSafeLoader(Loader):
     def __init__(self, stream, dictclass=dict):
         super(CSafeLoader, self).__init__(stream)
         if dictclass is not dict:

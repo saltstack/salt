@@ -8,22 +8,22 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import salt.renderers.cyaml as cyaml
+import salt.renderers.yaml_strict as yaml_strict
 
 
 class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        return {cyaml: {}}
+        return {yaml_strict: {}}
 
     def test_yaml_render_string(self):
         data = 'string'
-        result = cyaml.render(data)
+        result = yaml_strict.render(data)
 
         self.assertEqual(result, data)
 
     def test_yaml_render_unicode(self):
         data = '!!python/unicode python unicode string'
-        result = cyaml.render(data)
+        result = yaml_strict.render(data)
 
         self.assertEqual(result, u'python unicode string')
