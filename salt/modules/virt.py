@@ -2457,15 +2457,9 @@ def virt_type():
     return __grains__['virtual']
 
 
-def is_kvm_hyper():
+def _is_kvm_hyper():
     '''
     Returns a bool whether or not this node is a KVM hypervisor
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.is_kvm_hyper
     '''
     try:
         with salt.utils.files.fopen('/proc/modules') as fp_:
@@ -2477,15 +2471,29 @@ def is_kvm_hyper():
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
 
 
-def is_xen_hyper():
+def is_kvm_hyper():
     '''
-    Returns a bool whether or not this node is a XEN hypervisor
+    Returns a bool whether or not this node is a KVM hypervisor
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.is_xen_hyper
+        salt '*' virt.is_kvm_hyper
+
+    .. deprecated:: Fluorine
+    '''
+    salt.utils.versions.warn_until(
+        'Sodium',
+        '\'is_kvm_hyper\' function has been deprecated. Use the \'get_hypervisor\' == "kvm" instead. '
+        '\'is_kvm_hyper\' will be removed in {version}.'
+    )
+    return _is_kvm_hyper()
+
+
+def _is_xen_hyper():
+    '''
+    Returns a bool whether or not this node is a XEN hypervisor
     '''
     try:
         if __grains__['virtual_subtype'] != 'Xen Dom0':
@@ -2501,6 +2509,51 @@ def is_xen_hyper():
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
+
+def is_xen_hyper():
+    '''
+    Returns a bool whether or not this node is a XEN hypervisor
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.is_xen_hyper
+
+    .. deprecated:: Fluorine
+    '''
+    salt.utils.versions.warn_until(
+        'Sodium',
+        '\'is_xen_hyper\' function has been deprecated. Use the \'get_hypervisor\' == "xen" instead. '
+        '\'is_xen_hyper\' will be removed in {version}.'
+    )
+    return _is_xen_hyper()
+
+
+def get_hypervisor():
+    '''
+    Returns the name of the hypervisor running on this node or ``None``.
+
+    Detected hypervisors:
+
+    - kvm
+    - xen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_hypervisor
+
+    .. versionadded:: Fluorine
+        the function and the ``kvm`` and ``xen`` hypervisors support
+    '''
+    # To add a new 'foo' hypervisor, add the _is_foo_hyper function,
+    # add 'foo' to the list below and add it to the docstring with a .. versionadded::
+    hypervisors = ['kvm', 'xen']
+    result = [hyper for hyper in hypervisors if getattr(sys.modules[__name__], '_is_{}_hyper').format(hyper)()]
+    return result[0] if result else None
 
 
 def is_hyper():
