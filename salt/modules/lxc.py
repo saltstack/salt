@@ -2270,22 +2270,22 @@ def _change_state(cmd,
     # as te command itself mess with double forks; we must not
     # communicate with it, but just wait for the exit status
     pkwargs = {'python_shell': False,
+               'redirect_stderr': True,
                'with_communicate': with_communicate,
                'use_vt': use_vt,
                'stdin': stdin,
-               'stdout': stdout,
-               'stderr': stderr}
+               'stdout': stdout}
     for i in [a for a in pkwargs]:
         val = pkwargs[i]
         if val is _marker:
             pkwargs.pop(i, None)
 
-    error = __salt__['cmd.run_stderr'](cmd, **pkwargs)
+    _cmdout = __salt__['cmd.run_all'](cmd, **pkwargs)
 
-    if error:
+    if _cmdout['retcode'] != 0:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
-            '\'{1}\': {2}'.format(name, cmd, error)
+            '\'{1}\': {2}'.format(name, cmd, _cmdout['stdout'])
         )
     if expected is not None:
         # some commands do not wait, so we will
