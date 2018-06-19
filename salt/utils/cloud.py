@@ -152,6 +152,13 @@ def __ssh_gateway_config_dict(gateway):
 
 
 def __ssh_gateway_arguments(kwargs):
+    '''
+    Return ProxyCommand configuration string for ssh/scp command.
+
+    All gateway options should not include quotes (' or "). To support
+    future user configuration, please make sure to update the dictionary
+    from __ssh_gateway_config_dict and get_ssh_gateway_config (ec2.py)
+    '''
     extended_arguments = ""
 
     ssh_gateway = kwargs.get('ssh_gateway', '')
