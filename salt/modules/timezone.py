@@ -366,7 +366,7 @@ def zone_compare(timezone):
 
 
 def _get_localtime_path():
-    if 'nilrt' in __grains__['lsb_distrib_id']:
+    if 'NILinuxRT' in __grains__['os_family'] and 'nilrt' in __grains__['lsb_distrib_id']:
         return '/etc/natinst/share/localtime'
     return '/etc/localtime'
 
