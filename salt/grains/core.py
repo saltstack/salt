@@ -947,7 +947,7 @@ def _virtual(osdata):
         if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
             try:
                 with salt.utils.files.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
-                    output = fhr.read()
+                    output = salt.utils.stringutils.to_unicode(fhr.read())
                     if 'VirtualBox' in output:
                         grains['virtual'] = 'VirtualBox'
                     elif 'RHEV Hypervisor' in output:
