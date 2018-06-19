@@ -2084,9 +2084,9 @@ def pkg(pkg_path,
     # Verify that the tarball does not extract outside of the intended root
     members = s_pkg.getmembers()
     for member in members:
-        if member.path.startswith((os.sep, '..{0}'.format(os.sep))):
+        if salt.utils.stringutils.to_unicode(member.path).startswith((os.sep, '..{0}'.format(os.sep))):
             return {}
-        elif '..{0}'.format(os.sep) in member.path:
+        elif '..{0}'.format(os.sep) in salt.utils.stringutils.to_unicode(member.path):
             return {}
     s_pkg.extractall(root)
     s_pkg.close()
