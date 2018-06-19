@@ -20,10 +20,16 @@ pipeline {
     }
     post {
         success {
-            githubNotify description: "The docs job has passed, artifacts have been saved", status: "SUCCESS"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The docs job has passed',
+                status: 'SUCCESS',
+                context: "jenkins/pr/docs"
         }
         failure {
-            githubNotify description: "The docs job has failed", status: "FAILURE"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The docs job has failed',
+                status: 'FAILURE',
+                context: "jenkins/pr/docs"
         }
     }
 }
