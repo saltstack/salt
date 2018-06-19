@@ -9,6 +9,14 @@ pipeline {
         TEST_PLATFORM = "centos-7"
     }
     stages {
+        stage('github-pending') {
+            steps {
+                githubNotify credentialsId: 'test-jenkins-credentials',
+                    description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
+                    status: 'PENDING',
+                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+            }
+        }
         stage('setup') {
             steps {
                 sh 'bundle install --with ec2 windows --without opennebula docker'
