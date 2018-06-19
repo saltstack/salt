@@ -319,6 +319,69 @@ def _parse_qemu_img_info(info):
         output.append(line)
     return '\n'.join(output)
 
+def _get_uuid(dom):
+    '''
+    Return a uuid from the named vm
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_uuid <domain>
+    '''
+    uuid = ''
+    doc = minidom.parse(_StringIO(get_xml(dom)))
+    for node in doc.getElementsByTagName('uuid'):
+        uuid = node.firstChild.nodeValue
+    return uuid
+
+def _get_on_poweroff(dom):
+    '''
+    Return `on_poweroff` setting from the named vm
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_restart <domain>
+    '''
+    on_poweroff = ''
+    doc = minidom.parse(_StringIO(get_xml(dom)))
+    for node in doc.getElementsByTagName('on_poweroff'):
+        on_poweroff = node.firstChild.nodeValue
+    return on_poweroff
+
+def _get_on_reboot(dom):
+    '''
+    Return `on_reboot` setting from the named vm
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_reboot <domain>
+    '''
+    on_restart = ''
+    doc = minidom.parse(_StringIO(get_xml(dom)))
+    for node in doc.getElementsByTagName('on_reboot'):
+        on_restart = node.firstChild.nodeValue
+    return on_reboot
+
+def _get_on_crash(dom):
+    '''
+    Return `on_crash` setting from the named vm
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_crash <domain>
+    '''
+    on_crash = ''
+    doc = minidom.parse(_StringIO(get_xml(dom)))
+    for node in doc.getElementsByTagName('on_crash'):
+        on_crash = node.firstChild.nodeValue
+    return on_crash
 
 def _get_nics(dom):
     '''
@@ -1217,6 +1280,10 @@ def vm_info(vm_=None, **kwargs):
                 'disks': _get_disks(dom),
                 'graphics': _get_graphics(dom),
                 'nics': _get_nics(dom),
+                'uuid': _get_uuid(dom),
+                'on_crash': _get_on_crash(dom),
+                'on_reboot': _get_on_reboot(dom),
+                'on_poweroff': _get_on_poweroff(dom),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
