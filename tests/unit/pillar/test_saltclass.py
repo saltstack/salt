@@ -32,12 +32,9 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {saltclass: {'__opts__': fake_opts,
                             '__salt__': fake_salt,
-                            '__grains__': fake_grains
-                           }}
+                            '__grains__': fake_grains}}
 
     def _runner(self, expected_ret):
-        full_ret = {}
-        parsed_ret = []
         try:
             full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
             parsed_ret = full_ret['__saltclass__']['classes']

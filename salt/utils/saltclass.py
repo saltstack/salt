@@ -206,7 +206,9 @@ def expand_classes_in_order(minion_dict,
                 expanded_classes[klass] = {}
 
             # Merge newly found pillars into existing ones
-            dict_merge(salt_data['__pillar__'], expanded_classes[klass].get('pillars', {}))
+            new_pillars = expanded_classes[klass].get('pillars', {})
+            if new_pillars:
+                dict_merge(salt_data['__pillar__'], new_pillars)
 
             # Now replace class element in classes_to_expand by expansion
             if expanded_classes[klass].get('classes'):
