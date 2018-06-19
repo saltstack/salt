@@ -743,7 +743,7 @@ def _qemu_image_create(vm_name,
                        disk_image=None,
                        disk_size=None,
                        disk_type='qcow2',
-                       enable_qcow=False,
+                       create_overlay=False,
                        saltenv='base'):
     '''
     Create the image file using specified disk_size or/and disk_image
@@ -782,7 +782,7 @@ def _qemu_image_create(vm_name,
             imageinfo = salt.utils.yaml.safe_load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
         try:
-            if enable_qcow and qcow2:
+            if create_overlay and qcow2:
                 log.info('Cloning qcow2 image %s using copy on write', sfn)
                 __salt__['cmd.run'](
                     'qemu-img create -f qcow2 -o backing_file={0} {1}'
@@ -1128,6 +1128,19 @@ def init(name,
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).
+
+        Deprecated in favor of ``disks`` parameter. Add the following to the disks
+        definitions to create an overlay image of a template disk image with an
+        image set:
+
+        .. code-block:: python
+
+            {
+                'name': 'name_of_disk_to_change',
+                'overlay_image': True
+            }
+
+        .. deprecated:: Fluorine
     :param pool:
         Path of the folder where the image files are located for vmware/esx hypervisors.
 
@@ -1223,6 +1236,10 @@ def init(name,
     image
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
         (Default: ``None``)
+
+    overlay_image
+        ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
+        the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
     .. _init-graphics-def:
 
@@ -1377,6 +1394,16 @@ def init(name,
                 disk_image = args.get('image', None)
                 disk_size = args.get('size', None)
                 disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
+                create_overlay = enable_qcow
+                if create_overlay:
+                    salt.utils.versions.warn_until(
+                        'Sodium',
+                        '\'enable_qcow\' parameter has been deprecated. Rather use the \'disks\' '
+                        'parameter to override or define the image. \'enable_qcow\' will be removed '
+                        'in {version}.'
+                    )
+                else:
+                    create_overlay = args.get('overlay_image', False)
 
                 img_dest = _qemu_image_create(
                     vm_name=name,
@@ -1384,7 +1411,7 @@ def init(name,
                     disk_image=disk_image,
                     disk_size=disk_size,
                     disk_type=disk_type,
-                    enable_qcow=enable_qcow,
+                    create_overlay=create_overlay,
                     saltenv=saltenv,
                 )
 
