@@ -1464,9 +1464,10 @@ def is_available_extension(name,
 
 
 def _pg_is_older_ext_ver(a, b):
-    '''Return true if version a is lesser than b
-    
-    Compare versions of extensions using salt.utils.versions.LooseVersion
+    '''
+    Compare versions of extensions using salt.utils.versions.LooseVersion.
+
+    Returns ``True`` if version a is lesser than b.
     '''
     return _LooseVersion(a) < _LooseVersion(b)
 

@@ -88,6 +88,8 @@ def creds(provider):
     # Declare globals
     global __AccessKeyId__, __SecretAccessKey__, __Token__, __Expiration__
 
+    ret_credentials = ()
+
     # if id or key is 'use-instance-role-credentials', pull them from meta-data
     ## if needed
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
@@ -125,9 +127,15 @@ def creds(provider):
         __SecretAccessKey__ = data['SecretAccessKey']
         __Token__ = data['Token']
         __Expiration__ = data['Expiration']
-        return __AccessKeyId__, __SecretAccessKey__, __Token__
+
+        ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
-        return provider['id'], provider['key'], ''
+        ret_credentials = provider['id'], provider['key'], ''
+
+    if provider.get('role_arn') is not None:
+        ret_credentials = assumed_creds(provider, role_arn=provider.get('role_arn'), location=None)
+
+    return ret_credentials
 
 
 def sig2(method, endpoint, params, provider, aws_api_version):
