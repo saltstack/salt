@@ -643,10 +643,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.set_mock_vm("test-vm", xml)
 
         disks = virt.get_disks('test-vm')
-        disk = disks[list(disks)[0]]
+        disk = disks.get('vda')
         self.assertEqual('/disks/test.qcow2', disk['file'])
         self.assertEqual('disk', disk['type'])
-        cdrom = disks[list(disks)[1]]
+        cdrom = disks.get('hda')
         self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
         self.assertEqual('cdrom', cdrom['type'])
 
