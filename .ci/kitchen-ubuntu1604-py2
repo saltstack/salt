@@ -39,10 +39,16 @@ pipeline {
     }
     post {
         success {
-            githubNotify description: "The ubuntu-1604-py2 job has passed", status: "SUCCESS"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
+                status: 'SUCCESS',
+                context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
         }
         failure {
-            githubNotify description: "The ubuntu-1604-py2 job has failed", status: "FAILURE"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
+                status: 'FAILURE',
+                context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
         }
     }
 }
