@@ -645,8 +645,6 @@ class CkMinions(object):
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' and not include_localhost:
                         continue
-                    if ipv4 == '0.0.0.0':
-                        continue
                     if ipv4 in addrs:
                         if show_ipv4:
                             minions.add((id_, ipv4))
