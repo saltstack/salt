@@ -841,7 +841,7 @@ def _qemu_image_create(vm_name,
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, **kwargs):
+def _disk_profile(profile, hypervisor, pool=None):
     '''
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -885,7 +885,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
-                   'pool': '[{0}] '.format(kwargs.get('pool', '0'))}
+                   'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
                    'model': 'virtio',
@@ -1056,6 +1056,7 @@ def init(name,
          hypervisor=None,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
+         disks=None,
          saltenv='base',
          seed=True,
          install=True,
@@ -1073,6 +1074,16 @@ def init(name,
     :param cpu: Number of virtual CPUs to assign to the virtual machine
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
     :param image: Path to a disk image to use as the first disk (Default: ``None``).
+                  Deprecated in favor of the ``disks`` parameter. To set (or change) the image of a
+                  disk, add the following to the disks definitions:
+
+                  .. code-block:: python
+
+                      {
+                          'name': 'name_of_disk_to_change',
+                          'image': '/path/to/the/image'
+                      }
+
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
     :param interfaces:
@@ -1085,6 +1096,11 @@ def init(name,
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
     :param disk: Disk profile to use (Default: ``'default'``).
+    :param disks: List of dictionaries providing details on the disk devices to create.
+                  These data are merged with the ones from the disk profile. The structure of
+                  each dictionary is documented in :ref:`init-disk-def`.
+
+                  .. versionadded:: Fluorine
     :param saltenv: Fileserver environment (Default: ``'base'``).
                     See :mod:`cp module for more details <salt.modules.cp>`
     :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
@@ -1112,7 +1128,20 @@ def init(name,
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).
-    :param pool: Path of the folder where the image files are located for vmware/esx hypervisors.
+    :param pool:
+        Path of the folder where the image files are located for vmware/esx hypervisors.
+
+        Deprecated in favor of ``disks`` parameter. Add the following to the disks
+        definitions to set the vmware datastore of a disk image:
+
+        .. code-block:: python
+
+            {
+                'name': 'name_of_disk_to_change',
+                'pool': 'mydatastore'
+            }
+
+        .. deprecated:: Flurorine
     :param dmac:
         Default MAC address to use for the network interfaces. By default MAC addresses are
         automatically generated.
@@ -1164,6 +1193,36 @@ def init(name,
 
     model
         The network card model (Default: depends on the hypervisor)
+
+    .. _init-disk-def:
+
+    .. rubric:: Disks Definitions
+
+    Disk dictionaries can contain the following properties:
+
+    disk_name
+        Name of the disk. This is mostly used in the name of the disk image and as a key to merge
+        with the profile data.
+
+    format
+        Format of the disk image, like ``'qcow2'``, ``'raw'``, ``'vmdk'``.
+        (Default: depends on the hypervisor)
+
+    size
+        Disk size in MiB
+
+    pool
+        Path to the folder where disks should be created
+
+    model
+        One of the disk busses allowed by libvirt (Default: depends on hypervisor)
+
+        See `libvirt documentation <https://libvirt.org/formatdomain.html#elementsDisks>`_
+        for the allowed bus types.
+
+    image
+        Path to the image to use for the disk. If no image is provided, an empty disk will be created
+        (Default: ``None``)
 
     .. _init-graphics-def:
 
@@ -1252,15 +1311,40 @@ def init(name,
                 nicp.append(unic)
         log.debug('Merged NICs: %s', nicp)
 
-    diskp = _disk_profile(disk, hypervisor, **kwargs)
+    # the disks are computed as follows:
+    # 1 - get the disks defined in the profile
+    # 2 - set the image on the first disk (will be removed later)
+    # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
+    pool = kwargs.get('pool', None)
+    if pool:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'pool\' parameter has been deprecated. Rather use the \'disks\' parameter '
+            'to properly define the vmware datastore of disks. \'pool\' will be removed in {version}.'
+        )
+    diskp = _disk_profile(disk, hypervisor, pool=pool)
 
     if image:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'image\' parameter has been deprecated. Rather use the \'disks\' parameter '
+            'to override or define the image. \'image\' will be removed in {version}.'
+        )
         # If image is specified in module arguments, then it will be used
         # for the first disk instead of the image from the disk profile
         disk_name = next(six.iterkeys(diskp[0]))
         log.debug('%s image from module arguments will be used for disk "%s"'
                   ' instead of %s', image, disk_name, diskp[0][disk_name].get('image'))
         diskp[0][disk_name]['image'] = image
+
+    if disks:
+        for udisk in disks:
+            if 'name' in udisk:
+                found = [_disk for _disk in diskp if udisk['name'] in _disk]
+                if found:
+                    found[udisk['name']].update(udisk)
+                else:
+                    diskp.append([{udisk['name']: udisk}])
 
     # Create multiple disks, empty or from specified images.
     for _disk in diskp:
