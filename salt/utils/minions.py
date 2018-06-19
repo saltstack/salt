@@ -627,7 +627,7 @@ class CkMinions(object):
             if '127.0.0.1' in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=False)))
             if subset:
                 search = subset
             for id_ in search:
@@ -643,8 +643,6 @@ class CkMinions(object):
                     continue
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' and not include_localhost:
-                        continue
                     if ipv4 in addrs:
                         if show_ipv4:
                             minions.add((id_, ipv4))
