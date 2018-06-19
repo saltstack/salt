@@ -17,6 +17,7 @@ from yaml.parser import ParserError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
+import salt.utils.stringutils
 import salt.utils.url
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
@@ -55,6 +56,10 @@ class CSafeLoader(yaml.CSafeLoader):
 
     def construct_unicode(self, node):
         return node.value
+
+    def construct_yaml_str(self, node):
+        value = self.construct_scalar(node)
+        return salt.utils.stringutils.to_unicode(value)
 
     def construct_yaml_map(self, node):
         data = self.dictclass()
