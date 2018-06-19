@@ -1282,7 +1282,7 @@ def active_tcp():
                     sl = next(iter(iret))
                     if iret[sl]['state'] == 1:  # 1 is ESTABLISHED
                         del iret[sl]['state']
-                        ret.update(iret)
+                        ret[len(ret)] = iret[sl]
     return ret
 
 
