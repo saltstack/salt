@@ -1126,6 +1126,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
                 kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+                kwargs['ssh_gateway_command'] = gateway['ssh_gateway_command']
 
             if key_filename:
                 if not os.path.isfile(key_filename):
@@ -1464,6 +1465,7 @@ def deploy_script(host,
                 ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
                 ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+                ssh_kwargs['ssh_gateway_command'] = gateway['ssh_gateway_command']
             if key_filename:
                 log.debug('Using %s as the key_filename', key_filename)
                 ssh_kwargs['key_filename'] = key_filename
@@ -1907,6 +1909,7 @@ def run_inline_script(host,
                 ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
                 ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+                ssh_kwargs['ssh_gateway_command'] = gateway['ssh_gateway_command']
             if key_filename:
                 log.debug('Using %s as the key_filename', key_filename)
                 ssh_kwargs['key_filename'] = key_filename
