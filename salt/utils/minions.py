@@ -614,10 +614,16 @@ class CkMinions(object):
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
+    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=None):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
+        if include_localhost is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'include_localhost\' argument is no longer required; any'
+                'connected localhost minion will always be included.'
+            )
         minions = set()
         if self.opts.get('minion_data_cache', False):
             search = self.cache.list('minions')
