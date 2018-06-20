@@ -264,7 +264,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 'fun': 'test.ping',
               }
 
-        self.application.opts['order_masters'] = ['']
+        self.application.opts['order_masters'] = True
         self.application.opts['syndic_wait'] = 5
 
         response = self.fetch('/',
