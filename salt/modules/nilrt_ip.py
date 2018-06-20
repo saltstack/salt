@@ -6,20 +6,21 @@ The networking module for NI Linux Real-Time distro
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from requests.structures import CaseInsensitiveDict
-import configparser
 import logging
 import time
 import os
 import re
 
 # Import salt libs
+import salt.exceptions
 import salt.utils.files
 import salt.utils.validate.net
-import salt.exceptions
 
 # Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin,no-name-in-module
+from salt.ext.six.moves import map, range
 from salt.ext import six
+# pylint: enable=import-error,redefined-builtin,no-name-in-module
 try:
     import pyconnman
     HAS_PYCONNMAN = True
@@ -37,6 +38,18 @@ try:
 except ImportError:
     HAS_PYIFACE = False
 
+try:
+    import configparser
+    HAS_CONFIGPARSER = True
+except ImportError:
+    HAS_CONFIGPARSER = False
+
+try:
+    from requests.structures import CaseInsensitiveDict
+    HAS_REQUEST = True
+except ImportError:
+    HAS_REQUEST = False
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -50,65 +63,71 @@ IFF_LOOPBACK = 0x8
 IFF_RUNNING = 0x40
 
 
+def _assume_condition(condition, err):
+    '''
+    Raise an exception if the condition is false
+    '''
+    if not condition:
+        raise RuntimeError(err)
+
+
 def __virtual__():
     '''
     Confine this module to NI Linux Real-Time based distros
     '''
-    if __grains__['os_family'] == 'NILinuxRT':
-        if not HAS_PYIFACE:
-            return False, 'The python pyiface package is not installed'
-        if not __grains__['lsb_distrib_id'] == 'nilrt'
-            if not HAS_PYCONNMAN:
-                return False, 'The python package pyconnman is not installed'
-            if not HAS_DBUS:
-                return False, 'The python DBus package is not installed'
-            try:
-                state = _get_state
-                if state == 'offline':
-                    return False, 'Connmand is not running'
-            except Exception as exc:
-                return False, six.text_type(exc)
-        return __virtualname__
-    return False, 'The nilrt_ip module could not be loaded: unsupported OS family'
+    try:
+        _assume_condition(HAS_CONFIGPARSER, 'The python package configparser is not installed')
+        _assume_condition(HAS_REQUEST, 'The python package request is not installed')
+        msg = 'The nilrt_ip module could not be loaded: unsupported OS family'
+        _assume_condition(__grains__['os_family'] == 'NILinuxRT', msg)
+        _assume_condition(HAS_PYIFACE, 'The python pyiface package is not installed')
+        if __grains__['lsb_distrib_id'] != 'nilrt':
+            _assume_condition(HAS_PYCONNMAN, 'The python package pyconnman is not installed')
+            _assume_condition(HAS_DBUS, 'The python DBus package is not installed')
+            _assume_condition(_get_state() != 'offline', 'Connman is not running')
+    except RuntimeError as exc:
+        return False, str(exc)
+    return __virtualname__
 
 
 def _get_state():
+    '''
+    Returns the state of connman
+    '''
     try:
-        state = pyconnman.ConnManager().get_property('State')
-    except Exception as exc:
-        raise salt.exceptions.CommandExecutionError('Connman daemon error: {0}'.format(exc))
-    return state
+        return pyconnman.ConnManager().get_property('State')
+    except (KeyError, dbus.Exception):
+        return 'offline'
 
 
 def _get_technologies():
-    strTech = ''
+    '''
+    Returns the technologies of connman
+    '''
+    tech = ''
     technologies = pyconnman.ConnManager().get_technologies()
     for path, params in technologies:
-        strTech += '{0}\n\tName = {1}\n\tType = {2}\n\tPowered = {3}\n\tConnected = {4}\n'.format(
+        tech += '{0}\n\tName = {1}\n\tType = {2}\n\tPowered = {3}\n\tConnected = {4}\n'.format(
             path, params['Name'], params['Type'], params['Powered'] == 1, params['Connected'] == 1)
-    return strTech
-
-
-def _add_path(service):
-    return '{0}{1}'.format(SERVICE_PATH, service)
+    return tech
 
 
 def _get_services():
     '''
-    Returns a list with all connman services.
+    Returns a list with all connman services
     '''
-    serviceList = []
+    serv = []
     services = pyconnman.ConnManager().get_services()
-    for path, params in services:
-        serviceList.append(six.text_type(path[len(SERVICE_PATH):]))
-    return serviceList
+    for path, _ in services:
+        serv.append(six.text_type(path[len(SERVICE_PATH):]))
+    return serv
 
 
 def _connected(service):
     '''
     Verify if a connman service is connected
     '''
-    state = pyconnman.ConnService(_add_path(service)).get_property('State')
+    state = pyconnman.ConnService(os.path.join(SERVICE_PATH, service)).get_property('State')
     return state == 'online' or state == 'ready'
 
 
@@ -153,7 +172,7 @@ def _interface_to_service(iface):
     returns the coresponding service to given interface if exists, otherwise return None
     '''
     for _service in _get_services():
-        service_info = pyconnman.ConnService(_add_path(_service))
+        service_info = pyconnman.ConnService(os.path.join(SERVICE_PATH, _service))
         if service_info.get_property('Ethernet')['Interface'] == iface:
             return _service
     return None
@@ -163,7 +182,7 @@ def _get_service_info(service):
     '''
     return details about given connman service
     '''
-    service_info = pyconnman.ConnService(_add_path(service))
+    service_info = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
     data = {
         'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
@@ -180,31 +199,31 @@ def _get_service_info(service):
         ipv4 = 'IPv4'
         if service_info.get_property('IPv4')['Method'] == 'manual':
             ipv4 += '.Configuration'
-        ipv4Info = service_info.get_property(ipv4)
+        ipv4_info = service_info.get_property(ipv4)
         for info in ['Method', 'Address', 'Netmask', 'Gateway']:
-            try:
-                value = ipv4Info[info]
-                if info == 'Method':
-                    info = 'requestmode'
-                    if value == 'dhcp':
-                        value = 'dhcp_linklocal'
-                    elif value == 'manual':
-                        value = 'static'
-                data['ipv4'][info.lower()] = six.text_type(value)
-            except Exception as exc:
+            value = ipv4_info.get(info)
+            if value is None:
                 log.warning('Unable to get IPv4 %s for service %s\n', info, service)
+                continue
+            if info == 'Method':
+                info = 'requestmode'
+                if value == 'dhcp':
+                    value = 'dhcp_linklocal'
+                elif value == 'manual':
+                    value = 'static'
+            data['ipv4'][info.lower()] = six.text_type(value)
 
-        ipv6Info = service_info.get_property('IPv6')
+        ipv6_info = service_info.get_property('IPv6')
         for info in ['Address', 'Prefix', 'Gateway']:
-            try:
-                value = ipv6Info[info]
-                data['ipv6'][info.lower()] = [six.text_type(value)]
-            except Exception as exc:
+            value = ipv6_info.get(info)
+            if value is None:
                 log.warning('Unable to get IPv6 %s for service %s\n', info, service)
+                continue
+            data['ipv6'][info.lower()] = [six.text_type(value)]
 
         nameservers = []
-        for x in service_info.get_property('Nameservers'):
-            nameservers.append(six.text_type(x))
+        for nameserver_prop in service_info.get_property('Nameservers'):
+            nameservers.append(six.text_type(nameserver_prop))
         data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
@@ -221,18 +240,18 @@ def _get_dns_info():
     '''
     return dns list
     '''
-    dnsList = []
+    dns_list = []
     try:
         with salt.utils.files.fopen('/etc/resolv.conf', 'r+') as dns_info:
             lines = dns_info.readlines()
             for line in lines:
                 if 'nameserver' in line:
                     dns = line.split()[1].strip()
-                    if dns not in dnsList:
-                        dnsList.append(dns)
+                    if dns not in dns_list:
+                        dns_list.append(dns)
     except IOError:
         log.warning('Could not get domain\n')
-    return dnsList
+    return dns_list
 
 
 def _remove_quotes(value):
@@ -253,20 +272,17 @@ def _get_requestmode_info(interface):
     with salt.utils.files.fopen(INI_FILE, 'r') as config_file:
         config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
         config_parser.read_file(config_file)
-        link_local_enabled = "" if not config_parser.has_option(interface, "linklocalenabled") else \
+        link_local_enabled = '' if not config_parser.has_option(interface, 'linklocalenabled') else \
             int(_remove_quotes(config_parser.get(interface, 'linklocalenabled')))
-        dhcp_enabled = "" if not config_parser.has_option(interface, "dhcpenabled") else \
+        dhcp_enabled = '' if not config_parser.has_option(interface, 'dhcpenabled') else \
             int(_remove_quotes(config_parser.get(interface, 'dhcpenabled')))
 
         if dhcp_enabled == 1:
-            if link_local_enabled == 1:
-                return 'dhcp_linklocal'
-            else:
-                return 'dhcp_only'
+            return 'dhcp_linklocal' if link_local_enabled == 1 else 'dhcp_only'
         else:
             if link_local_enabled == 1:
                 return 'linklocal_only'
-            elif link_local_enabled == 0:
+            if link_local_enabled == 0:
                 return 'static'
 
     # some versions of nirtcfg don't set the dhcpenabled/linklocalenabled variables
@@ -324,10 +340,10 @@ def _dict_to_string(dictionary):
             for line in _dict_to_string(val):
                 ret += six.text_type(key) + '-' + line + '\n'
         elif isinstance(val, list):
-            stringList = ''
+            text = ''
             for item in val:
-                stringList += six.text_type(item) + ' '
-            ret += six.text_type(key) + ': ' + stringList +'\n'
+                text += six.text_type(item) + ' '
+            ret += six.text_type(key) + ': ' + text +'\n'
         else:
             ret += six.text_type(key) + ': ' + six.text_type(val) +'\n'
     return ret.splitlines()
@@ -347,12 +363,12 @@ def get_interfaces_details():
         salt '*' ip.get_interfaces_details
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        _interfaces = filter(lambda interface: interface.flags & IFF_LOOPBACK == 0, pyiface.getIfaces())
+        _interfaces = [interface for interface in pyiface.getIfaces() if interface.flags & IFF_LOOPBACK == 0]
         return {'interfaces': list(map(_get_interface_info, _interfaces))}
     return {'interfaces': list(map(_get_service_info, _get_services()))}
 
 
-def up(interface, iface_type=None):
+def up(interface, iface_type=None):  # pylint: disable=invalid-name,unused-argument
     '''
     Enable the specified interface
 
@@ -369,17 +385,18 @@ def up(interface, iface_type=None):
     if __grains__['lsb_distrib_id'] == 'nilrt':
         out = __salt__['cmd.run_all']('ip link set {0} up'.format(interface))
         if out['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t enable interface {0}. Error: {1}'.format(interface, out['stderr']))
+            msg = 'Couldn\'t enable interface {0}. Error: {1}'.format(interface, out['stderr'])
+            raise salt.exceptions.CommandExecutionError(msg)
         return True
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     if not _connected(service):
-        service = pyconnman.ConnService(_add_path(service))
+        service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
         try:
             state = service.connect()
             return state is None
-        except Exception as exc:
+        except Exception:
             raise salt.exceptions.CommandExecutionError('Couldn\'t enable service: {0}\n'.format(service))
     return True
 
@@ -401,7 +418,7 @@ def enable(interface):
     return up(interface)
 
 
-def down(interface, iface_type=None):
+def down(interface, iface_type=None):  # pylint: disable=unused-argument
     '''
     Disable the specified interface
 
@@ -418,17 +435,18 @@ def down(interface, iface_type=None):
     if __grains__['lsb_distrib_id'] == 'nilrt':
         out = __salt__['cmd.run_all']('ip link set {0} down'.format(interface))
         if out['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t disable interface {0}. Error: {1}'.format(interface, out['stderr']))
+            msg = 'Couldn\'t disable interface {0}. Error: {1}'.format(interface, out['stderr'])
+            raise salt.exceptions.CommandExecutionError(msg)
         return True
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     if _connected(service):
-        service = pyconnman.ConnService(_add_path(service))
+        service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
         try:
             state = service.disconnect()
             return state is None
-        except Exception as exc:
+        except Exception:
             raise salt.exceptions.CommandExecutionError('Couldn\'t disable service: {0}\n'.format(service))
     return True
 
@@ -465,17 +483,15 @@ def set_dhcp_linklocal_all(interface):
         salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal  for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal  for interface: {0}\nError: could not enable linklocal option\n'.format(interface))
+        _persist_config(interface, 'dhcpenabled', '1')
+        _persist_config(interface, 'linklocalenabled', '1')
         disable(interface)
         enable(interface)
         return True
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
-    service = pyconnman.ConnService(_add_path(service))
+    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
     ipv4 = service.get_property('IPv4.Configuration')
     ipv4['Method'] = dbus.String('dhcp', variant_level=1)
     ipv4['Address'] = dbus.String('', variant_level=1)
@@ -485,7 +501,8 @@ def set_dhcp_linklocal_all(interface):
         service.set_property('IPv4.Configuration', ipv4)
         service.set_property('Nameservers.Configuration', [''])  # reset nameservers list
     except Exception as exc:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc))
+        exc_msg = 'Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc)
+        raise salt.exceptions.CommandExecutionError(exc_msg)
     return True
 
 
@@ -505,10 +522,8 @@ def set_dhcp_only_all(interface):
     '''
     if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
-    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp only for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
-    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp only for interface: {0}\nError: could not disable linklocal option\n'.format(interface))
+    _persist_config(interface, 'dhcpenabled', '1')
+    _persist_config(interface, 'linklocalenabled', '0')
     disable(interface)
     enable(interface)
     return True
@@ -530,13 +545,23 @@ def set_linklocal_only_all(interface):
     '''
     if not __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
-    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set linklocal only for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
-    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set set linklocal only for interface: {0}\nError: could not enable linklocal option\n'.format(interface))
+    _persist_config(interface, 'dhcpenabled', '0')
+    _persist_config(interface, 'linklocalenabled', '1')
     disable(interface)
     enable(interface)
     return True
+
+
+def _persist_config(section, token, value):
+    '''
+    Helper function to persist a configuration in the ini file
+    '''
+    cmd = NIRTCFG_PATH
+    cmd += ' --set section={0},token=\'{1}\',value=\'{2}\''.format(section, token, value)
+    if __salt__['cmd.run_all'](cmd)['retcode'] != 0:
+        exc_msg = 'Couldn\'t set manual settings for interface: {0}\n'.format(section)
+        exc_msg += 'Error: could not set {1} to {2}\n'.format(token, value)
+        raise salt.exceptions.CommandExecutionError(exc_msg)
 
 
 def set_static_all(interface, address, netmask, gateway, nameservers):
@@ -566,26 +591,20 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     if not isinstance(nameservers, list):
         nameservers = nameservers.split(' ')
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable linklocal option\n'.format(interface))
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'IP_Address\',value=\'{1}\''.format(interface, address))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set static ip\n'.format(interface))
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'Subnet_Mask\',value=\'{1}\''.format(interface, netmask))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set netmask\n'.format(interface))
-        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'Gateway\',value=\'{1}\''.format(interface, gateway))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set gateway\n'.format(interface))
+        _persist_config(interface, 'dhcpenabled', '0')
+        _persist_config(interface, 'linklocalenabled', '0')
+        _persist_config(interface, 'IP_Address', address)
+        _persist_config(interface, 'Subnet_Mask', netmask)
+        _persist_config(interface, 'Gateway', gateway)
         if nameservers:
-            if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'DNS_Address\',value=\'{1}\''.format(interface, nameservers[0]))['retcode'] != 0:
-                raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set dns\n'.format(interface))
+            _persist_config(interface, 'DNS_Address', nameservers[0])
         disable(interface)
         enable(interface)
         return True
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
-    service = pyconnman.ConnService(_add_path(service))
+    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
     ipv4 = service.get_property('IPv4.Configuration')
     ipv4['Method'] = dbus.String('manual', variant_level=1)
     ipv4['Address'] = dbus.String('{0}'.format(address), variant_level=1)
@@ -595,7 +614,8 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
         service.set_property('IPv4.Configuration', ipv4)
         service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
-        raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc))
+        exc_msg = 'Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc)
+        raise salt.exceptions.CommandExecutionError(exc_msg)
     return True
 
 
@@ -616,7 +636,7 @@ def get_interface(iface):
     return None
 
 
-def build_interface(iface, iface_type, enable, **settings):
+def build_interface(iface, iface_type, enabled, **settings):
     '''
     Build an interface script for a network interface.
 
@@ -634,7 +654,8 @@ def build_interface(iface, iface_type, enable, **settings):
     if 'proto' not in settings or settings['proto'] == 'dhcp':  # default protocol type used is dhcp
         set_dhcp_linklocal_all(iface)
     elif settings['proto'] != 'static':
-        raise salt.exceptions.CommandExecutionError('Protocol type: {0} is not supported'.format(settings['proto']))
+        exc_msg = 'Protocol type: {0} is not supported'.format(settings['proto'])
+        raise salt.exceptions.CommandExecutionError(exc_msg)
     else:
         address = settings['ipaddr']
         netmask = settings['netmask']
@@ -643,7 +664,9 @@ def build_interface(iface, iface_type, enable, **settings):
         for key, val in six.iteritems(settings):
             if 'dns' in key or 'domain' in key:
                 dns += val
-    if enable:
+        set_static_all(iface, address, netmask, gateway, dns)
+
+    if enabled:
         up(iface)
 
     return get_interface(iface)
@@ -692,7 +715,7 @@ def get_network_settings():
     if __grains__['lsb_distrib_id'] == 'nilrt':
         raise salt.exceptions.CommandExecutionError('Not supported in this version.')
     settings = []
-    networking = 'no' if _get_state() == 'offline' else "yes"
+    networking = 'no' if _get_state() == 'offline' else 'yes'
     settings.append('networking={0}'.format(networking))
     hostname = __salt__['network.get_hostname']
     settings.append('hostname={0}'.format(hostname))
