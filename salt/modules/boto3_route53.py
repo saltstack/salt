@@ -722,9 +722,7 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
 def aws_encode(x):
     '''
     An implementation of the encoding required to suport AWS's domain name
-    rules defined here:
-
-        .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+    rules defined `here <http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html>`_.
 
     While AWS's documentation specifies individual ASCII characters which need
     to be encoded, we instead just try to force the string to one of
@@ -732,11 +730,8 @@ def aws_encode(x):
     present.
 
     This means that we support things like ドメイン.テスト as a domain name string
-    per the idna documentation here in addition to ASCII
-
-        .. __: https://pypi.org/project/idna
-
-    This is a public method because we call it from the state in various places
+    per the idna documentation `here <https://pypi.org/project/idna>`_, in
+    addition to ASCII.
     '''
     ret = None
     try:
@@ -746,14 +741,14 @@ def aws_encode(x):
     except UnicodeEncodeError:
         ret = x.encode('idna')
     except Exception as e:
-        log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs" % (x))
+        log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs", x)
         raise CommandExecutionError(e)
     log.debug('AWS-encoded result for %s: %s', x, ret)
     return ret
 
 def _aws_encode_changebatch(o):
     '''
-    helper method to process a change batch & encode the bits which need encoding
+    helper method to process a change batch & encode the bits which need encoding.
     '''
     change_idx = 0
     while change_idx < len(o['Changes']):
@@ -772,9 +767,7 @@ def _aws_encode_changebatch(o):
 def _aws_decode(x):
     '''
     An implementation of the decoding required to suport AWS's domain name
-    rules defined here:
-
-        .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+    rules defined `here <http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html>`_.
 
     The important part is this:
 
@@ -788,7 +781,7 @@ def _aws_decode(x):
 
     We look for the existance of any escape codes which give us a clue that
     we're received an escaped unicode string; or we assume it's idna encoded
-    and then decode as necessary
+    and then decode as necessary.
     '''
     if '\\' in x:
         return x.decode('unicode_escape')
