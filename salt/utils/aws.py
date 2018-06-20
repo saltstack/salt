@@ -133,7 +133,10 @@ def creds(provider):
         ret_credentials = provider['id'], provider['key'], ''
 
     if provider.get('role_arn') is not None:
-        ret_credentials = assumed_creds(provider, role_arn=provider.get('role_arn'), location=None)
+        provider_shadow = provider.copy()
+        provider_shadow.pop("role_arn", None)
+        log.info("Assuming the role: %s", provider.get('role_arn'))
+        ret_credentials = assumed_creds(provider_shadow, role_arn=provider.get('role_arn'), location='us-east-1')
 
     return ret_credentials
 
