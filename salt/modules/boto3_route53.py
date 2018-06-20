@@ -128,6 +128,7 @@ def _wait_for_sync(change, conn, tries=10, sleep=20):
     log.error('Timed out waiting for Route53 INSYNC status.')
     return False
 
+
 def find_hosted_zone(Id=None, Name=None, PrivateZone=None,
                      region=None, key=None, keyid=None, profile=None):
     '''
@@ -719,6 +720,7 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
     Id = zone[0]['HostedZone']['Id']
     return delete_hosted_zone(Id=Id, region=region, key=key, keyid=keyid, profile=profile)
 
+
 def aws_encode(x):
     '''
     An implementation of the encoding required to suport AWS's domain name
@@ -745,6 +747,7 @@ def aws_encode(x):
         raise CommandExecutionError(e)
     log.debug('AWS-encoded result for %s: %s', x, ret)
     return ret
+
 
 def _aws_encode_changebatch(o):
     '''
