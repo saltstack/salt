@@ -431,9 +431,9 @@ def get_new_service_instance_stub(service_instance, path, ns=None,
         Version of the new stub.
         Default value is None.
     '''
-    # For python 2.7.9 and later, the defaul SSL conext has more strict
-    # connection handshaking rule. We may need turn of the hostname checking
-    # and client side cert verification
+    # For python 2.7.9 and later, the default SSL context has more strict
+    # connection handshaking rule. We may need turn off the hostname checking
+    # and the client side cert verification.
     context = None
     if sys.version_info[:3] > (2, 7, 8):
         context = ssl.create_default_context()
