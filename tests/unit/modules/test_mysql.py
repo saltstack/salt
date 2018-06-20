@@ -54,10 +54,12 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
-        with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
-            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                ret = mysql.user_create('testuser')
-                self.assertEqual(False, ret)
+        # mock the version of MySQL
+        with patch.object(mysql, 'version', MagicMock(return_value='8.0.10')):
+            with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                    ret = mysql.user_create('testuser')
+                    self.assertEqual(False, ret)
 
     def test_user_create(self):
         '''
