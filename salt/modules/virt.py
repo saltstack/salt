@@ -615,21 +615,20 @@ def _gen_xml(name,
 
     context['disks'] = {}
     for i, disk in enumerate(diskp):
-        for disk_name, args in six.iteritems(disk):
-            context['disks'][disk_name] = {}
-            context['disks'][disk_name]['file_name'] = args['filename']
-            context['disks'][disk_name]['source_file'] = args['source_file']
-            if hypervisor in ['qemu', 'kvm']:
-                context['disks'][disk_name]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
-                context['disks'][disk_name]['address'] = False
-                context['disks'][disk_name]['driver'] = True
-            elif hypervisor in ['esxi', 'vmware']:
-                context['disks'][disk_name]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
-                context['disks'][disk_name]['address'] = True
-                context['disks'][disk_name]['driver'] = False
-            context['disks'][disk_name]['disk_bus'] = args['model']
-            context['disks'][disk_name]['type'] = args['format']
-            context['disks'][disk_name]['index'] = six.text_type(i)
+        context['disks'][disk['name']] = {}
+        context['disks'][disk['name']]['file_name'] = disk['filename']
+        context['disks'][disk['name']]['source_file'] = disk['source_file']
+        if hypervisor in ['qemu', 'kvm']:
+            context['disks'][disk['name']]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
+            context['disks'][disk['name']]['address'] = False
+            context['disks'][disk['name']]['driver'] = True
+        elif hypervisor in ['esxi', 'vmware']:
+            context['disks'][disk['name']]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
+            context['disks'][disk['name']]['address'] = True
+            context['disks'][disk['name']]['driver'] = False
+        context['disks'][disk['name']]['disk_bus'] = disk['model']
+        context['disks'][disk['name']]['type'] = disk['format']
+        context['disks'][disk['name']]['index'] = six.text_type(i)
 
     context['nics'] = nicp
 
@@ -885,38 +884,37 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     disklist = copy.deepcopy(
         __salt__['config.get']('virt:disk', {}).get(profile, default))
 
+    # Transform the list to remove one level of dictionnary and add the name as a property
+    disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
+
     # Add the image to the first disk if there is one
     if image:
         # If image is specified in module arguments, then it will be used
         # for the first disk instead of the image from the disk profile
-        disk_name = next(six.iterkeys(disklist[0]))
         log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disk_name, disklist[0][disk_name].get('image'))
-        disklist[0][disk_name]['image'] = image
+                  ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
+        disklist[0]['image'] = image
 
     # Merge with the user-provided disks definitions
     if disks:
         for udisk in disks:
             if 'name' in udisk:
-                found = [disk for disk in disklist if udisk['name'] in disk]
+                found = [disk for disk in disklist if udisk['name'] == disk['name']]
                 if found:
-                    found[udisk['name']].update(udisk)
+                    found[0].update(udisk)
                 else:
-                    disklist.append({udisk['name']: udisk})
+                    disklist.append(udisk)
 
-    # Add the missing properties that have defaults
-    for key, val in six.iteritems(overlay):
-        for i, _disks in enumerate(disklist):
-            for disk in _disks:
-                if key not in _disks[disk]:
-                    disklist[i][disk][key] = val
+    for disk in disklist:
+        # Add the missing properties that have defaults
+        for key, val in six.iteritems(overlay):
+            if key not in disk:
+                disk[key] = val
 
-    # Compute the filename and source file properties if possible
-    if vm_name:
-        for disk in disklist:
-            for disk_name, args in six.iteritems(disk):
-                args['filename'] = '{0}_{1}.{2}'.format(vm_name, disk_name, args['format'])
-                args['source_file'] = os.path.join(args['pool'], args['filename'])
+        # Compute the filename and source file properties if possible
+        if vm_name:
+            disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
+            disk['source_file'] = os.path.join(disk['pool'], disk['filename'])
 
     return disklist
 
@@ -1371,60 +1369,58 @@ def init(name,
     for _disk in diskp:
         log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
 
-        for disk_name, args in six.iteritems(_disk):
-
-            if hypervisor == 'vmware':
-                if 'image' in args:
-                    # TODO: we should be copying the image file onto the ESX host
-                    raise SaltInvocationError(
-                        'virt.init does not support image '
-                        'template in conjunction with esxi hypervisor'
-                    )
-                else:
-                    # assume libvirt manages disks for us
-                    log.debug('Generating libvirt XML for %s', _disk)
-                    vol_xml = _gen_vol_xml(
-                        name,
-                        disk_name,
-                        args['format'],
-                        args['size'],
-                        args['pool']
-                    )
-                    define_vol_xml_str(vol_xml)
-
-            elif hypervisor in ['qemu', 'kvm']:
-
-                create_overlay = enable_qcow
-                if create_overlay:
-                    salt.utils.versions.warn_until(
-                        'Sodium',
-                        '\'enable_qcow\' parameter has been deprecated. Rather use the \'disks\' '
-                        'parameter to override or define the image. \'enable_qcow\' will be removed '
-                        'in {version}.'
-                    )
-                else:
-                    create_overlay = args.get('overlay_image', False)
-
-                img_dest = _qemu_image_create(args, create_overlay, saltenv)
-
-                # Seed only if there is an image specified
-                if seed and args.get('image', None):
-                    log.debug('Seed command is %s', seed_cmd)
-                    __salt__[seed_cmd](
-                        img_dest,
-                        id_=name,
-                        config=kwargs.get('config'),
-                        install=install,
-                        pub_key=pub_key,
-                        priv_key=priv_key,
-                    )
-
-            else:
-                # Unknown hypervisor
+        if hypervisor == 'vmware':
+            if 'image' in _disk:
+                # TODO: we should be copying the image file onto the ESX host
                 raise SaltInvocationError(
-                    'Unsupported hypervisor when handling disk image: {0}'
-                    .format(hypervisor)
+                    'virt.init does not support image '
+                    'template in conjunction with esxi hypervisor'
                 )
+            else:
+                # assume libvirt manages disks for us
+                log.debug('Generating libvirt XML for %s', _disk)
+                vol_xml = _gen_vol_xml(
+                    name,
+                    _disk['name'],
+                    _disk['format'],
+                    _disk['size'],
+                    _disk['pool']
+                )
+                define_vol_xml_str(vol_xml)
+
+        elif hypervisor in ['qemu', 'kvm']:
+
+            create_overlay = enable_qcow
+            if create_overlay:
+                salt.utils.versions.warn_until(
+                    'Sodium',
+                    '\'enable_qcow\' parameter has been deprecated. Rather use the \'disks\' '
+                    'parameter to override or define the image. \'enable_qcow\' will be removed '
+                    'in {version}.'
+                )
+            else:
+                create_overlay = _disk.get('overlay_image', False)
+
+            img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+
+            # Seed only if there is an image specified
+            if seed and _disk.get('image', None):
+                log.debug('Seed command is %s', seed_cmd)
+                __salt__[seed_cmd](
+                    img_dest,
+                    id_=name,
+                    config=kwargs.get('config'),
+                    install=install,
+                    pub_key=pub_key,
+                    priv_key=priv_key,
+                )
+
+        else:
+            # Unknown hypervisor
+            raise SaltInvocationError(
+                'Unsupported hypervisor when handling disk image: {0}'
+                .format(hypervisor)
+            )
 
     log.debug('Generating VM XML')
 
