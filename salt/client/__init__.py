@@ -559,6 +559,7 @@ class LocalClient(object):
             {'stewart': {...}}
         '''
         if 'expr_form' in kwargs:
+            import salt.utils.versions
             salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
