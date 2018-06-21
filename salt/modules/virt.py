@@ -319,6 +319,7 @@ def _parse_qemu_img_info(info):
         output.append(line)
     return '\n'.join(output)
 
+
 def _get_uuid(dom):
     '''
     Return a uuid from the named vm
@@ -334,6 +335,7 @@ def _get_uuid(dom):
     for node in doc.getElementsByTagName('uuid'):
         uuid = node.firstChild.nodeValue
     return uuid
+
 
 def _get_on_poweroff(dom):
     '''
@@ -351,6 +353,7 @@ def _get_on_poweroff(dom):
         on_poweroff = node.firstChild.nodeValue
     return on_poweroff
 
+
 def _get_on_reboot(dom):
     '''
     Return `on_reboot` setting from the named vm
@@ -367,6 +370,7 @@ def _get_on_reboot(dom):
         on_restart = node.firstChild.nodeValue
     return on_reboot
 
+
 def _get_on_crash(dom):
     '''
     Return `on_crash` setting from the named vm
@@ -382,6 +386,7 @@ def _get_on_crash(dom):
     for node in doc.getElementsByTagName('on_crash'):
         on_crash = node.firstChild.nodeValue
     return on_crash
+
 
 def _get_nics(dom):
     '''
