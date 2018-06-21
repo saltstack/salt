@@ -724,7 +724,9 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
 def aws_encode(x):
     '''
     An implementation of the encoding required to suport AWS's domain name
-    rules defined `here <http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html>`_.
+    rules defined here__:
+
+    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
 
     While AWS's documentation specifies individual ASCII characters which need
     to be encoded, we instead just try to force the string to one of
