@@ -52,7 +52,7 @@ def _changes(name,
 
     change = {}
     if gid:
-        if lgrp['gid'] != gid:
+        if lgrp['gid'] != int(gid):
             change['gid'] = gid
 
     if members:
