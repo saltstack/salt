@@ -324,35 +324,37 @@ def playbooks(playbook, rundir=None, check=False, diff=False, extra_vars=None,
         salt 'ansiblehost'  ansible.playbook playbook=/srv/playbooks/play.yml
     '''
     command = ['ansible-playbook', playbook]
-    if check is True:
+    if check:
         command.append('--check')
-    if diff is True:
+    if diff:
         command.append('--diff')
-    if extra_vars is not None:
+    if isinstance(extra_vars, dict):
         command.append('--extra-vars={0}'.format(json.dumps(extra_vars)))
-    if flush_cache is True:
+    elif isinstance(extra_vars, six.text_type) and extra_vars.startswith('@'):
+        command.append('--extra-vars={0}'.format(extra_vars))
+    if flush_cache:
         command.append('--flush-cache')
-    if inventory is not None:
+    if inventory:
         command.append('--inventory={0}'.format(inventory))
-    if limit is not None:
+    if limit:
         command.append('--limit={0}'.format(limit))
-    if list_hosts is True:
+    if list_hosts:
         command.append('--list-hosts')
-    if list_tags is True:
+    if list_tags:
         command.append('--list-tags')
-    if list_tasks is True:
+    if list_tasks:
         command.append('--list-tasks')
-    if module_path is not None:
-        command.append('--module-path="{0}"'.format(module_path))
-    if skip_tags is not None:
+    if module_path:
+        command.append('--module-path={0}'.format(module_path))
+    if skip_tags:
         command.append('--skip-tags={0}'.format(skip_tags))
-    if start_at_task is not None:
+    if start_at_task:
         command.append('--start-at-task={0}'.format(start_at_task))
-    if syntax_check is True:
+    if syntax_check:
         command.append('--syntax-check')
-    if tags is not None:
+    if tags:
         command.append('--tags={0}'.format(tags))
-    if playbook_kwargs is not None:
+    if playbook_kwargs:
         for key, value in six.iteritems(playbook_kwargs):
             key = key.replace('_', '-')
             if value is True:

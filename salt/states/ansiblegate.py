@@ -113,6 +113,9 @@ def _client():
 
 
 def _changes(plays):
+    '''
+    Find changes in ansible return data
+    '''
     changes = {}
     for play in plays['plays']:
         task_changes = {}
