@@ -960,7 +960,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 'saltutil.sync_states': Mock(),
             }
             with patch.dict(state.__salt__, sync_mocks):
-                state.sls('foo', sync='modules,states')
+                state.sls('foo', sync_mods='modules,states')
 
             for key in sync_mocks:
                 call_count = sync_mocks[key].call_count
@@ -973,7 +973,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             # Test syncing all
             sync_mocks = {'saltutil.sync_all': Mock()}
             with patch.dict(state.__salt__, sync_mocks):
-                state.sls('foo', sync='all')
+                state.sls('foo', sync_mods='all')
 
             for key in sync_mocks:
                 call_count = sync_mocks[key].call_count
@@ -983,10 +983,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                         key, call_count, expected
                     )
 
-            # sync=True should be interpreted as sync=all
+            # sync_mods=True should be interpreted as sync_mods=all
             sync_mocks = {'saltutil.sync_all': Mock()}
             with patch.dict(state.__salt__, sync_mocks):
-                state.sls('foo', sync=True)
+                state.sls('foo', sync_mods=True)
 
             for key in sync_mocks:
                 call_count = sync_mocks[key].call_count
@@ -1001,7 +1001,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             # extra syncing.
             sync_mocks = {'saltutil.sync_all': Mock()}
             with patch.dict(state.__salt__, sync_mocks):
-                state.sls('foo', sync='modules,all')
+                state.sls('foo', sync_mods='modules,all')
 
             for key in sync_mocks:
                 call_count = sync_mocks[key].call_count
