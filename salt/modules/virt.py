@@ -915,8 +915,8 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     if vm_name:
         for disk in disklist:
             for disk_name, args in six.iteritems(disk):
-                args['filename'] = '{0}.{1}'.format(disk_name, args['format'])
-                args['source_file'] = os.path.join(args['pool'], vm_name, args['filename'])
+                args['filename'] = '{0}_{1}.{2}'.format(vm_name, disk_name, args['format'])
+                args['source_file'] = os.path.join(args['pool'], args['filename'])
 
     return disklist
 
