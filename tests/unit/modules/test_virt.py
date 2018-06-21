@@ -1573,6 +1573,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_mock.info.return_value = [0, 1234, 5678, 123]
         pool_mock.autostart.return_value = True
         pool_mock.isPersistent.return_value = True
+        pool_mock.XMLDesc.return_value = '''<pool type='dir'>
+  <name>default</name>
+  <uuid>d92682d0-33cf-4e10-9837-a216c463e158</uuid>
+  <capacity unit='bytes'>854374301696</capacity>
+  <allocation unit='bytes'>596275986432</allocation>
+  <available unit='bytes'>258098315264</available>
+  <source>
+  </source>
+  <target>
+    <path>/srv/vms</path>
+    <permissions>
+      <mode>0755</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>'''
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
         # pylint: enable=no-member
 
@@ -1584,7 +1601,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'allocation': 5678,
             'free': 123,
             'autostart': True,
-            'persistent': True}, pool)
+            'persistent': True,
+            'type': 'dir',
+            'target_path': '/srv/vms'}, pool)
 
     def test_pool_info_notfound(self):
         '''
