@@ -172,7 +172,7 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
     if ansible_kwargs is None:
         ansible_kwargs = {}
     checks = __salt__['ansible.playbooks'](name, rundir=rundir, check=True, diff=True, **ansible_kwargs)
-    if all(not check['changed'] for _, check in six.iteritems(checks['stats'])):
+    if all(not check['changed'] for check in six.itervalues(checks['stats'])):
         ret['comment'] = 'No changes to be made from playbook {0}'.format(name)
         ret['result'] = True
     elif __opts__['test']:
@@ -183,5 +183,5 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
         results = __salt__['ansible.playbooks'](name, rundir=rundir, diff=True, **ansible_kwargs)
         ret['comment'] = 'Changes were made by playbook {0}'.format(name)
         ret['changes'] = _changes(results)
-        ret['result'] = all(not check['failures'] for _, check in six.iteritems(checks['stats']))
+        ret['result'] = all(not check['failures'] for check in six.itervalues(checks['stats']))
     return ret
