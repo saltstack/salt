@@ -42,6 +42,10 @@ try:
 except ImportError as err:
     ansible = None
 
+# Import salt modules
+import salt.fileclient
+import salt.ext.six as six
+
 
 __virtualname__ = 'ansible'
 
@@ -99,3 +103,85 @@ def __virtual__():
     '''
     setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))   # pylint: disable=W0108
     return ansible is not None
+
+
+def _client():
+    '''
+    Get a fileclient
+    '''
+    return salt.fileclient.get_file_client(__opts__)
+
+
+def _changes(plays):
+    changes = {}
+    for play in plays['plays']:
+        task_changes = {}
+        for task in play['tasks']:
+            host_changes = {}
+            for host, data in six.iteritems(task['hosts']):
+                if data['changed'] is True:
+                    host_changes[host] = data.get('diff', data.get('changes', {}))
+            if host_changes:
+                task_changes[task['task']['name']] = host_changes
+        if task_changes:
+            changes[play['play']['name']] = task_changes
+    return changes
+
+
+def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=None):
+    '''
+    Run Ansible Playbooks
+
+    :param name: path to playbook. This can be relative to rundir or the git repo
+    :param rundir: location to run ansible-playbook from.
+    :param gitrepo: gitrepo to clone for ansible playbooks.  This is cloned
+                    using the `git.latest` state, and is cloned to the `rundir`
+                    if specified, otherwise it is clone to the `cache_dir`
+    :param git_kwargs: extra kwargs to pass to `git.latest` state module besides
+                       the `name` and `target`
+    :param ansible_kwargs: extra kwargs to pass to `ansible.playbooks` execution
+                           module besides the `name` and `target`
+
+    :return: Ansible playbook output.
+
+    .. code-block:: yaml
+
+        run nginx install:
+          ansible.playbooks:
+            - name: install.yml
+            - gitrepo: git://github.com/gituser/playbook.git
+            - git_kwargs:
+                rev: master
+    '''
+    ret = {
+        'result': False,
+        'changes': {},
+        'comment': 'Running playbook {0}'.format(name),
+        'name': name,
+    }
+    if gitrepo is not None:
+        if rundir is None:
+            rundir = _client()._extrn_path(gitrepo, 'base')
+        if git_kwargs is None:
+            git_kwargs = {}
+        __states__['git.latest'](
+            name=gitrepo,
+            target=rundir,
+            **git_kwargs,
+        )
+    if ansible_kwargs is None:
+        ansible_kwargs = {}
+    checks = __salt__['ansible.playbooks'](name, rundir=rundir, check=True, diff=True, **ansible_kwargs)
+    if all(not check['changed'] for _, check in six.iteritems(checks['stats'])):
+        ret['comment'] = 'No changes to be made from playbook {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Changes will be made from playbook {0}'.format(name)
+        ret['result'] = None
+        ret['changes'] = _changes(checks)
+    else:
+        results = __salt__['ansible.playbooks'](name, rundir=rundir, diff=True, **ansible_kwargs)
+        ret['comment'] = 'Changes were made by playbook {0}'.format(name)
+        ret['changes'] = _changes(results)
+        ret['result'] = all(not check['failures'] for _, check in six.iteritems(checks['stats']))
+    return ret
