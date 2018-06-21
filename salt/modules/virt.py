@@ -368,7 +368,7 @@ def _get_on_reboot(dom):
     doc = minidom.parse(_StringIO(get_xml(dom)))
     for node in doc.getElementsByTagName('on_reboot'):
         on_restart = node.firstChild.nodeValue
-    return on_reboot
+    return on_restart
 
 
 def _get_on_crash(dom):
