@@ -29,6 +29,7 @@ any Ansible module to respond.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
+import json
 import os
 import sys
 import logging
@@ -276,3 +277,99 @@ def list(pattern=None):
     :return:
     '''
     return _resolver.get_modules_list(pattern=pattern)
+
+
+def playbooks(playbook, rundir=None, check=False, diff=False, extra_vars=None,
+              flush_cache=False, forks=5, inventory=None, limit=None,
+              list_hosts=False, list_tags=False, list_tasks=False,
+              module_path=None, skip_tags=None, start_at_task=None,
+              syntax_check=False, tags=None, playbook_kwargs=None):
+    '''
+    Run Ansible Playbooks
+
+    :param playbook: Which playbook to run.
+    :param rundir: Directory to run `ansible-playbook` in. (Default: None)
+    :param check: don't make any changes; instead, try to predict some
+                  of the changes that may occur (Default: False)
+    :param diff: when changing (small) files and templates, show the
+                 differences in those files; works great with --check
+                 (default: False)
+    :param extra_vars: set additional variables as key=value or YAML/JSON, if
+                       filename prepend with @, (default: None)
+    :param flush_cache: clear the fact cache for every host in inventory
+                        (default: False)
+    :param forks: specify number of parallel processes to use
+                  (Default: 5)
+    :param inventory: specify inventory host path or comma separated host
+                      list. (Default: None) (Ansible's default is /etc/ansible/hosts)
+    :param limit: further limit selected hosts to an additional pattern (Default: None)
+    :param list_hosts: outputs a list of matching hosts; does not execute anything else
+                       (Default: False)
+    :param list_tags: list all available tags (Default: False)
+    :param list_tasks: list all tasks that would be executed (Default: False)
+    :param module_path: prepend colon-separated path(s) to module library. (Default: None)
+    :param skip_tags: only run plays and tasks whose tags do not match these
+                      values (Default: False)
+    :param start_at_task: start the playbook at the task matching this name (Default: None)
+    :param: syntax_check: perform a syntax check on the playbook, but do not execute it
+                          (Default: False)
+    :param tags: only run plays and tasks tagged with these values (Default: None)
+
+    :return: Playbook return
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'ansiblehost'  ansible.playbook playbook=/srv/playbooks/play.yml
+    '''
+    command = ['ansible-playbook', playbook]
+    if check is True:
+        command.append('--check')
+    if diff is True:
+        command.append('--diff')
+    if extra_vars is not None:
+        command.append('--extra-vars={0}'.format(json.dumps(extra_vars)))
+    if flush_cache is True:
+        command.append('--flush-cache')
+    if inventory is not None:
+        command.append('--inventory={0}'.format(inventory))
+    if limit is not None:
+        command.append('--limit={0}'.format(limit))
+    if list_hosts is True:
+        command.append('--list-hosts')
+    if list_tags is True:
+        command.append('--list-tags')
+    if list_tasks is True:
+        command.append('--list-tasks')
+    if module_path is not None:
+        command.append('--module-path="{0}"'.format(module_path))
+    if skip_tags is not None:
+        command.append('--skip-tags={0}'.format(skip_tags))
+    if start_at_task is not None:
+        command.append('--start-at-task={0}'.format(start_at_task))
+    if syntax_check is True:
+        command.append('--syntax-check')
+    if tags is not None:
+        command.append('--tags={0}'.format(tags))
+    if playbook_kwargs is not None:
+        for key, value in six.iteritems(playbook_kwargs):
+            key = key.replace('_', '-')
+            if value is True:
+                command.append('--{0}'.format(key))
+            elif isinstance(value, six.text_type):
+                command.append('--{0}={1}'.format(key, value))
+            elif isinstance(value, dict):
+                command.append('--{0}={1}'.format(key, json.dumps(value)))
+    command.append('--forks={0}'.format(forks))
+    cmd_kwargs = {
+        'env': {'ANSIBLE_STDOUT_CALLBACK': 'json', 'ANSIBLE_RETRY_FILES_ENABLED': '0'},
+        'cwd': rundir,
+        'cmd': ' '.join(command)
+    }
+    ret = __salt__['cmd.run_all'](**cmd_kwargs)
+    log.debug('Ansible Playbook Return: %s', ret)
+    retdata = json.loads(ret['stdout'])
+    if ret['retcode']:
+        __context__['retcode'] = ret['retcode']
+    return retdata
