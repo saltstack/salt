@@ -169,12 +169,18 @@ fields, separated by the pipe (``|``) character:
     sku: Such as 14.04.5-LTS or 2012-R2-Datacenter
     version: Such as 14.04.201612050 or latest
 
-It is possible to specify the URL of a custom image that you have access to,
-such as:
+It is possible to specify the URL or resource ID path of a custom image that you
+have access to, such as:
 
 .. code-block:: yaml
 
     https://<mystorage>.blob.core.windows.net/system/Microsoft.Compute/Images/<mystorage>/template-osDisk.01234567-890a-bcdef0123-4567890abcde.vhd
+
+or:
+
+.. code-block:: yaml
+
+    /subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/myRG/providers/Microsoft.Compute/images/myImage
 
 size
 ----

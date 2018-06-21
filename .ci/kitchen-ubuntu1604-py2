@@ -1,0 +1,48 @@
+pipeline {
+    agent { label 'kitchen-slave' }
+    environment {
+        SALT_KITCHEN_PLATFORMS = "/var/jenkins/workspace/platforms.yml"
+        SALT_KITCHEN_DRIVER = "/var/jenkins/workspace/driver.yml"
+        PATH = "/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin"
+        RBENV_VERSION = "2.4.2"
+        TEST_SUITE = "py2"
+        TEST_PLATFORM = "ubuntu-1604"
+    }
+    stages {
+        stage('setup') {
+            steps {
+                sh 'bundle install --with ec2 windows --without opennebula docker'
+            }
+        }
+        stage('run kitchen') {
+            steps {
+                script { withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sshagent(credentials: ['jenkins-testing-ssh-key']) {
+                        sh 'ssh-add ~/.ssh/jenkins-testing.pem'
+                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM || bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM'
+                        sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
+                    }
+                }}
+                archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
+            }
+            post {
+                always {
+                    script { withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        sshagent(credentials: ['jenkins-testing-ssh-key']) {
+                            sh 'ssh-add ~/.ssh/jenkins/jenkins-testing.pem'
+                            sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
+                        }
+                    }}
+                }
+            }
+        }
+    }
+    post {
+        success {
+            githubNotify description: "The ubuntu-1604-py2 job has passed", status: "SUCCESS"
+        }
+        failure {
+            githubNotify description: "The ubuntu-1604-py2 job has failed", status: "FAILURE"
+        }
+    }
+}

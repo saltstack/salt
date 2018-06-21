@@ -1,6 +1,6 @@
 {% set versions = {'18':['05', '03', '01'], '16':['04', '03', '02', '00'], '9':['20']} %}
 
-Zzip:
+7zip:
 {% for major, subversions in versions.items() %}
 {% for minor in subversions %}
   '{{major}}.{{minor}}.00.0':

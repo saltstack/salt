@@ -1091,6 +1091,8 @@ VALID_OPTS = {
     'proxy_username': six.string_types,
     'proxy_password': six.string_types,
     'proxy_port': int,
+    # Exclude list of hostnames from proxy
+    'no_proxy': list,
 
     # Minion de-dup jid cache max size
     'minion_jid_queue_hwm': int,
@@ -2786,6 +2788,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # prepend root_dir
     prepend_root_dirs = ['cachedir']
+    if 'log_file' in opts and urlparse(opts['log_file']).scheme == '':
+        prepend_root_dirs.append(opts['log_file'])
     prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options

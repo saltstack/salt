@@ -61,7 +61,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
@@ -500,6 +500,13 @@ def query(url,
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
         proxy_password = opts.get('proxy_password', None)
+        no_proxy = opts.get('no_proxy', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:

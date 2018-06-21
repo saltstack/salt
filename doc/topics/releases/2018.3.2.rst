@@ -5,12 +5,69 @@ In Progress: Salt 2018.3.2 Release Notes
 Version 2018.3.2 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 This release is still in progress and has not been released yet.
 
-Changes to win_timezone
-=======================
+The ``2018.3.2`` release contains only a small number of fixes, detailed below.
 
-Improves timezone detection by using the pytz module.
+Mainly, this release fixes Issue `#48038`_, which is a critical bug that occurs
+in a multi-syndic setup where the same job is run multiple times on a minion.
 
-``timezone.get_offset`` and ``timezone.get_zonecode`` now work properly.
+Statistics
+==========
 
-Adds ``timezone.list`` to list supported timezones in either Windows or Unix
-format.
+- Total Merges: **3**
+- Total Issue References: **1**
+- Total PR References: **6**
+
+- Contributors: **3** (`cro`_, `garethgreenaway`_, `rallytime`_)
+
+
+Changelog for v2018.3.1..v2018.3.2
+==================================
+
+*Generated at: 2018-06-14 13:24:42 UTC*
+
+* **PR** `#48100`_: (`rallytime`_) Back-port `#48014`_ to 2018.3.2
+  @ *2018-06-14 12:54:52 UTC*
+
+  * **PR** `#48014`_: (`cro`_) Find job pause (refs: `#48100`_)
+
+  * 36b99ae80a Merge pull request `#48100`_ from rallytime/bp-48014
+
+  * 77feccc5c4 Lint: Add blank line
+
+  * 159b052962 One more case where returner doesn't respond
+
+  * 91b45b4cc4 Catch two cases when a returner is not able to be contacted--these would throw a stacktrace.
+
+* **PR** `#48099`_: (`rallytime`_) Back-port `#47915`_ to 2018.3.2
+  @ *2018-06-14 12:54:23 UTC*
+
+  * **PR** `#47915`_: (`garethgreenaway`_) [2018.3] state runner pause resume kill (refs: `#48099`_)
+
+  * 40c1bfdec9 Merge pull request `#48099`_ from rallytime/bp-47915
+
+  * 3556850058 fixing typo in alias_function call.
+
+  * 4b0ff496fa Some fixes to the set_pause and rm_pause function in the state runner, renaming to in line with the functions in the state module.  Including aliases to previous names for back-ward compatibility.  Including a soft_kill function to kill running orchestration states.  A new test to test soft_kill functionality.
+
+* **ISSUE** `#48038`_: (`austinpapp`_) jobs are not dedup'ing minion side (refs: `#48075`_)
+
+* **PR** `#48097`_: (`rallytime`_) Back-port `#48075`_ to 2018.3.2
+  @ *2018-06-14 12:52:44 UTC*
+
+  * **PR** `#48075`_: (`garethgreenaway`_) [2017.7] Ensure that the shared list of jids is passed (refs: `#48097`_)
+
+  * 074a97dcfa Merge pull request `#48097`_ from rallytime/bp-48075
+
+  * e4c719b55f Ensure that the shared list of jids is passed when creating the Minion.  Fixes an issue when minions are pointed at multiple syndics.
+
+.. _`#47915`: https://github.com/saltstack/salt/pull/47915
+.. _`#48014`: https://github.com/saltstack/salt/pull/48014
+.. _`#48038`: https://github.com/saltstack/salt/issues/48038
+.. _`#48075`: https://github.com/saltstack/salt/pull/48075
+.. _`#48097`: https://github.com/saltstack/salt/pull/48097
+.. _`#48099`: https://github.com/saltstack/salt/pull/48099
+.. _`#48100`: https://github.com/saltstack/salt/pull/48100
+.. _`austinpapp`: https://github.com/austinpapp
+.. _`cro`: https://github.com/cro
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`rallytime`: https://github.com/rallytime
