@@ -8,7 +8,6 @@ virt execution module unit tests
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
-import os
 import datetime
 
 # Import Salt Testing libs
@@ -92,17 +91,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'format': 'qcow2',
                 'model': 'virtio',
                 'pool': '/srv/salt-images',
-                'filename': 'system.qcow2',
+                'filename': 'myvm_system.qcow2',
                 'image': '/path/to/image',
-                'source_file': '/srv/salt-images/myvm/system.qcow2'}},
+                'source_file': '/srv/salt-images/myvm_system.qcow2'}},
              {'data': {
                 'name': 'data',
                 'size': 16384,
                 'format': 'raw',
                 'model': 'virtio',
                 'pool': '/srv/salt-images',
-                'filename': 'data.raw',
-                'source_file': '/srv/salt-images/myvm/data.raw'}}],
+                'filename': 'myvm_data.raw',
+                'source_file': '/srv/salt-images/myvm_data.raw'}}],
             disks
         )
 
@@ -443,7 +442,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         disk = disks[0]
         root_dir = salt.config.DEFAULT_MINION_OPTS.get('root_dir')
         self.assertTrue(disk.find('source').attrib['file'].startswith(root_dir))
-        self.assertTrue(os.path.join('hello', 'system') in disk.find('source').attrib['file'])
+        self.assertTrue('hello_system' in disk.find('source').attrib['file'])
         self.assertEqual(disk.find('target').attrib['dev'], 'vda')
         self.assertEqual(disk.find('target').attrib['bus'], 'virtio')
         self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
@@ -484,7 +483,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(disks), 1)
         disk = disks[0]
         self.assertTrue('[0]' in disk.find('source').attrib['file'])
-        self.assertTrue(os.path.join('hello', 'system') in disk.find('source').attrib['file'])
+        self.assertTrue('hello_system' in disk.find('source').attrib['file'])
         self.assertEqual(disk.find('target').attrib['dev'], 'sda')
         self.assertEqual(disk.find('target').attrib['bus'], 'scsi')
         self.assertEqual(disk.find('address').attrib['unit'], '0')
