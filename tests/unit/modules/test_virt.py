@@ -86,22 +86,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
         self.assertEqual(
-            [{'system': {
-                'size': 8192,
-                'format': 'qcow2',
-                'model': 'virtio',
-                'pool': '/srv/salt-images',
-                'filename': 'myvm_system.qcow2',
-                'image': '/path/to/image',
-                'source_file': '/srv/salt-images/myvm_system.qcow2'}},
-             {'data': {
-                'name': 'data',
-                'size': 16384,
-                'format': 'raw',
-                'model': 'virtio',
-                'pool': '/srv/salt-images',
-                'filename': 'myvm_data.raw',
-                'source_file': '/srv/salt-images/myvm_data.raw'}}],
+            [{'name': 'system',
+              'size': 8192,
+              'format': 'qcow2',
+              'model': 'virtio',
+              'pool': '/srv/salt-images',
+              'filename': 'myvm_system.qcow2',
+              'image': '/path/to/image',
+              'source_file': '/srv/salt-images/myvm_system.qcow2'},
+             {'name': 'data',
+              'size': 16384,
+              'format': 'raw',
+              'model': 'virtio',
+              'pool': '/srv/salt-images',
+              'filename': 'myvm_data.raw',
+              'source_file': '/srv/salt-images/myvm_data.raw'}],
             disks
         )
 
@@ -358,8 +357,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._disk_profile('nonexistent', 'vmware')
             self.assertTrue(len(ret) == 1)
-            self.assertIn('system', ret[0])
-            system = ret[0]['system']
+            found = [disk for disk in ret if disk['name'] == 'system']
+            self.assertTrue(bool(found))
+            system = found[0]
             self.assertEqual(system['format'], 'vmdk')
             self.assertEqual(system['model'], 'scsi')
             self.assertTrue(int(system['size']) >= 1)
@@ -372,8 +372,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._disk_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
-            self.assertIn('system', ret[0])
-            system = ret[0]['system']
+            found = [disk for disk in ret if disk['name'] == 'system']
+            self.assertTrue(bool(found))
+            system = found[0]
             self.assertEqual(system['format'], 'qcow2')
             self.assertEqual(system['model'], 'virtio')
             self.assertTrue(int(system['size']) >= 1)
