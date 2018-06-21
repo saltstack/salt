@@ -385,7 +385,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = True
             self.assertEqual(junos.commit(), ret)
 
-    def test_commit_raise_commit_check_exeception(self):
+    def test_commit_raise_commit_check_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check:
             mock_commit_check.side_effect = self.raise_exception
             ret = dict()
