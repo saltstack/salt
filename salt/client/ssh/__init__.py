@@ -1393,6 +1393,30 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
 
+        def _version_mismatch_error():
+            messages = {
+                2: {
+                    6: 'Install Python 2.7 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.7 / Python 3 targets',
+                    7: 'Install Python 2.6 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.6 / Python 3 targets',
+                },
+                3: {
+                    'default': '- Install Python 2.6/2.7 Salt dependencies on the Salt SSH \n'
+                               '  master to interact with Python 2.6/2.7 targets\n'
+                               '- Install Python 3 on the target machine(s)',
+                },
+                'default': 'Matching major/minor Python release (>=2.6) needed both on the Salt SSH \n'
+                           'master and target machine',
+            }
+            major, minor = sys.version_info[:2]
+            help_msg = (
+                messages.get(major, {}).get(minor)
+                or messages.get(major, {}).get('default')
+                or messages['default']
+            )
+            return 'Python version error. Recommendation(s) follow:\n' + help_msg
+
         errors = [
             (
                 (),
@@ -1402,7 +1426,7 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
+                _version_mismatch_error()
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
