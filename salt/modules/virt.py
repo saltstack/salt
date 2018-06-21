@@ -1278,7 +1278,7 @@ def init(name,
 
     The disk images will be created in an image folder within the directory
     defined by the ``virt:images`` option. Its default value is
-    ``/srv/salt/salt-images/`` but this can changed with such a configuration:
+    ``/srv/salt-images/`` but this can changed with such a configuration:
 
     .. code-block:: yaml
 
