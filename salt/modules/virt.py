@@ -617,11 +617,8 @@ def _gen_xml(name,
     for i, disk in enumerate(diskp):
         for disk_name, args in six.iteritems(disk):
             context['disks'][disk_name] = {}
-            fn_ = '{0}.{1}'.format(disk_name, args['format'])
-            context['disks'][disk_name]['file_name'] = fn_
-            context['disks'][disk_name]['source_file'] = os.path.join(args['pool'],
-                                                                      name,
-                                                                      fn_)
+            context['disks'][disk_name]['file_name'] = args['filename']
+            context['disks'][disk_name]['source_file'] = args['source_file']
             if hypervisor in ['qemu', 'kvm']:
                 context['disks'][disk_name]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
                 context['disks'][disk_name]['address'] = False
@@ -738,32 +735,23 @@ def _get_images_dir():
     return img_dir
 
 
-def _qemu_image_create(vm_name,
-                       disk_file_name,
-                       disk_image=None,
-                       disk_size=None,
-                       disk_type='qcow2',
-                       create_overlay=False,
-                       saltenv='base'):
+def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
     '''
     Create the image file using specified disk_size or/and disk_image
 
     Return path to the created image file
     '''
+    disk_size = disk.get('size', None)
+    disk_image = disk.get('image', None)
+
     if not disk_size and not disk_image:
         raise CommandExecutionError(
             'Unable to create new disk {0}, please specify'
             ' disk size and/or disk image argument'
-            .format(disk_file_name)
+            .format(disk['filename'])
         )
 
-    img_dir = _get_images_dir()
-
-    img_dest = os.path.join(
-        img_dir,
-        vm_name,
-        disk_file_name
-    )
+    img_dest = disk['source_file']
     log.debug('Image destination will be %s', img_dest)
     img_dir = os.path.dirname(img_dest)
     log.debug('Image destination directory is %s', img_dir)
@@ -819,7 +807,7 @@ def _qemu_image_create(vm_name,
                 log.debug('Create empty image with size %sM', disk_size)
                 __salt__['cmd.run'](
                     'qemu-img create -f {0} {1} {2}M'
-                    .format(disk_type, img_dest, disk_size)
+                    .format(disk.get('format', 'qcow2'), img_dest, disk_size)
                 )
             else:
                 raise CommandExecutionError(
@@ -841,7 +829,7 @@ def _qemu_image_create(vm_name,
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, pool=None):
+def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, pool=None):
     '''
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -881,7 +869,7 @@ def _disk_profile(profile, hypervisor, pool=None):
     default to whatever is best suitable for the active hypervisor.
     '''
     default = [{'system':
-                {'size': '8192'}}]
+                {'size': 8192}}]
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
@@ -893,13 +881,43 @@ def _disk_profile(profile, hypervisor, pool=None):
     else:
         overlay = {}
 
+    # Get the disks from the profile
     disklist = copy.deepcopy(
         __salt__['config.get']('virt:disk', {}).get(profile, default))
+
+    # Add the image to the first disk if there is one
+    if image:
+        # If image is specified in module arguments, then it will be used
+        # for the first disk instead of the image from the disk profile
+        disk_name = next(six.iterkeys(disklist[0]))
+        log.debug('%s image from module arguments will be used for disk "%s"'
+                  ' instead of %s', image, disk_name, disklist[0][disk_name].get('image'))
+        disklist[0][disk_name]['image'] = image
+
+    # Merge with the user-provided disks definitions
+    if disks:
+        for udisk in disks:
+            if 'name' in udisk:
+                found = [disk for disk in disklist if udisk['name'] in disk]
+                if found:
+                    found[udisk['name']].update(udisk)
+                else:
+                    disklist.append({udisk['name']: udisk})
+
+    # Add the missing properties that have defaults
     for key, val in six.iteritems(overlay):
-        for i, disks in enumerate(disklist):
-            for disk in disks:
-                if key not in disks[disk]:
+        for i, _disks in enumerate(disklist):
+            for disk in _disks:
+                if key not in _disks[disk]:
                     disklist[i][disk][key] = val
+
+    # Compute the filename and source file properties if possible
+    if vm_name:
+        for disk in disklist:
+            for disk_name, args in six.iteritems(disk):
+                args['filename'] = '{0}.{1}'.format(disk_name, args['format'])
+                args['source_file'] = os.path.join(args['pool'], vm_name, args['filename'])
+
     return disklist
 
 
@@ -1339,7 +1357,6 @@ def init(name,
             '\'pool\' parameter has been deprecated. Rather use the \'disks\' parameter '
             'to properly define the vmware datastore of disks. \'pool\' will be removed in {version}.'
         )
-    diskp = _disk_profile(disk, hypervisor, pool=pool)
 
     if image:
         salt.utils.versions.warn_until(
@@ -1347,21 +1364,8 @@ def init(name,
             '\'image\' parameter has been deprecated. Rather use the \'disks\' parameter '
             'to override or define the image. \'image\' will be removed in {version}.'
         )
-        # If image is specified in module arguments, then it will be used
-        # for the first disk instead of the image from the disk profile
-        disk_name = next(six.iterkeys(diskp[0]))
-        log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disk_name, diskp[0][disk_name].get('image'))
-        diskp[0][disk_name]['image'] = image
 
-    if disks:
-        for udisk in disks:
-            if 'name' in udisk:
-                found = [_disk for _disk in diskp if udisk['name'] in _disk]
-                if found:
-                    found[udisk['name']].update(udisk)
-                else:
-                    diskp.append([{udisk['name']: udisk}])
+    diskp = _disk_profile(disk, hypervisor, disks, name, image=image, pool=pool)
 
     # Create multiple disks, empty or from specified images.
     for _disk in diskp:
@@ -1390,10 +1394,6 @@ def init(name,
 
             elif hypervisor in ['qemu', 'kvm']:
 
-                disk_type = args.get('format', 'qcow2')
-                disk_image = args.get('image', None)
-                disk_size = args.get('size', None)
-                disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
                 create_overlay = enable_qcow
                 if create_overlay:
                     salt.utils.versions.warn_until(
@@ -1405,18 +1405,10 @@ def init(name,
                 else:
                     create_overlay = args.get('overlay_image', False)
 
-                img_dest = _qemu_image_create(
-                    vm_name=name,
-                    disk_file_name=disk_file_name,
-                    disk_image=disk_image,
-                    disk_size=disk_size,
-                    disk_type=disk_type,
-                    create_overlay=create_overlay,
-                    saltenv=saltenv,
-                )
+                img_dest = _qemu_image_create(args, create_overlay, saltenv)
 
                 # Seed only if there is an image specified
-                if seed and disk_image:
+                if seed and args.get('image', None):
                     log.debug('Seed command is %s', seed_cmd)
                     __salt__[seed_cmd](
                         img_dest,
