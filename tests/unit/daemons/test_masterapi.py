@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 from functools import wraps
+import os
 import io
 import stat
 
@@ -12,6 +13,7 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 
 # Import Salt Testing Libs
+from tests.support.paths import TMP_CONF_DIR
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -568,7 +570,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(None)
+        opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 
