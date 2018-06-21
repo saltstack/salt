@@ -230,10 +230,10 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             try:
 
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
-                class SleepCalledEception(Exception):
+                class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
                     pass
-                tornado.gen.sleep.return_value.set_exception(SleepCalledEception())
+                tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
                 for i in range(process_count_max):
@@ -248,7 +248,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 mock_data = {'fun': 'foo.bar',
                              'jid': process_count_max + 1}
 
-                self.assertRaises(SleepCalledEception,
+                self.assertRaises(SleepCalledException,
                                   lambda: io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data)))
                 self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count,
                                  process_count_max)
