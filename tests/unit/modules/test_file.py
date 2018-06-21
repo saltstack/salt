@@ -218,6 +218,88 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
 
+class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+            }
+        }
+
+    MULTILINE_STRING = textwrap.dedent('''\
+        Lorem
+        ipsum
+        #dolor
+        ''')
+
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
+    def setUp(self):
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        self.tfile.write(self.MULTILINE_STRING)
+        self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        del self.tfile
+
+    def test_comment_line(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment(self):
+        filemod.comment(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment_different_character(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum',
+                             '//')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('//ipsum', filecontent)
+
+    def test_comment_not_found(self):
+        filemod.comment_line(self.tfile.name,
+                             '^sit')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertNotIn('#sit', filecontent)
+        self.assertNotIn('sit', filecontent)
+
+    def test_uncomment(self):
+        filemod.uncomment(self.tfile.name,
+                          'dolor')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('dolor', filecontent)
+        self.assertNotIn('#dolor', filecontent)
+
+
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
