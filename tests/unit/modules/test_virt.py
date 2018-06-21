@@ -79,11 +79,38 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # Return state as shutdown
         mock_domain.info.return_value = [4, 0, 0, 0]  # pylint: disable=no-member
 
+    def test_disk_profile_merge(self):
+        '''
+        Test virt._disk_profile() when merging with user-defined disks
+        '''
+        userdisks = [{'name': 'data', 'size': 16384, 'format': 'raw'}]
+
+        disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
+        self.assertEqual(
+            [{'system': {
+                'size': 8192,
+                'format': 'qcow2',
+                'model': 'virtio',
+                'pool': '/srv/salt-images',
+                'filename': 'system.qcow2',
+                'image': '/path/to/image',
+                'source_file': '/srv/salt-images/myvm/system.qcow2'}},
+             {'data': {
+                'name': 'data',
+                'size': 16384,
+                'format': 'raw',
+                'model': 'virtio',
+                'pool': '/srv/salt-images',
+                'filename': 'data.raw',
+                'source_file': '/srv/salt-images/myvm/data.raw'}}],
+            disks
+        )
+
     def test_boot_default_dev(self):
         '''
         Test virt._gen_xml() default boot device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -100,7 +127,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() custom boot device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -118,7 +145,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() multiple boot devices
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -137,7 +164,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() serial console
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -157,7 +184,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() telnet console
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -179,7 +206,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() telnet console without any specified port
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -200,7 +227,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with no serial console
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -220,7 +247,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with no telnet console
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -240,7 +267,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with default no graphics device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -257,7 +284,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with default vnc graphics device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -282,7 +309,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with default spice graphics device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -304,7 +331,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() with spice graphics device
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -395,7 +422,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml(), KVM default profile case
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
@@ -437,7 +464,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml(), ESXi/vmware default profile case
         '''
-        diskp = virt._disk_profile('default', 'vmware')
+        diskp = virt._disk_profile('default', 'vmware', [], 'hello')
         nicp = virt._nic_profile('default', 'vmware')
         xml_data = virt._gen_xml(
             'hello',
@@ -477,35 +504,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml(), ESXi/vmware custom profile case
         '''
-        diskp_yaml = '''
-- first:
-    size: 8192
-    format: vmdk
-    model: scsi
-    pool: datastore1
-- second:
-    size: 4096
-    format: vmdk
-    model: scsi
-    pool: datastore2
-'''
-        nicp_yaml = '''
-- type: bridge
-  name: eth1
-  source: ONENET
-  model: e1000
-  mac: '00:00:00:00:00:00'
-- name: eth2
-  type: bridge
-  source: TWONET
-  model: e1000
-  mac: '00:00:00:00:00:00'
-'''
-        with patch('salt.modules.virt._nic_profile') as nic_profile, \
-                patch('salt.modules.virt._disk_profile') as disk_profile:
-            disk_profile.return_value = salt.utils.yaml.safe_load(diskp_yaml)
-            nic_profile.return_value = salt.utils.yaml.safe_load(nicp_yaml)
-            diskp = virt._disk_profile('noeffect', 'vmware')
+        disks = {
+            'noeffect': [
+                {'first': {'size': 8192, 'pool': 'datastore1'}},
+                {'second': {'size': 4096, 'pool': 'datastore2'}}
+            ]
+        }
+        nics = {
+            'noeffect': [
+                {'name': 'eth1', 'source': 'ONENET'},
+                {'name': 'eth2', 'source': 'TWONET'}
+            ]
+        }
+        with patch.dict(virt.__salt__,  # pylint: disable=no-member
+                        {'config.get': MagicMock(side_effect=[disks, nics])}):
+            diskp = virt._disk_profile('noeffect', 'vmware', [], 'hello')
             nicp = virt._nic_profile('noeffect', 'vmware')
             xml_data = virt._gen_xml(
                 'hello',
@@ -527,35 +540,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml(), KVM custom profile case
         '''
-        diskp_yaml = '''
-- first:
-    size: 8192
-    format: qcow2
-    model: virtio
-    pool: /var/lib/images
-- second:
-    size: 4096
-    format: qcow2
-    model: virtio
-    pool: /var/lib/images
-'''
-        nicp_yaml = '''
-- type: bridge
-  name: eth1
-  source: b2
-  model: virtio
-  mac: '00:00:00:00:00:00'
-- name: eth2
-  type: bridge
-  source: b2
-  model: virtio
-  mac: '00:00:00:00:00:00'
-'''
-        with patch('salt.modules.virt._nic_profile') as nic_profile, \
-                patch('salt.modules.virt._disk_profile') as disk_profile:
-            disk_profile.return_value = salt.utils.yaml.safe_load(diskp_yaml)
-            nic_profile.return_value = salt.utils.yaml.safe_load(nicp_yaml)
-            diskp = virt._disk_profile('noeffect', 'kvm')
+        disks = {
+            'noeffect': [
+                {'first': {'size': 8192, 'pool': '/var/lib/images'}},
+                {'second': {'size': 4096, 'pool': '/var/lib/images'}}
+            ]
+        }
+        nics = {
+            'noeffect': [
+                {'name': 'eth1', 'source': 'b2'},
+                {'name': 'eth2', 'source': 'b2'}
+            ]
+        }
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
+                "/srv/salt-images", disks, nics])}):
+            diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
             nicp = virt._nic_profile('noeffect', 'kvm')
             xml_data = virt._gen_xml(
                 'hello',
@@ -577,7 +576,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() generated device controller for ESXi/vmware
         '''
-        diskp = virt._disk_profile('default', 'vmware')
+        diskp = virt._disk_profile('default', 'vmware', [], 'hello')
         nicp = virt._nic_profile('default', 'vmware')
         xml_data = virt._gen_xml(
             'hello',
@@ -597,7 +596,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_xml() generated device controller for KVM
         '''
-        diskp = virt._disk_profile('default', 'kvm')
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
         nicp = virt._nic_profile('default', 'kvm')
         xml_data = virt._gen_xml(
             'hello',
