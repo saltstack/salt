@@ -190,7 +190,7 @@ def _linux_gpu_data():
         return {}
 
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
-    known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware', 'matrox', 'aspeed']
     gpu_classes = ('vga compatible controller', '3d controller')
 
     devs = []
@@ -251,7 +251,7 @@ def _netbsd_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
-    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware']
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware', 'matrox', 'aspeed']
 
     gpus = []
     try:
