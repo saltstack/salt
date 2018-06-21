@@ -1172,10 +1172,11 @@ class Minion(MinionBase):
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
-        future_exception = self._connect_master_future.exception()
-        if future_exception:
-            # This needs to be re-raised to preserve restart_on_error behavior.
-            raise six.reraise(*future_exception)
+        if self._connect_master_future.done():
+            future_exception = self._connect_master_future.exception()
+            if future_exception:
+                # This needs to be re-raised to preserve restart_on_error behavior.
+                raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
 
@@ -1655,7 +1656,9 @@ class Minion(MinionBase):
                 )
                 ret['out'] = 'nested'
             except TypeError as exc:
-                msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(function_name, exc, func.__doc__)
+                msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
+                    function_name, exc, func.__doc__ or ''
+                )
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
