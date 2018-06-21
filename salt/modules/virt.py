@@ -4258,6 +4258,9 @@ def pool_info(name, **kwargs):
         infos = pool.info()
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
+        desc = minidom.parseString(pool.XMLDesc())
+        pool_node = _get_xml_first_element_by_tag_name(desc, 'pool')
+        path_node = _get_xml_first_element_by_tag_name(desc, 'path')
         result = {
             'uuid': pool.UUIDString(),
             'state': state,
@@ -4265,7 +4268,9 @@ def pool_info(name, **kwargs):
             'allocation': infos[2],
             'free': infos[3],
             'autostart': pool.autostart(),
-            'persistent': pool.isPersistent()
+            'persistent': pool.isPersistent(),
+            'target_path': _get_xml_element_text(path_node) if path_node else None,
+            'type': pool_node.getAttribute('type')
         }
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
