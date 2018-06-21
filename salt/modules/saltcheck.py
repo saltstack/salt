@@ -2,65 +2,62 @@
 '''
 A module for testing the logic of states and highstates
 
-Saltcheck provides unittest like functionality requiring only the knowledge of salt module execution and yaml.
-
-In order to run state and highstate saltcheck tests a sub-folder of a state must be creaed and named "saltcheck-tests".
-
-Tests for a state should be created in files ending in *.tst and placed in the saltcheck-tests folder.
-
-Multiple tests can be created in a file.
-Multiple *.tst files can be created in the saltcheck-tests folder.
-Salt rendering is supported in test files e.g. yaml + jinja.
-The "id" of a test works in the same manner as in salt state files.
-They should be unique and descriptive.
-
-Example file system layout:
-/srv/salt/apache/
-                 init.sls
-                 config.sls
-                 saltcheck-tests/
-                                 pkg_and_mods.tst
-                                 config.tst
-
-
-Saltcheck Test Syntax:
-
-Unique-ID:
-  module_and_function:
-  args:
-  kwargs:
-  assertion:
-  expected-return:
-
-
-Example test 1:
-
-echo-test-hello:
-  module_and_function: test.echo
-  args:
-    - "hello"
-  kwargs:
-  assertion: assertEqual
-  expected-return:  'hello'
-
-
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
+
+Saltcheck provides unittest like functionality requiring only the knowledge of
+salt module execution and yaml.
+
+In order to run state and highstate saltcheck tests a sub-folder of a state must
+be created and named ``saltcheck-tests``.
+
+Tests for a state should be created in files ending in ``*.tst`` and placed in
+the ``saltcheck-tests`` folder.
+
+Multiple tests can be created in a file. Multiple ``*.tst`` files can be
+created in the ``saltcheck-tests`` folder. Salt rendering is supported in test
+files (e.g. ``yaml + jinja``). The ``id`` of a test works in the same manner as
+in salt state files. They should be unique and descriptive.
+
+Example file system layout:
+
+.. code-block: txt
+
+    /srv/salt/apache/
+        init.sls
+        config.sls
+        saltcheck-tests/
+            pkg_and_mods.tst
+            config.tst
+
+Example:
+
+.. code-block:: yaml
+
+    echo-test-hello:
+      module_and_function: test.echo
+      args:
+        - "hello"
+      kwargs:
+      assertion: assertEqual
+      expected-return:  'hello'
+
 '''
+
+# Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import time
 from json import loads, dumps
-try:
-    import salt.utils.files
-    import salt.utils.path
-    import salt.utils.yaml
-    import salt.client
-    import salt.exceptions
-    from salt.ext import six
-except ImportError:
-    pass
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.yaml
+import salt.client
+import salt.exceptions
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +78,9 @@ def update_master_cache():
     Can be automated by setting "auto_update_master_cache: True" in minion config
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' saltcheck.update_master_cache
     '''
     __salt__['cp.cache_master']()
@@ -92,7 +92,11 @@ def run_test(**kwargs):
     Execute one saltcheck test and return result
 
     :param keyword arg test:
-    CLI Example::
+
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' saltcheck.run_test
             test='{"module_and_function": "test.echo",
                    "assertion": "assertEqual",
@@ -115,8 +119,11 @@ def run_state_tests(state):
 
     :param str state: the name of a user defined state
 
-    CLI Example::
-      salt '*' saltcheck.run_state_tests postfix
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltcheck.run_state_tests postfix
     '''
     scheck = SaltCheck()
     paths = scheck.get_state_search_path_list()
@@ -157,8 +164,11 @@ def run_highstate_tests():
     '''
     Execute all tests for a salt highstate and return results
 
-    CLI Example::
-      salt '*' saltcheck.run_highstate_tests
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltcheck.run_highstate_tests
     '''
     scheck = SaltCheck()
     paths = scheck.get_state_search_path_list()
@@ -203,7 +213,9 @@ def run_highstate_tests():
 
 
 def _render_file(file_path):
-    '''call the salt utility to render a file'''
+    '''
+    call the salt utility to render a file
+    '''
     # salt-call slsutil.renderer /srv/salt/jinjatest/saltcheck-tests/test1.tst
     rendered = __salt__['slsutil.renderer'](file_path)
     log.info("rendered: %s", rendered)
@@ -211,19 +223,25 @@ def _render_file(file_path):
 
 
 def _is_valid_module(module):
-    '''return a list of all modules available on minion'''
+    '''
+    Return a list of all modules available on minion
+    '''
     modules = __salt__['sys.list_modules']()
     return bool(module in modules)
 
 
 def _get_auto_update_cache_value():
-    '''return the config value of auto_update_master_cache'''
+    '''
+    Return the config value of auto_update_master_cache
+    '''
     __salt__['config.get']('auto_update_master_cache')
     return True
 
 
 def _is_valid_function(module_name, function):
-    '''Determine if a function is valid for a module'''
+    '''
+    Determine if a function is valid for a module
+    '''
     try:
         functions = __salt__['sys.list_functions'](module_name)
     except salt.exceptions.SaltException:
@@ -232,7 +250,9 @@ def _is_valid_function(module_name, function):
 
 
 def _get_top_states():
-    ''' equivalent to a salt cli: salt web state.show_top'''
+    '''
+    Equivalent to a salt cli: salt web state.show_top
+    '''
     alt_states = []
     try:
         returned = __salt__['state.show_top']()
@@ -245,7 +265,9 @@ def _get_top_states():
 
 
 def _get_state_sls(state):
-    ''' equivalent to a salt cli: salt web state.show_low_sls STATE'''
+    '''
+    Equivalent to a salt cli: salt web state.show_low_sls STATE
+    '''
     sls_list_state = []
     try:
         returned = __salt__['state.show_low_sls'](state)
@@ -281,11 +303,14 @@ class SaltCheck(object):
             update_master_cache()
 
     def __is_valid_test(self, test_dict):
-        '''Determine if a test contains:
-             a test name,
-             a valid module and function,
-             a valid assertion,
-             an expected return value'''
+        '''
+        Determine if a test contains:
+
+        - a test name
+        - a valid module and function
+        - a valid assertion
+        - an expected return value
+        '''
         tots = 0  # need total of >= 6 to be a valid test
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
@@ -314,7 +339,9 @@ class SaltCheck(object):
                           fun,
                           args,
                           kwargs):
-        '''Generic call of salt Caller command'''
+        '''
+        Generic call of salt Caller command
+        '''
         value = False
         try:
             if args and kwargs:
@@ -332,7 +359,9 @@ class SaltCheck(object):
         return value
 
     def run_test(self, test_dict):
-        '''Run a single saltcheck test'''
+        '''
+        Run a single saltcheck test
+        '''
         if self.__is_valid_test(test_dict):
             mod_and_func = test_dict['module_and_function']
             args = test_dict.get('args', None)
@@ -516,8 +545,9 @@ class SaltCheck(object):
 
     @staticmethod
     def get_state_search_path_list():
-        '''For the state file system, return a
-           list of paths to search for states'''
+        '''
+        For the state file system, return a list of paths to search for states
+        '''
         # state cache should be updated before running this method
         search_list = []
         cachedir = __opts__.get('cachedir', None)
@@ -533,7 +563,7 @@ class SaltCheck(object):
 class StateTestLoader(object):
     '''
     Class loads in test files for a state
-    e.g.  state_dir/saltcheck-tests/[1.tst, 2.tst, 3.tst]
+    e.g. state_dir/saltcheck-tests/[1.tst, 2.tst, 3.tst]
     '''
 
     def __init__(self, search_paths):
@@ -543,7 +573,9 @@ class StateTestLoader(object):
         self.test_dict = {}
 
     def load_test_suite(self):
-        '''load tests either from one file, or a set of files'''
+        '''
+        Load tests either from one file, or a set of files
+        '''
         self.test_dict = {}
         for myfile in self.test_files:
             # self.load_file(myfile)
@@ -578,7 +610,9 @@ class StateTestLoader(object):
         return
 
     def gather_files(self, filepath):
-        '''gather files for a test suite'''
+        '''
+        Gather files for a test suite
+        '''
         self.test_files = []
         log.info("gather_files: %s", time.time())
         filepath = filepath + os.sep + 'saltcheck-tests'
@@ -594,7 +628,9 @@ class StateTestLoader(object):
 
     @staticmethod
     def convert_sls_to_paths(sls_list):
-        '''Converting sls to paths'''
+        '''
+        Converting sls to paths
+        '''
         new_sls_list = []
         for sls in sls_list:
             sls = sls.replace(".", os.sep)
@@ -603,12 +639,16 @@ class StateTestLoader(object):
 
     @staticmethod
     def convert_sls_to_path(sls):
-        '''Converting sls to paths'''
+        '''
+        Converting sls to paths
+        '''
         sls = sls.replace(".", os.sep)
         return sls
 
     def add_test_files_for_sls(self, sls_path):
-        '''Adding test files'''
+        '''
+        Adding test files
+        '''
         for path in self.search_paths:
             full_path = path + os.sep + sls_path
             rootdir = full_path

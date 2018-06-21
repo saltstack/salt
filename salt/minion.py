@@ -1073,7 +1073,7 @@ class Minion(MinionBase):
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
-        self.jid_queue = jid_queue or []
+        self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
 
         if io_loop is None:
