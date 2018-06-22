@@ -828,7 +828,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, pool=None):
+def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, pool=None, **kwargs):
     '''
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -875,8 +875,7 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                    'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
-                   'model': 'virtio',
-                   'pool': _get_images_dir()}
+                   'model': 'virtio'}
     else:
         overlay = {}
 
@@ -911,10 +910,27 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
             if key not in disk:
                 disk[key] = val
 
+        base_dir = disk.get('pool', None)
+        if hypervisor in ['qemu', 'kvm']:
+            # Compute the base directory from the pool property. We may have either a path
+            # or a libvirt pool name there.
+            # If the pool is a known libvirt one with a target path, use it as target path
+            if not base_dir:
+                base_dir = _get_images_dir()
+            else:
+                if not base_dir.startswith('/'):
+                    # The pool seems not to be a path, lookup for pool infos
+                    pool = pool_info(base_dir, **kwargs)
+                    if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
+                        raise CommandExecutionError(
+                                    'Unable to create new disk {0}, specified pool {1} does not exist '
+                                    'or is unsupported'.format(disk['name'], base_dir))
+                    base_dir = pool['target_path']
+
         # Compute the filename and source file properties if possible
         if vm_name:
             disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
-            disk['source_file'] = os.path.join(disk['pool'], disk['filename'])
+            disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
     return disklist
 
@@ -1241,7 +1257,8 @@ def init(name,
         Disk size in MiB
 
     pool
-        Path to the folder where disks should be created
+        Path to the folder or name of the pool where disks should be created.
+        (Default: depends on hypervisor)
 
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
@@ -1363,7 +1380,7 @@ def init(name,
             'to override or define the image. \'image\' will be removed in {version}.'
         )
 
-    diskp = _disk_profile(disk, hypervisor, disks, name, image=image, pool=pool)
+    diskp = _disk_profile(disk, hypervisor, disks, name, image=image, pool=pool, **kwargs)
 
     # Create multiple disks, empty or from specified images.
     for _disk in diskp:

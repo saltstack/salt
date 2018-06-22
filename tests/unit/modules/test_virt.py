@@ -21,6 +21,7 @@ import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 from salt.ext import six
@@ -90,7 +91,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'size': 8192,
               'format': 'qcow2',
               'model': 'virtio',
-              'pool': '/srv/salt-images',
               'filename': 'myvm_system.qcow2',
               'image': '/path/to/image',
               'source_file': '/srv/salt-images/myvm_system.qcow2'},
@@ -98,7 +98,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
-              'pool': '/srv/salt-images',
               'filename': 'myvm_data.raw',
               'source_file': '/srv/salt-images/myvm_data.raw'}],
             disks
@@ -553,7 +552,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ]
         }
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
-                "/srv/salt-images", disks, nics])}):
+                disks, nics])}):
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
             nicp = virt._nic_profile('noeffect', 'kvm')
             xml_data = virt._gen_xml(
@@ -571,6 +570,55 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
             self.assertTrue(len(root.findall('.//disk')) == 2)
             self.assertTrue(len(root.findall('.//interface')) == 2)
+
+    @patch('salt.modules.virt.pool_info', return_value={'target_path': '/pools/default'})
+    def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
+        '''
+        Test virt._gen_xml(), KVM case with pools defined.
+        '''
+        disks = {
+            'noeffect': [
+                {'first': {'size': 8192, 'pool': 'default'}},
+                {'second': {'size': 4096}}
+            ]
+        }
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
+                disks, "/default/path/"])}):
+            diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
+
+            self.assertEqual(len(diskp), 2)
+            self.assertTrue(diskp[0]['source_file'].startswith('/pools/default/'))
+            self.assertTrue(diskp[1]['source_file'].startswith('/default/path/'))
+
+    @patch('salt.modules.virt.pool_info', return_value={})
+    def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
+        '''
+        Test virt._gen_xml(), KVM case with pools defined.
+        '''
+        disks = {
+            'noeffect': [
+                {'first': {'size': 8192, 'pool': 'default'}},
+            ]
+        }
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
+                disks, "/default/path/"])}):
+            with self.assertRaises(CommandExecutionError):
+                virt._disk_profile('noeffect', 'kvm', [], 'hello')
+
+    @patch('salt.modules.virt.pool_info', return_value={'target_path': '/dev/disk/by-path'})
+    def test_disk_profile_kvm_disk_pool_invalid(self, mock_poolinfo):
+        '''
+        Test virt._gen_xml(), KVM case with pools defined.
+        '''
+        disks = {
+            'noeffect': [
+                {'first': {'size': 8192, 'pool': 'default'}},
+            ]
+        }
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
+                disks, "/default/path/"])}):
+            with self.assertRaises(CommandExecutionError):
+                virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
     def test_controller_for_esxi(self):
         '''
