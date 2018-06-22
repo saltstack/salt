@@ -35,6 +35,8 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import binascii
+import hashlib
 import time
 import logging
 import re
@@ -200,6 +202,13 @@ def __virtual__():
     if HAS_MYSQLDB:
         return True
     return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
+
+
+def __mysql_hash_password(password):
+    _password = hashlib.sha1(password).hexdigest()
+    _password = binascii.unhexlify(_password)
+    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
+    return _password
 
 
 def __check_table(name, table, **connection_args):
@@ -1236,10 +1245,13 @@ def user_exists(user,
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
         if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            # Hash the password before comparing
+            _password = __mysql_hash_password(password)
             qry += ' AND ' + password_column + ' = %(password)s'
         else:
+            _password = password
             qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
-        args['password'] = six.text_type(password)
+        args['password'] = six.text_type(_password)
     elif password_hash:
         qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
