@@ -598,6 +598,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             backup=False
         )
 
+
 class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
