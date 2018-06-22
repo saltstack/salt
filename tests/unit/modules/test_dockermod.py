@@ -165,6 +165,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
+                                 'config.get': MagicMock(return_value=True),
                                  'cp.cache_file': MagicMock(return_value=False)}):
                     with patch.dict(docker_mod.__utils__,
                                     {'docker.get_client_args': client_args_mock}):
@@ -172,6 +173,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                             command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
+
+    def test_update_mine(self):
+        '''
+        Test the docker.update_mine config option
+        '''
+        def config_get_disabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': False}[val]
+
+        def config_get_enabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': True}[val]
+
+        mine_mock = Mock()
+        dunder_salt = {
+            'config.get': MagicMock(side_effect=config_get_disabled),
+            'mine.send': mine_mock,
+        }
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            docker_mod.stop('foo', timeout=1)
+            mine_mock.assert_not_called()
+
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            dunder_salt['config.get'].side_effect = config_get_enabled
+            docker_mod.stop('foo', timeout=1)
+            self.assert_called_once(mine_mock)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')

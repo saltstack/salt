@@ -3504,7 +3504,9 @@ def bootstrap(name,
                 configdir = '/var/tmp/.c_{0}'.format(rstr)
 
                 cmd = 'install -m 0700 -d {0}'.format(configdir)
-                if run(name, cmd, python_shell=False):
+                if run_all(
+                    name, cmd, path=path, python_shell=False
+                )['retcode'] != 0:
                     log.error('tmpdir %s creation failed %s', configdir, cmd)
                     return False
 
@@ -3514,6 +3516,7 @@ def bootstrap(name,
                 copy_to(name, bs_, script, path=path)
                 result = run_all(name,
                                  'sh -c "chmod +x {0}"'.format(script),
+                                 path=path,
                                  python_shell=True)
 
                 copy_to(name, cfg_files['config'],
@@ -3539,6 +3542,7 @@ def bootstrap(name,
                 run_all(name,
                         'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''
                         ''.format(script),
+                        path=path,
                         ignore_retcode=True,
                         python_shell=True)
             else:
