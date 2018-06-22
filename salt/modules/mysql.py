@@ -35,7 +35,6 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import binascii
 import hashlib
 import time
 import logging
@@ -205,8 +204,7 @@ def __virtual__():
 
 
 def __mysql_hash_password(password):
-    _password = hashlib.sha1(password).hexdigest()
-    _password = binascii.unhexlify(_password)
+    _password = hashlib.sha1(password).digest()
     _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
     return _password
 
