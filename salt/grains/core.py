@@ -1168,6 +1168,9 @@ def _clean_value(key, val):
         # AssetTag0. Manufacturer04. Begone.
         if re.search(r'manufacturer|to be filled|available|asset|^no(ne|t)', val, flags=re.IGNORECASE):
             return None
+    elif key == 'chassis_type':
+        if val in [0x02, '0x02', '2', 'Unknown']:
+            return None
     else:
         # map unspecified, undefined, unknown & whatever to None
         if (re.search(r'to be filled', val, flags=re.IGNORECASE) or
@@ -2334,6 +2337,13 @@ def _hw_data(osdata):
         manufacturer
         serialnumber
         biosreleasedate
+        mainboard_manufacturer
+        mainboard_name
+        mainboard_serial
+        mainboard_version
+        chassis_manufacturer
+        chassis_type
+        chassis_serial
         uuid
 
     .. versionadded:: 0.9.5
@@ -2343,6 +2353,41 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
+
+    # Chassis Type table taken from the System Management BIOS (SMBIOS)
+    # Reference Specification (DSP0134) Version 2.7.1
+    chassis_types = {
+      0x01: 'Other',
+      0x02: 'Unknown',
+      0x03: 'Desktop',
+      0x04: 'Low Profile Desktop',
+      0x05: 'Pizza Box',
+      0x06: 'Mini Tower',
+      0x07: 'Tower',
+      0x08: 'Portable',
+      0x09: 'LapTop',
+      0x0a: 'Notebook',
+      0x0b: 'Hand Held',
+      0x0c: 'Docking Station',
+      0x0d: 'All in One',
+      0x0e: 'Sub Notebook',
+      0x0f: 'Space-saving',
+      0x10: 'Lunch Box',
+      0x11: 'Main Server Chassis',
+      0x12: 'Expansion Chassis',
+      0x13: 'SubChassis',
+      0x14: 'Bus Expansion Chassis',
+      0x15: 'Peripheral Chassis',
+      0x16: 'RAID Chassis',
+      0x17: 'Rack Mount Chassis',
+      0x18: 'Sealed-case PC',
+      0x19: 'Multi-system chassis',
+      0x1a: 'Compact PCI',
+      0x1b: 'Advanced TCA',
+      0x1c: 'Blade',
+      0x1d: 'Blade Enclosure'
+    }
+
     if osdata['kernel'] == 'Linux' and os.path.exists('/sys/class/dmi/id'):
         # On many Linux distributions basic firmware information is available via sysfs
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
@@ -2352,22 +2397,35 @@ def _hw_data(osdata):
             'manufacturer': 'sys_vendor',
             'biosreleasedate': 'bios_date',
             'uuid': 'product_uuid',
-            'serialnumber': 'product_serial'
+            'serialnumber': 'product_serial',
+            'mainboard_manufacturer': 'board_vendor',
+            'mainboard_name': 'board_name',
+            'mainboard_serial': 'board_serial',
+            'mainboard_version': 'board_version',
+            'chassis_manufacturer': 'chassis_vendor',
+            'chassis_serial': 'chassis_serial',
+            'chassis_type': 'chassis_type'
         }
         for key, fw_file in sysfs_firmware_info.items():
             contents_file = os.path.join('/sys/class/dmi/id', fw_file)
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
+                        grains[key] = _clean_value(key, salt.utils.stringutils.to_unicode(ifile.read().strip()))
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
+                        elif key == 'chassis_type':
+                            try:
+                                grains['chassis_type'] = chassis_types[int(grains['chassis_type'])]
+                            except KeyError:
+                                grains['chassis_type'] = 'Unknown'
                 except (IOError, OSError) as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
                     if err.errno == EACCES or err.errno == EPERM:
                         # Skip the grain if non-root user has no access to the file.
                         pass
+        grains = dict([(key, val) for key, val in grains.items() if val is not None])
     elif salt.utils.path.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.platform.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
@@ -2376,13 +2434,23 @@ def _hw_data(osdata):
             )):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-        grains = {
-            'biosversion': __salt__['smbios.get']('bios-version'),
-            'productname': __salt__['smbios.get']('system-product-name'),
-            'manufacturer': __salt__['smbios.get']('system-manufacturer'),
-            'biosreleasedate': __salt__['smbios.get']('bios-release-date'),
-            'uuid': __salt__['smbios.get']('system-uuid')
+        smbios_hwdata = {
+            'biosversion': 'bios-version',
+            'productname': 'system-product-name',
+            'manufacturer': 'system-manufacturer',
+            'biosreleasedate': 'bios-release-date',
+            'mainboard_manufacturer': 'baseboard-vendor',
+            'mainboard_name': 'baseboard-product-name',
+            'mainboard_serial': 'baseboard-serial',
+            'mainboard_version': 'baseboard-version',
+            'chassis_manufacturer': 'chassis-manufacturer',
+            'chassis_serial': 'chassis-serial',
+            'chassis_type': 'chassis-type',
+            'uuid': 'system-uuid'
         }
+        for key, val in six.iteritems(smbios_hwdata):
+            value = __salt__['smbios.get'](val)
+            grains[key] = _clean_value(key, value)
         grains = dict([(key, val) for key, val in grains.items() if val is not None])
         uuid = __salt__['smbios.get']('system-uuid')
         if uuid is not None:
