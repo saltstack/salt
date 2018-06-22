@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.virt as virt
 import salt.utils.files
+from salt.exceptions import CommandExecutionError
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -227,6 +228,17 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'myvm': 'Domain started'},
                         'comment': 'Domain myvm started'})
             self.assertDictEqual(virt.running('myvm'), ret)
+
+        init_mock = MagicMock(return_value=True)
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.vm_state': MagicMock(side_effect=CommandExecutionError('not found')),
+                    'virt.init': init_mock,
+                    'virt.start': MagicMock(return_value=0)
+                }):
+            ret.update({'changes': {'myvm': 'Domain defined and started'},
+                        'comment': 'Domain myvm defined and started'})
+            self.assertDictEqual(virt.running('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2'), ret)
+            init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.vm_state': MagicMock(return_value='stopped'),
