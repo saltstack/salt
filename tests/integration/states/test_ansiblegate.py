@@ -38,6 +38,10 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
                         'ansible_port': 2827,
                         'ansible_user': RUNTIME_VARS.RUNNING_TESTS_USER,
                         'ansible_ssh_private_key_file': priv_file,
+                        'ansible_ssh_extra_args': (
+                            '-o StrictHostKeyChecking=false '
+                            '-o UserKnownHostsFile=/dev/null '
+                        )
                     },
                 },
             },
