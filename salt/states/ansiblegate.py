@@ -172,7 +172,7 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
         __states__['git.latest'](
             name=gitrepo,
             target=rundir,
-            **git_kwargs,
+            **git_kwargs
         )
     if not isinstance(ansible_kwargs, dict):
         log.debug('Setting ansible_kwargs to empty dict: %s', ansible_kwargs)
@@ -189,5 +189,8 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
         results = __salt__['ansible.playbooks'](name, rundir=rundir, diff=True, **ansible_kwargs)
         ret['comment'] = 'Changes were made by playbook {0}'.format(name)
         ret['changes'] = _changes(results)
-        ret['result'] = all(not check['failures'] for check in six.itervalues(checks['stats']))
+        ret['result'] = all(
+            not check['failures'] and not check['unreachable']
+            for check in six.itervalues(checks['stats'])
+        )
     return ret
