@@ -36,6 +36,7 @@ state:
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import sys
 try:
     import ansible
@@ -46,7 +47,7 @@ except ImportError as err:
 import salt.fileclient
 import salt.ext.six as six
 
-
+log = logging.getLogger(__name__)
 __virtualname__ = 'ansible'
 
 
@@ -165,14 +166,16 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
     if gitrepo is not None:
         if rundir is None:
             rundir = _client()._extrn_path(gitrepo, 'base')
-        if git_kwargs is None:
+        if not isinstance(git_kwargs, dict):
+            log.debug('Setting git_kwargs to empty dict: %s', git_kwargs)
             git_kwargs = {}
         __states__['git.latest'](
             name=gitrepo,
             target=rundir,
             **git_kwargs,
         )
-    if ansible_kwargs is None:
+    if not isinstance(ansible_kwargs, dict):
+        log.debug('Setting ansible_kwargs to empty dict: %s', ansible_kwargs)
         ansible_kwargs = {}
     checks = __salt__['ansible.playbooks'](name, rundir=rundir, check=True, diff=True, **ansible_kwargs)
     if all(not check['changed'] for check in six.itervalues(checks['stats'])):
