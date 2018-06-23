@@ -11,15 +11,16 @@ import tempfile
 import yaml
 
 # Import salt libraries
+import salt.utils.files
 import salt.utils.path
 
 # Import testing libraries
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.paths import FILES, TMP
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+
 
 @destructiveTest
 @skipIf(not salt.utils.path.which('ansible-playbook'), 'ansible-playbook is not installed')
@@ -43,7 +44,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         }
         self.tempdir = tempfile.mkdtemp()
         self.inventory = self.tempdir + 'inventory'
-        with open(self.inventory, 'w') as yaml_file:
+        with salt.utils.files.fopen(self.inventory, 'w') as yaml_file:
             yaml.dump(data, yaml_file, default_flow_style=False)
 
     def tearDown(self):
