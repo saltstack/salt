@@ -900,7 +900,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                       mock):
                                         with patch(
                                                    'salt.utils.files.fopen',
-                                                   mock_open()):
+                                                   mock_open(b'')):
                                             self.assertTrue(
                                                             state.sls(arg,
                                                                       None,
