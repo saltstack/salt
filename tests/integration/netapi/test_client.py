@@ -45,9 +45,9 @@ class NetapiClientTest(TestCase):
         rets = []
         for _ret in ret:
             rets.append(_ret)
-        self.assertEqual(rets.sort(), [{'localhost': True},
-                                       {'sub_minion': True},
-                                       {'minion': True}].sort())
+        self.assertEqual(rets, [{'localhost': True},
+                                {'sub_minion': True},
+                                {'minion': True}])
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
