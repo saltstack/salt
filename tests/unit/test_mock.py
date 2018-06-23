@@ -12,6 +12,7 @@ import textwrap
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mock import patch, mock_open, NO_MOCK, NO_MOCK_REASON
@@ -545,3 +546,236 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     assert loc == sum(
                         len(x) for x in self.questions_str_lines[:index]
                     ), loc
+
+    def test_write(self):
+        '''
+        Test writing to a filehandle using .write()
+        '''
+        # Test opening for non-binary writing
+        with patch('salt.utils.files.fopen', mock_open()):
+            with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
+                for line in self.questions_str_lines:
+                    self.fh.write(line)
+                assert self.fh.write_calls == self.questions_str_lines, self.fh.write_calls
+
+        # Test opening for binary writing using "wb"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
+                for line in self.questions_bytes_lines:
+                    self.fh.write(line)
+                assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
+
+        # Test opening for binary writing using "ab"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'ab') as self.fh:
+                for line in self.questions_bytes_lines:
+                    self.fh.write(line)
+                assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
+
+        # Test opening for read-and-write using "r+b"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'r+b') as self.fh:
+                for line in self.questions_bytes_lines:
+                    self.fh.write(line)
+                assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
+
+        # Test trying to write str types to a binary filehandle
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
+                try:
+                    self.fh.write('foo\n')
+                except TypeError:
+                    # This exception is expected on Python 3
+                    if not six.PY3:
+                        raise
+                else:
+                    # This write should work fine on Python 2
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able to write a str to a '
+                            'binary filehandle'
+                        )
+
+                if six.PY2:
+                    # Try with non-ascii unicode. Note that the write above
+                    # should work because the mocked filehandle should attempt
+                    # a .encode() to convert it to a str type. But when writing
+                    # a string with non-ascii unicode, it should raise a
+                    # UnicodeEncodeError, which is what we are testing here.
+                    try:
+                        self.fh.write(self.questions)
+                    except UnicodeEncodeError:
+                        pass
+                    else:
+                        raise Exception(
+                            'Should not have been able to write non-ascii '
+                            'unicode to a binary filehandle'
+                        )
+
+        # Test trying to write bytestrings to a non-binary filehandle
+        with patch('salt.utils.files.fopen', mock_open()):
+            with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
+                try:
+                    self.fh.write(b'foo\n')
+                except TypeError:
+                    # This exception is expected on Python 3
+                    if not six.PY3:
+                        raise
+                else:
+                    # This write should work fine on Python 2
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able to write a bytestring '
+                            'to a non-binary filehandle'
+                        )
+
+                if six.PY2:
+                    # Try with non-ascii unicode. Note that the write above
+                    # should work because the mocked filehandle should attempt
+                    # a .encode() to convert it to a str type. But when writing
+                    # a string with non-ascii unicode, it should raise a
+                    # UnicodeEncodeError, which is what we are testing here.
+                    try:
+                        self.fh.write(self.questions)
+                    except UnicodeEncodeError:
+                        pass
+                    else:
+                        raise Exception(
+                            'Should not have been able to write non-ascii '
+                            'unicode to a binary filehandle'
+                        )
+
+    def test_writelines(self):
+        '''
+        Test writing to a filehandle using .writelines()
+        '''
+        # Test opening for non-binary writing
+        with patch('salt.utils.files.fopen', mock_open()):
+            with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
+                self.fh.writelines(self.questions_str_lines)
+                assert self.fh.writelines_calls == [self.questions_str_lines], self.fh.writelines_calls
+
+        # Test opening for binary writing using "wb"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
+                self.fh.writelines(self.questions_bytes_lines)
+                assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
+
+        # Test opening for binary writing using "ab"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'ab') as self.fh:
+                self.fh.writelines(self.questions_bytes_lines)
+                assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
+
+        # Test opening for read-and-write using "r+b"
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'r+b') as self.fh:
+                self.fh.writelines(self.questions_bytes_lines)
+                assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
+
+        # Test trying to write str types to a binary filehandle
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
+                try:
+                    self.fh.writelines(['foo\n'])
+                except TypeError:
+                    # This exception is expected on Python 3
+                    if not six.PY3:
+                        raise
+                else:
+                    # This write should work fine on Python 2
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able to write a str to a '
+                            'binary filehandle'
+                        )
+
+                if six.PY2:
+                    # Try with non-ascii unicode. Note that the write above
+                    # should work because the mocked filehandle should attempt
+                    # a .encode() to convert it to a str type. But when writing
+                    # a string with non-ascii unicode, it should raise a
+                    # UnicodeEncodeError, which is what we are testing here.
+                    try:
+                        self.fh.writelines(self.questions_lines)
+                    except UnicodeEncodeError:
+                        pass
+                    else:
+                        raise Exception(
+                            'Should not have been able to write non-ascii '
+                            'unicode to a binary filehandle'
+                        )
+
+        # Test trying to write bytestrings to a non-binary filehandle
+        with patch('salt.utils.files.fopen', mock_open()):
+            with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
+                try:
+                    self.fh.write([b'foo\n'])
+                except TypeError:
+                    # This exception is expected on Python 3
+                    if not six.PY3:
+                        raise
+                else:
+                    # This write should work fine on Python 2
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able to write a bytestring '
+                            'to a non-binary filehandle'
+                        )
+
+                if six.PY2:
+                    # Try with non-ascii unicode. Note that the write above
+                    # should work because the mocked filehandle should attempt
+                    # a .encode() to convert it to a str type. But when writing
+                    # a string with non-ascii unicode, it should raise a
+                    # UnicodeEncodeError, which is what we are testing here.
+                    try:
+                        self.fh.writelines(self.questions_lines)
+                    except UnicodeEncodeError:
+                        pass
+                    else:
+                        raise Exception(
+                            'Should not have been able to write non-ascii '
+                            'unicode to a binary filehandle'
+                        )
+
+    def test_open(self):
+        '''
+        Test that opening a file for binary reading with string read_data
+        fails, and that the same thing happens for non-binary filehandles and
+        bytestring read_data.
+
+        NOTE: This test should always pass on PY2 since MockOpen will normalize
+        unicode types to str types.
+        '''
+        try:
+            with patch('salt.utils.files.fopen', mock_open()):
+                try:
+                    with salt.utils.files.fopen('foo.txt', 'rb') as self.fh:
+                        self.fh.read()
+                except TypeError:
+                    pass
+                else:
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able open for binary read with '
+                            'non-bytestring read_data'
+                        )
+
+            with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+                try:
+                    with salt.utils.files.fopen('foo.txt', 'r') as self.fh2:
+                        self.fh2.read()
+                except TypeError:
+                    pass
+                else:
+                    if six.PY3:
+                        raise Exception(
+                            'Should not have been able open for non-binary read '
+                            'with bytestring read_data'
+                        )
+        finally:
+            # Make sure we destroy the filehandles before the teardown, as they
+            # will also try to read and this will generate another exception
+            delattr(self, 'fh')
+            delattr(self, 'fh2')
