@@ -218,6 +218,24 @@ a separate implementation which has additional functionality.
 This will force any filehandle opened to mimic a filehandle which, when read,
 produces the specified contents.
 
+.. important::
+    **String Types**
+
+    When running tests on Python 2, ``mock_open`` will convert any ``unicode``
+    types to ``str`` types to more closely reproduce Python 2 behavior (file
+    reads are always ``str`` types in Python 2, irrespective of mode).
+
+    However, when configuring your read_data, make sure that you are using
+    bytestrings (e.g. ``b'foo\nbar\nbaz\n'``) when the code you are testing is
+    opening a file for binary reading, otherwise the tests will fail on Python
+    3. The mocked filehandles produced by ``mock_open`` will raise a
+    :py:obj:`TypeError` if you attempt to read a bytestring when opening for
+    non-binary reading, and similarly will not let you read a string when
+    opening a file for binary reading. They will also not permit bytestrings to
+    be "written" if the mocked filehandle was opened for non-binary writing,
+    and vice-versa when opened for non-binary writing. These enhancements force
+    test writers to write more accurate tests.
+
 More Complex Scenarios
 **********************
 
@@ -296,7 +314,6 @@ below two ``mock_open`` calls would produce identical results:
         contents['/etc/b*.conf'] = IOError(errno.EACCES, 'Permission denied')
         contents['*'] = 'This is a fallback for files not beginning with "/etc/b"\n'
         fopen_mock = mock_open(read_data=contents)
-
 
 Raising Exceptions
 ++++++++++++++++++
@@ -523,7 +540,8 @@ several useful attributes:
     are available as shorthands and correspond to lists containing the contents
     passed for all calls to **.write()** and **.writelines()**, respectively.
 
-Here are some examples
+Examples
+++++++++
 
 .. code-block:: python
 
@@ -536,7 +554,6 @@ Here are some examples
         assert list(m_open.filehandles) == ['/etc/foo.conf']
         # "opens" will be a list of all the mocked filehandles opened
         opens = m_open.filehandles['/etc/foo.conf']
-        assert len(opens) == 1
         # Check that we wrote the expected lines ("expected" here is assumed to
         # be a list of strings)
         assert opens[0].write_calls == expected
@@ -546,8 +563,17 @@ Here are some examples
     with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
         # Run the code you are unit testing
         mymod.myfunc()
-        # .readlines is a Mock, remember
+        # Check that .readlines() was called (remember, it's a Mock)
         m_open.filehandles['/etc/foo.conf'][0].readlines.assert_called()
+
+.. code-block:: python
+
+    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+        # Run the code you are unit testing
+        mymod.myfunc()
+        # Check that we read the file and also wrote to it
+        m_open.filehandles['/etc/foo.conf'][0].read.assert_called_once()
+        m_open.filehandles['/etc/foo.conf'][1].writelines.assert_called_once()
 
 .. _`Mock()`: https://github.com/testing-cabal/mock
 
