@@ -177,6 +177,7 @@ MOCK_MODULES = [
     'twisted.internet.protocol',
     'twisted.internet.protocol.DatagramProtocol',
     'msgpack',
+    'boto.regioninfo',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -213,6 +214,8 @@ sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 # Define a fake version attribute for the following libs.
 sys.modules['cherrypy'].config = mock_decorator_with_params
+sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------

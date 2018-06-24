@@ -338,18 +338,22 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
         _origin_group = _current_perms.get('comment', {}).get('group', None)
         _origin_owner = _current_perms.get('comment', {}).get('owner', None)
 
-        _current_acl_types = list()
+        _current_acl_types = []
         diff_perms = False
         for key in _current_perms[acl_type]:
             for current_acl_name in key.keys():
                 _current_acl_types.append(current_acl_name.encode('utf-8'))
                 diff_perms = _octal_perms == key[current_acl_name]['octal']
         if acl_type == 'user':
-            if _origin_owner:
+            try:
                 _current_acl_types.remove(_origin_owner)
+            except ValueError:
+                pass
         else:
-            if _origin_group:
+            try:
                 _current_acl_types.remove(_origin_group)
+            except ValueError:
+                pass
         diff_acls = set(_current_acl_types) ^ set(acl_names)
         if not diff_acls and diff_perms and not force:
             ret = {'name': name,

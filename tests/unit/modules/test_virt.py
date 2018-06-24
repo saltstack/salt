@@ -3,6 +3,8 @@
 virt execution module unit tests
 '''
 
+# pylint: disable=3rd-party-module-not-gated
+
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
@@ -73,7 +75,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_default_dev(self):
         '''
-        Test virt_gen_xml() default boot device
+        Test virt._gen_xml() default boot device
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -90,7 +92,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_custom_dev(self):
         '''
-        Test virt_gen_xml() custom boot device
+        Test virt._gen_xml() custom boot device
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -108,7 +110,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_boot_multiple_devs(self):
         '''
-        Test virt_gen_xml() multiple boot devices
+        Test virt._gen_xml() multiple boot devices
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -127,7 +129,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_serial_console(self):
         '''
-        Test virt_gen_xml() serial console
+        Test virt._gen_xml() serial console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -147,7 +149,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_console(self):
         '''
-        Test virt_gen_xml() telnet console
+        Test virt._gen_xml() telnet console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -169,7 +171,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         '''
-        Test virt_gen_xml() telnet console without any specified port
+        Test virt._gen_xml() telnet console without any specified port
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -190,7 +192,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_serial_no_console(self):
         '''
-        Test virt_gen_xml() with no serial console
+        Test virt._gen_xml() with no serial console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -210,7 +212,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gen_xml_for_telnet_no_console(self):
         '''
-        Test virt_gen_xml() with no telnet console
+        Test virt._gen_xml() with no telnet console
         '''
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -284,24 +286,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0['source'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
 
-    def test_gen_vol_xml_for_kvm(self):
+    def test_gen_vol_xml(self):
         '''
-        Test virt._get_vol_xml(), KVM case
+        Test virt._get_vol_xml()
         '''
-        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
+        xml_data = virt._gen_vol_xml('vmname', 'system', 'qcow2', 8192, '/path/to/image/')
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
-        self.assertEqual(root.find('key').text, 'vmname/system')
-        self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
-        self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
-
-    def test_gen_vol_xml_for_esxi(self):
-        '''
-        Test virt._get_vol_xml(), ESXi case
-        '''
-        xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'vmname/system.vmdk')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
@@ -643,10 +634,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.set_mock_vm("test-vm", xml)
 
         disks = virt.get_disks('test-vm')
-        disk = disks[list(disks)[0]]
+        disk = disks.get('vda')
         self.assertEqual('/disks/test.qcow2', disk['file'])
         self.assertEqual('disk', disk['type'])
-        cdrom = disks[list(disks)[1]]
+        cdrom = disks.get('hda')
         self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
         self.assertEqual('cdrom', cdrom['type'])
 
@@ -723,6 +714,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_remove.assert_any_call('/disks/test.qcow2')
 
     def test_capabilities(self):
+        '''
+        Test the virt.capabilities parsing
+        '''
         xml = '''
 <capabilities>
   <host>
@@ -842,7 +836,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
 </capabilities>
         '''
-        self.mock_conn.getCapabilities.return_value = xml
+        self.mock_conn.getCapabilities.return_value = xml  # pylint: disable=no-member
         caps = virt.capabilities()
 
         expected = {
@@ -986,6 +980,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
 
     def test_domain_capabilities(self):
+        '''
+        Test the virt.domain_capabilities parsing
+        '''
         xml = '''
 <domainCapabilities>
   <path>/usr/bin/qemu-system-aarch64</path>
@@ -1085,7 +1082,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 </domainCapabilities>
         '''
 
-        self.mock_conn.getDomainCapabilities.return_value = xml
+        self.mock_conn.getDomainCapabilities.return_value = xml  # pylint: disable=no-member
         caps = virt.domain_capabilities()
 
         expected = {
@@ -1237,8 +1234,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.network_info() when the network can't be found
         '''
+        # pylint: disable=no-member
         self.mock_conn.networkLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Network not found")  # pylint: disable=no-member
+            self.mock_libvirt.libvirtError("Network not found")
+        # pylint: enable=no-member
         net = virt.network_info('foo')
         self.assertEqual({}, net)
 
@@ -1303,8 +1302,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.pool_info() when the pool can't be found
         '''
+        # pylint: disable=no-member
         self.mock_conn.storagePoolLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Pool not found")  # pylint: disable=no-member
+            self.mock_libvirt.libvirtError("Pool not found")
+        # pylint: enable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
 
