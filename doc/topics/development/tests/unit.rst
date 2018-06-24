@@ -190,7 +190,7 @@ Mocking Filehandles
 
 Opening files in Salt is done using ``salt.utils.files.fopen()``. When testing
 code that reads from files, the ``mock_open`` helper can be used to mock
-filehandles. Note that is not the samw ``mock_open`` as
+filehandles. Note that is not the same ``mock_open`` as
 :py:func:`unittest.mock.mock_open` from the Python standard library, but rather
 a separate implementation which has additional functionality.
 
