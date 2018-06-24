@@ -349,25 +349,29 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
             except AttributeError:
                 continue
             log.debug('Running tearDown tests for self.%s', handle_name)
-            result = fh.read(5)
-            assert not result, result
-            result = fh.read()
-            assert not result, result
-            result = fh.readline()
-            assert not result, result
-            result = fh.readlines()
-            assert not result, result
-            # Last but not least, try to read using a for loop. This should not
-            # read anything as we should hit EOF immediately, before the generator
-            # in the mocked filehandle has a chance to yield anything. So the
-            # exception will only be raised if we aren't at EOF already.
-            for line in fh:
-                raise Exception(
-                    'Instead of EOF, read the following from {0}: {1}'.format(
-                        handle_name,
-                        line
+            try:
+                result = fh.read(5)
+                assert not result, result
+                result = fh.read()
+                assert not result, result
+                result = fh.readline()
+                assert not result, result
+                result = fh.readlines()
+                assert not result, result
+                # Last but not least, try to read using a for loop. This should not
+                # read anything as we should hit EOF immediately, before the generator
+                # in the mocked filehandle has a chance to yield anything. So the
+                # exception will only be raised if we aren't at EOF already.
+                for line in fh:
+                    raise Exception(
+                        'Instead of EOF, read the following from {0}: {1}'.format(
+                            handle_name,
+                            line
+                        )
                     )
-                )
+            except IOError as exc:
+                if six.text_type(exc) != 'File not open for reading':
+                    raise
             del fh
 
     def test_read(self):
