@@ -105,6 +105,7 @@ class MockFH(object):
         except IndexError:
             self.mode = kwargs.get('mode', 'r')
         self.binary_mode = 'b' in self.mode
+        self.read_mode = any(x in self.mode for x in ('r', '+'))
         self.write_mode = any(x in self.mode for x in ('w', 'a', '+'))
         self.empty_string = b'' if self.binary_mode else ''
         self.call = MockCall(filename, *args, **kwargs)
@@ -186,6 +187,8 @@ class MockFH(object):
 
     def _read(self, size=0):
         self.__check_read_data()
+        if not self.read_mode:
+            raise IOError('File not open for reading')
         if not isinstance(size, six.integer_types) or size < 0:
             raise TypeError('a positive integer is required')
 
@@ -206,6 +209,8 @@ class MockFH(object):
     def _readlines(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
         self.__check_read_data()
+        if not self.read_mode:
+            raise IOError('File not open for reading')
         ret = list(self.read_data_iter)
         self.__loc += sum(len(x) for x in ret)
         return ret
@@ -213,6 +218,8 @@ class MockFH(object):
     def _readline(self, size=None):  # pylint: disable=unused-argument
         # TODO: Implement "size" argument
         self.__check_read_data()
+        if not self.read_mode:
+            raise IOError('File not open for reading')
         try:
             ret = next(self.read_data_iter)
             self.__loc += len(ret)
@@ -222,6 +229,8 @@ class MockFH(object):
 
     def __iter__(self):
         self.__check_read_data()
+        if not self.read_mode:
+            raise IOError('File not open for reading')
         while True:
             try:
                 ret = next(self.read_data_iter)
