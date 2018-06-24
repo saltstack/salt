@@ -71,6 +71,36 @@ Management of SmartOS Standalone Compute Nodes
                   - dhcp
                 vlan_id: 30
 
+    docker.example.org:
+      smartos.vm_present:
+        - config:
+            auto_import: true
+            reprovision: true
+        - vmconfig:
+            image_uuid: emby/embyserver:latest
+            brand: lx
+            alias: mydockervm
+            quota: 5
+            max_physical_memory: 1024
+            tags:
+              label: 'my emby docker'
+              owner: 'sjorge'
+            resolvers:
+              - 172.16.1.1
+            nics:
+              "82:1b:8e:49:e9:18":
+                nic_tag: trunk
+                mtu: 1500
+                ips:
+                  - 172.16.1.118/24
+                vlan_id: 10
+            filesystems:
+              "/config:
+                source: "/vmdata/emby_config"
+                type: lofs
+                options:
+                  - nodevices
+
     cleanup_images:
       smartos.image_vacuum
 
@@ -86,6 +116,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
+import json
 import os
 
 # Import Salt libs
@@ -240,6 +271,60 @@ def _get_instance_changes(current, state):
             del changed[change]
 
     return changed
+
+
+def _copy_lx_vars(vmconfig):
+    # NOTE: documentation on dockerinit: https://github.com/joyent/smartos-live/blob/master/src/dockerinit/README.md
+    if 'image_uuid' in vmconfig:
+        # NOTE: retrieve tags and type from image
+        imgconfig = __salt__['imgadm.get'](vmconfig['image_uuid']).get('manifest', {})
+        imgtype = imgconfig.get('type', 'zone-dataset')
+        imgtags = imgconfig.get('tags', {})
+
+        # NOTE: copy kernel_version (if not specified in vmconfig)
+        if 'kernel_version' not in vmconfig and 'kernel_version' in imgtags:
+            vmconfig['kernel_version'] = imgtags['kernel_version']
+
+        # NOTE: copy docker vars
+        if imgtype == 'docker':
+            vmconfig['docker'] = True
+            vmconfig['kernel_version'] = vmconfig.get('kernel_version', '4.3.0')
+            if 'internal_metadata' not in vmconfig:
+                vmconfig['internal_metadata'] = {}
+
+            for var in imgtags.get('docker:config', {}):
+                val = imgtags['docker:config'][var]
+                var = 'docker:{0}'.format(var.lower())
+
+                # NOTE: skip empty values
+                if not val:
+                    continue
+
+                # NOTE: skip or merge user values
+                if var == 'docker:env':
+                    try:
+                        val_config = json.loads(
+                            vmconfig['internal_metadata'].get(var, "")
+                        )
+                    except ValueError as e:
+                        val_config = []
+
+                    for config_env_var in val_config if isinstance(val_config, list) else json.loads(val_config):
+                        config_env_var = config_env_var.split('=')
+                        for img_env_var in val:
+                            if img_env_var.startswith('{0}='.format(config_env_var[0])):
+                                val.remove(img_env_var)
+                        val.append('='.join(config_env_var))
+                elif var in vmconfig['internal_metadata']:
+                    continue
+
+                if isinstance(val, list):
+                    # NOTE: string-encoded JSON arrays
+                    vmconfig['internal_metadata'][var] = json.dumps(val)
+                else:
+                    vmconfig['internal_metadata'][var] = val
+
+    return vmconfig
 
 
 def config_present(name, value):
@@ -615,11 +700,14 @@ def vm_present(name, vmconfig, config=None):
     .. note::
 
         The following configuration properties can be toggled in the config parameter.
-          - kvm_reboot (true) - reboots of kvm zones if needed for a config update
-          - auto_import (false) - automatic importing of missing images
-          - reprovision (false) - reprovision on image_uuid changes
+          - kvm_reboot (true)                - reboots of kvm zones if needed for a config update
+          - auto_import (false)              - automatic importing of missing images
+          - auto_lx_vars (true)              - copy kernel_version and docker:* variables from image
+          - reprovision (false)              - reprovision on image_uuid changes
+          - enforce_tags (true)              - false = add tags only, true =  add, update, and remove tags
+          - enforce_routes (true)            - false = add tags only, true =  add, update, and remove routes
+          - enforce_internal_metadata (true) - false = add metadata only, true =  add, update, and remove metadata
           - enforce_customer_metadata (true) - false = add metadata only, true =  add, update, and remove metadata
-          - enforce_tags (true) - false = add tags only, true =  add, update, and remove tags
 
     .. note::
 
@@ -639,6 +727,10 @@ def vm_present(name, vmconfig, config=None):
 
         e.g. disk0 will be the first disk added, disk1 the 2nd,...
 
+    .. versionchanged:: Fluorine
+
+        Added support for docker image uuids, added auto_lx_vars configuration, documented some missing configuration options.
+
     '''
     name = name.lower()
     ret = {'name': name,
@@ -651,7 +743,12 @@ def vm_present(name, vmconfig, config=None):
     config = {
         'kvm_reboot': True,
         'auto_import': False,
+        'auto_lx_vars': True,
         'reprovision': False,
+        'enforce_tags': True,
+        'enforce_routes': True,
+        'enforce_internal_metadata': True,
+        'enforce_customer_metadata': True,
     }
     config.update(state_config)
     log.debug('smartos.vm_present::%s::config - %s', name, config)
@@ -675,6 +772,15 @@ def vm_present(name, vmconfig, config=None):
             'filesystems'
         ]
     }
+    vmconfig_docker_keep = [
+        'docker:id',
+        'docker:restartcount',
+    ]
+    vmconfig_docker_array = [
+        'docker:env',
+        'docker:cmd',
+        'docker:entrypoint',
+    ]
 
     # parse vmconfig
     vmconfig = _parse_vmconfig(vmconfig, vmconfig_type['instance'])
@@ -683,6 +789,46 @@ def vm_present(name, vmconfig, config=None):
     # set hostname if needed
     if 'hostname' not in vmconfig:
         vmconfig['hostname'] = name
+
+    # prepare image_uuid
+    if 'image_uuid' in vmconfig:
+        # NOTE: lookup uuid from docker uuid (normal uuid's are passed throuhg unmodified)
+        #       we must do this again if we end up importing a missing image later!
+        docker_uuid = __salt__['imgadm.docker_to_uuid'](vmconfig['image_uuid'])
+        vmconfig['image_uuid'] = docker_uuid if docker_uuid else vmconfig['image_uuid']
+
+        # NOTE: import image (if missing and allowed)
+        if vmconfig['image_uuid'] not in __salt__['imgadm.list']():
+            if config['auto_import']:
+                if not __opts__['test']:
+                    res = __salt__['imgadm.import'](vmconfig['image_uuid'])
+                    vmconfig['image_uuid'] = __salt__['imgadm.docker_to_uuid'](vmconfig['image_uuid'])
+                    if vmconfig['image_uuid'] not in res:
+                        ret['result'] = False
+                        ret['comment'] = 'failed to import image {0}'.format(vmconfig['image_uuid'])
+            else:
+                ret['result'] = False
+                ret['comment'] = 'image {0} not installed'.format(vmconfig['image_uuid'])
+
+    # docker json-array handling
+    if 'internal_metadata' in vmconfig:
+        for var in vmconfig_docker_array:
+            if var not in vmconfig['internal_metadata']:
+                continue
+            if isinstance(vmconfig['internal_metadata'][var], list):
+                vmconfig['internal_metadata'][var] = json.dumps(
+                    vmconfig['internal_metadata'][var]
+                )
+
+    # copy lx variables
+    if vmconfig['brand'] == 'lx' and config['auto_lx_vars']:
+        # NOTE: we can only copy the lx vars after the image has bene imported
+        vmconfig = _copy_lx_vars(vmconfig)
+
+    # quick abort if things look wrong
+    # NOTE: use explicit check for false, otherwise None also matches!
+    if ret['result'] is False:
+        return ret
 
     # check if vm exists
     if vmconfig['hostname'] in __salt__['vmadm.list'](order='hostname'):
@@ -746,10 +892,19 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # enforcement
-            enforce = True
-            if 'enforce_{0}'.format(collection) in config:
-                enforce = config['enforce_{0}'.format(collection)]
+            enforce = config['enforce_{0}'.format(collection)]
             log.debug('smartos.vm_present::enforce_%s = %s', collection, enforce)
+
+            # dockerinit handling
+            if collection == 'internal_metadata' and vmconfig['state'].get('docker', False):
+                if 'internal_metadata' not in vmconfig['state']:
+                    vmconfig['state']['internal_metadata'] = {}
+
+                # preserve some docker specific metadata (added and needed by dockerinit)
+                for var in vmconfig_docker_keep:
+                    val = vmconfig['current'].get(collection, {}).get(var, None)
+                    if val is not None:
+                        vmconfig['state']['internal_metadata'][var] = val
 
             # process add and update for collection
             if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
@@ -899,18 +1054,9 @@ def vm_present(name, vmconfig, config=None):
                 ret['changes'] = {}
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
+            # reprovision (if required and allowed)
             if 'image_uuid' in vmconfig['current'] and vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
                 if config['reprovision']:
-                    # check required image installed
-                    if vmconfig['reprovision_uuid'] not in __salt__['imgadm.list']():
-                        if config['auto_import']:
-                            # check if image is available
-                            available_images = __salt__['imgadm.avail']()
-                            if vmconfig['reprovision_uuid'] in available_images and not __opts__['test']:
-                                # import image
-                                __salt__['imgadm.import'](vmconfig['reprovision_uuid'])
-
-                    # reprovision
                     rret = __salt__['vmadm.reprovision'](
                         vm=vmconfig['state']['hostname'],
                         key='hostname',
@@ -918,15 +1064,9 @@ def vm_present(name, vmconfig, config=None):
                     )
                     if not isinstance(rret, (bool)) and 'Error' in rret:
                         ret['result'] = False
-                        if vmconfig['reprovision_uuid'] not in __salt__['imgadm.list']():
-                            ret['comment'] = 'vm {0} updated, reprovision failed because images {1} not installed'.format(
-                                vmconfig['state']['hostname'],
-                                vmconfig['reprovision_uuid']
-                            )
-                        else:
-                            ret['comment'] = 'vm {0} updated, reprovision failed'.format(
-                                vmconfig['state']['hostname']
-                            )
+                        ret['comment'] = 'vm {0} updated, reprovision failed'.format(
+                            vmconfig['state']['hostname']
+                        )
                     else:
                         ret['comment'] = 'vm {0} updated and reprovisioned'.format(vmconfig['state']['hostname'])
                         if vmconfig['state']['hostname'] not in ret['changes']:
@@ -944,20 +1084,6 @@ def vm_present(name, vmconfig, config=None):
     else:
         # check required image installed
         ret['result'] = True
-        if 'image_uuid' in vmconfig and vmconfig['image_uuid'] not in __salt__['imgadm.list']():
-            if config['auto_import']:
-                # check if image is available
-                available_images = __salt__['imgadm.avail']()
-                if vmconfig['image_uuid'] not in available_images:
-                    ret['result'] = False
-                    ret['comment'] = 'image {0} not available'.format(vmconfig['image_uuid'])
-                elif not __opts__['test']:
-                    if vmconfig['image_uuid'] not in __salt__['imgadm.import'](vmconfig['image_uuid']):
-                        ret['result'] = False
-                        ret['comment'] = 'failed to import image {0}'.format(vmconfig['image_uuid'])
-            else:
-                ret['result'] = False
-                ret['comment'] = 'image {0} not installed'.format(vmconfig['image_uuid'])
 
         # disks need some special care
         if 'disks' in vmconfig:
