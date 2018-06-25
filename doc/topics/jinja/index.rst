@@ -222,8 +222,8 @@ maps.
     {%- load_yaml as foo %}
     bar: {{ bar|yaml_encode }}
     baz: {{ baz|yaml_encode }}
-    baz: {{ zip|yaml_encode }}
-    baz: {{ zap|yaml_encode }}
+    zip: {{ zip|yaml_encode }}
+    zap: {{ zap|yaml_encode }}
     {%- endload %}
 
 In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
