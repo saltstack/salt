@@ -237,8 +237,76 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret.update({'changes': {'myvm': 'Domain defined and started'},
                         'comment': 'Domain myvm defined and started'})
-            self.assertDictEqual(virt.running('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2'), ret)
-            init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2')
+            self.assertDictEqual(virt.running('myvm',
+                                              cpu=2,
+                                              mem=2048,
+                                              image='/path/to/img.qcow2'), ret)
+            init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
+                                         disk=None, disks=None, nic=None, interfaces=None,
+                                         graphics=None, hypervisor=None,
+                                         seed=True, install=True, pub_key=None, priv_key=None)
+
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.vm_state': MagicMock(side_effect=CommandExecutionError('not found')),
+                    'virt.init': init_mock,
+                    'virt.start': MagicMock(return_value=0)
+                }):
+            ret.update({'changes': {'myvm': 'Domain defined and started'},
+                        'comment': 'Domain myvm defined and started'})
+            disks = [{
+                        'name': 'system',
+                        'size': 8192,
+                        'overlay_image': True,
+                        'pool': 'default',
+                        'image': '/path/to/image.qcow2'
+                     },
+                     {
+                        'name': 'data',
+                        'size': 16834
+                     }]
+            ifaces = [{
+                         'name': 'eth0',
+                         'mac': '01:23:45:67:89:AB'
+                      },
+                      {
+                         'name': 'eth1',
+                         'type': 'network',
+                         'source': 'admin'
+                      }]
+            graphics = {'type': 'spice', 'listen': {'type': 'address', 'address': '192.168.0.1'}}
+            self.assertDictEqual(virt.running('myvm',
+                                              cpu=2,
+                                              mem=2048,
+                                              vm_type='qemu',
+                                              disk_profile='prod',
+                                              disks=disks,
+                                              nic_profile='prod',
+                                              interfaces=ifaces,
+                                              graphics=graphics,
+                                              seed=False,
+                                              install=False,
+                                              pub_key='/path/to/key.pub',
+                                              priv_key='/path/to/key',
+                                              connection='someconnection',
+                                              username='libvirtuser',
+                                              password='supersecret'), ret)
+            init_mock.assert_called_with('myvm',
+                                         cpu=2,
+                                         mem=2048,
+                                         image=None,
+                                         disk='prod',
+                                         disks=disks,
+                                         nic='prod',
+                                         interfaces=ifaces,
+                                         graphics=graphics,
+                                         hypervisor='qemu',
+                                         seed=False,
+                                         install=False,
+                                         pub_key='/path/to/key.pub',
+                                         priv_key='/path/to/key',
+                                         connection='someconnection',
+                                         username='libvirtuser',
+                                         password='supersecret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.vm_state': MagicMock(return_value='stopped'),
