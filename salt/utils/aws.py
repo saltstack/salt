@@ -88,6 +88,8 @@ def creds(provider):
     # Declare globals
     global __AccessKeyId__, __SecretAccessKey__, __Token__, __Expiration__
 
+    ret_credentials = ()
+
     # if id or key is 'use-instance-role-credentials', pull them from meta-data
     ## if needed
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
@@ -125,9 +127,18 @@ def creds(provider):
         __SecretAccessKey__ = data['SecretAccessKey']
         __Token__ = data['Token']
         __Expiration__ = data['Expiration']
-        return __AccessKeyId__, __SecretAccessKey__, __Token__
+
+        ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
-        return provider['id'], provider['key'], ''
+        ret_credentials = provider['id'], provider['key'], ''
+
+    if provider.get('role_arn') is not None:
+        provider_shadow = provider.copy()
+        provider_shadow.pop("role_arn", None)
+        log.info("Assuming the role: %s", provider.get('role_arn'))
+        ret_credentials = assumed_creds(provider_shadow, role_arn=provider.get('role_arn'), location='us-east-1')
+
+    return ret_credentials
 
 
 def sig2(method, endpoint, params, provider, aws_api_version):
@@ -467,7 +478,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             log.debug('AWS Response Status Code: %s', result.status_code)
             log.trace(
                 'AWS Response Text: %s',
-                result.text.encode(result.encoding if result.encoding else 'utf-8')
+                result.text
             )
             result.raise_for_status()
             break
@@ -503,11 +514,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.text.encode(
-        result.encoding if result.encoding else 'utf-8'
-    )
-
-    root = ET.fromstring(response)
+    root = ET.fromstring(result.text)
     items = root[1]
     if return_root is True:
         items = root

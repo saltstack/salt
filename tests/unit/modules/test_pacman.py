@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Eric Vz <eric@base10.org>`
+    :codeauthor: Eric Vz <eric@base10.org>
 '''
 
 # Import Python Libs

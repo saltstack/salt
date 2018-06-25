@@ -57,6 +57,10 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
+      # If 'role_arn' is specified the above credentials are used to
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
@@ -723,7 +727,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 NOTE: If ``image`` of a profile does not start with ``ami-``, latest
 image with that name will be used. For example, to create a CentOS 7
-profile, instead of using the AMI like ``image: ami-1caef165``, we 
+profile, instead of using the AMI like ``image: ami-1caef165``, we
 can use its name like ``image: 'CentOS Linux 7 x86_64 HVM EBS ENA 1803_01'``.
 We can also use a pattern like below to get the latest CentOS 7:
 

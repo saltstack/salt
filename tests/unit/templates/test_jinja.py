@@ -170,6 +170,23 @@ class TestSaltCacheLoader(TestCase):
         self.assertEqual(fc.requests[0]['path'], 'salt://hello_import')
         self.assertEqual(fc.requests[1]['path'], 'salt://macro')
 
+    def test_relative_import(self):
+        '''
+        You can import using relative paths
+        issue-13889
+        '''
+        fc, jinja = self.get_test_saltenv()
+        tmpl = jinja.get_template('relative/rhello')
+        result = tmpl.render()
+        self.assertEqual(result, 'Hey world !a b !')
+        assert len(fc.requests) == 3
+        self.assertEqual(fc.requests[0]['path'], 'salt://relative/rhello')
+        self.assertEqual(fc.requests[1]['path'], 'salt://relative/rmacro')
+        self.assertEqual(fc.requests[2]['path'], 'salt://macro')
+        # This must fail when rendered: attempts to import from outside file root
+        template = jinja.get_template('relative/rescape')
+        self.assertRaises(exceptions.TemplateNotFound, template.render)
+
     def test_include(self):
         '''
         You can also include a template that imports and uses macros

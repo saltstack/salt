@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`jmoney <justin@saltstack.com>`
+    :codeauthor: jmoney <justin@saltstack.com>
 '''
 
 # Import Python libs
@@ -147,7 +147,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                     cmd='_file_recv',
                     tok='token',
                     path=['saltines', 'test.file'],
-                    data='',  # data is empty here because load['data'] is overwritten
+                    data=b'',  # data is empty here because load['data'] is overwritten
                     id='abc'
                 )
             )

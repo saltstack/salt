@@ -53,7 +53,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
         __clean_tmp, check_file_meta, _binary_replace,
         _splitlines_preserving_trailing_newline, restore_backup,
-        access, copy, readdir, rmdir, truncate, replace, delete_backup,
+        access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
@@ -111,7 +111,7 @@ def __virtual__():
             global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, line, _get_flags, extract_hash, comment_line
-            global access, copy, readdir, rmdir, truncate, replace, search
+            global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
@@ -158,6 +158,7 @@ def __virtual__():
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
+            read = _namespaced_function(read, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())

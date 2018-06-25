@@ -542,7 +542,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
     network
         network to list subnets of
 
-    .. code-block::
+    .. code-block:: bash
 
         salt-cloud -f list_subnets myopenstack network=salt-net
 

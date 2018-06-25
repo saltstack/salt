@@ -24,7 +24,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
-GET_ETC_LOCALTIME_PATH = 'salt.modules.timezone._get_etc_localtime_path'
+GET_LOCALTIME_PATH = 'salt.modules.timezone._get_localtime_path'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -49,7 +49,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         zone_path = self.create_tempfile_with_contents('a')
 
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertTrue(timezone.zone_compare('foo'))
 
@@ -57,7 +57,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         etc_localtime = self.create_tempfile_with_contents('a')
 
         with patch(GET_ZONE_FILE, lambda p: '/foopath/nonexistent'):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertRaises(SaltInvocationError, timezone.zone_compare, 'foo')
 
@@ -66,13 +66,13 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         zone_path = self.create_tempfile_with_contents('b')
 
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertFalse(timezone.zone_compare('foo'))
 
     def test_missing_localtime(self):
         with patch(GET_ZONE_FILE, lambda p: '/nonexisting'):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: '/also-missing'):
+            with patch(GET_LOCALTIME_PATH, lambda: '/also-missing'):
                 self.assertRaises(CommandExecutionError, timezone.zone_compare, 'foo')
 
     def create_tempfile_with_contents(self, contents):
@@ -324,6 +324,21 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             hwclock = 'UTC'
         with patch.dict(timezone.__grains__, {'os_family': ['AIX']}):
             assert timezone.get_hwclock() == hwclock
+
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=True))
+    def test_set_hwclock_timedatectl(self):
+        '''
+        Test set hwclock with timedatectl
+        :return:
+        '''
+        timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
+        assert args == (['timedatectl', 'set-local-rtc', 'false'],)
+
+        timezone.set_hwclock('localtime')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[1]
+        assert args == (['timedatectl', 'set-local-rtc', 'true'],)
 
     @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
     @patch('salt.utils.path.which', MagicMock(return_value=False))
