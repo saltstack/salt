@@ -77,8 +77,9 @@ def mask_args_value(data, mask):
     ready for print or dump to the log. Also, when the data is formatted
     as "key: value" in YAML syntax.
 
-    :param data:
-    :param mask:
+    :param data: String data, already rendered.
+    :param mask: Mask that matches a single line
+
     :return:
     '''
     if not mask:
