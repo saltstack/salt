@@ -230,16 +230,14 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for Modify hostname
         '''
         self.assertFalse(network.mod_hostname(None))
+        file_d = '\n'.join(['#', 'A B C D,E,F G H'])
 
-        with patch.object(salt.utils.path, 'which', return_value='hostname'):
-            with patch.dict(network.__salt__,
-                            {'cmd.run': MagicMock(return_value=None)}):
-                file_d = '\n'.join(['#', 'A B C D,E,F G H'])
-                with patch('salt.utils.files.fopen', mock_open(read_data=file_d),
-                           create=True) as mfi:
-                    mfi.return_value.__iter__.return_value = file_d.splitlines()
-                    with patch.dict(network.__grains__, {'os_family': 'A'}):
-                        self.assertTrue(network.mod_hostname('hostname'))
+        with patch.object(salt.utils.path, 'which', return_value='hostname'), \
+                patch.dict(network.__salt__,
+                           {'cmd.run': MagicMock(return_value=None)}), \
+                patch.dict(network.__grains__, {'os_family': 'A'}), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_d)):
+            self.assertTrue(network.mod_hostname('hostname'))
 
     def test_connect(self):
         '''

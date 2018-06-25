@@ -1422,6 +1422,38 @@ List of hosts to bypass HTTP proxy
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+Docker Configuration
+====================
+
+.. conf_minion:: docker.update_mine
+
+``docker.update_mine``
+----------------------
+
+.. versionadded:: 2017.7.8,2018.3.3
+.. versionchanged:: Fluorine
+    The default value is now ``False``
+
+Default: ``True``
+
+If enabled, when containers are added, removed, stopped, started, etc., the
+:ref:`mine <salt-mine>` will be updated with the results of :py:func:`docker.ps
+verbose=True all=True host=True <salt.modules.dockermod.ps>`. This mine data is
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`. Set this
+option to ``False`` to keep Salt from updating the mine with this information.
+
+.. note::
+    This option can also be set in Grains or Pillar data, with Grains
+    overriding Pillar and the minion config file overriding Grains.
+
+.. note::
+    Disabling this will of course keep :py:func:`mine.get_docker
+    <salt.modules.mine.get_docker>` from returning any information for a given
+    minion.
+
+.. code-block:: yaml
+
+    docker.update_mine: False
 
 .. conf_minion:: docker.compare_container_networks
 
@@ -1456,6 +1488,7 @@ Specifies which keys are examined by
         - Gateway
         - GlobalIPv6Address
         - IPv6Gateway
+
 
 Minion Execution Module Management
 ==================================

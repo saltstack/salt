@@ -947,7 +947,7 @@ def _virtual(osdata):
         if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
             try:
                 with salt.utils.files.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
-                    output = fhr.read()
+                    output = salt.utils.stringutils.to_unicode(fhr.read())
                     if 'VirtualBox' in output:
                         grains['virtual'] = 'VirtualBox'
                     elif 'RHEV Hypervisor' in output:
@@ -1428,6 +1428,18 @@ _OS_FAMILY_MAP = {
     'AIX': 'AIX',
 }
 
+# Matches any possible format:
+#     DISTRIB_ID="Ubuntu"
+#     DISTRIB_ID='Mageia'
+#     DISTRIB_ID=Fedora
+#     DISTRIB_RELEASE='10.10'
+#     DISTRIB_CODENAME='squeeze'
+#     DISTRIB_DESCRIPTION='Ubuntu 10.10'
+_LSB_REGEX = re.compile((
+    '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
+    '([\\w\\s\\.\\-_]+)(?:\'|")?'
+))
+
 
 def _linux_bin_exists(binary):
     '''
@@ -1460,32 +1472,49 @@ def _get_interfaces():
     return _INTERFACES
 
 
-def _parse_os_release(os_release_files):
+def _parse_lsb_release():
+    ret = {}
+    try:
+        log.trace('Attempting to parse /etc/lsb-release')
+        with salt.utils.files.fopen('/etc/lsb-release') as ifile:
+            for line in ifile:
+                try:
+                    key, value = _LSB_REGEX.match(line.rstrip('\n')).groups()[:2]
+                except AttributeError:
+                    pass
+                else:
+                    # Adds lsb_distrib_{id,release,codename,description}
+                    ret['lsb_{0}'.format(key.lower())] = value.rstrip()
+    except (IOError, OSError) as exc:
+        log.trace('Failed to parse /etc/lsb-release: %s', exc)
+    return ret
+
+
+def _parse_os_release(*os_release_files):
     '''
     Parse os-release and return a parameter dictionary
 
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     '''
-
-    data = dict()
+    ret = {}
     for filename in os_release_files:
-        if os.path.isfile(filename):
+        try:
+            with salt.utils.files.fopen(filename) as ifile:
+                regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
+                for line in ifile:
+                    match = regex.match(line.strip())
+                    if match:
+                        # Shell special characters ("$", quotes, backslash,
+                        # backtick) are escaped with backslashes
+                        ret[match.group(1)] = re.sub(
+                            r'\\([$"\'\\`])', r'\1', match.group(2)
+                        )
             break
-    else:
-        # None of the specified os-release files exist
-        return data
+        except (IOError, OSError):
+            pass
 
-    with salt.utils.files.fopen(filename) as ifile:
-        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
-        for line in ifile:
-            match = regex.match(line.strip())
-            if match:
-                # Shell special characters ("$", quotes, backslash, backtick)
-                # are escaped with backslashes
-                data[match.group(1)] = re.sub(r'\\([$"\'\\`])', r'\1', match.group(2))
-
-    return data
+    return ret
 
 
 def os_data():
@@ -1548,6 +1577,7 @@ def os_data():
     elif salt.utils.platform.is_linux():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
+            log.trace('Adding selinux grains')
             grains['selinux'] = {}
             grains['selinux']['enabled'] = __salt__['cmd.retcode'](
                 'selinuxenabled'
@@ -1559,6 +1589,7 @@ def os_data():
 
         # Add systemd grain, if you have it
         if _linux_bin_exists('systemctl') and _linux_bin_exists('localectl'):
+            log.trace('Adding systemd grains')
             grains['systemd'] = {}
             systemd_info = __salt__['cmd.run'](
                 'systemctl --version'
@@ -1568,74 +1599,77 @@ def os_data():
 
         # Add init grain
         grains['init'] = 'unknown'
+        log.trace('Adding init grain')
         try:
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
         except (OSError, IOError):
-            if os.path.exists('/proc/1/cmdline'):
+            try:
                 with salt.utils.files.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
+            except (IOError, OSError):
+                pass
+            else:
+                try:
+                    init_bin = salt.utils.path.which(init_cmdline[0])
+                except IndexError:
+                    # Emtpy init_cmdline
+                    init_bin = None
+                    log.warning('Unable to fetch data from /proc/1/cmdline')
+                if init_bin is not None and init_bin.endswith('bin/init'):
+                    supported_inits = (b'upstart', b'sysvinit', b'systemd')
+                    edge_len = max(len(x) for x in supported_inits) - 1
                     try:
-                        init_bin = salt.utils.path.which(init_cmdline[0])
-                    except IndexError:
-                        # Emtpy init_cmdline
-                        init_bin = None
-                        log.warning(
-                            "Unable to fetch data from /proc/1/cmdline"
-                        )
-                    if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (b'upstart', b'sysvinit', b'systemd')
-                        edge_len = max(len(x) for x in supported_inits) - 1
-                        try:
-                            buf_size = __opts__['file_buffer_size']
-                        except KeyError:
-                            # Default to the value of file_buffer_size for the minion
-                            buf_size = 262144
-                        try:
-                            with salt.utils.files.fopen(init_bin, 'rb') as fp_:
-                                buf = True
-                                edge = b''
+                        buf_size = __opts__['file_buffer_size']
+                    except KeyError:
+                        # Default to the value of file_buffer_size for the minion
+                        buf_size = 262144
+                    try:
+                        with salt.utils.files.fopen(init_bin, 'rb') as fp_:
+                            edge = b''
+                            buf = fp_.read(buf_size).lower()
+                            while buf:
+                                buf = edge + buf
+                                for item in supported_inits:
+                                    if item in buf:
+                                        if six.PY3:
+                                            item = item.decode('utf-8')
+                                        grains['init'] = item
+                                        buf = b''
+                                        break
+                                edge = buf[-edge_len:]
                                 buf = fp_.read(buf_size).lower()
-                                while buf:
-                                    buf = edge + buf
-                                    for item in supported_inits:
-                                        if item in buf:
-                                            if six.PY3:
-                                                item = item.decode('utf-8')
-                                            grains['init'] = item
-                                            buf = b''
-                                            break
-                                    edge = buf[-edge_len:]
-                                    buf = fp_.read(buf_size).lower()
-                        except (IOError, OSError) as exc:
-                            log.error(
-                                'Unable to read from init_bin (%s): %s',
-                                init_bin, exc
-                            )
-                    elif salt.utils.path.which('supervisord') in init_cmdline:
-                        grains['init'] = 'supervisord'
-                    elif salt.utils.path.which('dumb-init') in init_cmdline:
-                        # https://github.com/Yelp/dumb-init
-                        grains['init'] = 'dumb-init'
-                    elif salt.utils.path.which('tini') in init_cmdline:
-                        # https://github.com/krallin/tini
-                        grains['init'] = 'tini'
-                    elif init_cmdline == ['runit']:
-                        grains['init'] = 'runit'
-                    elif '/sbin/my_init' in init_cmdline:
-                        #Phusion Base docker container use runit for srv mgmt, but my_init as pid1
-                        grains['init'] = 'runit'
-                    else:
-                        log.info(
-                            'Could not determine init system from command line: (%s)',
-                            ' '.join(init_cmdline)
+                    except (IOError, OSError) as exc:
+                        log.error(
+                            'Unable to read from init_bin (%s): %s',
+                            init_bin, exc
                         )
+                elif salt.utils.path.which('supervisord') in init_cmdline:
+                    grains['init'] = 'supervisord'
+                elif salt.utils.path.which('dumb-init') in init_cmdline:
+                    # https://github.com/Yelp/dumb-init
+                    grains['init'] = 'dumb-init'
+                elif salt.utils.path.which('tini') in init_cmdline:
+                    # https://github.com/krallin/tini
+                    grains['init'] = 'tini'
+                elif init_cmdline == ['runit']:
+                    grains['init'] = 'runit'
+                elif '/sbin/my_init' in init_cmdline:
+                    # Phusion Base docker container use runit for srv mgmt, but
+                    # my_init as pid1
+                    grains['init'] = 'runit'
+                else:
+                    log.info(
+                        'Could not determine init system from command line: (%s)',
+                        ' '.join(init_cmdline)
+                    )
 
         # Add lsb grains on any distro with lsb-release. Note that this import
         # can fail on systems with lsb-release installed if the system package
         # does not install the python package for the python interpreter used by
         # Salt (i.e. python2 or python3)
         try:
+            log.trace('Getting lsb_release distro information')
             import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
             for key, value in six.iteritems(release):
@@ -1648,35 +1682,21 @@ def os_data():
         # Catch a NameError to workaround possible breakage in lsb_release
         # See https://github.com/saltstack/salt/issues/37867
         except (ImportError, NameError):
-            # if the python library isn't available, default to regex
-            if os.path.isfile('/etc/lsb-release'):
-                # Matches any possible format:
-                #     DISTRIB_ID="Ubuntu"
-                #     DISTRIB_ID='Mageia'
-                #     DISTRIB_ID=Fedora
-                #     DISTRIB_RELEASE='10.10'
-                #     DISTRIB_CODENAME='squeeze'
-                #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-                regex = re.compile((
-                    '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
-                    '([\\w\\s\\.\\-_]+)(?:\'|")?'
-                ))
-                with salt.utils.files.fopen('/etc/lsb-release') as ifile:
-                    for line in ifile:
-                        match = regex.match(line.rstrip('\n'))
-                        if match:
-                            # Adds:
-                            #   lsb_distrib_{id,release,codename,description}
-                            grains[
-                                'lsb_{0}'.format(match.groups()[0].lower())
-                            ] = match.groups()[1].rstrip()
+            # if the python library isn't available, try to parse
+            # /etc/lsb-release using regex
+            log.trace('lsb_release python bindings not available')
+            grains.update(_parse_lsb_release())
+
             if grains.get('lsb_distrib_description', '').lower().startswith('antergos'):
                 # Antergos incorrectly configures their /etc/lsb-release,
                 # setting the DISTRIB_ID to "Arch". This causes the "os" grain
                 # to be incorrectly set to "Arch".
                 grains['osfullname'] = 'Antergos Linux'
             elif 'lsb_distrib_id' not in grains:
-                os_release = _parse_os_release(['/etc/os-release', '/usr/lib/os-release'])
+                log.trace(
+                    'Failed to get lsb_distrib_id, trying to parse os-release'
+                )
+                os_release = _parse_os_release('/etc/os-release', '/usr/lib/os-release')
                 if os_release:
                     if 'NAME' in os_release:
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
@@ -1701,6 +1721,7 @@ def os_data():
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
                 elif os.path.isfile('/etc/SuSE-release'):
+                    log.trace('Parsing distrib info from /etc/SuSE-release')
                     grains['lsb_distrib_id'] = 'SUSE'
                     version = ''
                     patch = ''
@@ -1722,6 +1743,7 @@ def os_data():
                     if not grains.get('lsb_distrib_codename'):
                         grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
+                    log.trace('Parsing distrib info from /etc/altlinux-release')
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'
                     with salt.utils.files.fopen('/etc/altlinux-release') as ifile:
@@ -1737,6 +1759,7 @@ def os_data():
                                 grains['lsb_distrib_codename'] = \
                                     comps[3].replace('(', '').replace(')', '')
                 elif os.path.isfile('/etc/centos-release'):
+                    log.trace('Parsing distrib info from /etc/centos-release')
                     # CentOS Linux
                     grains['lsb_distrib_id'] = 'CentOS'
                     with salt.utils.files.fopen('/etc/centos-release') as ifile:
@@ -1754,6 +1777,9 @@ def os_data():
                 elif os.path.isfile('/etc.defaults/VERSION') \
                         and os.path.isfile('/etc.defaults/synoinfo.conf'):
                     grains['osfullname'] = 'Synology'
+                    log.trace(
+                        'Parsing Synology distrib info from /etc/.defaults/VERSION'
+                    )
                     with salt.utils.files.fopen('/etc.defaults/VERSION', 'r') as fp_:
                         synoinfo = {}
                         for line in fp_:
@@ -1777,6 +1803,10 @@ def os_data():
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
+        log.trace(
+            'Getting OS name, release, and codename from '
+            'platform.linux_distribution()'
+        )
         (osname, osrelease, oscodename) = \
             [x.strip('"').strip("'") for x in
              linux_distribution(supported_dists=_supported_dists)]
