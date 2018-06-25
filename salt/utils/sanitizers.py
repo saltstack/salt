@@ -18,6 +18,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os.path
+import fnmatch
 
 # Import Salt libs
 from salt.ext import six
@@ -62,3 +63,33 @@ class InputSanitizer(object):
 
 
 clean = InputSanitizer()
+
+
+def mask_args_value(data, mask):
+    '''
+    Mask a line in the data, which matches "mask".
+
+    In case you want to put to the logs rosters or other data,
+    but you certainly do not want to put there an actual IP address,
+    passwords, user names etc.
+
+    Note, this is working only when data is a single string,
+    ready for print or dump to the log. Also, when the data is formatted
+    as "key: value" in YAML syntax.
+
+    :param data:
+    :param mask:
+    :return:
+    '''
+    if not mask:
+        return data
+
+    out = []
+    for line in data.split(os.linesep):
+        if fnmatch.fnmatch(line.strip(), mask) and ':' in line:
+            key, value = line.split(':', 1)
+            out.append('{}: {}'.format(key.strip(), '** hidden **'))
+        else:
+            out.append(line)
+
+    return '\n'.join(out)
