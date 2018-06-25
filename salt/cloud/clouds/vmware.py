@@ -987,15 +987,11 @@ def _valid_ip(ip_address):
     except ipaddress.AddressValueError:
         return False
 
-    if address.is_unspecified:
-        return False
-    elif address.is_loopback:
-        return False
-    elif address.is_link_local:
-        return False
-    elif address.is_multicast:
-        return False
-    elif address.is_reserved:
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
         return False
 
     return True
@@ -1013,17 +1009,14 @@ def _valid_ip6(ip_address):
     except ipaddress.AddressValueError:
         return False
 
-    if address.is_unspecified:
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
         return False
-    elif address.is_loopback:
-        return False
-    elif address.ipv4_mapped is not None:
-        return False
-    elif address.is_link_local:
-        return False
-    elif address.is_multicast:
-        return False
-    elif address.is_reserved:
+
+    if address.ipv4_mapped is not None:
         return False
 
     return True
