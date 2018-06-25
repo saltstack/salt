@@ -1068,7 +1068,7 @@ def _wait_for_ip(vm_ref, max_wait):
                             "in %s seconds", vm_ref.name, time_counter
                         )
                         return current_ip.ipAddress
-                    if _valid_ip(current_ip.ipAddress):
+                    if _valid_ip(current_ip.ipAddress) and not ipv4_address:
                         # Delay return in case we have a valid IPv6 available
                         ipv4_address = current_ip
         if ipv4_address:
