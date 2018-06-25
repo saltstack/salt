@@ -364,9 +364,17 @@ def run(name,
                             )
                         )
             else:
-                output_file.write(
-                    salt.utils.stringutils.to_str(query_result)
-                )
+                if isinstance(query_result, six.text_type):
+                    output_file.write(
+                        salt.utils.stringutils.to_str(query_result)
+                    )
+                else:
+                    for col, val in six.iteritems(query_result):
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                '{0}:{1}\n'.format(col, val)
+                            )
+                        )
     else:
         ret['changes']['query'] = "Executed"
 
