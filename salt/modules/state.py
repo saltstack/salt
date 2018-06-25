@@ -1252,7 +1252,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     if sync_mods is True:
         sync_mods = ['all']
     if sync_mods is not None:
-        sync_mods = salt.utils.split_input(sync_mods)
+        sync_mods = salt.utils.args.split_input(sync_mods)
     else:
         sync_mods = []
 
