@@ -1372,14 +1372,6 @@ def install(name=None,
 
     _clean_cache()
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg_name in new:
-        pkg_data = new[pkg_name]
-        if isinstance(pkg_data, six.string_types):
-            new[pkg_name] = pkg_data.split(',')[-1]
-
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
