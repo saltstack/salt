@@ -7,8 +7,10 @@ powercfg.
 
 .. code-block:: bash
 
+    # Set monitor to never turn off
     salt '*' powercfg.set_monitor_timeout 0 power=dc
-    salt '*' powercfg.set_disk_timeout 120 power=ac
+    # Set disk timeout to 120 minutes
+    salt '*' powercfg.set_disk_timeout 7200 power=ac
 '''
 
 # Import Python Libs
@@ -77,154 +79,243 @@ def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
 
 def set_monitor_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the monitor timeout in minutes for the given power scheme
+    Set the monitor timeout in seconds for the given power scheme
+
+    Args:
+        timeout (int):
+            The amount of time in seconds before the monitor will timeout
+
+        power (str):
+            Set the value for AC or DC (battery). Valid options are:
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
+            Default is ``ac``
+
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        str: The stdout of the powercfg command
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' powercfg.set_monitor_timeout 30 power=ac
-
-    timeout
-        The amount of time in minutes before the monitor will timeout
-
-    power
-        Should we set the value for AC or DC (battery)? Valid options ac,dc.
-
-    scheme
-        The scheme to use, leave as None to use the current.
-
+        # Sets the monitor timeout to 30 minutes
+        salt '*' powercfg.set_monitor_timeout 1800
     '''
-    return _set_powercfg_value(scheme, "SUB_VIDEO", "VIDEOIDLE", power, timeout)
+    return _set_powercfg_value(
+        scheme=scheme,
+        sub_group="SUB_VIDEO",
+        setting_guid="VIDEOIDLE",
+        power=power,
+        value=timeout)
 
 
 def get_monitor_timeout(scheme=None):
     '''
     Get the current monitor timeout of the given scheme
 
+    Args:
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        dict: A dictionary of both the AC and DC settings
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_monitor_timeout
-
-    scheme
-        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(scheme, "SUB_VIDEO", "VIDEOIDLE", "Turn off display after")
+    return _get_powercfg_minute_values(
+        scheme=scheme,
+        guid="SUB_VIDEO",
+        subguid="VIDEOIDLE",
+        safe_name="Turn off display after")
 
 
 def set_disk_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the disk timeout in minutes for the given power scheme
+    Set the disk timeout in seconds for the given power scheme
+
+    Args:
+        timeout (int):
+            The amount of time in seconds before the disk will timeout
+
+        power (str):
+            Set the value for AC or DC (battery). Valid options are:
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
+            Default is ``ac``
+
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        str: The stdout of the powercfg command
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' powercfg.set_disk_timeout 30 power=dc
-
-    timeout
-        The amount of time in minutes before the disk will timeout
-
-    power
-        Should we set the value for AC or DC (battery)? Valid options ac,dc.
-
-    scheme
-        The scheme to use, leave as None to use the current.
-
+        # Sets the disk timeout to 30 minutes on battery
+        salt '*' powercfg.set_disk_timeout 1800 power=dc
     '''
-    return _set_powercfg_value(scheme, "SUB_DISK", "DISKIDLE", power, timeout)
+    return _set_powercfg_value(
+        scheme=scheme,
+        sub_group="SUB_DISK",
+        setting_guid="DISKIDLE",
+        power=power,
+        value=timeout)
 
 
 def get_disk_timeout(scheme=None):
     '''
     Get the current disk timeout of the given scheme
 
+    Args:
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        dict: A dictionary of both the AC and DC settings
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_disk_timeout
-
-    scheme
-        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(scheme, "SUB_DISK", "DISKIDLE", "Turn off hard disk after")
+    return _get_powercfg_minute_values(
+        scheme=scheme,
+        guid="SUB_DISK",
+        subguid="DISKIDLE",
+        safe_name="Turn off hard disk after")
 
 
 def set_standby_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the standby timeout in minutes for the given power scheme
+    Set the standby timeout in seconds for the given power scheme
+
+    Args:
+        timeout (int):
+            The amount of time in seconds before the computer sleeps
+
+        power (str):
+            Set the value for AC or DC (battery). Valid options are:
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
+            Default is ``ac``
+
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        str: The stdout of the powercfg command
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' powercfg.set_standby_timeout 30 power=dc
-
-    timeout
-        The amount of time in minutes before the computer sleeps
-
-    power
-        Should we set the value for AC or DC (battery)? Valid options ac,dc.
-
-    scheme
-        The scheme to use, leave as None to use the current.
-
+        # Sets the system standby timeout to 30 minutes on Battery
+        salt '*' powercfg.set_standby_timeout 1800 power=dc
     '''
-    return _set_powercfg_value(scheme, "SUB_SLEEP", "STANDBYIDLE", power, timeout)
+    return _set_powercfg_value(
+        scheme=scheme,
+        sub_group="SUB_SLEEP",
+        setting_guid="STANDBYIDLE",
+        power=power,
+        value=timeout)
 
 
 def get_standby_timeout(scheme=None):
     '''
     Get the current standby timeout of the given scheme
 
+    Args:
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        dict: A dictionary of both the AC and DC settings
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_standby_timeout
-
-    scheme
-        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(scheme, "SUB_SLEEP", "STANDBYIDLE", "Sleep after")
+    return _get_powercfg_minute_values(
+        scheme=scheme,
+        guid="SUB_SLEEP",
+        subguid="STANDBYIDLE",
+        safe_name="Sleep after")
 
 
 def set_hibernate_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the hibernate timeout in minutes for the given power scheme
+    Set the hibernate timeout in seconds for the given power scheme
+
+    Args:
+        timeout (int):
+            The amount of time in seconds before the computer hibernates
+
+        power (str):
+            Set the value for AC or DC (battery). Valid options are:
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
+            Default is ``ac``
+
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        str: The stdout of the powercfg command
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' powercfg.set_hibernate_timeout 30 power=pc
-
-    timeout
-        The amount of time in minutes before the computer hibernates
-
-    power
-        Should we set the value for AC or DC (battery)? Valid options ac,dc.
-
-    scheme
-        The scheme to use, leave as None to use the current.
+        # Sets the hibernate timeout to 30 minutes on Battery
+        salt '*' powercfg.set_hibernate_timeout 1800 power=dc
     '''
-    return _set_powercfg_value(scheme, "SUB_SLEEP", "HIBERNATEIDLE", power, timeout)
+    return _set_powercfg_value(
+        scheme=scheme,
+        sub_group="SUB_SLEEP",
+        setting_guid="HIBERNATEIDLE",
+        power=power,
+        value=timeout)
 
 
 def get_hibernate_timeout(scheme=None):
     '''
     Get the current hibernate timeout of the given scheme
 
+    Args:
+        scheme (str):
+            The scheme to use, leave as None to use the current. Default is
+            ``None``
+
+    Returns:
+        dict: A dictionary of both the AC and DC settings
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_hibernate_timeout
-
-    scheme
-        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(scheme, "SUB_SLEEP", "HIBERNATEIDLE", "Hibernate after")
+    return _get_powercfg_minute_values(
+        scheme=scheme,
+        guid="SUB_SLEEP",
+        subguid="HIBERNATEIDLE",
+        safe_name="Hibernate after")
