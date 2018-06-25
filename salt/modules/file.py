@@ -4459,7 +4459,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get('name', ''))
+            perms['lattrs'] = ''.join(lattrs.get(name, ''))
             # Remove attributes on file so changes can be enforced.
             if perms['lattrs']:
                 chattr(name, operator='remove', attributes=perms['lattrs'])

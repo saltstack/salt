@@ -15,10 +15,13 @@
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 from __future__ import absolute_import
+import errno
+import fnmatch
 import sys
 
 # Import salt libs
 from salt.ext import six
+import salt.utils.stringutils
 
 try:
     from mock import (
@@ -98,30 +101,33 @@ file_spec = None
 
 
 def _iterate_read_data(read_data):
-    # Helper for mock_open:
-    # Retrieve lines from read_data via a generator so that separate calls to
-    # readline, read, and readlines are properly interleaved
-    if six.PY3 and isinstance(read_data, six.binary_type):
-        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(b'\n')]
-    else:
-        data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
+    '''
+    Helper for mock_open:
+    Retrieve lines from read_data via a generator so that separate calls to
+    readline, read, and readlines are properly interleaved
+    '''
+    # Newline will always be a bytestring on PY2 because mock_open will have
+    # normalized it to one.
+    newline = b'\n' if isinstance(read_data, six.binary_type) else '\n'
 
-    if data_as_list[-1] == '\n':
+    read_data = [line + newline for line in read_data.split(newline)]
+
+    if read_data[-1] == newline:
         # If the last line ended in a newline, the list comprehension will have an
-        # extra entry that's just a newline.  Remove this.
-        data_as_list = data_as_list[:-1]
+        # extra entry that's just a newline. Remove this.
+        read_data = read_data[:-1]
     else:
         # If there wasn't an extra newline by itself, then the file being
-        # emulated doesn't have a newline to end the last line  remove the
-        # newline that our naive format() added
-        data_as_list[-1] = data_as_list[-1][:-1]
+        # emulated doesn't have a newline to end the last line, so remove the
+        # newline that we added in the list comprehension.
+        read_data[-1] = read_data[-1][:-1]
 
-    for line in data_as_list:
+    for line in read_data:
         yield line
 
 
-def mock_open(mock=None, read_data=''):
-    """
+def mock_open(mock=None, read_data='', match=None):
+    '''
     A helper function to create a mock to replace the use of `open`. It works
     for `open` called directly or used as a context manager.
 
@@ -131,7 +137,18 @@ def mock_open(mock=None, read_data=''):
 
     `read_data` is a string for the `read` methoddline`, and `readlines` of the
     file handle to return.  This is an empty string by default.
-    """
+
+    If passed, `match` can be either a string or an iterable containing
+    patterns to attempt to match using fnmatch.fnmatch(). A side_effect will be
+    added to the mock object returned, which will cause an IOError(2, 'No such
+    file or directory') to be raised when the file path is not a match. This
+    allows you to make your mocked filehandle only work for certain file paths.
+    '''
+    # Normalize read_data, Python 2 filehandles should never produce unicode
+    # types on read.
+    if six.PY2:
+        read_data = salt.utils.stringutils.to_str(read_data)
+
     def _readlines_side_effect(*args, **kwargs):
         if handle.readlines.return_value is not None:
             return handle.readlines.return_value
@@ -140,7 +157,8 @@ def mock_open(mock=None, read_data=''):
     def _read_side_effect(*args, **kwargs):
         if handle.read.return_value is not None:
             return handle.read.return_value
-        return ''.join(_data)
+        joiner = b'' if isinstance(read_data, six.binary_type) else ''
+        return joiner.join(_data)
 
     def _readline_side_effect():
         if handle.readline.return_value is not None:
@@ -170,10 +188,25 @@ def mock_open(mock=None, read_data=''):
     handle.readline.return_value = None
     handle.readlines.return_value = None
 
+    # Support iteration via for loop
+    handle.__iter__ = lambda x: _readline_side_effect()
+
     # This is salt specific and not in the upstream mock
     handle.read.side_effect = _read_side_effect
     handle.readline.side_effect = _readline_side_effect()
     handle.readlines.side_effect = _readlines_side_effect
+
+    if match is not None:
+        if isinstance(match, six.string_types):
+            match = [match]
+
+        def fopen_side_effect(name, *args, **kwargs):
+            for pat in match:
+                if fnmatch.fnmatch(name, pat):
+                    return DEFAULT
+            raise IOError(errno.ENOENT, 'No such file or directory', name)
+
+        mock.side_effect = fopen_side_effect
 
     mock.return_value = handle
     return mock

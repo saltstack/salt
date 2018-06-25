@@ -129,7 +129,7 @@ def call(napalm_device, method, *args, **kwargs):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exeception. \
+        * traceback (string): complete traceback in case of exception. \
         Please submit an issue including this traceback \
         on the `correct driver repo`_ and make sure to read the FAQ_
 

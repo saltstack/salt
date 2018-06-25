@@ -28,7 +28,7 @@ import salt.utils.stringutils
 import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 
 SED_CONTENT = '''test
@@ -216,6 +216,88 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         information.
         '''
         filemod.replace(self.tfile.name, r'Etiam', 123)
+
+
+class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+            }
+        }
+
+    MULTILINE_STRING = textwrap.dedent('''\
+        Lorem
+        ipsum
+        #dolor
+        ''')
+
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
+    def setUp(self):
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        self.tfile.write(self.MULTILINE_STRING)
+        self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        del self.tfile
+
+    def test_comment_line(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment(self):
+        filemod.comment(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment_different_character(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum',
+                             '//')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('//ipsum', filecontent)
+
+    def test_comment_not_found(self):
+        filemod.comment_line(self.tfile.name,
+                             '^sit')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertNotIn('#sit', filecontent)
+        self.assertNotIn('sit', filecontent)
+
+    def test_uncomment(self):
+        filemod.uncomment(self.tfile.name,
+                          'dolor')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('dolor', filecontent)
+        self.assertNotIn('#dolor', filecontent)
 
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
@@ -515,6 +597,87 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             content='foobar',
             backup=False
         )
+
+
+class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+            }
+        }
+
+    MULTILINE_STRING = textwrap.dedent('''\
+        Lorem ipsum dolor sit amet, consectetur
+        adipiscing elit. Nam rhoncus enim ac
+        bibendum vulputate.
+        ''')
+
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
+    def setUp(self):
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        self.tfile.write(self.MULTILINE_STRING)
+        self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        del self.tfile
+
+    def test_grep_query_exists(self):
+        result = filemod.grep(self.tfile.name,
+                     'Lorem ipsum')
+
+        self.assertTrue(result, None)
+        self.assertTrue(result['retcode'] == 0)
+        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
+        self.assertTrue(result['stderr'] == '')
+
+    def test_grep_query_not_exists(self):
+        result = filemod.grep(self.tfile.name,
+                     'Lorem Lorem')
+
+        self.assertTrue(result['retcode'] == 1)
+        self.assertTrue(result['stdout'] == '')
+        self.assertTrue(result['stderr'] == '')
+
+    def test_grep_query_exists_with_opt(self):
+        result = filemod.grep(self.tfile.name,
+                     'Lorem ipsum',
+                     '-i')
+
+        self.assertTrue(result, None)
+        self.assertTrue(result['retcode'] == 0)
+        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
+        self.assertTrue(result['stderr'] == '')
+
+    def test_grep_query_not_exists_opt(self):
+        result = filemod.grep(self.tfile.name,
+                     'Lorem Lorem',
+                     '-v')
+
+        self.assertTrue(result['retcode'] == 0)
+        self.assertTrue(result['stdout'] == FileGrepTestCase.MULTILINE_STRING)
+        self.assertTrue(result['stderr'] == '')
+
+    def test_grep_query_too_many_opts(self):
+        with self.assertRaisesRegex(SaltInvocationError, '^Passing multiple command line arg') as cm:
+            result = filemod.grep(self.tfile.name,
+                                  'Lorem Lorem',
+                                  '-i -b2')
 
 
 class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
