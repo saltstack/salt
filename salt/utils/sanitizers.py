@@ -74,9 +74,11 @@ def mask_args_value(data, mask):
     but you certainly do not want to put there an actual IP address,
     passwords, user names etc.
 
-    Note, this is working only when data is a single string,
-    ready for print or dump to the log. Also, when the data is formatted
-    as "key: value" in YAML syntax.
+    This can be used for cases where keys in your roster file may contain
+    sensitive data such as IP addresses, passwords, user names, etc.
+
+    Note that this works only when ``data`` is a single string (i.e. when the
+    data in the roster is formatted as ``key: value`` pairs in YAML syntax).
 
     :param data: String data, already rendered.
     :param mask: Mask that matches a single line
