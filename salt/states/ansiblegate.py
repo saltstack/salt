@@ -132,15 +132,15 @@ def _changes(plays):
     return changes
 
 
-def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=None):
+def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=None):
     '''
     Run Ansible Playbooks
 
     :param name: path to playbook. This can be relative to rundir or the git repo
     :param rundir: location to run ansible-playbook from.
-    :param gitrepo: gitrepo to clone for ansible playbooks.  This is cloned
-                    using the `git.latest` state, and is cloned to the `rundir`
-                    if specified, otherwise it is clone to the `cache_dir`
+    :param git_repo: git repository to clone for ansible playbooks.  This is cloned
+                     using the `git.latest` state, and is cloned to the `rundir`
+                     if specified, otherwise it is clone to the `cache_dir`
     :param git_kwargs: extra kwargs to pass to `git.latest` state module besides
                        the `name` and `target`
     :param ansible_kwargs: extra kwargs to pass to `ansible.playbooks` execution
@@ -163,14 +163,15 @@ def playbooks(name, rundir=None, gitrepo=None, git_kwargs=None, ansible_kwargs=N
         'comment': 'Running playbook {0}'.format(name),
         'name': name,
     }
-    if gitrepo is not None:
-        if rundir is None:
+    if git_repo:
+        if not isinstance(rundir, six.text_type) or not os.path.isdir(rundir):
             rundir = _client()._extrn_path(gitrepo, 'base')
+            log.trace('rundir set to %s', rundir)
         if not isinstance(git_kwargs, dict):
             log.debug('Setting git_kwargs to empty dict: %s', git_kwargs)
             git_kwargs = {}
         __states__['git.latest'](
-            name=gitrepo,
+            name=git_repo,
             target=rundir,
             **git_kwargs
         )
