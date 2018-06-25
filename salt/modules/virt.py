@@ -2453,7 +2453,11 @@ def undefine(vm_, **kwargs):
     '''
     conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
-    ret = dom.undefine() == 0
+    if getattr(libvirt, 'VIR_DOMAIN_UNDEFINE_NVRAM', False):
+        # This one is only in 1.2.8+
+        ret = dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM) == 0
+    else:
+        ret = dom.undefine() == 0
     conn.close()
     return ret
 
@@ -2511,7 +2515,11 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
-    dom.undefine()
+    if getattr(libvirt, 'VIR_DOMAIN_UNDEFINE_NVRAM', False):
+        # This one is only in 1.2.8+
+        dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+    else:
+        dom.undefine()
     conn.close()
     return True
 
