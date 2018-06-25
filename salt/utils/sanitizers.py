@@ -23,6 +23,7 @@ import fnmatch
 # Import Salt libs
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
+import salt.utils.stringutils
 
 
 class InputSanitizer(object):
@@ -89,7 +90,7 @@ def mask_args_value(data, mask):
     for line in data.split(os.linesep):
         if fnmatch.fnmatch(line.strip(), mask) and ':' in line:
             key, value = line.split(':', 1)
-            out.append('{}: {}'.format(key.strip(), '** hidden **'))
+            out.append('{}: {}'.format(salt.utils.stringutils.to_unicode(key.strip()), '** hidden **'))
         else:
             out.append(line)
 
