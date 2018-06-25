@@ -405,12 +405,23 @@ def proxy_napalm_wrap(func):
             log.debug('Not running in a NAPALM Proxy Minion')
             _salt_obj = wrapped_global_namespace.get('__salt__')
             napalm_opts = _salt_obj['config.get']('napalm', {})
+            napalm_inventory = _salt_obj['config.get']('napalm_inventory', {})
             log.debug('NAPALM opts found in the Minion config')
             log.debug(napalm_opts)
             clean_kwargs = salt.utils.args.clean_kwargs(**kwargs)
             napalm_opts.update(clean_kwargs)  # no need for deeper merge
             log.debug('Merging the found opts with the CLI args')
             log.debug(napalm_opts)
+            host = napalm_opts.get('host') or napalm_opts.get('hostname') or\
+                   napalm_opts.get('fqdn') or napalm_opts.get('ip')
+            if host and napalm_inventory and isinstance(napalm_inventory, dict) and\
+               host in napalm_inventory:
+                inventory_opts = napalm_inventory[host]
+                log.debug('Found %s in the NAPALM inventory:', host)
+                log.debug(inventory_opts)
+                napalm_opts.update(inventory_opts)
+                log.debug('Merging the config for %s with the details found in the napalm inventory:', host)
+                log.debug(napalm_opts)
             opts = opts.copy()  # make sure we don't override the original
             # opts, but just inject the CLI args from the kwargs to into the
             # object manipulated by ``get_device_opts`` to extract the
