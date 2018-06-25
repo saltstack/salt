@@ -26,6 +26,7 @@ from functools import wraps
 from salt.ext import six as six
 import salt.output
 import salt.utils.platform
+import salt.utils.args
 
 # Import third party libs
 try:
@@ -93,14 +94,14 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
+    if (HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE:
         return virtualname
     else:
         return (
             False,
             (
                 '"{vname}"" {filename} cannot be loaded: '
-                'NAPALM is not installed or not running in a (proxy) minion'
+                'NAPALM is not installed: ``pip install napalm``'
             ).format(
                 vname=virtualname,
                 filename='({filename})'.format(filename=filename)
@@ -255,15 +256,12 @@ def get_device_opts(opts, salt_obj=None):
     '''
     network_device = {}
     # by default, look in the proxy config details
-    device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
+    device_dict = opts.get('proxy', {}) if is_proxy(opts) else opts.get('napalm', {})
     if opts.get('proxy') or opts.get('napalm'):
         opts['multiprocessing'] = device_dict.get('multiprocessing', False)
         # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
         # But the user can be allows one to have a different value for the multiprocessing, which will
         #   override the opts.
-    if salt_obj and not device_dict:
-        # get the connection details from the opts
-        device_dict = salt_obj['config.merge']('napalm')
     if not device_dict:
         # still not able to setup
         log.error('Incorrect minion config. Please specify at least the napalm driver name!')
@@ -367,11 +365,12 @@ def proxy_napalm_wrap(func):
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
-        if salt.utils.platform.is_proxy() and always_alive:
-            # if it is running in a proxy and it's using the default always alive behaviour,
-            # will get the cached copy of the network device
+        if is_proxy(opts) and always_alive:
+            # if it is running in a NAPALM Proxy and it's using the default
+            # always alive behaviour, will get the cached copy of the network
+            # device object which should preserve the connection.
             wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
-        elif salt.utils.platform.is_proxy() and not always_alive:
+        elif is_proxy(opts) and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
             # which establishes a new connection
@@ -398,10 +397,25 @@ def proxy_napalm_wrap(func):
                 # otherwise we risk to open multiple sessions
                 wrapped_global_namespace['napalm_device'] = kwargs['inherit_napalm_device']
         else:
-            # if no proxy
+            # if not a NAPLAM proxy
             # thus it is running on a regular minion, directly on the network device
+            # or another flavour of Minion from where we can invoke arbitrary
+            # NAPALM commands
             # get __salt__ from func_globals
+            log.debug('Not running in a NAPALM Proxy Minion')
             _salt_obj = wrapped_global_namespace.get('__salt__')
+            napalm_opts = _salt_obj['config.get']('napalm', {})
+            log.debug('NAPALM opts found in the Minion config')
+            log.debug(napalm_opts)
+            clean_kwargs = salt.utils.args.clean_kwargs(**kwargs)
+            napalm_opts.update(clean_kwargs)  # no need for deeper merge
+            log.debug('Merging the found opts with the CLI args')
+            log.debug(napalm_opts)
+            opts = opts.copy()  # make sure we don't override the original
+            # opts, but just inject the CLI args from the kwargs to into the
+            # object manipulated by ``get_device_opts`` to extract the
+            # connection details, then use then to establish the connection.
+            opts['napalm'] = napalm_opts
             if 'inherit_napalm_device' not in kwargs or ('inherit_napalm_device' in kwargs and
                                                          not kwargs['inherit_napalm_device']):
                 # try to open a new connection
