@@ -14,6 +14,7 @@ import tarfile
 import zipfile
 import tempfile
 import subprocess
+import concurrent
 
 # Import third party libs
 import jinja2
@@ -106,6 +107,8 @@ def get_tops(extra_mods='', so_mods=''):
             os.path.dirname(msgpack.__file__),
             ]
 
+    if _six.PY2:
+        tops.append(os.path.dirname(concurrent.__file__))
     tops.append(_six.__file__.replace('.pyc', '.py'))
     tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
