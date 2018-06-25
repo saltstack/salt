@@ -55,3 +55,11 @@ class SanitizersTestCase(TestCase):
         '''
         out = mask_args_value('quantum: fluctuations', 'quant*')
         assert out == 'quantum: ** hidden **'
+
+    def test_value_not_masked(self):
+        '''
+        Test if the values are not masked.
+        :return:
+        '''
+        out = mask_args_value('quantum fluctuations', 'quant*')
+        assert out == 'quantum fluctuations'
