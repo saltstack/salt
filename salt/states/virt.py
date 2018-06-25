@@ -27,6 +27,7 @@ except ImportError:
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -208,16 +209,101 @@ def powered_off(name):
     return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
 
 
-def running(name, **kwargs):
+def running(name,
+            cpu=None,
+            mem=None,
+            image=None,
+            vm_type=None,
+            disk_profile=None,
+            disks=None,
+            nic_profile=None,
+            interfaces=None,
+            graphics=None,
+            seed=True,
+            install=True,
+            pub_key=None,
+            priv_key=None,
+            **kwargs):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
     .. versionadded:: 2016.3.0
 
+    :param name: name of the virtual machine to run
+    :param cpu: number of CPUs for the virtual machine to create
+    :param mem: amount of memory in MiB for the new virtual machine
+    :param image: disk image to use for the first disk of the new VM
+
+        .. deprecated:: Fluorine
+    :param vm_type: force virtual machine type for the new VM. The default value is taken from
+        the host capabilities. This could be useful for example to use ``'qemu'`` type instead
+        of the ``'kvm'`` one.
+
+        .. versionadded:: Fluorine
+    :param disk_profile:
+        Name of the disk profile to use for the new virtual machine
+
+        .. versionadded:: Fluorine
+    :param disks:
+        List of disk to create for the new virtual machine.
+        See :ref:`init-disk-def` for more details on the items on this list.
+
+        .. versionadded:: Fluorine
+    :param nic_profile:
+        Name of the network interfaces profile to use for the new virtual machine
+
+        .. versionadded:: Fluorine
+    :param interfaces:
+        List of network interfaces to create for the new virtual machine.
+        See :ref:`init-nic-def` for more details on the items on this list.
+
+        .. versionadded:: Fluorine
+    :param graphics:
+        Graphics device to create for the new virtual machine.
+        See :ref:`init-graphics-def` for more details on this dictionary
+
+        .. versionadded:: Fluorine
+    :param saltenv:
+        Fileserver environment (Default: ``'base'``).
+        See :mod:`cp module for more details <salt.modules.cp>`
+
+        .. versionadded:: Fluorine
+    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
+                 (Default: ``True``)
+
+        .. versionadded:: Fluorine
+    :param install: install salt minion if absent (Default: ``True``)
+
+        .. versionadded:: Fluorine
+    :param pub_key: public key to seed with (Default: ``None``)
+
+        .. versionadded:: Fluorine
+    :param priv_key: public key to seed with (Default: ``None``)
+
+        .. versionadded:: Fluorine
+    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+
+        .. versionadded:: Fluorine
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
+    .. rubric:: Example States
+
+    Make sure an already-defined virtual machine called ``domain_name`` is running:
+
     .. code-block:: yaml
 
         domain_name:
           virt.running
+
+    Do the same, but define the virtual machine if needed:
 
     .. code-block:: yaml
 
@@ -225,7 +311,27 @@ def running(name, **kwargs):
           virt.running:
             - cpu: 2
             - mem: 2048
-            - eth0_mac: 00:00:6a:53:00:e3
+            - disk_profile: prod
+            - disks:
+              - name: system
+                size: 8192
+                overlay_image: True
+                pool: default
+                image: /path/to/image.qcow2
+              - name: data
+                size: 16834
+            - nic_profile: prod
+            - interfaces:
+              - name: eth0
+                mac: 01:23:45:67:89:AB
+              - name: eth1
+                type: network
+                source: admin
+            - graphics:
+              - type: spice
+                listen:
+                  - type: address
+                    address: 192.168.0.125
 
     '''
 
@@ -236,9 +342,6 @@ def running(name, **kwargs):
            }
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    cpu = kwargs.pop('cpu', False)
-    mem = kwargs.pop('mem', False)
-    image = kwargs.pop('image', False)
 
     try:
         try:
@@ -251,7 +354,27 @@ def running(name, **kwargs):
                 ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
             kwargs = salt.utils.args.clean_kwargs(**kwargs)
-            __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
+            if image:
+                salt.utils.versions.warn_until(
+                    'Sodium',
+                    '\'image\' parameter has been deprecated. Rather use the \'disks\' parameter '
+                    'to override or define the image. \'image\' will be removed in {version}.'
+                )
+            __salt__['virt.init'](name,
+                                  cpu=cpu,
+                                  mem=mem,
+                                  image=image,
+                                  hypervisor=vm_type,
+                                  disk=disk_profile,
+                                  disks=disks,
+                                  nic=nic_profile,
+                                  interfaces=interfaces,
+                                  graphics=graphics,
+                                  seed=seed,
+                                  install=install,
+                                  pub_key=pub_key,
+                                  priv_key=priv_key,
+                                  **kwargs)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
