@@ -70,11 +70,7 @@ def mask_args_value(data, mask):
     '''
     Mask a line in the data, which matches "mask".
 
-    In case you want to put to the logs rosters or other data,
-    but you certainly do not want to put there an actual IP address,
-    passwords, user names etc.
-
-    This can be used for cases where keys in your roster file may contain
+    This can be used for cases where values in your roster file may contain
     sensitive data such as IP addresses, passwords, user names, etc.
 
     Note that this works only when ``data`` is a single string (i.e. when the
