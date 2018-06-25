@@ -2,9 +2,7 @@
 Salt 2017.7.6 Release Notes
 ===========================
 
-Version 2017.7.6 is a bugfix release for :ref:`2017.7.0
-<release-2017-7-0>`.
-
+Version 2017.7.6 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 
 Statistics
 ==========
@@ -15,6 +13,15 @@ Statistics
 
 - Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `Quarky9`_, `RichardW42`_, `UtahDave`_, `amaclean199`_, `arif-ali`_, `baniobloom`_, `bdrung`_, `benediktwerner`_, `bmiguel-teixeira`_, `cachedout`_, `dafenko`_, `damon-atkins`_, `dwoz`_, `ezh`_, `folti`_, `fpicot`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeroennijhof`_, `jfindlay`_, `jfoboss`_, `kstreee`_, `lomeroe`_, `mattp-`_, `meaksh`_, `mirceaulinic`_, `myinitialsarepm`_, `mzbroch`_, `nages13`_, `paclat`_, `pcjeff`_, `pruiz`_, `psyer`_, `rallytime`_, `s0undt3ch`_, `skizunov`_, `smitty42`_, `terminalmage`_, `twangboy`_, `vutny`_, `yagnik`_, `yannj-fr`_)
 
+Tornado 5.0 Support for Python 2 Only
+-------------------------------------
+
+Tornado 5.0 moves to using asyncio for all python3 versions.  Because of this
+and changes in asyncio between python 3.4 and 3.5 to only be able to use one
+ioloop, which requires some rearchitecting, support for tornado 5.0 and python3
+versions of salt has been delayed to a later release.
+
+For now, to use tornado 5.0, the python 2 version of salt must be used.
 
 Tornado 5.0 Support for Python 2 Only
 -------------------------------------

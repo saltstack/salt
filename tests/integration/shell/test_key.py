@@ -232,8 +232,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         test salt-key -l with wrong eauth
         '''
         data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
-        expect = ['The specified external authentication system "wrongeauth" is not available']
-        self.assertEqual(data, expect)
+        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
+        self.assertRegex("\t".join(data), expect)
 
     def test_list_un(self):
         '''

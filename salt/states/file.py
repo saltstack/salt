@@ -1256,7 +1256,7 @@ def _makedirs(name,
     Helper function for creating directories when the ``makedirs`` option is set
     to ``True``. Handles Unix and Windows based systems
 
-    .. versionadded:: 2017.7.7
+    .. versionadded:: 2017.7.8
 
     Args:
         name (str): The directory path to create

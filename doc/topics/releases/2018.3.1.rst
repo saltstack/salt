@@ -46,7 +46,66 @@ to the flat roster file.  This behavior can also be enabled by setting
 Changelog for v2018.3.0..v2018.3.1
 ==================================
 
-*Generated at: 2018-05-30 14:09:03 UTC*
+
+*Generated at: 2018-06-06 17:43:01 UTC*
+
+* **ISSUE** `#47955`_: (`frogunder`_) 2018.3.1 Creating Windows machine in Amazon using salt-cloud fails. (refs: `#47989`_)
+
+* **PR** `#47998`_: (`rallytime`_) Back-port `#47989`_ to 2018.3.1
+  @ *2018-06-06 17:08:04 UTC*
+
+  * **PR** `#47989`_: (`dwoz`_) Properly decode password from aws using m2crypto (refs: `#47998`_)
+
+  * 605463ca0d Merge pull request `#47998`_ from rallytime/bp-47989
+
+  * 1b7e9ac2d3 Lint fixes
+
+  * 0545152ddd Properly decode password from aws using m2crypto
+
+* **PR** `#47965`_: (`Ch3LL`_) Add PR 47924 from 2018.3 branch
+  @ *2018-06-06 13:54:09 UTC*
+
+  * dbc798ac68 Merge pull request `#47965`_ from Ch3LL/gitpy_mac_3.1
+
+  * bf608abd44 Catch all exceptions in git import for salt.utils.gitfs
+
+* **PR** `#47973`_: (`terminalmage`_) salt.modules.testinframod: fix TypeError invoking types.FunctionType
+  @ *2018-06-06 13:53:46 UTC*
+
+  * 864d640633 Merge pull request `#47973`_ from terminalmage/fix-testinfra
+
+  * 4518c89484 Lint: Remove unused six import
+
+  * c6816b2149 salt.modules.testinframod: fix TypeError invoking types.FunctionType
+
+* **ISSUE** `#47236`_: (`MorphBonehunter`_) x509.private_key_managed broken after upgrade to 2018.3.0 (refs: `#47957`_)
+
+* **PR** `#47967`_: (`rallytime`_) Back-port `#47957`_ to 2018.3.1
+  @ *2018-06-06 13:53:28 UTC*
+
+  * **PR** `#47957`_: (`garethgreenaway`_) [2018.8] Ensure x509 passphrase is a string (refs: `#47967`_)
+
+  * 5ddcfff420 Merge pull request `#47967`_ from rallytime/bp-47957
+
+  * 9a55579af1 removing unnecessary change
+
+  * 329b2e5956 Ensuring that when a passphrase is passed in, it is returned as a string from the passphrase callback.
+
+* **PR** `#47902`_: (`Ch3LL`_) Remove In Progress for 2018.3.1 Release Notes
+  @ *2018-05-30 18:26:49 UTC*
+
+  * 9c964fdbce Merge pull request `#47902`_ from Ch3LL/rn_in_progress
+
+  * f560a151cd Remove In Progress for 2018.3.1 Release Notes
+
+* **PR** `#47897`_: (`Ch3LL`_) Add changelog to 2018.3.1 release notes
+  @ *2018-05-30 15:04:42 UTC*
+
+  * ea7b4fdc08 Merge pull request `#47897`_ from Ch3LL/rn_2018
+
+  * e27ee273a7 Add == line to changelog line for release notes
+
+  * 61e56d275d Add changelog to 2018.3.1 release notes
 
 * **ISSUE** `#47784`_: (`jpsv`_) win_lgpo.py line 5368; AttributeError: 'OrderedDict' object has no attribute 'lower' (refs: `#47848`_)
 
@@ -519,7 +578,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * fd9bc06aab bytes file that decodes the same utf-8 and cp1252
 
-* **ISSUE** `#46660`_: (`mruepp`_) top file merging same does produce conflicting ids with gitfs (refs: `#46751`_, `#47354`_)
+* **ISSUE** `#46660`_: (`mruepp`_) top file merging same does produce conflicting ids with gitfs (refs: `#47354`_, `#46751`_)
 
 * **PR** `#47465`_: (`rallytime`_) Back-port `#47354`_ to 2018.3
   @ *2018-05-04 13:06:04 UTC*
@@ -768,9 +827,9 @@ Changelog for v2018.3.0..v2018.3.1
 * **PR** `#47368`_: (`rallytime`_) [2018.3] Merge forward from 2017.7 to 2018.3
   @ *2018-05-01 18:56:20 UTC*
 
-  * **PR** `#47106`_: (`DmitryKuzmenko`_) Tornado50 compatibility fixes (refs: `#47368`_, `#47374`_, `#47433`_)
+  * **PR** `#47106`_: (`DmitryKuzmenko`_) Tornado50 compatibility fixes (refs: `#47374`_, `#47368`_, `#47433`_)
 
-  * **PR** `#46002`_: (`isbm`_) Pyzmq 17.0.0 proper handling (refs: `#47368`_, `#47374`_)
+  * **PR** `#46002`_: (`isbm`_) Pyzmq 17.0.0 proper handling (refs: `#47374`_, `#47368`_)
 
   * 0bdfaa5ffe Merge pull request `#47368`_ from rallytime/merge-2018.3
 
@@ -1037,9 +1096,9 @@ Changelog for v2018.3.0..v2018.3.1
 * **PR** `#47374`_: (`DmitryKuzmenko`_) tornado50 merge forward for 2018.3
   @ *2018-04-29 16:29:12 UTC*
 
-  * **PR** `#47106`_: (`DmitryKuzmenko`_) Tornado50 compatibility fixes (refs: `#47368`_, `#47374`_, `#47433`_)
+  * **PR** `#47106`_: (`DmitryKuzmenko`_) Tornado50 compatibility fixes (refs: `#47374`_, `#47368`_, `#47433`_)
 
-  * **PR** `#46002`_: (`isbm`_) Pyzmq 17.0.0 proper handling (refs: `#47368`_, `#47374`_)
+  * **PR** `#46002`_: (`isbm`_) Pyzmq 17.0.0 proper handling (refs: `#47374`_, `#47368`_)
 
   * 3400f829c4 Merge pull request `#47374`_ from DSRCorporation/bugs/tornado50-2018.3
 
@@ -1139,7 +1198,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * cc2538e08f The grp modules is not available on windows
 
-* **ISSUE** `#46862`_: (`kivoli`_) Setting locale.system fails in 2018.3 (refs: `#46869`_, `#47280`_)
+* **ISSUE** `#46862`_: (`kivoli`_) Setting locale.system fails in 2018.3 (refs: `#47280`_, `#46869`_)
 
 * **PR** `#47280`_: (`gtmanfred`_) make sure not to send invalid information
   @ *2018-04-25 17:46:45 UTC*
@@ -1263,18 +1322,18 @@ Changelog for v2018.3.0..v2018.3.1
 
   * b8630a70be Fix virtual package detection
 
-* **ISSUE** `#47225`_: (`pruiz`_) zfs.filesystem_present takes forever on a dataset with lots (10k+) of snapshots (refs: `#47226`_, `#47227`_, `#47228`_)
+* **ISSUE** `#47225`_: (`pruiz`_) zfs.filesystem_present takes forever on a dataset with lots (10k+) of snapshots (refs: `#47228`_, `#47227`_, `#47226`_)
 
 * **PR** `#47228`_: (`pruiz`_) Fix issue `#47225`_: avoid zfs.filesystem_present slowdown when dataset has lots of snapshots (2018.3 branch)
   @ *2018-04-24 13:35:21 UTC*
 
-  * **PR** `#47226`_: (`pruiz`_) Fix issue `#47225`_: avoid zfs.filesystem_present slowdown when dataset has lots of snapshots (refs: `#47227`_, `#47228`_)
+  * **PR** `#47226`_: (`pruiz`_) Fix issue `#47225`_: avoid zfs.filesystem_present slowdown when dataset has lots of snapshots (refs: `#47228`_, `#47227`_)
 
   * 428e915d6a Merge pull request `#47228`_ from pruiz/pruiz/zfs-dataset-present-slow-2018.3
 
   * cfbf136ab2 Fix issue `#47225`_: avoid zfs.filesystem_present slowdown when dataset has lots of snapshots
 
-* **ISSUE** `#46943`_: (`Auha`_) Slack.Engine could not start (refs: `#47109`_, `#47262`_)
+* **ISSUE** `#46943`_: (`Auha`_) Slack.Engine could not start (refs: `#47262`_, `#47109`_)
 
 * **PR** `#47262`_: (`garethgreenaway`_) [2018.3] Fixes to targeting in Slack engine
   @ *2018-04-24 13:18:36 UTC*
@@ -1642,7 +1701,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * 92eeaa51bd Put some error checking in the shell command
 
-* **ISSUE** `#46943`_: (`Auha`_) Slack.Engine could not start (refs: `#47109`_, `#47262`_)
+* **ISSUE** `#46943`_: (`Auha`_) Slack.Engine could not start (refs: `#47262`_, `#47109`_)
 
 * **PR** `#47109`_: (`garethgreenaway`_) [2018.3] fixes to Slack engine
   @ *2018-04-17 13:56:27 UTC*
@@ -2010,7 +2069,7 @@ Changelog for v2018.3.0..v2018.3.1
 
 * **ISSUE** `#46834`_: (`oeuftete`_) strftime filter not found in 2018.3.0 (refs: `#46848`_)
 
-* **ISSUE** `#46668`_: (`anlutro`_) Jinja2 filter strftime stopped working in salt-ssh 2018.3 (refs: `#46744`_, `#46848`_)
+* **ISSUE** `#46668`_: (`anlutro`_) Jinja2 filter strftime stopped working in salt-ssh 2018.3 (refs: `#46848`_, `#46744`_)
 
 * **PR** `#46848`_: (`garethgreenaway`_) [2018.8] salt-ssh jinja filters tests
   @ *2018-04-10 16:19:51 UTC*
@@ -2248,7 +2307,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * d9511d04d4 `#43499`_, zmq setsockopt need to adapt python3
 
-* **ISSUE** `#46862`_: (`kivoli`_) Setting locale.system fails in 2018.3 (refs: `#46869`_, `#47280`_)
+* **ISSUE** `#46862`_: (`kivoli`_) Setting locale.system fails in 2018.3 (refs: `#47280`_, `#46869`_)
 
 * **PR** `#46869`_: (`gtmanfred`_) Always return dictionary for _localectl_status
   @ *2018-04-05 13:25:14 UTC*
@@ -2782,7 +2841,7 @@ Changelog for v2018.3.0..v2018.3.1
 
       * 19bd1d9db5 handle user-data for metadata grains
 
-* **ISSUE** `#46668`_: (`anlutro`_) Jinja2 filter strftime stopped working in salt-ssh 2018.3 (refs: `#46744`_, `#46848`_)
+* **ISSUE** `#46668`_: (`anlutro`_) Jinja2 filter strftime stopped working in salt-ssh 2018.3 (refs: `#46848`_, `#46744`_)
 
 * **PR** `#46744`_: (`garethgreenaway`_) [2018.3] Ensure salt.utils.dateutils is available for templates via salt-ssh
   @ *2018-03-28 21:09:46 UTC*
@@ -3441,14 +3500,14 @@ Changelog for v2018.3.0..v2018.3.1
 
       * e0940a9fc4 Properly detect use of the state.orch alias and add orch jid to kwargs
 
-* **ISSUE** `#42932`_: (`bobrik`_) cmd.run with bg: true doesn't fail properly (refs: `#45932`_, `#46172`_)
+* **ISSUE** `#42932`_: (`bobrik`_) cmd.run with bg: true doesn't fail properly (refs: `#46172`_, `#45932`_)
 
 * **PR** `#46172`_: (`The-Loeki`_) cmdmod: reimplementation of `#45932`_ for Oxygen
   @ *2018-02-28 19:14:26 UTC*
 
   * **PR** `#45932`_: (`The-Loeki`_) Fix cmd run_all bg error (refs: `#46172`_)
 
-  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function (refs: `#45932`_, `#46172`_)
+  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function (refs: `#46172`_, `#45932`_)
 
   * 20d869c228 Merge pull request `#46172`_ from The-Loeki/fix_cmd_run_all_bg_oxygen
 
@@ -4503,6 +4562,7 @@ Changelog for v2018.3.0..v2018.3.1
 .. _`#47226`: https://github.com/saltstack/salt/pull/47226
 .. _`#47227`: https://github.com/saltstack/salt/pull/47227
 .. _`#47228`: https://github.com/saltstack/salt/pull/47228
+.. _`#47236`: https://github.com/saltstack/salt/issues/47236
 .. _`#47239`: https://github.com/saltstack/salt/issues/47239
 .. _`#47241`: https://github.com/saltstack/salt/pull/47241
 .. _`#47242`: https://github.com/saltstack/salt/pull/47242
@@ -4664,6 +4724,15 @@ Changelog for v2018.3.0..v2018.3.1
 .. _`#47848`: https://github.com/saltstack/salt/pull/47848
 .. _`#47874`: https://github.com/saltstack/salt/pull/47874
 .. _`#47881`: https://github.com/saltstack/salt/pull/47881
+.. _`#47897`: https://github.com/saltstack/salt/pull/47897
+.. _`#47902`: https://github.com/saltstack/salt/pull/47902
+.. _`#47955`: https://github.com/saltstack/salt/issues/47955
+.. _`#47957`: https://github.com/saltstack/salt/pull/47957
+.. _`#47965`: https://github.com/saltstack/salt/pull/47965
+.. _`#47967`: https://github.com/saltstack/salt/pull/47967
+.. _`#47973`: https://github.com/saltstack/salt/pull/47973
+.. _`#47989`: https://github.com/saltstack/salt/pull/47989
+.. _`#47998`: https://github.com/saltstack/salt/pull/47998
 .. _`AmbicaY`: https://github.com/AmbicaY
 .. _`Auha`: https://github.com/Auha
 .. _`Ch3LL`: https://github.com/Ch3LL
@@ -4673,6 +4742,7 @@ Changelog for v2018.3.0..v2018.3.1
 .. _`Kimol`: https://github.com/Kimol
 .. _`L4rS6`: https://github.com/L4rS6
 .. _`LukeCarrier`: https://github.com/LukeCarrier
+.. _`MorphBonehunter`: https://github.com/MorphBonehunter
 .. _`OrlandoArcapix`: https://github.com/OrlandoArcapix
 .. _`PhilippeAB`: https://github.com/PhilippeAB
 .. _`SynPrime`: https://github.com/SynPrime
@@ -4707,6 +4777,7 @@ Changelog for v2018.3.0..v2018.3.1
 .. _`ezh`: https://github.com/ezh
 .. _`femnad`: https://github.com/femnad
 .. _`folti`: https://github.com/folti
+.. _`frogunder`: https://github.com/frogunder
 .. _`garethgreenaway`: https://github.com/garethgreenaway
 .. _`gtmanfred`: https://github.com/gtmanfred
 .. _`isbm`: https://github.com/isbm
