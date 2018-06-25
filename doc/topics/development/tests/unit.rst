@@ -479,7 +479,7 @@ several useful attributes:
 
           def test_something(self):
 
-              with patch('salt.utils.files.fopen', mock_open(read_data=b'foo\n')) as mopen:
+              with patch('salt.utils.files.fopen', mock_open(read_data=b'foo\n')) as m_open:
                   mymod.myfunc()
                   # Assert that only two opens attempted
                   assert m_open.call_count == 2
@@ -487,7 +487,7 @@ several useful attributes:
                   assert all(call.args[0] == '/etc/foo.conf' for call in m_open.calls)
                   # Asser that the first open was for binary read, and the
                   # second was for binary write.
-                  assert m_open.calls = [
+                  assert m_open.calls == [
                       MockCall('/etc/foo.conf', 'rb'),
                       MockCall('/etc/foo.conf', 'wb'),
                   ]
