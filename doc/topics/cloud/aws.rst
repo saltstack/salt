@@ -464,7 +464,7 @@ following example will request that spot instances be used and your
 maximum bid will be $0.10. Keep in mind that different spot prices
 may be needed based on the current value of the various EC2 instance
 sizes. You can check current and past spot instance pricing via the
-EC2 API or AWS Console. 
+EC2 API or AWS Console.
 
 .. code-block:: yaml
 
