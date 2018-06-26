@@ -508,3 +508,33 @@ def salt_extend(extension, name, description, salt_dir, merge):
                           description=description,
                           salt_dir=salt_dir,
                           merge=merge)
+
+def get_avail():
+    '''
+    Return the available salt commands
+    '''
+    import inspect
+    return [ name[5:] for name,obj in inspect.getmembers(sys.modules[__name__])
+        if (inspect.isfunction(obj) and name.startswith('salt') and not name.endswith('unity')) ]
+
+def salt_unity():
+    '''
+    Change the args and redirect to another salt script
+    '''
+    avail = get_avail()
+    if len(sys.argv) < 2:
+        msg = 'Must pass in a salt command, available commands are:'
+        for cmd in avail:
+            msg += '\n{0}'.format(cmd)
+        print(msg)
+        sys.exit(1)
+    cmd = sys.argv[1]
+    if cmd not in avail:
+        # Fall back to the salt command
+        sys.argv[0] = 'salt'
+        s_fun = salt.scripts.salt_main
+    else:
+        sys.argv[0] = 'salt-{0}'.format(cmd)
+        sys.argv.pop(1)
+        s_fun = getattr(salt.scripts, 'salt_{0}'.format(cmd))
+    s_fun()
