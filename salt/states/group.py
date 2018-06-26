@@ -73,8 +73,14 @@ def _changes(name,
 
     change = {}
     if gid:
-        if lgrp['gid'] != int(gid):
-            change['gid'] = gid
+       try:
+           gid = int(gid)
+           if lgrp['gid'] != gid:
+                change['gid'] = gid
+       except (TypeError, ValueError):
+           ret['result'] = False
+           ret['comment'] = 'Invalid gid'
+           return ret 
 
     if members:
         # -- if new member list if different than the current
