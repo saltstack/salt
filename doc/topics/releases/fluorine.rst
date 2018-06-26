@@ -42,7 +42,7 @@ Jinja filter`_:
     already present, making it available on platforms like RHEL 7 and Ubuntu
     14.04 which provide older versions of Jinja.
 
-.. _`tojson Jinja filter`_: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+.. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
 New Docker Proxy Minion
 =======================
