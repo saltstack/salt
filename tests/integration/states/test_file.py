@@ -696,7 +696,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             Webseite ist https://saltstack.com.
 
             ''')
-        assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)
+        assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
 
     def test_directory(self):
         '''
