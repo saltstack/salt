@@ -24,155 +24,137 @@ Pillar
 The ``netmiko`` proxy configuration requires the following parameters in order
 to connect to the network device:
 
-device_type
-    Class selection based on device type. Supported options:
+- ``device_type`` - Class selection based on device type. Supported options:
 
-    - ``a10``: A10 Networks
-    - ``accedian``: Accedian Networks
-    - ``alcatel_aos``: Alcatel AOS
-    - ``alcatel_sros``: Alcatel SROS
-    - ``apresia_aeos``: Apresia AEOS
-    - ``arista_eos``: Arista EOS
-    - ``aruba_os``: Aruba
-    - ``avaya_ers``: Avaya ERS
-    - ``avaya_vsp``: Avaya VSP
-    - ``brocade_fastiron``: Brocade Fastiron
-    - ``brocade_netiron``: Brocade Netiron
-    - ``brocade_nos``: Brocade NOS
-    - ``brocade_vdx``: Brocade NOS
-    - ``brocade_vyos``: VyOS
-    - ``checkpoint_gaia``: Check Point GAiA
-    - ``calix_b6``: Calix B6
-    - ``ciena_saos``: Ciena SAOS
-    - ``cisco_asa``: Cisco SA
-    - ``cisco_ios``: Cisco IOS
-    - ``cisco_nxos``: Cisco NX-oS
-    - ``cisco_s300``: Cisco S300
-    - ``cisco_tp``: Cisco TpTcCe
-    - ``cisco_wlc``: Cisco WLC
-    - ``cisco_xe``: Cisco IOS
-    - ``cisco_xr``: Cisco XR
-    - ``coriant``: Coriant
-    - ``dell_force10``: Dell Force10
-    - ``dell_os10``: Dell OS10
-    - ``dell_powerconnect``: Dell PowerConnect
-    - ``eltex``: Eltex
-    - ``enterasys``: Enterasys
-    - ``extreme``: Extreme
-    - ``extreme_wing``: Extreme Wing
-    - ``f5_ltm``: F5 LTM
-    - ``fortinet``: Fortinet
-    - ``generic_termserver``: TerminalServer
-    - ``hp_comware``: HP Comware
-    - ``hp_procurve``: HP Procurve
-    - ``huawei``: Huawei
-    - ``huawei_vrpv8``: Huawei VRPV8
-    - ``juniper``: Juniper Junos
-    - ``juniper_junos``: Juniper Junos
-    - ``linux``: Linux
-    - ``mellanox``: Mellanox
-    - ``mrv_optiswitch``: MrvOptiswitch
-    - ``netapp_cdot``: NetAppcDot
-    - ``netscaler``: Netscaler
-    - ``ovs_linux``: OvsLinux
-    - ``paloalto_panos``: PaloAlto Panos
-    - ``pluribus``: Pluribus
-    - ``quanta_mesh``: Quanta Mesh
-    - ``ruckus_fastiron``: Ruckus Fastiron
-    - ``ubiquiti_edge``: Ubiquiti Edge
-    - ``ubiquiti_edgeswitch``: Ubiquiti Edge
-    - ``vyatta_vyos``: VyOS
-    - ``vyos``: VyOS
-    - ``brocade_fastiron_telnet``: Brocade Fastiron over Telnet
-    - ``brocade_netiron_telnet``: Brocade Netiron over Telnet
-    - ``cisco_ios_telnet``: Cisco IOS over Telnet
-    - ``apresia_aeos_telnet``: Apresia AEOS over Telnet
-    - ``arista_eos_telnet``: Arista EOS over Telnet
-    - ``hp_procurve_telnet``: HP Procurve over Telnet
-    - ``hp_comware_telnet``: HP Comware over Telnet
-    - ``juniper_junos_telnet``: Juniper Junos over Telnet
-    - ``calix_b6_telnet``: Calix B6 over Telnet
-    - ``dell_powerconnect_telnet``: Dell PowerConnect over Telnet
-    - ``generic_termserver_telnet``: TerminalServer over Telnet
-    - ``extreme_telnet``: Extreme Networks over Telnet
-    - ``ruckus_fastiron_telnet``: Ruckus Fastiron over Telnet
-    - ``cisco_ios_serial``: Cisco IOS over serial port
+  - ``a10``: A10 Networks
+  - ``accedian``: Accedian Networks
+  - ``alcatel_aos``: Alcatel AOS
+  - ``alcatel_sros``: Alcatel SROS
+  - ``apresia_aeos``: Apresia AEOS
+  - ``arista_eos``: Arista EOS
+  - ``aruba_os``: Aruba
+  - ``avaya_ers``: Avaya ERS
+  - ``avaya_vsp``: Avaya VSP
+  - ``brocade_fastiron``: Brocade Fastiron
+  - ``brocade_netiron``: Brocade Netiron
+  - ``brocade_nos``: Brocade NOS
+  - ``brocade_vdx``: Brocade NOS
+  - ``brocade_vyos``: VyOS
+  - ``checkpoint_gaia``: Check Point GAiA
+  - ``calix_b6``: Calix B6
+  - ``ciena_saos``: Ciena SAOS
+  - ``cisco_asa``: Cisco SA
+  - ``cisco_ios``: Cisco IOS
+  - ``cisco_nxos``: Cisco NX-oS
+  - ``cisco_s300``: Cisco S300
+  - ``cisco_tp``: Cisco TpTcCe
+  - ``cisco_wlc``: Cisco WLC
+  - ``cisco_xe``: Cisco IOS
+  - ``cisco_xr``: Cisco XR
+  - ``coriant``: Coriant
+  - ``dell_force10``: Dell Force10
+  - ``dell_os10``: Dell OS10
+  - ``dell_powerconnect``: Dell PowerConnect
+  - ``eltex``: Eltex
+  - ``enterasys``: Enterasys
+  - ``extreme``: Extreme
+  - ``extreme_wing``: Extreme Wing
+  - ``f5_ltm``: F5 LTM
+  - ``fortinet``: Fortinet
+  - ``generic_termserver``: TerminalServer
+  - ``hp_comware``: HP Comware
+  - ``hp_procurve``: HP Procurve
+  - ``huawei``: Huawei
+  - ``huawei_vrpv8``: Huawei VRPV8
+  - ``juniper``: Juniper Junos
+  - ``juniper_junos``: Juniper Junos
+  - ``linux``: Linux
+  - ``mellanox``: Mellanox
+  - ``mrv_optiswitch``: MrvOptiswitch
+  - ``netapp_cdot``: NetAppcDot
+  - ``netscaler``: Netscaler
+  - ``ovs_linux``: OvsLinux
+  - ``paloalto_panos``: PaloAlto Panos
+  - ``pluribus``: Pluribus
+  - ``quanta_mesh``: Quanta Mesh
+  - ``ruckus_fastiron``: Ruckus Fastiron
+  - ``ubiquiti_edge``: Ubiquiti Edge
+  - ``ubiquiti_edgeswitch``: Ubiquiti Edge
+  - ``vyatta_vyos``: VyOS
+  - ``vyos``: VyOS
+  - ``brocade_fastiron_telnet``: Brocade Fastiron over Telnet
+  - ``brocade_netiron_telnet``: Brocade Netiron over Telnet
+  - ``cisco_ios_telnet``: Cisco IOS over Telnet
+  - ``apresia_aeos_telnet``: Apresia AEOS over Telnet
+  - ``arista_eos_telnet``: Arista EOS over Telnet
+  - ``hp_procurve_telnet``: HP Procurve over Telnet
+  - ``hp_comware_telnet``: HP Comware over Telnet
+  - ``juniper_junos_telnet``: Juniper Junos over Telnet
+  - ``calix_b6_telnet``: Calix B6 over Telnet
+  - ``dell_powerconnect_telnet``: Dell PowerConnect over Telnet
+  - ``generic_termserver_telnet``: TerminalServer over Telnet
+  - ``extreme_telnet``: Extreme Networks over Telnet
+  - ``ruckus_fastiron_telnet``: Ruckus Fastiron over Telnet
+  - ``cisco_ios_serial``: Cisco IOS over serial port
 
-ip
-  IP address of target device. Not required if ``host`` is provided.
+- ``ip`` - IP address of target device (not required if ``host`` is provided)
 
-host
-  Hostname of target device. Not required if ``ip`` is provided.
+- ``host`` - Hostname of target device (not required if ``ip`` is provided)
 
-username
-  Username to authenticate against target device if required.
+- ``username`` - Username to authenticate against target device, if required
 
-password
-  Password to authenticate against target device if required.
+- ``password`` - Password to authenticate against target device, if required
 
-secret
-  The enable password if target device requires one.
+- ``secret`` - The enable password if target device requires one
 
-port
-  The destination port used to connect to the target device.
+- ``port`` - The destination port used to connect to the target device
 
-global_delay_factor: ``1``
-  Multiplication factor affecting Netmiko delays (default: ``1``).
+- ``global_delay_factor`` - Multiplication factor affecting Netmiko delays
+  (default: ``1``)
 
-use_keys: ``False``
-  Connect to target device using SSH keys.
+- ``use_keys`` - Connect to target device using SSH keys (default: ``False``)
 
-key_file
-  Filename path of the SSH key file to use.
+- ``key_file`` - Filename path of the SSH key file to use
 
-allow_agent
-  Enable use of SSH key-agent.
+- ``allow_agent`` - Enable use of SSH key-agent
 
-ssh_strict: ``False``
-  Automatically reject unknown SSH host keys (default: ``False``, which means
-  unknown SSH host keys will be accepted).
+- ``ssh_strict`` - Automatically reject unknown SSH host keys (default:
+  ``False``, which means unknown SSH host keys will be accepted)
 
-system_host_keys: ``False``
-  Load host keys from the user's 'known_hosts' file.
+- ``system_host_keys`` - Load host keys from the user's "known_hosts" file
+  (default: ``False``)
 
-alt_host_keys: ``False``
-  If ``True`` host keys will be loaded from the file specified in
-  ``alt_key_file``.
+- ``alt_host_keys`` - If ``True``,  host keys will be loaded from the file
+  specified in ``alt_key_file`` (default: ``False``)
 
-alt_key_file
-  SSH host key file to use (if ``alt_host_keys=True``).
+- ``alt_key_file`` - SSH host key file to use (if ``alt_host_keys=True``)
 
-ssh_config_file
-  File name of OpenSSH configuration file.
+- ``ssh_config_file`` - File name of OpenSSH configuration file
 
-timeout: ``90``
-  Connection timeout (in seconds).
+- ``timeout`` - Connection timeout, in seconds (default: ``90``)
 
-session_timeout: ``60``
-  Set a timeout for parallel requests (in seconds).
+- ``session_timeout`` - Set a timeout for parallel requests, in seconds
+  (default: ``60``)
 
-keepalive: ``0``
-  Send SSH keepalive packets at a specific interval, in seconds. Currently
-  defaults to ``0``, for backwards compatibility (it will not attempt to keep
-  the connection alive using the KEEPALIVE packets).
+- ``keepalive`` - Send SSH keepalive packets at a specific interval, in
+  seconds. Currently defaults to ``0``, for backwards compatibility (it will
+  not attempt to keep the connection alive using the KEEPALIVE packets).
 
-default_enter: ``\n``
-  Character(s) to send to correspond to enter key (default: ``\n``).
+- ``default_enter`` - Character(s) to send to correspond to enter key (default:
+  ``\\n``)
 
-response_return: ``\n``
-    Character(s) to use in normalized return data to represent enter key
-    (default: ``\n``)
+- ``response_return`` - Character(s) to use in normalized return data to
+  represent enter key (default: ``\\n``)
 
-always_alive: ``True``
-    In certain less dynamic environments, maintaining the remote connection
-    permanently open with the network device is not always beneficial. In that
-    case, the user can select to initialize the connection only when needed, by
-    specifying this field to ``false``.
-    Default: ``true`` (maintains the connection with the remote network device).
+- ``always_alive`` - In certain less dynamic environments, maintaining the
+  remote connection permanently open with the network device is not always
+  beneficial. In that case, the user can select to initialize the connection
+  only when needed, by setting this option to ``False``. By default this option
+  is set to ``True`` (maintains the connection with the remote network device)
 
-multiprocessing: ``False``
-    Overrides the :conf_minion:`multiprocessing` option, per proxy minion, as
-    the Netmiko communication channel is mainly SSH.
+- ``multiprocessing`` - Overrides the :conf_minion:`multiprocessing` option,
+  per proxy minion, as the Netmiko communication channel is mainly SSH
+  (default: ``False``)
 
 Proxy Pillar Example
 --------------------
