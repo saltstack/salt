@@ -60,7 +60,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'ansible.playbooks',
             name='remove.yml',
-            gitrepo='git://github.com/gtmanfred/playbooks.git',
+            git_repo='git://github.com/gtmanfred/playbooks.git',
             ansible_kwargs={'inventory': self.inventory}
         )
         self.assertSaltTrueReturn(ret)
