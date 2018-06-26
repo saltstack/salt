@@ -138,10 +138,12 @@ def set_timeout(name, value, power='ac', scheme=None):
         ret['changes'] = {name: changes}
         ret['comment'] = '{0} timeout on {1} power set to {2}' \
                          ''.format(name.capitalize(), power.upper(), value)
+        log.debug(ret['comment'])
     else:
         ret['changes'] = {}
         ret['comment'] = 'Failed to set {0} timeout on {1} power to {2}' \
                          ''.format(name, power.upper(), value)
+        log.debug(ret['comment'])
         ret['result'] = False
 
     return ret
