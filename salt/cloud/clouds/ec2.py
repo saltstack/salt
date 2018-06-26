@@ -2708,8 +2708,8 @@ def create(vm_=None, call=None):
 
         spot_request_tags['Name'] = vm_['name']
 
-        for k,v in vm_['spot_config']['tag'].iteritems():
-          spot_request_tags[k] = v
+        for k, v in six.iteritems(vm_['spot_config']['tag']):
+            spot_request_tags[k] = v
 
         __utils__['cloud.fire_event'](
             'event',
@@ -2718,7 +2718,7 @@ def create(vm_=None, call=None):
             args={'tags': spot_request_tags},
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
-        )       
+        )
         salt.utils.cloud.wait_for_fun(
             set_tags,
             timeout=30,
@@ -2729,7 +2729,6 @@ def create(vm_=None, call=None):
             location=location
         )
 
-    
     network_interfaces = config.get_cloud_config_value(
         'network_interfaces',
         vm_,
