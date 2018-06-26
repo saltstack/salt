@@ -464,13 +464,26 @@ following example will request that spot instances be used and your
 maximum bid will be $0.10. Keep in mind that different spot prices
 may be needed based on the current value of the various EC2 instance
 sizes. You can check current and past spot instance pricing via the
-EC2 API or AWS Console.
+EC2 API or AWS Console. 
 
 .. code-block:: yaml
 
     my-ec2-config:
       spot_config:
         spot_price: 0.10
+
+You can optionally specify tags to apply to the EC2 spot instance request.
+A spot instance request itself is an object in AWS. The following example
+will set two tags on the spot instance request.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+        tag:
+          tag0: value
+          tag1: value
 
 By default, the spot instance type is set to 'one-time', meaning it will
 be launched and, if it's ever terminated for whatever reason, it will not
