@@ -4,6 +4,46 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+Non-Backward-Compatible Change to YAML Renderer
+===============================================
+
+In earlier releases, this was considered valid usage in Python 2, assuming that
+``data`` was a dictionary containing keys/values which are unicode string
+types:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data }}
+
+Jinja will render the unicode string types in Python 2 with the "u" prefix.
+While not valid YAML, earlier releases would successfully load these values.
+
+As of this release, the above SLS would result in an error message. To allow
+for a data structure to be dumped directly into your SLS file, use the `tojson
+Jinja filter`_:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data|tojson }}
+
+.. note::
+    This filter was added in Jinja 2.9. However, fear not! The Fluorine release
+    also adds a ``tojson`` filter which will be used if this filter is not
+    already present, making it available on platforms like RHEL 7 and Ubuntu
+    14.04 which provide older versions of Jinja.
+
+.. _`tojson Jinja filter`_: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+
 New Docker Proxy Minion
 =======================
 
@@ -21,7 +61,6 @@ module.
     proxy:
       proxytype: docker
       name: keen_proskuriakova
-
 
 Grains Dictionary Passed into Custom Grains
 ===========================================
