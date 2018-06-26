@@ -154,7 +154,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         run nginx install:
           ansible.playbooks:
             - name: install.yml
-            - gitrepo: git://github.com/gituser/playbook.git
+            - git_repo: git://github.com/gituser/playbook.git
             - git_kwargs:
                 rev: master
     '''
