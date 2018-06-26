@@ -2211,7 +2211,11 @@ class ClearFuncs(object):
 
             if save_load_func:
                 try:
-                    self.mminion.returners[fstr](clear_load['jid'], clear_load, minions=minions)
+                    returner_args = [clear_load['jid'], clear_load]
+                    returner_kwargs = {}
+                    if 'minions' in salt.utils.args.get_function_argspec(self.mminion.returners[fstring]).args:
+                        returner_kwargs['minions'] = minions
+                    self.mminion.returners[fstr](*returner_args, **returner_kwargs)
                 except Exception:
                     log.critical(
                         'The specified returner threw a stack trace:\n',
