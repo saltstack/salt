@@ -472,6 +472,19 @@ EC2 API or AWS Console.
       spot_config:
         spot_price: 0.10
 
+You can optionally specify tags to apply to the EC2 spot instance request.
+A spot instance request itself is an object in AWS. The following example
+will set two tags on the spot instance request.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+        tag:
+          tag0: value
+          tag1: value
+
 By default, the spot instance type is set to 'one-time', meaning it will
 be launched and, if it's ever terminated for whatever reason, it will not
 be recreated. If you would like your spot instances to be relaunched after
