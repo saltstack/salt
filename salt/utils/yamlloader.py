@@ -127,47 +127,6 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
         value = self.construct_scalar(node)
         return salt.utils.stringutils.to_unicode(value)
 
-    def fetch_plain(self):
-        '''
-        Handle unicode literal strings which appear inline in the YAML
-        '''
-        orig_line = self.line
-        orig_column = self.column
-        orig_pointer = self.pointer
-        try:
-            return super(SaltYamlSafeLoader, self).fetch_plain()
-        except yaml.scanner.ScannerError as exc:
-            problem_line = self.line
-            problem_column = self.column
-            problem_pointer = self.pointer
-            if exc.problem == "found unexpected ':'":
-                # Reset to prior position
-                self.line = orig_line
-                self.column = orig_column
-                self.pointer = orig_pointer
-                if self.peek(0) == 'u':
-                    # Might be a unicode literal string, check for 2nd char and
-                    # call the appropriate fetch func if it's a quote
-                    quote_char = self.peek(1)
-                    if quote_char in ("'", '"'):
-                        # Skip the "u" prefix by advancing the column and
-                        # pointer by 1
-                        self.column += 1
-                        self.pointer += 1
-                        if quote_char == '\'':
-                            return self.fetch_single()
-                        else:
-                            return self.fetch_double()
-                    else:
-                        # This wasn't a unicode literal string, so the caught
-                        # exception was correct. Restore the old position and
-                        # then raise the caught exception.
-                        self.line = problem_line
-                        self.column = problem_column
-                        self.pointer = problem_pointer
-            # Raise the caught exception
-            raise exc
-
     def flatten_mapping(self, node):
         merge = []
         index = 0
