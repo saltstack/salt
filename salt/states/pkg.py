@@ -415,16 +415,6 @@ def _find_remove_targets(name=None,
 
         if __grains__['os'] == 'FreeBSD' and origin:
             cver = [k for k, v in six.iteritems(cur_pkgs) if v['origin'] == pkgname]
-        elif __grains__['os_family'] == 'Suse':
-            # On SUSE systems. Zypper returns packages without "arch" in name
-            try:
-                namepart, archpart = pkgname.rsplit('.', 1)
-            except ValueError:
-                cver = cur_pkgs.get(pkgname, [])
-            else:
-                if archpart in salt.utils.pkg.rpm.ARCHES + ("noarch",):
-                    pkgname = namepart
-                cver = cur_pkgs.get(pkgname, [])
         else:
             cver = cur_pkgs.get(pkgname, [])
 
