@@ -14,7 +14,7 @@ pipeline {
         stage('build') {
             steps {
                 sh 'eval "$(pyenv init -)"; make -C doc clean html'
-                archiveArtifacts artifacts: 'doc/_build/html'
+                archiveArtifacts artifacts: 'doc/_build/html/'
             }
         }
     }
