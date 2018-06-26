@@ -54,7 +54,7 @@ def set_(key, value, profile=None):
         return False
     redis_kwargs = profile.copy()
     redis_kwargs.pop('driver')
-    redis_conn = redis.Redis(**redis_kwargs)
+    redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.set(key, value)
 
 
@@ -66,7 +66,7 @@ def get(key, profile=None):
         return False
     redis_kwargs = profile.copy()
     redis_kwargs.pop('driver')
-    redis_conn = redis.Redis(**redis_kwargs)
+    redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.get(key)
 
 
@@ -78,5 +78,5 @@ def delete(key, profile=None):
         return False
     redis_kwargs = profile.copy()
     redis_kwargs.pop('driver')
-    redis_conn = redis.Redis(**redis_kwargs)
+    redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.get(key)
