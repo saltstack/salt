@@ -8,8 +8,7 @@ Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
 In earlier releases, this was considered valid usage in Python 2, assuming that
-``data`` was a dictionary containing keys/values which are unicode string
-types:
+``data`` was a dictionary containing keys/values which are ``unicode`` types:
 
 .. code-block:: jinja
 
@@ -20,8 +19,9 @@ types:
         - context:
             data: {{ data }}
 
-Jinja will render the unicode string types in Python 2 with the "u" prefix.
-While not valid YAML, earlier releases would successfully load these values.
+Jinja will render the ``unicode`` string types in Python 2 with the "u" prefix
+(e.g. ``{u'foo': u'bar'}``). While not valid YAML, earlier releases would
+successfully load these values.
 
 As of this release, the above SLS would result in an error message. To allow
 for a data structure to be dumped directly into your SLS file, use the `tojson
