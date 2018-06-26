@@ -96,13 +96,14 @@ def options_present(name, sections=None, separator='=', strict=False):
                                                         'after': None}})
             for section_name, section_body in [(sname, sbody) for sname, sbody in sections.items()
                                                if isinstance(sbody, (dict, OrderedDict))]:
+                section_descr = ' in section ' + section_name if section_name else ''
                 changes[section_name] = {}
                 if strict:
                     original = cur_ini.get(section_name, {})
                     for key_to_remove in set(original.keys()).difference(section_body.keys()):
                         orig_value = original_sections.get(section_name, {}).get(key_to_remove, '#-#-')
                         if __opts__['test']:
-                            ret['comment'] += 'Deleted key {0} in section {1}.\n'.format(key_to_remove, section_name)
+                            ret['comment'] += 'Deleted key {0}{1}.\n'.format(key_to_remove, section_descr)
                             ret['result'] = None
                         else:
                             __salt__['ini.remove_option'](name, section_name, key_to_remove, separator)
@@ -113,9 +114,9 @@ def options_present(name, sections=None, separator='=', strict=False):
                     for option in section_body:
                         if six.text_type(section_body[option]) == \
                                 six.text_type(original_sections.get(section_name, {}).get(option, '#-#-')):
-                            ret['comment'] += 'Unchanged key {0} in section {1}.\n'.format(option, section_name)
+                            ret['comment'] += 'Unchanged key {0}{1}.\n'.format(option, section_descr)
                         else:
-                            ret['comment'] += 'Changed key {0} in section {1}.\n'.format(option, section_name)
+                            ret['comment'] += 'Changed key {0}{1}.\n'.format(option, section_descr)
                             ret['result'] = None
                 else:
                     options_updated = __salt__['ini.set_option'](name, {section_name: section_body}, separator)
@@ -170,7 +171,7 @@ def options_absent(name, sections=None, separator='='):
         ret['result'] = True
         ret['comment'] = ''
         for section in sections or {}:
-            section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            section_name = ' in section ' + section if section else ''
             try:
                 cur_section = __salt__['ini.get_section'](name, section, separator)
             except IOError as err:

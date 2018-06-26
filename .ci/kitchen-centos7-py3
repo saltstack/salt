@@ -9,6 +9,14 @@ pipeline {
         TEST_PLATFORM = "centos-7"
     }
     stages {
+        stage('github-pending') {
+            steps {
+                githubNotify credentialsId: 'test-jenkins-credentials',
+                    description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
+                    status: 'PENDING',
+                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+            }
+        }
         stage('setup') {
             steps {
                 sh 'bundle install --with ec2 windows --without opennebula docker'
@@ -39,10 +47,16 @@ pipeline {
     }
     post {
         success {
-            githubNotify description: "The centos7-py3 job has passed", status: "SUCCESS"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
+                status: 'SUCCESS',
+                context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
         }
         failure {
-            githubNotify description: "The centos7-py3 job has failed", status: "FAILURE"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
+                status: 'FAILURE',
+                context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
         }
     }
 }
