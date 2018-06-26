@@ -2357,35 +2357,35 @@ def _hw_data(osdata):
     # Chassis Type table taken from the System Management BIOS (SMBIOS)
     # Reference Specification (DSP0134) Version 2.7.1
     chassis_types = {
-      0x01: 'Other',
-      0x02: 'Unknown',
-      0x03: 'Desktop',
-      0x04: 'Low Profile Desktop',
-      0x05: 'Pizza Box',
-      0x06: 'Mini Tower',
-      0x07: 'Tower',
-      0x08: 'Portable',
-      0x09: 'LapTop',
-      0x0a: 'Notebook',
-      0x0b: 'Hand Held',
-      0x0c: 'Docking Station',
-      0x0d: 'All in One',
-      0x0e: 'Sub Notebook',
-      0x0f: 'Space-saving',
-      0x10: 'Lunch Box',
-      0x11: 'Main Server Chassis',
-      0x12: 'Expansion Chassis',
-      0x13: 'SubChassis',
-      0x14: 'Bus Expansion Chassis',
-      0x15: 'Peripheral Chassis',
-      0x16: 'RAID Chassis',
-      0x17: 'Rack Mount Chassis',
-      0x18: 'Sealed-case PC',
-      0x19: 'Multi-system chassis',
-      0x1a: 'Compact PCI',
-      0x1b: 'Advanced TCA',
-      0x1c: 'Blade',
-      0x1d: 'Blade Enclosure'
+        0x01: 'Other',
+        0x02: 'Unknown',
+        0x03: 'Desktop',
+        0x04: 'Low Profile Desktop',
+        0x05: 'Pizza Box',
+        0x06: 'Mini Tower',
+        0x07: 'Tower',
+        0x08: 'Portable',
+        0x09: 'LapTop',
+        0x0a: 'Notebook',
+        0x0b: 'Hand Held',
+        0x0c: 'Docking Station',
+        0x0d: 'All in One',
+        0x0e: 'Sub Notebook',
+        0x0f: 'Space-saving',
+        0x10: 'Lunch Box',
+        0x11: 'Main Server Chassis',
+        0x12: 'Expansion Chassis',
+        0x13: 'SubChassis',
+        0x14: 'Bus Expansion Chassis',
+        0x15: 'Peripheral Chassis',
+        0x16: 'RAID Chassis',
+        0x17: 'Rack Mount Chassis',
+        0x18: 'Sealed-case PC',
+        0x19: 'Multi-system chassis',
+        0x1a: 'Compact PCI',
+        0x1b: 'Advanced TCA',
+        0x1c: 'Blade',
+        0x1d: 'Blade Enclosure'
     }
 
     if osdata['kernel'] == 'Linux' and os.path.exists('/sys/class/dmi/id'):
@@ -2425,7 +2425,7 @@ def _hw_data(osdata):
                     if err.errno == EACCES or err.errno == EPERM:
                         # Skip the grain if non-root user has no access to the file.
                         pass
-        grains = dict([(key, val) for key, val in grains.items() if val is not None])
+        grains = {key: val for key, val in six.iteritems(grains) if val is not None}
     elif salt.utils.path.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.platform.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
@@ -2451,7 +2451,7 @@ def _hw_data(osdata):
         for key, val in six.iteritems(smbios_hwdata):
             value = __salt__['smbios.get'](val)
             grains[key] = _clean_value(key, value)
-        grains = dict([(key, val) for key, val in grains.items() if val is not None])
+        grains = {key: val for key, val in six.iteritems(grains) if val is not None}
         uuid = __salt__['smbios.get']('system-uuid')
         if uuid is not None:
             grains['uuid'] = uuid.lower()
