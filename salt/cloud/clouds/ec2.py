@@ -2683,7 +2683,6 @@ def create(vm_=None, call=None):
         location=location
     )
 
-
     # Once instance tags are set, tag the spot request if configured
     if 'spot_config' in vm_ and 'tag' in vm_['spot_config']:
 
@@ -2701,7 +2700,7 @@ def create(vm_=None, call=None):
 
         spot_request_tags = {}
 
-        if not 'spotRequestId' in vm_:
+        if 'spotRequestId' not in vm_:
             raise SaltCloudConfigError('Failed to find spotRequestId')
 
         sir_id = vm_['spotRequestId']
