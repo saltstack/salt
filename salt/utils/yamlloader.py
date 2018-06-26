@@ -5,7 +5,6 @@ Custom YAML loading in Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import re
 import warnings
 
 import yaml  # pylint: disable=blacklisted-import
