@@ -692,8 +692,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(test_file) as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
         expected = textwrap.dedent('''\
-            Zucker ist süß.
             Webseite ist https://saltstack.com.
+            Zucker ist süß.
 
             ''')
         assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
