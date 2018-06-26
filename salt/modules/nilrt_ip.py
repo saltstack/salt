@@ -76,10 +76,10 @@ def __virtual__():
     Confine this module to NI Linux Real-Time based distros
     '''
     try:
-        _assume_condition(HAS_CONFIGPARSER, 'The python package configparser is not installed')
-        _assume_condition(HAS_REQUEST, 'The python package request is not installed')
         msg = 'The nilrt_ip module could not be loaded: unsupported OS family'
         _assume_condition(__grains__['os_family'] == 'NILinuxRT', msg)
+        _assume_condition(HAS_CONFIGPARSER, 'The python package configparser is not installed')
+        _assume_condition(HAS_REQUEST, 'The python package request is not installed')
         _assume_condition(HAS_PYIFACE, 'The python pyiface package is not installed')
         if __grains__['lsb_distrib_id'] != 'nilrt':
             _assume_condition(HAS_PYCONNMAN, 'The python package pyconnman is not installed')
@@ -96,8 +96,10 @@ def _get_state():
     '''
     try:
         return pyconnman.ConnManager().get_property('State')
-    except (KeyError, dbus.Exception):
+    except KeyError:
         return 'offline'
+    except dbus.Exception as exc:
+        raise salt.exceptions.CommandExecutionError('Connman daemon error: {0}'.format(exc))
 
 
 def _get_technologies():
@@ -340,9 +342,7 @@ def _dict_to_string(dictionary):
             for line in _dict_to_string(val):
                 ret += six.text_type(key) + '-' + line + '\n'
         elif isinstance(val, list):
-            text = ''
-            for item in val:
-                text += six.text_type(item) + ' '
+            text = ' '.join([six.text_type(item) for item in val])
             ret += six.text_type(key) + ': ' + text +'\n'
         else:
             ret += six.text_type(key) + ': ' + six.text_type(val) +'\n'
@@ -559,8 +559,7 @@ def _persist_config(section, token, value):
     cmd = NIRTCFG_PATH
     cmd += ' --set section={0},token=\'{1}\',value=\'{2}\''.format(section, token, value)
     if __salt__['cmd.run_all'](cmd)['retcode'] != 0:
-        exc_msg = 'Couldn\'t set manual settings for interface: {0}\n'.format(section)
-        exc_msg += 'Error: could not set {1} to {2}\n'.format(token, value)
+        exc_msg = 'Error: could not set {} to {} for {}\n'.format(token, value, section)
         raise salt.exceptions.CommandExecutionError(exc_msg)
 
 
