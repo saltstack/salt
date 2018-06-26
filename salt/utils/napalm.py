@@ -17,6 +17,7 @@ Utils for the NAPALM modules and proxy.
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import copy
 import traceback
 import logging
 import importlib
@@ -422,7 +423,7 @@ def proxy_napalm_wrap(func):
                 napalm_opts.update(inventory_opts)
                 log.debug('Merging the config for %s with the details found in the napalm inventory:', host)
                 log.debug(napalm_opts)
-            opts = opts.copy()  # make sure we don't override the original
+            opts = copy.deepcopy(opts)  # make sure we don't override the original
             # opts, but just inject the CLI args from the kwargs to into the
             # object manipulated by ``get_device_opts`` to extract the
             # connection details, then use then to establish the connection.
