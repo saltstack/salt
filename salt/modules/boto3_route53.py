@@ -733,9 +733,12 @@ def aws_encode(x):
     escaped unicode or idna depending on whether there are non-ASCII characters
     present.
 
-    This means that we support things like ドメイン.テスト as a domain name string
-    per the idna documentation `here <https://pypi.org/project/idna>`_, in
-    addition to ASCII.
+    This means that we support things like ドメイン.テスト as a domain name string.
+
+    More information about IDNA encoding in python is found here__:
+
+    .. __: https://pypi.org/project/idna
+
     '''
     ret = None
     try:
@@ -772,7 +775,9 @@ def _aws_encode_changebatch(o):
 def _aws_decode(x):
     '''
     An implementation of the decoding required to suport AWS's domain name
-    rules defined `here <http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html>`_.
+    rules defined here__:
+
+    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
 
     The important part is this:
 
