@@ -8,7 +8,8 @@ Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
 In earlier releases, this was considered valid usage in Python 2, assuming that
-``data`` was a dictionary containing keys/values which are ``unicode`` types:
+``data`` was a list or dictionary containing keys/values which are ``unicode``
+types:
 
 .. code-block:: jinja
 
@@ -19,9 +20,13 @@ In earlier releases, this was considered valid usage in Python 2, assuming that
         - context:
             data: {{ data }}
 
-Jinja will render the ``unicode`` string types in Python 2 with the "u" prefix
-(e.g. ``{u'foo': u'bar'}``). While not valid YAML, earlier releases would
-successfully load these values.
+One common use case for this is when using one of Salt's :jinja_ref:`custom
+Jinja filters <custom-jinja-filters>` which return lists or dictionaries, such
+as the :jinja_ref:`ipv4` filter.
+
+In Python 2, Jinja will render the ``unicode`` string types within the
+list/dictionary with the "u" prefix (e.g. ``{u'foo': u'bar'}``). While not
+valid YAML, earlier releases would successfully load these values.
 
 As of this release, the above SLS would result in an error message. To allow
 for a data structure to be dumped directly into your SLS file, use the `tojson
@@ -41,6 +46,14 @@ Jinja filter`_:
     also adds a ``tojson`` filter which will be used if this filter is not
     already present, making it available on platforms like RHEL 7 and Ubuntu
     14.04 which provide older versions of Jinja.
+
+.. important::
+    The :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list` filters
+    do not actually dump the results to JSON. Since ``tojson`` accomplishes
+    what those filters were designed to do, they are now deprecated and will be
+    removed in the Neon release. The ``tojson`` filter should be used in all
+    cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
+    would have been used.
 
 .. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
