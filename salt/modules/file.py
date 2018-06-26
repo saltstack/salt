@@ -5022,9 +5022,9 @@ def manage_file(name,
                 user,
                 group,
                 mode,
-                attrs,
                 saltenv,
                 backup,
+                attrs='',
                 makedirs=False,
                 template=None,   # pylint: disable=W0613
                 show_changes=True,
@@ -5075,7 +5075,7 @@ def manage_file(name,
         backup_mode
 
     attrs
-        attributes to be set on file: '' means remove all of them
+        attributes to be set on file: '' or not setting it means remove all of them
 
         .. versionadded:: 2018.3.0
 
