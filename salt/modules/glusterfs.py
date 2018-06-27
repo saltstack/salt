@@ -36,7 +36,8 @@ def _get_version():
     result = __salt__['cmd.run'](cmd).splitlines()
     for line in result:
         if line.startswith('glusterfs'):
-            version = line.split()[1].split('.')
+            version = line.split()[-1].split('.')
+            version = [int(i) for i in version]
     return tuple(version)
 
 
@@ -747,10 +748,8 @@ def get_max_op_version():
 
         salt '*' glusterfs.get_max_op_version
     '''
-
-
     if _get_version() < (3, 10,):
-        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(_get_version())))
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(str(i) for i in _get_version())))
 
     cmd = 'volume get all cluster.max-op-version'
     root = _gluster_xml(cmd)
