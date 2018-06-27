@@ -628,7 +628,7 @@ def send_config(config_file=None,
                 raise CommandExecutionError('Source file {} not found'.format(config_file))
         config_commands = file_str.splitlines()
     if isinstance(config_commands, (six.string_types, six.text_type)):
-        config_commands = [ config_commands ]
+        config_commands = [config_commands]
     kwargs = clean_kwargs(**kwargs)
     if 'netmiko.conn' in __proxy__:
         conn = __proxy__['netmiko.conn']()

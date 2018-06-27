@@ -34,7 +34,7 @@ except ImportError:
     HAS_NETMIKO_HELPERS = False
 
 try:
-    import jxmlease
+    import jxmlease  # pylint: disable=unused-import
     HAS_JXMLEASE = True
 except ImportError:
     HAS_JXMLEASE = False
@@ -673,7 +673,7 @@ def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
         salt '*' napalm.junos_rpc get-lldp-neighbors-information
         salt '*' napalm.junos_rcp get-config <configuration><system><ntp/></system></configuration>
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
     if not format:
@@ -722,7 +722,7 @@ def junos_install_os(path=None, **kwargs):
 
         salt '*' napalm.junos_install_os salt://images/junos_16_1.tgz reboot=True
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
     return __salt__['junos.install_os'](path=path, **kwargs)
@@ -741,10 +741,10 @@ def junos_facts(**kwargs):
 
         salt '*' napalm.junos_facts
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
-    facts = dict(napalm_device['DRIVER'].device.facts)
+    facts = dict(napalm_device['DRIVER'].device.facts)  # pylint: disable=undefined-variable
     if 'version_info' in facts:
         facts['version_info'] = \
             dict(facts['version_info'])
@@ -784,7 +784,7 @@ def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
 
         salt '*' napalm.junos_cli 'show lldp neighbors'
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
     return __salt__['junos.cli'](command,
@@ -814,7 +814,7 @@ def junos_copy_file(src, dst, **kwargs):
 
         salt '*' napalm.junos_copy_file https://example.com/junos.cfg /var/tmp/myjunos.cfg
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
     cached_src = __salt__['cp.cache_file'](src)
@@ -847,7 +847,7 @@ def junos_call(fun, *args, **kwargs):
 
         salt '*' napalm.junos_fun cli 'show system commit'
     '''
-    prep = _junos_prep_fun(napalm_device)
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep['result']:
         return prep
     if 'junos.' not in fun:
