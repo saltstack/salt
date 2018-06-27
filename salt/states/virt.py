@@ -145,7 +145,8 @@ def keys(name, basepath='/etc/pki', **kwargs):
     return ret
 
 
-def _virt_call(domain, function, section, comment, **kwargs):
+def _virt_call(domain, function, section, comment,
+               connection=None, username=None, password=None, **kwargs):
     '''
     Helper to call the virt functions. Wildcards supported.
 
@@ -161,7 +162,11 @@ def _virt_call(domain, function, section, comment, **kwargs):
     ignored_domains = list()
     for targeted_domain in targeted_domains:
         try:
-            response = __salt__['virt.{0}'.format(function)](targeted_domain, **kwargs)
+            response = __salt__['virt.{0}'.format(function)](targeted_domain,
+                                                             connection=connection,
+                                                             username=username,
+                                                             password=password,
+                                                             **kwargs)
             if isinstance(response, dict):
                 response = response['name']
             changed_domains.append({'domain': targeted_domain, function: response})
@@ -179,34 +184,56 @@ def _virt_call(domain, function, section, comment, **kwargs):
     return ret
 
 
-def stopped(name):
+def stopped(name, connection=None, username=None, password=None):
     '''
     Stops a VM by shutting it down nicely.
 
     .. versionadded:: 2016.3.0
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. code-block:: yaml
 
         domain_name:
           virt.stopped
     '''
 
-    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
+    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down",
+                      connection=connection, username=username, password=password)
 
 
-def powered_off(name):
+def powered_off(name, connection=None, username=None, password=None):
     '''
     Stops a VM by power off.
 
     .. versionadded:: 2016.3.0
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. code-block:: yaml
 
         domain_name:
           virt.stopped
     '''
 
-    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off',
+                      connection=connection, username=username, password=password)
 
 
 def running(name,
@@ -385,11 +412,21 @@ def running(name,
     return ret
 
 
-def snapshot(name, suffix=None):
+def snapshot(name, suffix=None, connection=None, username=None, password=None):
     '''
     Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
     .. versionadded:: 2016.3.0
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -402,21 +439,32 @@ def snapshot(name, suffix=None):
             - suffix: periodic
     '''
 
-    return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
+    return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix,
+                      connection=connection, username=username, password=password)
 
 
 # Deprecated states
-def rebooted(name):
+def rebooted(name, connection=None, username=None, password=None):
     '''
     Reboots VMs
 
     .. versionadded:: 2016.3.0
 
     :param name:
-    :return:
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
     '''
 
-    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
+    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted",
+                      connection=connection, username=username, password=password)
 
 
 def unpowered(name):
@@ -519,9 +567,19 @@ def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-o
     return ret
 
 
-def network_define(name, bridge, forward, **kwargs):
+def network_define(name, bridge, forward, connection=None, username=None, password=None, **kwargs):
     '''
     Defines and starts a new network with specified arguments.
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -553,7 +611,16 @@ def network_define(name, bridge, forward, **kwargs):
     start = kwargs.pop('start', True)
 
     try:
-        result = __salt__['virt.net_define'](name, bridge, forward, vport, tag=tag, autostart=autostart, start=start)
+        result = __salt__['virt.net_define'](name,
+                                             bridge,
+                                             forward,
+                                             vport,
+                                             tag=tag,
+                                             autostart=autostart,
+                                             start=start,
+                                             connection=connection,
+                                             username=username,
+                                             password=password)
         if result:
             ret['changes'][name] = 'Network {0} has been created'.format(name)
             ret['result'] = True
@@ -569,9 +636,19 @@ def network_define(name, bridge, forward, **kwargs):
     return ret
 
 
-def pool_define(name, **kwargs):
+def pool_define(name, connection=None, username=None, password=None, **kwargs):
     '''
     Defines and starts a new pool with specified arguments.
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -603,8 +680,15 @@ def pool_define(name, **kwargs):
     start = kwargs.pop('start', True)
 
     try:
-        result = __salt__['virt.pool_define_build'](name, ptype=ptype, target=target,
-                                                    source=source, autostart=autostart, start=start)
+        result = __salt__['virt.pool_define_build'](name,
+                                                    ptype=ptype,
+                                                    target=target,
+                                                    source=source,
+                                                    autostart=autostart,
+                                                    start=start,
+                                                    connection=connection,
+                                                    username=username,
+                                                    password=password)
         if result:
             if 'Pool exist' in result:
                 if 'Pool update' in result:
