@@ -5,6 +5,14 @@ pipeline {
         PATH = "$PYENV_ROOT/bin:$PATH"
     }
     stages {
+        stage('github-pending') {
+            steps {
+                githubNotify credentialsId: 'test-jenkins-credentials',
+                    description: 'Testing lint...',
+                    status: 'PENDING',
+                    context: "jenkins/pr/lint"
+            }
+        }
         stage('setup') {
             steps {
                 sh 'eval "$(pyenv init -)"; pyenv install 2.7.14 || echo "We already have this python."; pyenv local 2.7.14; pyenv shell 2.7.14'
@@ -32,10 +40,16 @@ pipeline {
     }
     post {
         success {
-            githubNotify description: "The lint job has passed", status: "SUCCESS"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has passed',
+                status: 'SUCCESS',
+                context: "jenkins/pr/lint"
         }
         failure {
-            githubNotify description: "The lint job has failed", status: "FAILURE"
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has failed',
+                status: 'FAILURE',
+                context: "jenkins/pr/lint"
         }
     }
 }
