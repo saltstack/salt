@@ -428,7 +428,7 @@ to False.
 .. conf_master:: color_theme
 
 ``color_theme``
----------
+---------------
 
 Default: ``""``
 
@@ -728,31 +728,6 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
-.. conf_master:: ping_on_rotate
-
-``ping_on_rotate``
-------------------
-
-.. versionadded:: 2014.7.0
-
-Default:  ``False``
-
-By default, the master AES key rotates every 24 hours. The next command
-following a key rotation will trigger a key refresh from the minion which may
-result in minions which do not respond to the first command after a key refresh.
-
-To tell the master to ping all minions immediately after an AES key refresh, set
-ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
-appear to initially respond after a key is rotated.
-
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
-
-.. code-block:: yaml
-
-    ping_on_rotate: False
-
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -840,6 +815,8 @@ that connect to a master via localhost.
 ``ping_on_rotate``
 ------------------
 
+.. versionadded:: 2014.7.0
+
 Default: ``False``
 
 By default, the master AES key rotates every 24 hours. The next command
@@ -850,9 +827,9 @@ To tell the master to ping all minions immediately after an AES key refresh,
 set ``ping_on_rotate`` to ``True``. This should mitigate the issue where a
 minion does not appear to initially respond after a key is rotated.
 
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
+Note that enabling this may cause high load on the master immediately after the
+key rotation event as minions reconnect. Consider this carefully if this salt
+master is managing a large number of minions.
 
 If disabled, it is recommended to handle this event by listening for the
 ``aes_key_rotate`` event with the ``key`` tag and acting appropriately.
@@ -1085,24 +1062,27 @@ Default settings which will be inherited by all rosters.
 
 Default: ``/etc/salt/roster``
 
-Pass in an alternative location for the salt-ssh `flat` roster file.
+Pass in an alternative location for the salt-ssh :py:mod:`flat
+<salt.roster.flat>` roster file.
 
 .. code-block:: yaml
 
     roster_file: /root/roster
 
-.. conf_master:: roster_file
+.. conf_master:: rosters
 
 ``rosters``
----------------
+-----------
 
-Default: None
+Default: ``None``
 
-Define locations for `flat` roster files so they can be chosen when using Salt API.
-An administrator can place roster files into these locations.
-Then when calling Salt API, parameter 'roster_file' should contain a relative path to these locations.
-That is, "roster_file=/foo/roster" will be resolved as "/etc/salt/roster.d/foo/roster" etc.
-This feature prevents passing insecure custom rosters through the Salt API.
+Define locations for :py:mod:`flat <salt.roster.flat>` roster files so they can
+be chosen when using Salt API. An administrator can place roster files into
+these locations. Then, when calling Salt API, the :conf_master:`roster_file`
+parameter should contain a relative path to these locations. That is,
+``roster_file=/foo/roster`` will be resolved as
+``/etc/salt/roster.d/foo/roster`` etc. This feature prevents passing insecure
+custom rosters through the Salt API.
 
 .. code-block:: yaml
 
@@ -2179,6 +2159,7 @@ Example using line statements and line comments to increase ease of use:
 If your configuration options are
 
 .. code-block:: yaml
+
     jinja_sls_env:
       line_statement_prefix: '%'
       line_comment_prefix: '##'
@@ -2188,7 +2169,7 @@ as a jinja statement and will interpret anything after a ``##`` as a comment.
 
 This allows the following more convenient syntax to be used:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     ## (this comment will not stay once rendered)
     # (this comment remains in the rendered template)
@@ -2202,7 +2183,7 @@ This allows the following more convenient syntax to be used:
 The following less convenient but equivalent syntax would have to
 be used if you had not set the line_statement and line_comment options:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# (this comment will not stay once rendered) #}
     # (this comment remains in the rendered template)

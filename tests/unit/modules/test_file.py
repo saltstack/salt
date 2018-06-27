@@ -8,10 +8,11 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, Mock, patch, mock_open
+from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
 
 try:
     import pytest
@@ -37,6 +38,10 @@ content
 /var/lib/foo/app/test
 here
 '''
+
+
+class DummyStat(object):
+    st_size = 123
 
 
 class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
@@ -990,10 +995,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             filemod._starts_till(src=src, probe='and here is something'), -1)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_after_no_pattern(self):
+    @with_tempfile()
+    def test_line_insert_after_no_pattern(self, name):
         '''
         Test for file.line for insertion after specific line, using no pattern.
 
@@ -1012,19 +1015,26 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/custom'
         ])
         cfg_content = '- /srv/custom'
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, after='- /srv/salt', mode='insert')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_after_pattern(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, after='- /srv/salt', mode='insert')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_after_pattern(self, name):
         '''
         Test for file.line for insertion after specific line, using pattern.
 
@@ -1053,20 +1063,59 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '  custom:',
             '    - /srv/custom'
         ])
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for after_line in ['file_r.*', '.*roots']:
-            files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content=cfg_content, after=after_line, mode='insert', indent=False)
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                filemod.line(name, content=cfg_content, after=after_line, mode='insert', indent=False)
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_before(self):
+    @with_tempfile()
+    def test_line_insert_multi_line_content_after_unicode(self, name):
+        '''
+        Test for file.line for insertion after specific line with Unicode
+
+        See issue #48113
+        :return:
+        '''
+        file_content = ("This is a line\nThis is another line")
+        file_modified = salt.utils.stringutils.to_str("This is a line\nThis is another line\nThis is a line with unicode Ŷ")
+        cfg_content = "This is a line with unicode Ŷ"
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        for after_line in ['This is another line']:
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                filemod.line(name, content=cfg_content, after=after_line, mode='insert', indent=False)
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_before(self, name):
         '''
         Test for file.line for insertion before specific line, using pattern and no patterns.
 
@@ -1087,20 +1136,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/sugar'
         ])
         cfg_content = '- /srv/custom'
-        for before_line in ['/srv/salt', '/srv/sa.*t', '/sr.*']:
-            files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content=cfg_content, before=before_line, mode='insert')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-                self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                                 file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_before_after(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        for before_line in ['/srv/salt', '/srv/sa.*t', '/sr.*']:
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                filemod.line(name, content=cfg_content, before=before_line, mode='insert')
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_before_after(self, name):
         '''
         Test for file.line for insertion before specific line, using pattern and no patterns.
 
@@ -1123,20 +1181,29 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/sugar'
         ])
         cfg_content = '- /srv/coriander'
-        for b_line, a_line in [('/srv/sugar', '/srv/salt')]:
-            files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content=cfg_content, before=b_line, after=a_line, mode='insert')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-                self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                                 file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_start(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        for b_line, a_line in [('/srv/sugar', '/srv/salt')]:
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                filemod.line(name, content=cfg_content, before=b_line, after=a_line, mode='insert')
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_start(self, name):
         '''
         Test for file.line for insertion at the beginning of the file
         :return:
@@ -1155,19 +1222,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/salt',
             '    - /srv/sugar'
         ])
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, location='start', mode='insert')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_end(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, location='start', mode='insert')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_end(self, name):
         '''
         Test for file.line for insertion at the end of the file (append)
         :return:
@@ -1186,19 +1262,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/sugar',
             cfg_content
         ])
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, location='end', mode='insert')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_ensure_before(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, location='end', mode='insert')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_ensure_before(self, name):
         '''
         Test for file.line for insertion ensuring the line is before
         :return:
@@ -1215,19 +1300,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             cfg_content,
             'exit 0'
         ])
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, before='exit 0', mode='ensure')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_ensure_after(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_ensure_after(self, name):
         '''
         Test for file.line for insertion ensuring the line is after
         :return:
@@ -1242,19 +1336,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '/etc/init.d/someservice restart',
             cfg_content
         ])
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_ensure_beforeafter_twolines(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_ensure_beforeafter_twolines(self, name):
         '''
         Test for file.line for insertion ensuring the line is between two lines
         :return:
@@ -1268,23 +1371,32 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         # pylint: enable=W1401
         after, before = file_content.split(os.linesep)
         file_modified = os.linesep.join([after, cfg_content, before])
-        for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
-            files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-                self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                                 file_modified)
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_ensure_beforeafter_twolines_exists(self):
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                filemod.line(name, content=cfg_content, after=_after, before=_before, mode='ensure')
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
+
+    @with_tempfile()
+    def test_line_insert_ensure_beforeafter_twolines_exists(self, name):
         '''
-        Test for file.line for insertion ensuring the line is between two lines where content already exists
-        :return:
+        Test for file.line for insertion ensuring the line is between two lines
+        where content already exists
         '''
         cfg_content = 'EXTRA_GROUPS="dialout"'
         # pylint: disable=W1401
@@ -1295,24 +1407,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         ])
         # pylint: enable=W1401
         after, before = file_content.split(os.linesep)[0], file_content.split(os.linesep)[2]
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
-            files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    result = filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 0)
-                self.assertEqual(result, False)
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen',
+                          mock_open(read_data=file_content)), \
+                    patch('salt.utils.atomicfile.atomic_open',
+                          mock_open()) as atomic_open_mock:
+                result = filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
+                # We should not have opened the file
+                assert not atomic_open_mock.filehandles
+                # No changes should have been made
+                assert result is False
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
     def test_line_insert_ensure_beforeafter_rangelines(self):
         '''
-        Test for file.line for insertion ensuring the line is between two lines within the range.
-        This expected to bring no changes.
-
-        :return:
+        Test for file.line for insertion ensuring the line is between two lines
+        within the range.  This expected to bring no changes.
         '''
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
         # pylint: disable=W1401
@@ -1331,10 +1447,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 'Found more than one line between boundaries "before" and "after"',
                 six.text_type(cmd_err))
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_delete(self):
+    @with_tempfile()
+    def test_line_delete(self, name):
         '''
         Test for file.line for deletion of specific line
         :return:
@@ -1352,20 +1466,28 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/salt',
             '    - /srv/sugar'
         ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for content in ['/srv/pepper', '/srv/pepp*', '/srv/p.*', '/sr.*pe.*']:
             files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content=content, mode='delete')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-                self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                                 file_modified)
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen', files_fopen), \
+                    patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+                filemod.line(name, content=content, mode='delete')
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_replace(self):
+    @with_tempfile()
+    def test_line_replace(self, name):
         '''
         Test for file.line for replacement of specific line
         :return:
@@ -1384,15 +1506,25 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '    - /srv/natrium-chloride',
             '    - /srv/sugar'
         ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for match in ['/srv/pepper', '/srv/pepp*', '/srv/p.*', '/sr.*pe.*']:
             files_fopen = mock_open(read_data=file_content)
-            with patch('salt.utils.files.fopen', files_fopen):
-                atomic_opener = mock_open()
-                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    filemod.line('foo', content='- /srv/natrium-chloride', match=match, mode='replace')
-                self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-                self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                                 file_modified)
+            with patch('os.path.isfile', isfile_mock), \
+                    patch('os.stat', MagicMock(return_value=DummyStat())), \
+                    patch('salt.utils.files.fopen', files_fopen), \
+                    patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+                filemod.line(name, content='- /srv/natrium-chloride', match=match, mode='replace')
+                handles = atomic_open_mock.filehandles[name]
+                # We should only have opened the file once
+                open_count = len(handles)
+                assert open_count == 1, open_count
+                # We should only have invoked .write() once...
+                write_count = len(handles[0].write.call_args_list)
+                assert write_count == 1, write_count
+                # ... with the updated content
+                write_content = handles[0].write.call_args_list[0][0][0]
+                assert write_content == file_modified, write_content
 
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):

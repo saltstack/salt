@@ -403,7 +403,7 @@ def key_absent(name, use_32bit_registry=False):
     CLI Example:
 
         The following example will delete the ``SOFTWARE\DeleteMe`` key in the
-        ``HKEY_LOCAL_MACHINE` hive including all its subkeys and value pairs.
+        ``HKEY_LOCAL_MACHINE`` hive including all its subkeys and value pairs.
 
         .. code-block:: yaml
 

@@ -431,6 +431,16 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
+    @skipIf(not os.path.isfile('pip3'), 'test where pip3 is installed')
+    @skipIf(salt.utils.platform.is_windows(), 'test specific for linux usage of /bin/python')
+    def test_system_pip3(self):
+        self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env='/bin/pip3')
+        ret1 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
+        self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env='/bin/pip3')
+        ret2 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
+        assert 'lazyimport==0.0.1' in ret1
+        assert ret2 == ''
+
     def tearDown(self):
         super(PipModuleTest, self).tearDown()
         if os.path.isdir(self.venv_test_dir):

@@ -233,20 +233,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
 
-            out = self.run_script(
+            _, timed_out = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
                 timeout=timeout,
+                catch_timeout=True,
             )
 
             try:
-                self.assertIn(
-                    'Process took more than {0} seconds to complete. '
-                    'Process Killed!'.format(timeout),
-                    out
-                )
+                self.assertTrue(timed_out)
             except AssertionError:
                 if os.path.isfile(minion_config_file):
                     os.unlink(minion_config_file)
@@ -410,7 +407,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Let's create an initial output file with some data
                 self.run_script(
                     'salt-call',
-                    '-c {0} --output-file={1} -l debug -g'.format(
+                    '-c {0} --output-file={1} -l trace -g'.format(
                         self.get_config_dir(),
                         output_file
                     ),

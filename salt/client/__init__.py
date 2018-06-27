@@ -559,6 +559,11 @@ class LocalClient(object):
             {'stewart': {...}}
         '''
         if 'expr_form' in kwargs:
+            # We need to re-import salt.utils.versions here
+            # even though it has already been imported.
+            # when cmd_batch is called via the NetAPI
+            # the module is unavailable.
+            import salt.utils.versions
             salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '

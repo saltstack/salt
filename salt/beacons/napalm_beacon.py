@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-NAPALM functions
-================
+Watch NAPALM functions and fire events on specific triggers
+===========================================================
 
 .. versionadded:: 2018.3.0
 
-Watch NAPALM functions and fire events on specific triggers.
 
 .. note::
 
@@ -14,7 +13,7 @@ Watch NAPALM functions and fire events on specific triggers.
     Check the documentation for the
     :mod:`NAPALM proxy module <salt.proxy.napalm>`.
 
-    _NAPALM: http://napalm.readthedocs.io/en/latest/index.html
+    .. _NAPALM: http://napalm.readthedocs.io/en/latest/index.html
 
 The configuration accepts a list of Salt functions to be
 invoked, and the corresponding output hierarchy that should
@@ -134,7 +133,7 @@ Event structure example:
 
 .. code-block:: json
 
-    salt/beacon/edge01.bjm01/napalm/junos/ntp.stats {
+    {
         "_stamp": "2017-09-05T09:51:09.377202",
         "args": [],
         "data": {
