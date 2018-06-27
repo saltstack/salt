@@ -118,7 +118,7 @@ def set_monitor_timeout(timeout, power='ac', scheme=None):
     .. code-block:: bash
 
         # Sets the monitor timeout to 30 minutes
-        salt '*' powercfg.set_monitor_timeout 1800
+        salt '*' powercfg.set_monitor_timeout 30
     '''
     return _set_powercfg_value(
         scheme=scheme,
@@ -190,7 +190,7 @@ def set_disk_timeout(timeout, power='ac', scheme=None):
     .. code-block:: bash
 
         # Sets the disk timeout to 30 minutes on battery
-        salt '*' powercfg.set_disk_timeout 1800 power=dc
+        salt '*' powercfg.set_disk_timeout 30 power=dc
     '''
     return _set_powercfg_value(
         scheme=scheme,
@@ -262,7 +262,7 @@ def set_standby_timeout(timeout, power='ac', scheme=None):
     .. code-block:: bash
 
         # Sets the system standby timeout to 30 minutes on Battery
-        salt '*' powercfg.set_standby_timeout 1800 power=dc
+        salt '*' powercfg.set_standby_timeout 30 power=dc
     '''
     return _set_powercfg_value(
         scheme=scheme,
@@ -333,7 +333,7 @@ def set_hibernate_timeout(timeout, power='ac', scheme=None):
     .. code-block:: bash
 
         # Sets the hibernate timeout to 30 minutes on Battery
-        salt '*' powercfg.set_hibernate_timeout 1800 power=dc
+        salt '*' powercfg.set_hibernate_timeout 30 power=dc
     '''
     return _set_powercfg_value(
         scheme=scheme,
