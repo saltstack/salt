@@ -2047,10 +2047,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                 # Make sure we match the file mode from salt.utils.files.fopen
                 if six.PY2 and salt.utils.platform.is_windows():
                     mode = 'wb'
-                    body = salt.utils.stringutils.to_bytes(body)
+                    body = salt.utils.data.encode_list(body)
                 else:
                     mode = 'w'
-                    body = salt.utils.stringutils.to_str(body)
+                    body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
                 fh_.write(''.join(body))
             finally:
