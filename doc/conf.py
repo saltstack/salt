@@ -256,7 +256,7 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2018.3.1'  # latest release
+latest_release = '2018.3.2'  # latest release
 previous_release = '2017.7.6'  # latest release from previous branch
 previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
