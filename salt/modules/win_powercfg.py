@@ -73,6 +73,11 @@ def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
     '''
     Sets the AC/DC values of a setting with the given power for the given scheme
     '''
+    salt.utils.warn_until(
+        'Fluorine',
+        'This function now expects the timeout value in minutes instead of '
+        'seconds as stated in the documentation. This warning will be removed '
+        'in Salt Fluorine.')
     if scheme is None:
         scheme = _get_current_scheme()
 
