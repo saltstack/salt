@@ -1532,10 +1532,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             write_content = handles[0].write.call_args_list[0][0][0]
             assert write_content == file_modified, write_content
 
-    @patch('os.path.realpath', MagicMock())
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.stat', MagicMock())
-    def test_line_insert_ensure_before_first_line(self):
+    @with_tempfile()
+    def test_line_insert_ensure_before_first_line(self, name):
         '''
         Test for file.line for insertion ensuring the line is before first line
         :return:
@@ -1550,14 +1548,25 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '/etc/init.d/someservice restart',
             'exit 0'
         ])
-        files_fopen = mock_open(read_data=file_content)
-        with patch('salt.utils.files.fopen', files_fopen):
-            atomic_opener = mock_open()
-            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
-            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
-            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
-                             file_modified)
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .write() once...
+            write_count = len(handles[0].write.call_args_list)
+            assert write_count == 1, write_count
+            # ... with the updated content
+            write_content = handles[0].write.call_args_list[0][0][0]
+            assert write_content == file_modified, write_content
 
     @with_tempfile()
     def test_line_insert_ensure_after(self, name):
