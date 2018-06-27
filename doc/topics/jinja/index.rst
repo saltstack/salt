@@ -886,7 +886,7 @@ Example:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
-.. deprecated:: Fluorine
+.. deprecated:: 2018.3.3,Fluorine
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -919,7 +919,7 @@ Returns:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
-.. deprecated:: Fluorine
+.. deprecated:: 2018.3.3,Fluorine
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -946,7 +946,7 @@ Returns:
 ``tojson``
 ----------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2018.3.3,Fluorine
 
 Dumps a data structure to JSON.
 
