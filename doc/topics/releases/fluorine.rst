@@ -42,10 +42,10 @@ Jinja filter`_:
             data: {{ data|tojson }}
 
 .. note::
-    This filter was added in Jinja 2.9. However, fear not! The Fluorine release
-    also adds a ``tojson`` filter which will be used if this filter is not
-    already present, making it available on platforms like RHEL 7 and Ubuntu
-    14.04 which provide older versions of Jinja.
+    This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
+    added a ``tojson`` filter which will be used if this filter is not already
+    present, making it available on platforms like RHEL 7 and Ubuntu 14.04
+    which provide older versions of Jinja.
 
 .. important::
     The :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list` filters
