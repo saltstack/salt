@@ -84,7 +84,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 pipes.quote(minion_testfile)
             ))
 
-            data = eval('\n'.join(ret), {}, {})
+            data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
