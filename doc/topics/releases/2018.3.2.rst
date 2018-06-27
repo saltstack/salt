@@ -1,9 +1,8 @@
-========================================
-In Progress: Salt 2018.3.2 Release Notes
-========================================
+===========================
+Salt 2018.3.2 Release Notes
+===========================
 
-Version 2018.3.2 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
-This release is still in progress and has not been released yet.
+Version 2018.3.2 is a bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 
 The ``2018.3.2`` release contains only a small number of fixes, detailed below.
 
