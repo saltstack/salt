@@ -2421,7 +2421,7 @@ def wait_for_instance(
                 )
                 pprint.pprint(console)
                 time.sleep(5)
-            output = console['output_decoded']
+            output = salt.utils.stringutils.to_unicode(console['output_decoded'])
             comps = output.split('-----BEGIN SSH HOST KEY KEYS-----')
             if len(comps) < 2:
                 # Fail; there are no host keys
@@ -4762,7 +4762,7 @@ def get_password_data(
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
             if HAS_M2:
-                key = RSA.load_key_string(rsa_key)
+                key = RSA.load_key_string(rsa_key.encode('ascii'))
                 password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
             else:
                 dsize = Crypto.Hash.SHA.digest_size
