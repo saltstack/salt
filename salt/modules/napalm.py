@@ -221,20 +221,66 @@ def call(method, *args, **kwargs):
 
 
 @proxy_napalm_wrap
-def compliance_report(filepath, **kwargs):
+def compliance_report(filepath=None,
+                      string=None,
+                      renderer='jinja|yaml',
+                      **kwargs):
     '''
     Return the compliance report.
 
     filepath
         The absolute path to the validation file.
 
+        .. versionchanged:: Fluorine
+
+        Beginning with release codename ``Fluorine``, this function has been
+        enhanced, to be able to leverage the multi-engine template rendering
+        of Salt, besides the possibility to retrieve the file source from
+        remote systems, the URL schemes supported being:
+
+        - ``salt://``
+        - ``http://`` and ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift:/``
+
+        Or on the local file system (on the Minion).
+
+        .. note::
+
+            The rendering result does not necessarily need to be YAML, instead
+            it can be any format interpreted by Salt's rendering pipeline
+            (including pure Python).
+
+    string
+
+        .. versionchanged:: Fluorine
+
+        The compliance report send as inline string, to be used as the file to
+        send through the renderer system. Note, not all renderer modules can
+        work with strings; the 'py' renderer requires a file, for example.
+
+    renderer: ``jinja|yaml``
+
+        .. versionchanged:: Fluorine
+
+        The renderer pipe to send the file through; this is overridden by a
+        "she-bang" at the top of the file.
+
+    kwargs
+
+        .. versionchanged:: Fluorine
+
+        Keyword args to pass to Salt's compile_template() function.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' napalm.compliance_report ~/validate.yml
+        salt '*' napalm.compliance_report salt://path/to/validator.sls
 
-    Validation File Example:
+    Validation File Example (pure YAML):
 
     .. code-block:: yaml
 
@@ -243,10 +289,24 @@ def compliance_report(filepath, **kwargs):
 
         - get_interfaces_ip:
             Management1:
-                ipv4:
-                    10.0.2.14:
-                        prefix_length: 24
-                    _mode: strict
+              ipv4:
+                10.0.2.14:
+                  prefix_length: 24
+                _mode: strict
+
+    Validation File Example (as Jinja + YAML):
+
+    .. code-block:: yaml
+
+        - get_facts:
+            os_version: {{ grains.version }}
+        - get_interfaces_ip:
+            Loopback0:
+              ipv4:
+                {{ grains.lo0.ipv4 }}:
+                  prefix_length: 24
+                _mode: strict
+        - get_bgp_neighbors: {{ pillar.bgp.neighbors }}
 
     Output Example:
 
@@ -288,10 +348,14 @@ def compliance_report(filepath, **kwargs):
             result:
                 True
     '''
+    validation_string = __salt__['slsutil.renderer'](path=filepath,
+                                                     string=string,
+                                                     default_renderer=renderer,
+                                                     **kwargs)
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'compliance_report',
-        validation_file=filepath
+        validation_source=validation_string
     )
 
 
