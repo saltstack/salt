@@ -476,6 +476,7 @@ def exit_config_mode(**kwargs):
 def send_config(config_file=None,
                 config_commands=None,
                 template_engine='jinja',
+                commit=False,
                 source_hash=None,
                 source_hash_name=None,
                 user=None,
@@ -521,6 +522,11 @@ def send_config(config_file=None,
         The template engine to use when rendering the source file. Default:
         ``jinja``. To simply fetch the file without attempting to render, set
         this argument to ``None``.
+
+    commit: ``False``
+        Commit the configuration changes before exiting the config mode. This
+        option is by default disabled, as many platforms don't have this
+        capability natively.
 
     source_hash
         The hash of the ``config_file``
@@ -606,8 +612,18 @@ def send_config(config_file=None,
         config_commands = file_str.splitlines()
     if isinstance(config_commands, (six.string_types, six.text_type)):
         config_commands = [config_commands]
-    call('send_config_set', config_commands=config_commands, **kwargs)
-    return config_commands
+    kwargs = clean_kwargs(**kwargs)
+    if 'netmiko.conn' in __proxy__:
+        conn = __proxy__['netmiko.conn']()
+    else:
+        conn, kwargs = _prepare_connection(**kwargs)
+    if commit:
+        kwargs['exit_config_mode'] = False  # don't exit config mode after
+        # loading the commands, wait for explicit commit
+    ret = conn.send_config_set(config_commands=config_commands, **kwargs)
+    if commit:
+        ret += conn.commit()
+    return ret
 
 
 def commit(**kwargs):
