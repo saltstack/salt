@@ -3806,11 +3806,14 @@ class SProxyMinion(SMinion):
         ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            errmsg = 'No proxy key found in pillar or opts for id ' + self.opts['id'] + '. ' + \
-                     'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
+            errmsg = (
+                'No "proxy" configuration key found in pillar or opts '
+                'dictionaries for id {id}. Check your pillar/options '
+                'configuration and contents. Salt-proxy aborted.'
+            ).format(id=self.opts['id'])
             log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1, msg=errmsg)
+            raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
 
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
@@ -3844,7 +3847,7 @@ class SProxyMinion(SMinion):
                      'Check your proxymodule.  Salt-proxy aborted.'
             log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1, msg=errmsg)
+            raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
 
         self.module_executors = self.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
         proxy_init_fn = self.proxy[fq_proxyname + '.init']
