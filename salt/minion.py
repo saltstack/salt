@@ -1638,7 +1638,6 @@ class Minion(MinionBase):
                 else:
                     ret['return'] = return_data
 
-
                 retcode = minion_instance.functions.pack['__context__'].get(
                     'retcode',
                     0
