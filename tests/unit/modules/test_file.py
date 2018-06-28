@@ -1556,7 +1556,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
                       mock_open()) as atomic_open_mock:
-            filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
+            filemod.line(name, content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
             open_count = len(handles)
