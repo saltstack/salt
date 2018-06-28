@@ -218,11 +218,6 @@ class BaseCaller(object):
             data.update(kwargs)
             executors = getattr(self.minion, 'module_executors', []) or \
                         self.opts.get('module_executors', ['direct_call'])
-            allow_missing_funcs = any([
-                self.minion.executors['{0}.allow_missing_func'.format(executor)](function_name)
-                for executor in executors
-                if '{0}.allow_missing_func' in self.minion.executors
-            ])
             if isinstance(executors, six.string_types):
                 executors = [executors]
             try:

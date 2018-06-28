@@ -2023,10 +2023,7 @@ class ProxyCaller(object):
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'proxy'), mopts=None):
         # Late-import of the minion module to keep the CLI as light as possible
         import salt.minion
-        if mopts:
-            self.opts = mopts
-        else:
-            self.opts = salt.config.proxy_config(c_path)
+        self.opts = mopts or salt.config.proxy_config(c_path)
         self.sminion = salt.minion.SProxyMinion(self.opts)
 
     def cmd(self, fun, *args, **kwargs):
@@ -2048,11 +2045,6 @@ class ProxyCaller(object):
         data.update(kwargs)
         executors = getattr(self.sminion, 'module_executors', []) or \
                     opts.get('module_executors', ['direct_call'])
-        allow_missing_funcs = any([
-            self.sminion.executors['{0}.allow_missing_func'.format(executor)](function_name)
-            for executor in executors
-            if '{0}.allow_missing_func' in self.sminion.executors
-        ])
         if isinstance(executors, six.string_types):
             executors = [executors]
         for name in executors:
