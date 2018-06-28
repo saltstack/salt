@@ -3829,6 +3829,11 @@ class SProxyMinion(SMinion):
 
         fq_proxyname = self.opts['proxy']['proxytype']
 
+        # we can then sync any proxymodules down from the master
+        # we do a sync_all here in case proxy code was installed by
+        # SPM or was manually placed in /srv/salt/_modules etc.
+        self.functions['saltutil.sync_all'](saltenv=self.opts['saltenv'])
+
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners

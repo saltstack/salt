@@ -41,9 +41,23 @@ class ProxyCallerSimpleTestCase(ShellCase):
         self.assertIn('apache', ret['local'])
         self.assertIn('redbull', ret['local'])
 
+    def test_upgrade(self):
+        ret = self._load_return(self.run_call('--proxyid proxytest --out=json pkg.upgrade'))
+        self.assertEqual(ret['local']['coreutils']['new'], '3.0')
+        self.assertEqual(ret['local']['redbull']['new'], '1001.99')
+
     def test_service_list(self):
         ret = self._load_return(self.run_call('--proxyid proxytest --out=json service.list'))
         self.assertIn('ntp', ret['local'])
+
+    def test_service_start(self):
+        ret = self._load_return(self.run_call('--proxyid proxytest --out=json service.start samba'))
+        ret = self._load_return(self.run_call('--proxyid proxytest --out=json service.status samba'))
+        self.assertTrue(ret)
+
+    def test_service_get_all(self):
+        ret = self._load_return(self.run_call('--proxyid proxytest --out=json service.get_all'))
+        self.assertIn('samba', ret['local'])
 
     def test_grains_items(self):
         ret = self._load_return(self.run_call('--proxyid proxytest --out=json grains.items'))
