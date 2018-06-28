@@ -166,10 +166,10 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with salt.utils.files.fopen(path, 'w') as fp_:
-                fp_.write(salt.utils.stringutils.to_str(
+            with salt.utils.files.fopen(path, 'w', encoding='utf-8') as fp_:
+                fp_.write(
                     'This is a test file with relative path {0}.\n'.format(path)
-                ))
+                )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
         if salt.utils.platform.is_windows():
