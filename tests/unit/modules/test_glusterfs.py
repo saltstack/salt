@@ -777,7 +777,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_version}):
             self.assertFalse(glusterfs.get_max_op_version()[0])
 
-        with patch.object(glusterfs, '_get_version', return_value=[3, 12, 0]):
+        with patch.object(glusterfs, '_get_version', return_value=(3, 12, 0)):
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_xml}):
                 self.assertEqual(glusterfs.get_max_op_version(), '31200')
 
