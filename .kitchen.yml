@@ -31,7 +31,7 @@ provisioner:
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
   salt_bootstrap_options: -X -p rsync stable <%= version %>
-  log_level: debug
+  log_level: info
   sudo: true
   require_chef: false
   retry_on_exit_code:
