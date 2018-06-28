@@ -35,6 +35,7 @@ def __virtual__():
         'Devuan',
         'Arch',
         'Arch ARM',
+        'Manjaro',
         'ALT',
         'SUSE  Enterprise Server',
         'SUSE',
