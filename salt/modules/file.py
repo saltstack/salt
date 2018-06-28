@@ -2052,7 +2052,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     mode = 'w'
                     body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(''.join(body))
+                fh_.writelines(body)
             finally:
                 if fh_:
                     fh_.close()
