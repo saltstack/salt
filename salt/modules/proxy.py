@@ -63,7 +63,7 @@ def _get_proxy_windows(types=None):
                                          'ProxyServer')
     servers = reg_val['vdata']
 
-    if "=" in servers:
+    if servers and "=" in servers:
         split = servers.split(";")
         for s in split:
             if len(s) == 0:
@@ -312,7 +312,9 @@ def get_proxy_bypass(network_service="Ethernet"):
         reg_val = __salt__['reg.read_value']('HKEY_CURRENT_USER',
                                          r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                                          'ProxyOverride')
-        bypass_servers = reg_val['vdata'].replace("<local>", "").split(";")
+        bypass_servers = []
+        if reg_val['vdata']:
+            bypass_servers = reg_val['vdata'].replace("<local>", "").split(";")
 
         return bypass_servers
 
