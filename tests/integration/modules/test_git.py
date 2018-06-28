@@ -93,10 +93,10 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w') as fp_:
-                    fp_.write(salt.utils.stringutils.to_str(
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w', encoding='utf-8') as fp_:
+                    fp_.write(
                         'This is a test file named {0}.'.format(filename)
-                    ))
+                    )
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         # Initialize a new git repository
