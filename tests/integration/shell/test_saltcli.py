@@ -79,104 +79,89 @@ class RetcodeTestCase(ShellCase):
     salt_error_status = 11
     salt_call_error_status = 1
 
-    def __test_exception(self, salt_call=False):
+    def _run(self, command, salt_call=False):
+        return (self.run_call if salt_call else self.run_salt)(
+            '{0}{1}{2}'.format(
+                'minion ' if not salt_call else '',
+                '--retcode-passthrough ' if salt_call else '',
+                command
+            ),
+            with_retcode=True)[1]
+
+    def _test_error(self, salt_call=False):
         '''
-        Tests retcode when various exceptions are raised
+        Tests retcode when various error conditions are triggered
         '''
-        if salt_call:
-            run_func = self.run_call
-            error_status = self.salt_call_error_status
-        else:
-            run_func = self.run_salt
-            error_status = self.salt_error_status
+        error_status = self.salt_call_error_status \
+            if salt_call \
+            else self.salt_error_status
 
-        def _run(command):
-            return run_func(
-                '{0}{1}'.format(
-                    'minion ' if not salt_call else '',
-                    command),
-                with_retcode=True)[1]
-
-        retcode = _run('test.raise_exception TypeError')
+        retcode = self._run('test.raise_exception TypeError', salt_call=salt_call)
         assert retcode == error_status, retcode
 
-        retcode = _run(
-            'test.raise_exception salt.exceptions.CommandNotFoundError')
+        retcode = self._run(
+            'test.raise_exception salt.exceptions.CommandNotFoundError',
+            salt_call=salt_call)
         assert retcode == error_status, retcode
 
-        retcode = _run(
-            'test.raise_exception salt.exceptions.CommandExecutionError')
+        retcode = self._run(
+            'test.raise_exception salt.exceptions.CommandExecutionError',
+            salt_call=salt_call)
         assert retcode == error_status, retcode
 
-        retcode = _run(
-            'test.raise_exception salt.exceptions.SaltInvocationError')
+        retcode = self._run(
+            'test.raise_exception salt.exceptions.SaltInvocationError',
+            salt_call=salt_call)
         assert retcode == error_status, retcode
 
-        retcode = _run(
+        retcode = self._run(
             'test.raise_exception '
-            'OSError 2 "No such file or directory" /tmp/foo.txt')
+            'OSError 2 "No such file or directory" /tmp/foo.txt',
+            salt_call=salt_call)
         assert retcode == error_status, retcode
 
-    def test_salt_zero_exit_code(self):
+        retcode = self._run(
+            'test.echo "{foo: bar, result: False}"',
+            salt_call=salt_call)
+        assert retcode == error_status, retcode
+
+        retcode = self._run(
+            'test.echo "{foo: bar, success: False}"',
+            salt_call=salt_call)
+        assert retcode == error_status, retcode
+
+    def test_zero_exit_code(self):
         '''
         Test that a zero exit code is set when there are no errors and there is
         no explicit False result set in the return data.
         '''
-        retcode = self.run_salt(
-            'minion test.ping',
-            with_retcode=True)[1]
+        retcode = self._run('test.ping')
         assert retcode == 0, retcode
 
-    def test_salt_context_retcode(self):
+        retcode = self._run('test.ping', salt_call=True)
+        assert retcode == 0, retcode
+
+    def test_context_retcode(self):
         '''
         Test that a nonzero retcode set in the context dunder will cause the
         salt CLI to set a nonzero retcode.
         '''
-        retcode = self.run_salt(
-            'minion test.retcode 0',
-            with_retcode=True)[1]
+        retcode = self._run('test.retcode 0')
         assert retcode == 0, retcode
 
-        retcode = self.run_salt(
-            'minion test.retcode 42',
-            with_retcode=True)[1]
+        retcode = self._run('test.retcode 42')
         assert retcode == self.salt_error_status, retcode
 
-    def test_salt_exception(self):
-        '''
-        Test that we return the expected retcode when a minion function raises
-        an exception.
-        '''
-        self.__test_exception()
-
-    def test_salt_call_zero_exit_code(self):
-        '''
-        Test that a zero exit code is set when there are no errors and there is
-        no explicit False result set in the return data.
-        '''
-        retcode = self.run_call(
-            'minion test.ping',
-            with_retcode=True)[1]
+        retcode = self._run('test.retcode 0', salt_call=True)
         assert retcode == 0, retcode
 
-    def test_salt_call_context_retcode(self):
-        '''
-        Test that a nonzero retcode set in the context dunder will cause the
-        salt CLI to set a nonzero retcode.
-        '''
-        retcode = self.run_call(
-            '--retcode-passthrough test.retcode 0',
-            with_retcode=True)[1]
-        assert retcode == 0, retcode
-
-        retcode = self.run_call(
-            '--retcode-passthrough test.retcode 42',
-            with_retcode=True)[1]
+        retcode = self._run('test.retcode 42', salt_call=True)
         assert retcode == 42, retcode
 
-    def test_salt_call_exception(self):
+    def test_salt_error(self):
         '''
         Test that we return the expected retcode when a minion function raises
         an exception.
         '''
-        self.__test_exception(salt_call=True)
+        self._test_error()
+        self._test_error(salt_call=True)
