@@ -1637,11 +1637,26 @@ class Minion(MinionBase):
                     ret['return'] = iret
                 else:
                     ret['return'] = return_data
-                ret['retcode'] = minion_instance.functions.pack['__context__'].get(
+
+
+                retcode = minion_instance.functions.pack['__context__'].get(
                     'retcode',
                     0
                 )
-                ret['success'] = True
+                if retcode == 0:
+                    # No nonzero retcode in __context__ dunder. Check if return
+                    # is a dictionary with a "result" or "success" key.
+                    try:
+                        func_result = all(return_data.get(x, True)
+                                          for x in ('result', 'success'))
+                    except Exception:
+                        # return data is not a dict
+                        func_result = True
+                    if not func_result:
+                        retcode = 1
+
+                ret['retcode'] = retcode
+                ret['success'] = retcode == 0
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found'.format(
                     function_name
@@ -1649,6 +1664,7 @@ class Minion(MinionBase):
                 log.debug(msg, exc_info=True)
                 ret['return'] = '{0}: {1}'.format(msg, exc)
                 ret['out'] = 'nested'
+                ret['retcode'] = 1
             except CommandExecutionError as exc:
                 log.error(
                     'A command in \'%s\' had a problem: %s',
@@ -1657,6 +1673,7 @@ class Minion(MinionBase):
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
                 ret['out'] = 'nested'
+                ret['retcode'] = 1
             except SaltInvocationError as exc:
                 log.error(
                     'Problem executing \'%s\': %s',
@@ -1667,6 +1684,7 @@ class Minion(MinionBase):
                     function_name, exc
                 )
                 ret['out'] = 'nested'
+                ret['retcode'] = 1
             except TypeError as exc:
                 msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
                     function_name, exc, func.__doc__ or ''
@@ -1674,12 +1692,14 @@ class Minion(MinionBase):
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
+                ret['retcode'] = 1
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
+                ret['retcode'] = 1
         else:
             docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
             if docs:
@@ -1810,20 +1830,26 @@ class Minion(MinionBase):
                     data['arg'][ind],
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-                if multifunc_ordered:
-                    ret['return'][ind] = func(*args, **kwargs)
-                    ret['retcode'][ind] = minion_instance.functions.pack['__context__'].get(
-                        'retcode',
-                        0
-                    )
-                    ret['success'][ind] = True
-                else:
-                    ret['return'][data['fun'][ind]] = func(*args, **kwargs)
-                    ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
-                        'retcode',
-                        0
-                    )
-                    ret['success'][data['fun'][ind]] = True
+                key = ind if multifunc_ordered else data['fun'][ind]
+                ret['return'][key] = func(*args, **kwargs)
+                retcode = minion_instance.functions.pack['__context__'].get(
+                    'retcode',
+                    0
+                )
+                if retcode == 0:
+                    # No nonzero retcode in __context__ dunder. Check if return
+                    # is a dictionary with a "result" or "success" key.
+                    try:
+                        func_result = all(ret['return'][key].get(x, True)
+                                          for x in ('result', 'success'))
+                    except Exception:
+                        # return data is not a dict
+                        func_result = True
+                    if not func_result:
+                        retcode = 1
+
+                ret['retcode'][key] = retcode
+                ret['success'][key] = retcode == 0
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning('The minion function caused an exception: %s', exc)
