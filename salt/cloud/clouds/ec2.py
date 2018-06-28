@@ -2059,6 +2059,8 @@ def request_instance(vm_=None, call=None):
     if spot_config:
         sir_id = data[0]['spotInstanceRequestId']
 
+        vm_['spotRequestId'] = sir_id
+
         def __query_spot_instance_request(sir_id, location):
             params = {'Action': 'DescribeSpotInstanceRequests',
                       'SpotInstanceRequestId.1': sir_id}
@@ -2680,6 +2682,51 @@ def create(vm_=None, call=None):
         call='action',
         location=location
     )
+
+    # Once instance tags are set, tag the spot request if configured
+    if 'spot_config' in vm_ and 'tag' in vm_['spot_config']:
+
+        if not isinstance(vm_['spot_config']['tag'], dict):
+            raise SaltCloudConfigError(
+                '\'tag\' should be a dict.'
+            )
+
+        for value in six.itervalues(vm_['spot_config']['tag']):
+            if not isinstance(value, str):
+                raise SaltCloudConfigError(
+                    '\'tag\' values must be strings. Try quoting the values. '
+                    'e.g. "2013-09-19T20:09:46Z".'
+                )
+
+        spot_request_tags = {}
+
+        if 'spotRequestId' not in vm_:
+            raise SaltCloudConfigError('Failed to find spotRequestId')
+
+        sir_id = vm_['spotRequestId']
+
+        spot_request_tags['Name'] = vm_['name']
+
+        for k, v in six.iteritems(vm_['spot_config']['tag']):
+            spot_request_tags[k] = v
+
+        __utils__['cloud.fire_event'](
+            'event',
+            'setting tags',
+            'salt/cloud/spot_request_{0}/tagging'.format(sir_id),
+            args={'tags': spot_request_tags},
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport']
+        )
+        salt.utils.cloud.wait_for_fun(
+            set_tags,
+            timeout=30,
+            name=vm_['name'],
+            tags=spot_request_tags,
+            instance_id=sir_id,
+            call='action',
+            location=location
+        )
 
     network_interfaces = config.get_cloud_config_value(
         'network_interfaces',
