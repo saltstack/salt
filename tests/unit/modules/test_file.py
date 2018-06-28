@@ -23,6 +23,7 @@ except ImportError:
 from salt.ext import six
 import salt.config
 import salt.loader
+import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
@@ -921,6 +922,19 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @staticmethod
+    def _get_body(content):
+        '''
+        The body is written as bytestrings or strings depending on platform.
+        This func accepts a string of content and returns the appropriate list
+        of strings back.
+        '''
+        ret = content.splitlines(True)
+        if six.PY2 and salt.utils.platform.is_windows():
+            return salt.utils.data.encode_list(ret)
+        else:
+            return salt.utils.data.decode_list(ret, to_str=True)
+
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_delete_line_in_empty_file(self):
@@ -1049,12 +1063,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_after_pattern(self, name):
@@ -1099,12 +1114,17 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                # We passed cfg_content with a newline in the middle, so it
+                # will be written as two lines in the same element of the list
+                # passed to .writelines()
+                expected[3] = expected[3] + expected.pop(4)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_multi_line_content_after_unicode(self, name):
@@ -1114,8 +1134,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         See issue #48113
         :return:
         '''
-        file_content = ("This is a line\nThis is another line")
-        file_modified = salt.utils.stringutils.to_str("This is a line\nThis is another line\nThis is a line with unicode Ŷ")
+        file_content = 'This is a line\nThis is another line'
+        file_modified = salt.utils.stringutils.to_str('This is a line\n'
+                                                      'This is another line\n'
+                                                      'This is a line with unicode Ŷ')
         cfg_content = "This is a line with unicode Ŷ"
         isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for after_line in ['This is another line']:
@@ -1130,12 +1152,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_before(self, name):
@@ -1173,12 +1196,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1244,12 +1268,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_start(self, name):
@@ -1284,12 +1309,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_end(self, name):
@@ -1324,12 +1350,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_ensure_before(self, name):
@@ -1362,12 +1389,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_ensure_before_first_line(self, name):
@@ -1398,12 +1426,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_ensure_after(self, name):
@@ -1434,12 +1463,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # We should only have opened the file once
             open_count = len(handles)
             assert open_count == 1, open_count
-            # We should only have invoked .write() once...
-            write_count = len(handles[0].write.call_args_list)
-            assert write_count == 1, write_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
             # ... with the updated content
-            write_content = handles[0].write.call_args_list[0][0][0]
-            assert write_content == file_modified, write_content
+            expected = self._get_body(file_modified)
+            assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_ensure_beforeafter_twolines(self, name):
@@ -1470,12 +1500,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_ensure_beforeafter_twolines_exists(self, name):
@@ -1564,12 +1595,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_replace(self, name):
@@ -1604,12 +1636,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # We should only have opened the file once
                 open_count = len(handles)
                 assert open_count == 1, open_count
-                # We should only have invoked .write() once...
-                write_count = len(handles[0].write.call_args_list)
-                assert write_count == 1, write_count
+                # We should only have invoked .writelines() once...
+                writelines_content = handles[0].writelines_calls
+                writelines_count = len(writelines_content)
+                assert writelines_count == 1, writelines_count
                 # ... with the updated content
-                write_content = handles[0].write.call_args_list[0][0][0]
-                assert write_content == file_modified, write_content
+                expected = self._get_body(file_modified)
+                assert writelines_content[0] == expected, (writelines_content[0], expected)
 
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
