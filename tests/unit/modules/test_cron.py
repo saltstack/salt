@@ -13,7 +13,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 # Import Salt libs
 import salt.modules.cron as cron
-from salt.ext.six.moves import builtins, StringIO
+from salt.ext.six.moves import builtins, range, StringIO
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
