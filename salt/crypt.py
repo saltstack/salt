@@ -207,7 +207,7 @@ def get_rsa_pub_key(path):
     log.debug('salt.crypt.get_rsa_pub_key: Loading public key')
     if HAS_M2:
         with salt.utils.files.fopen(path) as f:
-            data = f.read().replace(b'RSA ', '')
+            data = salt.utils.stringutils.to_bytes(f.read()).replace(b'RSA ', b'')
         bio = BIO.MemoryBuffer(data)
         key = RSA.load_pub_key_bio(bio)
     else:
