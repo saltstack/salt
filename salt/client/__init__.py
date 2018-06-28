@@ -2009,9 +2009,6 @@ class ProxyCaller(object):
     ``'local'``. The same can be achieved at the Python level by including that
     setting in a minion config file.
 
-    .. versionadded:: 2014.7.0
-        Pass the minion config as the ``mopts`` dictionary.
-
     .. code-block:: python
 
         import salt.client
@@ -2019,6 +2016,13 @@ class ProxyCaller(object):
         __opts__ = salt.config.proxy_config('/etc/salt/proxy', minion_id='quirky_edison')
         __opts__['file_client'] = 'local'
         caller = salt.client.ProxyCaller(mopts=__opts__)
+
+    .. note::
+
+        To use this for calling proxies, the :py:func:`is_proxy functions
+        <salt.utils.platform.is_proxy>` requires that ``--proxyid`` be an
+        argument on the commandline for the script this is used in, or that the
+        string ``proxy`` is in the name of the script.
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'proxy'), mopts=None):
         # Late-import of the minion module to keep the CLI as light as possible
