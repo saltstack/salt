@@ -8,7 +8,6 @@ The networking module for NI Linux Real-Time distro
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import configparser
 import os
 
 # Import salt libs
@@ -18,6 +17,7 @@ import salt.exceptions
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import configparser
 try:
     import pyconnman
     HAS_PYCONNMAN = True
