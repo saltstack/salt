@@ -220,10 +220,24 @@ class BaseCaller(object):
                     sys.stderr.write(trace)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
-                ret['retcode'] = sys.modules[
+                retcode = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
             except AttributeError:
-                ret['retcode'] = 1
+                retcode = salt.defaults.exitcodes.EX_GENERIC
+
+            if retcode == 0:
+                # No nonzero retcode in __context__ dunder. Check if return
+                # is a dictionary with a "result" or "success" key.
+                try:
+                    func_result = all(ret['return'].get(x, True)
+                                      for x in ('result', 'success'))
+                except Exception:
+                    # return data is not a dict
+                    func_result = True
+                if not func_result:
+                    retcode = salt.defaults.exitcodes.EX_GENERIC
+
+            ret['retcode'] = retcode
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
