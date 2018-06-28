@@ -3786,61 +3786,6 @@ class SProxyMinion(SMinion):
     generate all of the salt minion functions and present them with these
     functions for general use.
     '''
-    def _load_modules(self, force_refresh=False, notify=False, grains=None):
-        '''
-        Return the functions and the returners loaded up from the loader
-        module
-        '''
-        # if this is a *nix system AND modules_max_memory is set, lets enforce
-        # a memory limit on module imports
-        # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
-        modules_max_memory = False
-        if self.opts.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
-            log.debug(
-                'modules_max_memory set, enforcing a maximum of %s',
-                self.opts['modules_max_memory']
-            )
-            modules_max_memory = True
-            old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
-            mem_limit = rss + vms + self.opts['modules_max_memory']
-            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
-        elif self.opts.get('modules_max_memory', -1) > 0:
-            if not HAS_PSUTIL:
-                log.error('Unable to enforce modules_max_memory because psutil is missing')
-            if not HAS_RESOURCE:
-                log.error('Unable to enforce modules_max_memory because resource is missing')
-
-        # This might be a proxy minion
-        if hasattr(self, 'proxy'):
-            proxy = self.proxy
-        else:
-            proxy = None
-
-        if grains is None:
-            self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
-        self.utils = salt.loader.utils(self.opts, proxy=proxy)
-
-        if self.opts.get('multimaster', False):
-            s_opts = copy.deepcopy(self.opts)
-            functions = salt.loader.minion_mods(s_opts, utils=self.utils, proxy=proxy,
-                                                loaded_base_name=self.loaded_base_name, notify=notify)
-        else:
-            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify, proxy=proxy)
-        returners = salt.loader.returners(self.opts, functions, proxy=proxy)
-        errors = {}
-        if '_errors' in functions:
-            errors = functions['_errors']
-            functions.pop('_errors')
-
-        # we're done, reset the limits!
-        if modules_max_memory is True:
-            resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
-
-        executors = salt.loader.executors(self.opts, functions, proxy=proxy)
-
-        return functions, returners, errors, executors
-
     def gen_modules(self, initial_load=False):
         '''
         Tell the minion to reload the execution modules
@@ -3851,6 +3796,7 @@ class SProxyMinion(SMinion):
 
             salt '*' sys.reload_modules
         '''
+        self.opts['grains'] = salt.loader.grains(self.opts)
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
@@ -3869,31 +3815,17 @@ class SProxyMinion(SMinion):
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        if self.opts.get('proxy_merge_pillar_in_opts'):
-            # Override proxy opts with pillar data when the user required.
-            self.opts = salt.utils.dictupdate.merge(self.opts,
-                                                    self.opts['pillar'],
-                                                    strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
-                                                    merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
+        # Then load the proxy module
+        self.proxy = salt.loader.proxy(self.opts)
+
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=False, proxy=self.proxy)
+        self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
         fq_proxyname = self.opts['proxy']['proxytype']
 
-        # Need to load the modules so they get all the dunder variables
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-
-        # we can then sync any proxymodules down from the master
-        # we do a sync_all here in case proxy code was installed by
-        # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv=self.opts['saltenv'])
-
-        # Pull in the utils
-        self.utils = salt.loader.utils(self.opts)
-
-        # Then load the proxy module
-        self.proxy = salt.loader.proxy(self.opts, utils=self.utils)
-
-        # And re-load the modules so the __proxy__ variable gets injected
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
@@ -3919,10 +3851,6 @@ class SProxyMinion(SMinion):
         proxy_init_fn(self.opts)
 
         self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
-
-        self.serial = salt.payload.Serial(self.opts)
-        uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
-        self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')

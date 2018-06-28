@@ -2033,11 +2033,6 @@ class ProxyCaller(object):
         '''
         Call an execution module with the given arguments and keyword arguments
 
-        .. versionchanged:: 2015.8.0
-            Added the ``cmd`` method for consistency with the other Salt clients.
-            The existing ``function`` and ``sminion.functions`` interfaces still
-            exist but have been removed from the docs.
-
         .. code-block:: python
 
             caller.cmd('test.arg', 'Foo', 'Bar', baz='Baz')
@@ -2068,13 +2063,3 @@ class ProxyCaller(object):
             if return_data is not None:
                 break
         return return_data
-
-    def function(self, fun, *args, **kwargs):
-        '''
-        Call a single salt function
-        '''
-        func = self.sminion.functions[fun]
-        args, kwargs = salt.minion.load_args_and_kwargs(
-            func,
-            salt.utils.args.parse_input(args),
-            kwargs)
