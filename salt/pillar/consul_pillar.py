@@ -285,8 +285,8 @@ def pillar_format(ret, keys, value, expand_keys):
         return ret
 
     # If value is not None then it's a string
-    # If expand_keys is true, deserialize the YAML data
     # YAML strips whitespaces unless they're surrounded by quotes
+    # If expand_keys is true, deserialize the YAML data
     if expand_keys:
         pillar_value = salt.utils.yaml.safe_load(value)
     else:
