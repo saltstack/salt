@@ -48,6 +48,7 @@ pipeline {
                 unstableTotalAll: '999',
                 usePreviousBuildAsReference: true
             ])
+            cleanWs()
         }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
