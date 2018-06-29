@@ -27,6 +27,9 @@ pipeline {
         }
     }
     post {
+        always {
+            cleanWs()
+        }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: 'The docs job has passed',
