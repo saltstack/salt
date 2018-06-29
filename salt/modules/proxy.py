@@ -377,7 +377,6 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         return reg_val.replace('<local>', '').split(';')
 
-
     out = __salt__['cmd.run']('networksetup -getproxybypassdomains {0}'.format(network_service))
 
     return out.split("\n")
