@@ -39,6 +39,16 @@ pipeline {
         }
     }
     post {
+        always {
+            step([$class: 'WarningsPublisher',
+                parserConfigurations: [[
+                    parserName: 'PyLint',
+                    pattern: 'pylint-report*.xml'
+                ]],
+                unstableTotalAll: '999',
+                usePreviousBuildAsReference: true
+            ])
+        }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: 'The lint job has passed',
