@@ -3007,7 +3007,6 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
-            self.opts['saltenv'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
