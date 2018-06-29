@@ -1263,7 +1263,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     for module_type in sync_mods:
         try:
             __salt__['saltutil.sync_{0}'.format(module_type)](
-                saltenv=opts['environment']
+                saltenv=opts['saltenv']
             )
         except KeyError:
             log.warning(
