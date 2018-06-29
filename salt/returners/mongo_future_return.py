@@ -5,9 +5,10 @@ Return data to a mongodb server
 Required python modules: pymongo
 
 
-This returner will send data from the minions to a MongoDB server. To
-configure the settings for your MongoDB server, add the following lines
-to the minion config files:
+This returner will send data from the minions to a MongoDB server. MongoDB
+server can be configured by using host, port, db, user and password settings
+or by URI (for pymongo > 2.3). To configure the settings for your MongoDB
+server, add the following lines to the minion config files:
 
 .. code-block:: yaml
 
@@ -16,6 +17,12 @@ to the minion config files:
     mongo.user: <MongoDB username>
     mongo.password: <MongoDB user password>
     mongo.port: 27017
+
+Or single URI:
+
+.. code-block:: yaml
+
+   mongo.uri: URI
 
 You can also ask for indexes creation on the most common used fields, which
 should greatly improve performance. Indexes are not created by default.
@@ -36,6 +43,11 @@ the default location:
     alternative.mongo.password: <MongoDB user password>
     alternative.mongo.port: 27017
 
+Or single URI:
+
+.. code-block:: yaml
+
+   alternative.mongo.uri: URI
 
 This mongo returner is being developed to replace the default mongodb returner
 in the future and should not be considered API stable yet.
@@ -115,7 +127,8 @@ def _get_options(ret=None):
              'db': 'db',
              'user': 'user',
              'password': 'password',
-             'indexes': 'indexes'}
+             'indexes': 'indexes',
+             'uri': 'uri'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -133,6 +146,7 @@ def _get_conn(ret):
 
     host = _options.get('host')
     port = _options.get('port')
+    uri = _options.get('uri')
     db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
@@ -141,15 +155,22 @@ def _get_conn(ret):
     # at some point we should remove support for
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
-
-    if float(version) > 2.3:
-        conn = pymongo.MongoClient(host, port)
+    if uri and float(version) > 2.3:
+        if uri and host:
+            warnlog = 'Specified both URI and host. URI {0} will be taken'.format(uri)
+            log.warn(warnlog)
+        pymongo.uri_parser.parse_uri(uri)
+        conn = pymongo.MongoClient(uri)
+        mdb = conn.get_database()
     else:
-        conn = pymongo.Connection(host, port)
-    mdb = conn[db_]
+        if float(version) > 2.3:
+            conn = pymongo.MongoClient(host, port)
+        else:
+            conn = pymongo.Connection(host, port)
 
-    if user and password:
-        mdb.authenticate(user, password)
+        mdb = conn[db_]
+        if user and password:
+            mdb.authenticate(user, password)
 
     if indexes:
         if float(version) > 2.3:
