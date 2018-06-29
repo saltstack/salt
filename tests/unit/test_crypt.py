@@ -215,7 +215,7 @@ class M2CryptTestCase(TestCase):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
 
     def test_verify_signature(self):
-        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=six.b(PUBKEY_DATA))):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
 
     def test_encrypt_decrypt_bin(self):
@@ -289,13 +289,13 @@ class TestM2CryptoRegression47124(TestCase):
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_bytes(self):
         message = salt.utils.stringutils.to_unicode('meh')
-        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=six.b(PUBKEY_DATA))):
             salt.crypt.verify_signature('/keydir/keyname.pub', message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_unicode(self):
         message = salt.utils.stringutils.to_bytes('meh')
-        with patch('salt.utils.files.fopen', mock_open(read_data=PUBKEY_DATA)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=six.b(PUBKEY_DATA))):
             salt.crypt.verify_signature('/keydir/keyname.pub', message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
