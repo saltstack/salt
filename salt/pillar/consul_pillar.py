@@ -119,6 +119,21 @@ Matchers for more examples.
     ext_pillar:
       - consul: my_consul_config root=salt target="L@salt.example.com and G@osarch:x86_64"
 
+The data from Consul can be merged into a nested key in Pillar.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - consul: my_consul_config pillar_root=consul_data
+
+By default, keys containing YAML data will be deserialized before being merged into Pillar.  
+This behavior can be disabled by setting ``parse_yaml`` to ``false``.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - consul: my_consul_config parse_yaml=false
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -168,6 +183,7 @@ def ext_pillar(minion_id,
         checker = salt.utils.minions.CkMinions(__opts__)
         _res = checker.check_minions(opts['target'], 'compound')
         minions = _res['minions']
+        log.debug('Targeted minions: %r', minions)
         if minion_id not in minions:
             return {}
 
@@ -179,6 +195,14 @@ def ext_pillar(minion_id,
     else:
         opts['root'] = ""
 
+    pillar_root_re = re.compile('pillar_root=(\S*)')  # pylint: disable=W1401
+    match = pillar_root_re.search(temp)
+    if match:
+        opts['pillar_root'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['pillar_root'] = ""
+
     profile_re = re.compile('(?:profile=)?(\S+)')  # pylint: disable=W1401
     match = profile_re.search(temp)
     if match:
@@ -186,6 +210,14 @@ def ext_pillar(minion_id,
         temp = temp.replace(match.group(0), '')
     else:
         opts['profile'] = None
+
+    parse_yaml_re = re.compile('parse_yaml=False', re.IGNORECASE)  # pylint: disable=W1401
+    match = parse_yaml_re.search(temp)
+    if match:
+        opts['parse_yaml'] = False
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['parse_yaml'] = True
 
     client = get_conn(__opts__, opts['profile'])
 
@@ -199,7 +231,10 @@ def ext_pillar(minion_id,
     }
 
     try:
-        pillar = fetch_tree(client, opts['root'])
+        pillar = fetch_tree(client, opts['root'], opts['parse_yaml'])
+        if opts['pillar_root']:
+            log.debug('Merging consul path %s/ into pillar at %s/', opts['root'], opts['pillar_root'])
+            pillar = nest_tree(pillar, opts['pillar_root'])
     except KeyError:
         log.error('No such key in consul profile %s: %s', opts['profile'], opts['root'])
         pillar = {}
@@ -214,7 +249,7 @@ def consul_fetch(client, path):
     return client.kv.get(path, recurse=True)
 
 
-def fetch_tree(client, path):
+def fetch_tree(client, path, parse_yaml):
     '''
     Grab data from consul, trim base path and remove any keys which
     are folders. Take the remaining data and send it to be formatted
@@ -234,13 +269,13 @@ def fetch_tree(client, path):
             log.debug('key/path - %s: %s', path, key)
             log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
-            ret = pillar_format(ret, key.split('/'), item['Value'])
+            ret = pillar_format(ret, key.split('/'), item['Value'], parse_yaml)
             log.debug('Fetching subkeys for key: %r', item)
 
     return ret
 
 
-def pillar_format(ret, keys, value):
+def pillar_format(ret, keys, value, parse_yaml):
     '''
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
@@ -250,9 +285,12 @@ def pillar_format(ret, keys, value):
         return ret
 
     # If value is not None then it's a string
-    # Use YAML to parse the data
+    # If parse_yaml is true, Use YAML to parse the data
     # YAML strips whitespaces unless they're surrounded by quotes
-    pillar_value = salt.utils.yaml.safe_load(value)
+    if parse_yaml:
+        pillar_value = salt.utils.yaml.safe_load(value)
+    else:
+        pillar_value = value
 
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}
@@ -261,6 +299,24 @@ def pillar_format(ret, keys, value):
         pil = {k: pil}
 
     return dict_merge(ret, pil)
+
+
+def nest_tree(pillar, pillar_root):
+    '''
+    Returns a pillar nested in a subkey
+    '''
+    ret = {}
+    branch = ret
+    keys = pillar_root.split('/')
+
+    for i, k in enumerate(keys):
+        if i == len(keys) - 1:
+            branch[k] = pillar
+        else:
+            branch[k] = {}
+            branch = branch[k]
+
+    return ret
 
 
 def get_conn(opts, profile):
