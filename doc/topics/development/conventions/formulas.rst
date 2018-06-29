@@ -79,12 +79,12 @@ or zip file of the repository. The directory structure is designed to work with
 
         mkdir -p /srv/formulas
         cd /srv/formulas
-        git clone https://github.com/saltstack-formulas/apache-formula.git
+        git clone https://github.com/saltstack-formulas/apache-formula.git /srv/formulas/apache-formula
 
         # or
 
-        mkdir -p /srv/formulas
-        cd /srv/formulas
+        mkdir -p /srv/formulas/apache-formula
+        cd /srv/formulas/apache-formula
         wget https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
         tar xf apache-formula-master.tar.gz
 
