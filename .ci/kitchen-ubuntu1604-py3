@@ -46,6 +46,9 @@ pipeline {
         }
     }
     post {
+        always {
+            cleanWs()
+        }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
