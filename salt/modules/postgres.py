@@ -199,7 +199,9 @@ def _run_initdb(name,
         password=None,
         encoding='UTF8',
         locale=None,
-        runas=None):
+        runas=None,
+        waldir=None,
+        checksums=False):
     '''
     Helper function to call initdb
     '''
@@ -226,6 +228,15 @@ def _run_initdb(name,
 
     if locale is not None:
         cmd.append('--locale={0}'.format(locale))
+
+    # intentionally use short option, as the long option name has been
+    # renamed from "xlogdir" to "waldir" in PostgreSQL 10
+    if waldir is not None:
+        cmd.append('-X')
+        cmd.append(waldir)
+
+    if checksums:
+        cmd.append('--data-checksums')
 
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
@@ -3080,6 +3091,8 @@ def datadir_init(name,
         password=None,
         encoding='UTF8',
         locale=None,
+        waldir=None,
+        checksums=False,
         runas=None):
     '''
     .. versionadded:: 2016.3.0
@@ -3110,8 +3123,22 @@ def datadir_init(name,
     locale
         The default locale for new databases
 
+    waldir
+        The transaction log (WAL) directory (default is to keep WAL
+        inside the data directory)
+
+        .. versionadded:: Fluorine
+
+    checksums
+        If True, the cluster will be created with data page checksums.
+
+        .. note::  Data page checksums are supported since PostgreSQL 9.3.
+
+        .. versionadded:: Fluorine
+
     runas
         The system user the operation should be performed on behalf of
+
     '''
     if datadir_exists(name):
         log.info('%s already exists', name)
