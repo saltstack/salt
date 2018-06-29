@@ -224,6 +224,9 @@ def script(vm_):
 
 
 def _str_to_bool(var):
+    '''
+    Safely convert a string representation of a boolean to a real boolean.
+    '''
     if isinstance(var, bool):
         return var
 
@@ -235,7 +238,9 @@ def _str_to_bool(var):
 
 def _get_si():
     '''
-    Authenticate with vCenter server and return service instance object.
+    Authenticate with vCenter server and acquire a service instance object.
+
+    :returns: A service instance object.
     '''
 
     url = config.get_cloud_config_value(
@@ -621,6 +626,9 @@ def _add_new_cd_or_dvd_drive_helper(drive_label,
                                     device_type,
                                     mode,
                                     iso_path):
+    '''
+    Generate a new vim.vm.device.VirtualCDrom object with desired properties.
+    '''
     random_key = randint(-3025, -3000)
 
     device_type.strip().lower()
@@ -670,9 +678,11 @@ def _set_network_adapter_mapping(adapter_specs):
         gateway = adapter_specs['gateway']
         adapter_mapping.adapter.gateway = gateway
     if 'ip' in list(adapter_specs.keys()):
-        ip = six.text_type(adapter_specs['ip'])
+        ip_address = six.text_type(adapter_specs['ip'])
         subnet_mask = six.text_type(adapter_specs['subnet_mask'])
-        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(
+                                          ipAddress=ip_address
+                                     )
         adapter_mapping.adapter.subnetMask = subnet_mask
     else:
         adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
@@ -779,7 +789,13 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         network_name = devices['network'][device.deviceInfo.label]['name']
                         adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                         switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type, container_ref)
+                        network_spec = _edit_existing_network_adapter(
+                                           device,
+                                           network_name,
+                                           adapter_type,
+                                           switch_type,
+                                           container_ref
+                                       )
                         adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
@@ -810,7 +826,12 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
                         mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
                         iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
-                        cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
+                        cd_drive_spec = _edit_existing_cd_or_dvd_drive(
+                                            device,
+                                            device_type,
+                                            mode,
+                                            iso_path
+                                        )
                         device_specs.append(cd_drive_spec)
 
             elif isinstance(device, vim.vm.device.VirtualIDEController):
@@ -824,11 +845,24 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             log.debug("Networks adapters to create: %s", network_adapters_to_create)
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
-            adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
-            switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
-            mac = devices['network'][network_adapter_label]['mac'] if 'mac' in devices['network'][network_adapter_label] else ''
-            # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, mac, container_ref)
+            adapter_type = ''
+            if 'adapter_type' in devices['network'][network_adapter_label]:
+                adapter_type = devices['network'][network_adapter_label]['adapter_type']
+            switch_type = ''
+            if 'switch_type' in devices['network'][network_adapter_label]:
+                switch_type = devices['network'][network_adapter_label]['switch_type']
+            mac = ''
+            if 'mac' in devices['network'][network_adapter_label]:
+                mac = devices['network'][network_adapter_label]['mac']
+
+            network_spec = _add_new_network_adapter_helper(
+                               network_adapter_label,
+                               network_name,
+                               adapter_type,
+                               switch_type,
+                               mac,
+                               container_ref
+                           )
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
@@ -875,8 +909,12 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
         for disk_label in disks_to_create:
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
-            thin_provision = bool(devices['disk'][disk_label]['thin_provision']) if 'thin_provision' in devices['disk'][disk_label] else False
-            eagerly_scrub = bool(devices['disk'][disk_label]['eagerly_scrub']) if 'eagerly_scrub' in devices['disk'][disk_label] else False
+            thin_provision = False
+            if 'thin_provision' in devices['disk'][disk_label]:
+                thin_provision = bool(devices['disk'][disk_label]['thin_provision'])
+            eagerly_scrub = False
+            if 'eagerly_scrub' in devices['disk'][disk_label]:
+                eagerly_scrub = bool(devices['disk'][disk_label]['eagerly_scrub'])
             datastore = devices['disk'][disk_label].get('datastore', None)
             disk_spec = _add_new_hard_disk_helper(
                             disk_label,
@@ -905,10 +943,15 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
         if cd_drives_to_create:
             log.debug("CD/DVD drives to create: %s", cd_drives_to_create)
         for cd_drive_label in cd_drives_to_create:
-            # create the CD/DVD drive
-            device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
-            mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
-            iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
+            device_type = ''
+            if 'device_type' in devices['cd'][cd_drive_label]:
+                device_type = devices['cd'][cd_drive_label]['device_type']
+            mode = ''
+            if 'mode' in devices['cd'][cd_drive_label]:
+                mode = devices['cd'][cd_drive_label]['mode']
+            iso_path = ''
+            if 'iso_path' in devices['cd'][cd_drive_label]:
+                iso_path = devices['cd'][cd_drive_label]['iso_path']
             controller_key = None
 
             # When creating both IDE controller and CD/DVD drive at the same time we need the randomly
@@ -1093,6 +1136,9 @@ def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
 
 
 def _format_instance_info_select(vm, selection):
+    '''
+    Return the information of "vm" in a dictionary with selected attributes.
+    '''
     def defaultto(machine, section, default='N/A'):
         '''
         Return either a named value from a VirtualMachineConfig or a
@@ -1165,11 +1211,15 @@ def _format_instance_info_select(vm, selection):
         if "config.hardware.device" in vm:
             for device in vm["config.hardware.device"]:
                 device_full_info[device.deviceInfo.label] = {}
+
                 if 'devices' in selection:
-                    device_full_info[device.deviceInfo.label]['key'] = device.key,
-                    device_full_info[device.deviceInfo.label]['label'] = device.deviceInfo.label,
-                    device_full_info[device.deviceInfo.label]['summary'] = device.deviceInfo.summary,
-                    device_full_info[device.deviceInfo.label]['type'] = type(device).__name__.rsplit(".", 1)[1]
+                    info = {
+                        'key': device.key,
+                        'label': device.deviceInfo.label,
+                        'summary': device.deviceInfo.summary,
+                        'type': type(device).__name__.rsplit('.', 1)[1]
+                    }
+                    device_full_info[device.deviceInfo.label].update(info)
 
                     if device.unitNumber:
                         device_full_info[device.deviceInfo.label]['unitNumber'] = device.unitNumber
@@ -1234,6 +1284,9 @@ def _format_instance_info_select(vm, selection):
 
 
 def _format_instance_info(vm):
+    '''
+    Return the information of "vm" in a dictionary.
+    '''
     device_full_info = {}
     device_mac_addresses = []
     if "config.hardware.device" in vm:
@@ -1332,7 +1385,13 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
-def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
+def _get_snapshots(snapshot_list,
+                   current_snapshot=None,
+                   parent_snapshot_path=""):
+    '''
+    Return a dictionary containing the details of every snapshot in
+    "snapshot_list".
+    '''
     snapshots = {}
     for snapshot in snapshot_list:
         snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
@@ -1349,7 +1408,9 @@ def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""
 
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
-            ret = _get_snapshots(snapshot.childSnapshotList, current_snapshot, snapshot_path)
+            ret = _get_snapshots(snapshot.childSnapshotList,
+                                 current_snapshot,
+                                 snapshot_path)
             if current_snapshot:
                 return ret
             snapshots.update(ret)
@@ -1358,6 +1419,13 @@ def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""
 
 
 def _get_snapshot_ref_helper(base_snapshot, snapshot_name):
+    '''
+    Find a named snapshot within the tree of snapshots.
+
+    :param base_snapshot: The root snapshot to start the search with.
+    :param snapshot_name: The name to look for from the snapshots.
+    :returns: None or a reference to the named snapshot if one is found..
+    '''
     if base_snapshot.name == snapshot_name:
         return base_snapshot
 
@@ -1370,10 +1438,18 @@ def _get_snapshot_ref_helper(base_snapshot, snapshot_name):
 
 
 def _get_snapshot_ref_by_name(vm_ref, snapshot_name):
+    '''
+    Get a reference to a named snapshot.
+
+    :param vm_ref: A reference to a virtual machine.
+    :param snapshot_name: The name to look for from the snapshots.
+    :returns: None or a reference to the named snapshot if one is found.
+    '''
     snapshot_ref = None
     try:
         for root_snapshot in vm_ref.snapshot.rootSnapshotList:
-            snapshot_ref = _get_snapshot_ref_helper(root_snapshot, snapshot_name)
+            snapshot_ref = _get_snapshot_ref_helper(root_snapshot,
+                                                    snapshot_name)
             if snapshot_ref is not None:
                 break
     except (IndexError, AttributeError):
@@ -1448,7 +1524,7 @@ def _get_hba_type(hba_type):
     raise ValueError('Unknown Host Bus Adapter Type')
 
 
-def test_vcenter_connection(kwargs=None, call=None):
+def test_vcenter_connection(call=None):
     '''
     Test if the connection can be made to the vCenter server using
     the specified credentials inside ``/etc/salt/cloud.providers``
@@ -1475,7 +1551,7 @@ def test_vcenter_connection(kwargs=None, call=None):
     return 'connection successful'
 
 
-def get_vcenter_version(kwargs=None, call=None):
+def get_vcenter_version(call=None):
     '''
     Show the vCenter Server version with build number.
 
@@ -1497,7 +1573,7 @@ def get_vcenter_version(kwargs=None, call=None):
     return inv.about.fullName
 
 
-def list_datacenters(kwargs=None, call=None):
+def list_datacenters(call=None):
     '''
     List all the data centers for this VMware environment
 
@@ -1516,7 +1592,7 @@ def list_datacenters(kwargs=None, call=None):
     return {'Datacenters': salt.utils.vmware.list_datacenters(_get_si())}
 
 
-def list_portgroups(kwargs=None, call=None):
+def list_portgroups(call=None):
     '''
     List all the distributed virtual portgroups for this VMware environment
 
@@ -1535,7 +1611,7 @@ def list_portgroups(kwargs=None, call=None):
     return {'Portgroups': salt.utils.vmware.list_portgroups(_get_si())}
 
 
-def list_clusters(kwargs=None, call=None):
+def list_clusters(call=None):
     '''
     List all the clusters for this VMware environment
 
@@ -1554,7 +1630,7 @@ def list_clusters(kwargs=None, call=None):
     return {'Clusters': salt.utils.vmware.list_clusters(_get_si())}
 
 
-def list_datastore_clusters(kwargs=None, call=None):
+def list_datastore_clusters(call=None):
     '''
     List all the datastore clusters for this VMware environment
 
@@ -1573,7 +1649,7 @@ def list_datastore_clusters(kwargs=None, call=None):
     return {'Datastore Clusters': salt.utils.vmware.list_datastore_clusters(_get_si())}
 
 
-def list_datastores(kwargs=None, call=None):
+def list_datastores(call=None):
     '''
     List all the datastores for this VMware environment
 
@@ -1592,7 +1668,7 @@ def list_datastores(kwargs=None, call=None):
     return {'Datastores': salt.utils.vmware.list_datastores(_get_si())}
 
 
-def list_hosts(kwargs=None, call=None):
+def list_hosts(call=None):
     '''
     List all the hosts for this VMware environment
 
@@ -1611,7 +1687,7 @@ def list_hosts(kwargs=None, call=None):
     return {'Hosts': salt.utils.vmware.list_hosts(_get_si())}
 
 
-def list_resourcepools(kwargs=None, call=None):
+def list_resourcepools(call=None):
     '''
     List all the resource pools for this VMware environment
 
@@ -1630,7 +1706,7 @@ def list_resourcepools(kwargs=None, call=None):
     return {'Resource Pools': salt.utils.vmware.list_resourcepools(_get_si())}
 
 
-def list_networks(kwargs=None, call=None):
+def list_networks(call=None):
     '''
     List all the standard networks for this VMware environment
 
@@ -1649,9 +1725,10 @@ def list_networks(kwargs=None, call=None):
     return {'Networks': salt.utils.vmware.list_networks(_get_si())}
 
 
-def list_nodes_min(kwargs=None, call=None):
+def list_nodes_min(call=None):
     '''
-    Return a list of all VMs and templates that are on the specified provider, with no details
+    Return a list of all VMs and templates that are found in the specified
+    provider without any extra details.
 
     CLI Example:
 
@@ -1668,7 +1745,11 @@ def list_nodes_min(kwargs=None, call=None):
     ret = {}
     vm_properties = ["name"]
 
-    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(
+                  _get_si(),
+                  vim.VirtualMachine,
+                  vm_properties
+              )
 
     for vm in vm_list:
         ret[vm['name']] = {'state': 'Running', 'id': vm['name']}
@@ -1676,9 +1757,11 @@ def list_nodes_min(kwargs=None, call=None):
     return ret
 
 
-def list_nodes(kwargs=None, call=None):
+def list_nodes(call=None):
     '''
-    Return a list of all VMs and templates that are on the specified provider, with basic fields
+    Return a list of all VMs and templates that are found in the specified
+    provider. The entires of the returned list contain the name, state,
+    and id of each VM or template.
 
     CLI Example:
 
@@ -1686,8 +1769,8 @@ def list_nodes(kwargs=None, call=None):
 
         salt-cloud -f list_nodes my-vmware-config
 
-    To return a list of all VMs and templates present on ALL configured providers, with basic
-    fields:
+    Return a list of all VMs and templates present on ALL configured
+    providers.
 
     CLI Example:
 
@@ -1711,7 +1794,10 @@ def list_nodes(kwargs=None, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(
+                  _get_si(),
+                  vim.VirtualMachine,
+                  vm_properties)
 
     for vm in vm_list:
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
@@ -1733,9 +1819,10 @@ def list_nodes(kwargs=None, call=None):
     return ret
 
 
-def list_nodes_full(kwargs=None, call=None):
+def list_nodes_full(call=None):
     '''
-    Return a list of all VMs and templates that are on the specified provider, with full details
+    Return a list of all VMs and templates that are found in the specified
+    provider, with full details.
 
     CLI Example:
 
@@ -1743,8 +1830,8 @@ def list_nodes_full(kwargs=None, call=None):
 
         salt-cloud -f list_nodes_full my-vmware-config
 
-    To return a list of all VMs and templates present on ALL configured providers, with full
-    details:
+    Return a list of all VMs and templates present on ALL configured
+    providers, with full details.
 
     CLI Example:
 
@@ -1786,8 +1873,9 @@ def list_nodes_full(kwargs=None, call=None):
 
 def list_nodes_select(call=None):
     '''
-    Return a list of all VMs and templates that are on the specified provider, with fields
-    specified under ``query.selection`` in ``/etc/salt/cloud``
+    Return a list of all VMs and templates that are on the specified provider,
+    with fields specified under ``query.selection`` in ``/etc/salt/cloud``
+    (or any other suitable part in the salt-cloud configuration).
 
     CLI Example:
 
@@ -1795,8 +1883,9 @@ def list_nodes_select(call=None):
 
         salt-cloud -f list_nodes_select my-vmware-config
 
-    To return a list of all VMs and templates present on ALL configured providers, with
-    fields specified under ``query.selection`` in ``/etc/salt/cloud``:
+    Return a list of all VMs and templates present on ALL configured providers,
+    with fields specified under ``query.selection`` in ``/etc/salt/cloud``
+    (or any other suitable part in the salt-cloud configuration).
 
     CLI Example:
 
@@ -1826,7 +1915,8 @@ def list_nodes_select(call=None):
         vm_properties.append("config.guestFullName")
 
     if 'size' in selection:
-        vm_properties.extend(["config.hardware.numCPU", "config.hardware.memoryMB"])
+        vm_properties.extend(["config.hardware.numCPU",
+                              "config.hardware.memoryMB"])
 
     if 'state' in selection:
         vm_properties.append("summary.runtime.powerState")
@@ -1834,7 +1924,8 @@ def list_nodes_select(call=None):
     if 'private_ips' in selection or 'networks' in selection:
         vm_properties.append("guest.net")
 
-    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
+    if any(x in ['devices', 'mac_address', 'mac_addresses']
+           for x in selection):
         vm_properties.append("config.hardware.device")
 
     if 'storage' in selection:
@@ -1865,7 +1956,11 @@ def list_nodes_select(call=None):
     elif 'name' not in vm_properties:
         vm_properties.append("name")
 
-    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(
+                  _get_si(),
+                  vim.VirtualMachine,
+                  vm_properties
+              )
 
     for vm in vm_list:
         ret[vm["name"]] = _format_instance_info_select(vm, selection)
@@ -2003,7 +2098,7 @@ def avail_sizes(call=None):
     return {}
 
 
-def list_templates(kwargs=None, call=None):
+def list_templates(call=None):
     '''
     List all the templates present in this VMware environment
 
@@ -2022,7 +2117,7 @@ def list_templates(kwargs=None, call=None):
     return {'Templates': avail_images(call='function')}
 
 
-def list_folders(kwargs=None, call=None):
+def list_folders(call=None):
     '''
     List all the folders for this VMware environment
 
@@ -2075,7 +2170,11 @@ def list_snapshots(kwargs=None, call=None):
         "snapshot"
     ]
 
-    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(
+                  _get_si(),
+                  vim.VirtualMachine,
+                  vm_properties
+              )
 
     for vm in vm_list:
         if vm["rootSnapshot"]:
@@ -2448,7 +2547,11 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+                 'creating',
+                 vm_,
+                 ['name', 'profile', 'provider', 'driver']
+             ),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2537,24 +2640,19 @@ def create(vm_):
 
     # Get service instance object
     si = _get_si()
-
+    datacenter_ref = None
     container_ref = None
 
     # If datacenter is specified, set the container reference to start search from it instead
     if datacenter:
-        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+        datacenter_ref = salt.utils.vmware.get_mor_by_property(
+                             si,
+                             vim.Datacenter,
+                             datacenter
+                         )
         container_ref = datacenter_ref if datacenter_ref else None
 
     if 'clonefrom' in vm_:
-        # If datacenter is specified, set the container reference to start search from it instead
-        if datacenter:
-            datacenter_ref = salt.utils.vmware.get_mor_by_property(
-                                 si,
-                                 vim.Datacenter,
-                                 datacenter
-                             )
-            container_ref = datacenter_ref if datacenter_ref else None
-
         # Clone VM/template from specified VM/template
         object_ref = salt.utils.vmware.get_mor_by_property(
                          si,
@@ -2566,13 +2664,15 @@ def create(vm_):
             clone_type = "template" if object_ref.config.template else "vm"
         else:
             raise SaltCloudSystemExit(
-                'The VM/template that you have specified under clonefrom does not exist.'
+                'The VM/template specified under clonefrom does not exist.'
             )
     else:
         clone_type = None
         object_ref = None
 
-    # Either a cluster, or a resource pool must be specified when cloning from template or creating.
+    # Either a cluster or a resource pool must be specified, regardless
+    # of whether a new machine is created from a template or created
+    # from the scratch.
     if resourcepool:
         resourcepool_ref = salt.utils.vmware.get_mor_by_property(
                                si,
@@ -2581,9 +2681,12 @@ def create(vm_):
                                container_ref=container_ref
                            )
         if not resourcepool_ref:
-            log.error("Specified resource pool: '%s' does not exist", resourcepool)
+            log.error("The specified resource pool: '%s' does not exist",
+                      resourcepool)
             if not clone_type or clone_type == "template":
-                raise SaltCloudSystemExit('You must specify a resource pool that exists.')
+                raise SaltCloudSystemExit(
+                    'You must specify an existing resource pool.'
+                )
     elif cluster:
         cluster_ref = salt.utils.vmware.get_mor_by_property(
                           si,
@@ -2594,7 +2697,9 @@ def create(vm_):
         if not cluster_ref:
             log.error("Specified cluster: '%s' does not exist", cluster)
             if not clone_type or clone_type == "template":
-                raise SaltCloudSystemExit('You must specify a cluster that exists.')
+                raise SaltCloudSystemExit(
+                    'You must specify an existing cluster.'
+                )
         else:
             resourcepool_ref = cluster_ref.resourcePool
     elif clone_type == "template":
@@ -2606,7 +2711,8 @@ def create(vm_):
             'You must either specify a cluster or a resource pool when creating.'
         )
     else:
-        log.debug("Using resource pool used by the %s %s", clone_type, vm_['clonefrom'])
+        log.debug("Using resource pool used by the %s %s",
+                  clone_type, vm_['clonefrom'])
 
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
@@ -2624,21 +2730,24 @@ def create(vm_):
                 search_reference = folder_ref
         if not folder_ref:
             log.error("Specified folder: '%s' does not exist", folder)
-            log.debug("Using folder in which %s %s is present", clone_type, vm_['clonefrom'])
+            log.debug("Using folder in which %s %s is present",
+                      clone_type, vm_['clonefrom'])
             folder_ref = object_ref.parent
     elif datacenter:
         if not datacenter_ref:
             log.error("Specified datacenter: '%s' does not exist", datacenter)
-            log.debug("Using datacenter folder in which %s %s is present", clone_type, vm_['clonefrom'])
+            log.debug("Using datacenter folder in which %s %s is present",
+                      clone_type, vm_['clonefrom'])
             folder_ref = object_ref.parent
         else:
             folder_ref = datacenter_ref.vmFolder
     elif not clone_type:
         raise SaltCloudSystemExit(
-            'You must either specify a folder or a datacenter when creating not cloning.'
+            'You must either specify a folder or a datacenter when creating.'
         )
     else:
-        log.debug("Using folder in which %s %s is present", clone_type, vm_['clonefrom'])
+        log.debug("Using folder in which %s %s is present",
+                  clone_type, vm_['clonefrom'])
         folder_ref = object_ref.parent
 
     if 'clonefrom' in vm_:
@@ -2658,13 +2767,18 @@ def create(vm_):
                                 container_ref=container_ref
                             )
             if datastore_ref:
-                # specific datastore has been specified
                 reloc_spec.datastore = datastore_ref
             else:
-                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(si, vim.StoragePod, datastore, container_ref=container_ref)
+                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(
+                                            si,
+                                            vim.StoragePod,
+                                            datastore,
+                                            container_ref=container_ref
+                                        )
                 if not datastore_cluster_ref:
                     log.error("Specified datastore/datastore cluster: '%s' does not exist", datastore)
-                    log.debug("Using datastore used by the %s %s", clone_type, vm_['clonefrom'])
+                    log.debug("Using datastore used by the %s %s",
+                              clone_type, vm_['clonefrom'])
         else:
             log.debug("No datastore/datastore cluster specified")
             log.debug("Using datastore used by the %s %s", clone_type, vm_['clonefrom'])
@@ -2749,7 +2863,10 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-        specs = _manage_devices(devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name)
+        specs = _manage_devices(devices,
+                                vm=object_ref,
+                                container_ref=container_ref,
+                                new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
@@ -2775,7 +2892,9 @@ def create(vm_):
                                          template)
 
         if customization and customization_spec:
-            customization_spec = salt.utils.vmware.get_customizationspec_ref(si=si, customization_spec_name=customization_spec)
+            customization_spec = salt.utils.vmware.get_customizationspec_ref(
+                                     si=si,
+                                     customization_spec_name=customization_spec)
             clone_spec.customization = customization_spec.spec
         elif customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
@@ -2835,18 +2954,23 @@ def create(vm_):
     event_kwargs = vm_.copy()
     del event_kwargs['password']
 
-    try:
-        __utils__['cloud.fire_event'](
-            'event',
-            'requesting instance',
-            'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
-            sock_dir=__opts__['sock_dir'],
-            transport=__opts__['transport']
-        )
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting',
+        'salt/cloud/{0}/requesting'.format(vm_name),
+        args=__utils__['cloud.filter_event'](
+                'requesting',
+                event_kwargs,
+                list(event_kwargs)
+             ),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
+    try:
         if 'clonefrom' in vm_:
-            log.info("Creating %s from %s(%s)", vm_['name'], clone_type, vm_['clonefrom'])
+            log.info("Creating %s from %s(%s)", vm_['name'],
+                     clone_type, vm_['clonefrom'])
 
             if datastore and not datastore_ref and datastore_cluster_ref:
                 # datastore cluster has been specified so apply Storage DRS recommendations
@@ -2866,19 +2990,39 @@ def create(vm_):
 
                 # apply storage DRS recommendations
                 task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(recommended_datastores.recommendations[0].key)
-                salt.utils.vmware.wait_for_task(task, vm_name, 'apply storage DRS recommendations', 5, 'info')
+                salt.utils.vmware.wait_for_task(
+                    task,
+                    vm_name,
+                    'apply storage DRS recommendations',
+                    5,
+                    'info'
+                )
             else:
-                # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-                salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
+                salt.utils.vmware.wait_for_task(
+                    task,
+                    vm_name,
+                    'clone',
+                    5,
+                    'info'
+                )
         else:
             log.info('Creating %s', vm_['name'])
 
             if host:
-                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref, host_ref)
+                task = folder_ref.CreateVM_Task(config_spec,
+                                                resourcepool_ref,
+                                                host_ref)
             else:
-                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
-            salt.utils.vmware.wait_for_task(task, vm_name, "create", 15, 'info')
+                task = folder_ref.CreateVM_Task(config_spec,
+                                                resourcepool_ref)
+            salt.utils.vmware.wait_for_task(
+                task,
+                vm_name,
+                "create",
+                15,
+                'info'
+            )
     except Exception as exc:
         err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
         log.error(
@@ -2888,9 +3032,21 @@ def create(vm_):
         )
         return {'Error': err_msg}
 
-    new_vm_ref = salt.utils.vmware.get_mor_by_property(si, vim.VirtualMachine, vm_name, container_ref=container_ref)
+    __utils__['cloud.fire_event'](
+        'event',
+        'querying',
+        'salt/cloud/{0}/querying'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+    new_vm_ref = salt.utils.vmware.get_mor_by_property(
+                     si,
+                     vim.VirtualMachine,
+                     vm_name,
+                     container_ref=container_ref
+                 )
 
-    # Find how to power on in CreateVM_Task (if possible), for now this will do
     try:
         if not clone_type and power:
             task = new_vm_ref.PowerOn()
@@ -2899,7 +3055,8 @@ def create(vm_):
         log.info('Powering on the VM threw this exception. Ignoring.')
         log.info(exc)
 
-    # If it a template or if it does not need to be powered on then do not wait for the IP
+    # If the newly created virtual machine is a template or if it does not
+    # need to be powered on, do not wait for an IP-address.
     out = None
     if not template and power:
         ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
@@ -2912,7 +3069,14 @@ def create(vm_):
                 if 'ssh_host' not in vm_:
                     vm_['ssh_host'] = ip
                 log.info("[ %s ] Deploying to %s", vm_name, vm_['ssh_host'])
-
+                __utils__['cloud.fire_event'](
+                    'event',
+                    'waiting for SSH access',
+                    'salt/cloud/{0}/waiting_for_ssh'.format(vm_name),
+                    args={'name': vm_name, 'ip_address': vm_['ssh_host']},
+                    sock_dir=__opts__['sock_dir'],
+                    transport=__opts__['transport']
+                )
                 out = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
@@ -2922,9 +3086,13 @@ def create(vm_):
 
     __utils__['cloud.fire_event'](
         'event',
-        'created instance',
+        'created an instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+                 'created',
+                 vm_,
+                 ['driver', 'name', 'profile', 'provider', 'ssh_host']
+             ),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -3354,10 +3522,16 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
         )
 
     ret = {}
-    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
+    datacenter_name = None
+    if kwargs and 'datacenter' in kwarg:
+        datacenter_name = kwargs.get('datacenter')
     datacenter_properties = ["name"]
 
-    datacenter_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.Datacenter, datacenter_properties)
+    datacenter_list = salt.utils.vmware.get_mors_with_properties(
+                          _get_si(),
+                          vim.Datacenter,
+                          datacenter_properties
+                      )
 
     for datacenter in datacenter_list:
         ret[datacenter['name']] = []
@@ -3461,7 +3635,7 @@ def list_hbas(kwargs=None, call=None):
     return {'HBAs by Host': ret}
 
 
-def list_dvs(kwargs=None, call=None):
+def list_dvs(call=None):
     '''
     List all the distributed virtual switches for this VMware environment
 
@@ -3477,7 +3651,9 @@ def list_dvs(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    return {'Distributed Virtual Switches': salt.utils.vmware.list_dvs(_get_si())}
+    return {
+        'Distributed Virtual Switches': salt.utils.vmware.list_dvs(_get_si())
+    }
 
 
 def list_vapps(kwargs=None, call=None):
@@ -3869,7 +4045,7 @@ def remove_snapshot(name, kwargs=None, call=None):
     return 'Snapshots removed successfully'
 
 
-def remove_all_snapshots(name, kwargs=None, call=None):
+def remove_all_snapshots(name, call=None):
     '''
     Remove all the snapshots present for the specified virtual machine.
 
@@ -3911,7 +4087,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
     return 'Removed all snapshots'
 
 
-def convert_to_template(name, kwargs=None, call=None):
+def convert_to_template(name, call=None):
     '''
     Convert the specified virtual machine to template.
 
@@ -3927,7 +4103,11 @@ def convert_to_template(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
-    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+    vm_ref = salt.utils.vmware.get_mor_by_property(
+                 _get_si(),
+                 vim.VirtualMachine,
+                 name
+             )
 
     if vm_ref.config.template:
         raise SaltCloudSystemExit(
