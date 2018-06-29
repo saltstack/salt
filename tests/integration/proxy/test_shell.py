@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
+Test salt-call --proxyid commands
 
-    tests.integration.shell.proxy
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.proxy.test_shell
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs

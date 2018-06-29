@@ -99,7 +99,7 @@ class BaseCaller(object):
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
         try:
-            if self.opts.get('proxyid', None) is not None:
+            if self.opts.get('proxyid'):
                 self.minion = salt.minion.SProxyMinion(opts)
             else:
                 self.minion = salt.minion.SMinion(opts)
