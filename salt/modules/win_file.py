@@ -38,7 +38,8 @@ import glob  # do not remove, used in imported file.py functions
 import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError, \
+    get_error_message as _get_error_message
 # pylint: enable=W0611
 
 # Import salt libs
