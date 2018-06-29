@@ -37,7 +37,7 @@ pipeline {
                 always {
                     script { withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                         sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                            sh 'ssh-add ~/.ssh/jenkins/jenkins-testing.pem'
+                            sh 'ssh-add ~/.ssh/jenkins-testing.pem'
                             sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
                         }
                     }}
