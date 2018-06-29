@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Proxy Minion for Cisco NX OS Switches
 
 .. versionadded: 2016.11.0
