@@ -14,6 +14,9 @@ from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
+
+    yaml.SafeLoader = yaml.CSafeLoader
+    yaml.SafeDumper = yaml.CSafeDumper
 except Exception:
     pass
 
