@@ -32,7 +32,7 @@ password
     (REQUIRED) password to use to login with
 
 prompt_name
-    (REQUIRED, this or `prompt_regexp` below, but not both)
+    (REQUIRED, this or `prompt_regex` below, but not both)
     The name in the prompt on the switch.  Recommended to use your
     device's hostname.
 
@@ -63,7 +63,7 @@ prompt_regex
         Flash complete.  Reboot this switch (y/n)? [n]
 
 
-    If neither `prompt_name` nor `prompt_regexp` is specified the prompt will be
+    If neither `prompt_name` nor `prompt_regex` is specified the prompt will be
     defaulted to
 
     .. code-block:: shell
@@ -132,8 +132,8 @@ def init(opts=None):
         opts = __opts__
     try:
         this_prompt = None
-        if 'prompt_regexp' in opts['proxy']:
-            this_prompt = opts['proxy']['prompt_regexp']
+        if 'prompt_regex' in opts['proxy']:
+            this_prompt = opts['proxy']['prompt_regex']
         elif 'prompt_name' in opts['proxy']:
             this_prompt = '{0}.*#'.format(opts['proxy']['prompt_name'])
         else:
