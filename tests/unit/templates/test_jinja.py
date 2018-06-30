@@ -749,7 +749,7 @@ class TestCustomExtensions(TestCase):
                                    '{{ document.foo }}').render(document="{foo: it works}")
         self.assertEqual(rendered, "it works")
 
-        with self.assertRaises(exceptions.TemplateRuntimeError):
+        with self.assertRaises((TypeError, exceptions.TemplateRuntimeError)):
             env.from_string('{% set document = document|load_yaml %}'
                                        '{{ document.foo }}').render(document={"foo": "it works"})
 

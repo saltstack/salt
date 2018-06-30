@@ -3,4 +3,4 @@
 
 {% set result = list_one | compare_lists(list_two) %}
 
-{% include 'jinja_filters/common.sls' %}
+{% include 'jinja_filters/tojson.sls' %}

@@ -309,6 +309,26 @@ def to_bool(val):
     return False
 
 
+@jinja_filter('tojson')
+def tojson(val, indent=None):
+    '''
+    Implementation of tojson filter (only present in Jinja 2.9 and later). If
+    Jinja 2.9 or later is installed, then the upstream version of this filter
+    will be used.
+    '''
+    options = {'ensure_ascii': True}
+    if indent is not None:
+        options['indent'] = indent
+    return (
+        salt.utils.json.dumps(
+            val, **options
+        ).replace('<', '\\u003c')
+         .replace('>', '\\u003e')
+         .replace('&', '\\u0026')
+         .replace("'", '\\u0027')
+    )
+
+
 @jinja_filter('quote')
 def quote(txt):
     '''
