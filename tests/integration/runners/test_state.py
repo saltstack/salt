@@ -386,7 +386,7 @@ class OrchEventTest(ShellCase):
     def test_orchestration_with_pillar_dot_items(self):
         '''
         Test to confirm when using a state file that includes other state file, if
-        one of those state files includes pillar related functions that will not 
+        one of those state files includes pillar related functions that will not
         be pulling from the pillar cache that all the state files are available and
         the file_roots has been preserved.  See issues #48277 and #46986.
         '''
