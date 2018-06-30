@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.paths import TMP_CONF_DIR
 
 # Import Salt libs
