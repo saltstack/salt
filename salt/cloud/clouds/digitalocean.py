@@ -83,9 +83,10 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('personal_access_token',)
+        opts=__opts__,
+        provider=__active_provider_name__ or __virtualname__,
+        aliases=__virtual_aliases__,
+        required_keys=('personal_access_token',)
     )
 
 

@@ -532,9 +532,8 @@ def set_hwclock(clock):
                 'Zone \'{0}\' does not exist'.format(zonepath)
             )
 
-        tzfile = _get_localtime_path()
-        os.unlink(tzfile)
-        os.symlink(zonepath, tzfile)
+        os.unlink('/etc/localtime')
+        os.symlink(zonepath, '/etc/localtime')
 
         if 'Arch' in __grains__['os_family']:
             cmd = ['timezonectl', 'set-local-rtc',

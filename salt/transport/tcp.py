@@ -913,10 +913,9 @@ class SaltMessageClient(object):
                     # This happens because the logic is always waiting to read
                     # the next message and the associated read future is marked
                     # 'StreamClosedError' when the stream is closed.
-                    self._read_until_future.exception()
-                    if (not self._stream_return_future.done() and
-                            self.io_loop != tornado.ioloop.IOLoop.current(
-                                instance=False)):
+                    if self._read_until_future.done():
+                        self._read_until_future.exception()
+                    elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
                         self.io_loop.add_future(
                             self._stream_return_future,
                             lambda future: self.io_loop.stop()
@@ -1162,7 +1161,7 @@ class Subscriber(object):
         self._closing = True
         if not self.stream.closed():
             self.stream.close()
-            if self._read_until_future is not None:
+            if self._read_until_future is not None and self._read_until_future.done():
                 # This will prevent this message from showing up:
                 # '[ERROR   ] Future exception was never retrieved:
                 # StreamClosedError'

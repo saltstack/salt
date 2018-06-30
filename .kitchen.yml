@@ -43,23 +43,20 @@ provisioner:
     repo: git
     testingdir: /testing
   salt_copy_filter:
-    - .bundle
-    - .kitchen
-    - .kitchen.yml
-    - artifacts
-    - Gemfile
-    - Gemfile.lock
-    - README.rst
-    - .travis.yml
-    - '*.pyc'
     - __pycache__
+    - '*.pyc'
+    - .bundle
+    - .tox
+    - .kitchen
+    - artifacts
+    - Gemfile.lock
   state_top:
     base:
       "os:Windows":
         - match: grain
         - prep_windows
       "*":
-        - git.salt
+        - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
   pillars:
     top.sls:
       base:
