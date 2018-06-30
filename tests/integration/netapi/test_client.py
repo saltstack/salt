@@ -37,7 +37,6 @@ class NetapiClientTest(TestCase):
         ret = self.netapi.run(low)
         self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
 
-    @skipIf(True, 'Failing on the develop branch - investigate/fix for Fluorine')
     def test_local_batch(self):
         low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
         low.update(self.eauth_creds)

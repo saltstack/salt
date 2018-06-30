@@ -43,9 +43,12 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'gather_job_timeout',
     'kwarg',
     'match',
-    'print_event'
+    'print_event',
+    'raw'
+    'yield_pub_data',
 ])
 
 
