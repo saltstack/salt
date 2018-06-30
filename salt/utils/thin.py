@@ -6,16 +6,15 @@ Generate the salt thin tarball from the installed python files
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os
-import sys
 import copy
-import shutil
-import tarfile
-import zipfile
-import tempfile
-import subprocess
-import salt.utils.stringutils
 import logging
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
 
 # Import third party libs
 import jinja2

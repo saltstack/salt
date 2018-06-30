@@ -366,13 +366,11 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
         )
 
     def __getstate__(self):
         return {'opts': self.opts,
                 'log_queue': self.log_queue,
-                'log_queue_level': self.log_queue_level
         }
 
     def fill_buckets(self):
