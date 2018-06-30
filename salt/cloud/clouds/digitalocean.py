@@ -380,7 +380,7 @@ def create(vm_):
         if not isinstance(ipv6, bool):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
-        
+
     monitoring = config.get_cloud_config_value(
         'monitoring', vm_, __opts__, search_global=False, default=None,
     )
