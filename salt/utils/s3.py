@@ -23,7 +23,7 @@ import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves.urllib.parse import quote as _quote
+from salt.ext.six.moves.urllib.parse import quote as _quote   # pylint: disable=import-error,no-name-in-module
 from salt.ext import six
 
 log = logging.getLogger(__name__)
