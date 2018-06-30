@@ -47,8 +47,8 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'kwarg',
     'match',
     'print_event',
-    'raw'
-    'yield_pub_data',
+    'raw',
+    'yield_pub_data'
 ])
 
 
