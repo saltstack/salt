@@ -26,7 +26,6 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.raetevent
-import salt.utils.versions
 import salt.client
 import salt.client.ssh
 import salt.wheel
@@ -70,16 +69,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
-def _warn_expr_form():
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'the target type should be passed using the \'tgt_type\' '
-        'argument instead of \'expr_form\'. Support for using '
-        '\'expr_form\' will be removed in Salt Fluorine.'
-    )
-
-
-def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
+def status(output=True, tgt='*', tgt_type='glob', timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -95,12 +85,6 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
         salt-run manage.status tgt="webservers" tgt_type="nodegroup"
         salt-run manage.status timeout=5 gather_job_timeout=10
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        _warn_expr_form()
-        tgt_type = expr_form
-
     ret = {}
 
     if not timeout:
@@ -165,7 +149,7 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
+def down(removekeys=False, tgt='*', tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -183,12 +167,6 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        _warn_expr_form()
-        tgt_type = expr_form
-
     ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
@@ -197,7 +175,7 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     return ret
 
 
-def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -213,12 +191,6 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
         salt-run manage.up tgt="webservers" tgt_type="nodegroup"
         salt-run manage.up timeout=5 gather_job_timeout=10
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        _warn_expr_form()
-        tgt_type = expr_form
-
     ret = status(
         output=False,
         tgt=tgt,
@@ -229,9 +201,24 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
     return ret
 
 
-def list_state(subset=None, show_ipv4=False, state=None):
+def _show_ip_migration(show_ip, show_ipv4):
+    if show_ipv4 is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'The \'show_ipv4\' argument has been renamed to \'show_ip\' as'
+            'it now also includes IPv6 addresses for IPv6-connected'
+            'minions.'
+        )
+        return show_ipv4
+    return show_ip
+
+
+def list_state(subset=None, show_ip=False, show_ipv4=None, state=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -239,7 +226,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     state : 'available'
@@ -252,6 +239,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
 
         salt-run manage.list_state
     '''
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
     conf_file = __opts__['conf_file']
     opts = salt.config.client_config(conf_file)
     if opts['transport'] == 'raet':
@@ -266,18 +254,21 @@ def list_state(subset=None, show_ipv4=False, state=None):
                 minions = [m for m in minions if m in subset]
     else:
         # Always return 'present' for 0MQ for now
-        # TODO: implement other states spport for 0MQ
+        # TODO: implement other states support for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
+        minions = ckminions.connected_ids(show_ip=show_ip, subset=subset)
 
-    connected = dict(minions) if show_ipv4 else sorted(minions)
+    connected = dict(minions) if show_ip else sorted(minions)
 
     return connected
 
 
-def list_not_state(subset=None, show_ipv4=False, state=None):
+def list_not_state(subset=None, show_ip=False, show_ipv4=None, state=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -285,7 +276,7 @@ def list_not_state(subset=None, show_ipv4=False, state=None):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     state : 'available'
@@ -298,7 +289,8 @@ def list_not_state(subset=None, show_ipv4=False, state=None):
 
         salt-run manage.list_not_state
     '''
-    connected = list_state(subset=None, show_ipv4=show_ipv4, state=state)
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    connected = list_state(subset=None, show_ip=show_ip, state=state)
 
     key = salt.key.get_key(__opts__)
     keys = key.list_keys()
@@ -318,15 +310,19 @@ def list_not_state(subset=None, show_ipv4=False, state=None):
     return not_connected
 
 
-def present(subset=None, show_ipv4=False):
+def present(subset=None, show_ip=False, show_ipv4=None):
     '''
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -335,12 +331,16 @@ def present(subset=None, show_ipv4=False):
 
         salt-run manage.present
     '''
-    return list_state(subset=subset, show_ipv4=show_ipv4)
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_state(subset=subset, show_ip=show_ip)
 
 
-def not_present(subset=None, show_ipv4=False):
+def not_present(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
@@ -348,7 +348,7 @@ def not_present(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -357,12 +357,16 @@ def not_present(subset=None, show_ipv4=False):
 
         salt-run manage.not_present
     '''
-    return list_not_state(subset=subset, show_ipv4=show_ipv4)
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_not_state(subset=subset, show_ip=show_ip)
 
 
-def joined(subset=None, show_ipv4=False):
+def joined(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -370,7 +374,7 @@ def joined(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -379,12 +383,16 @@ def joined(subset=None, show_ipv4=False):
 
         salt-run manage.joined
     '''
-    return list_state(subset=subset, show_ipv4=show_ipv4, state='joined')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_state(subset=subset, show_ip=show_ip, state='joined')
 
 
-def not_joined(subset=None, show_ipv4=False):
+def not_joined(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
@@ -392,7 +400,7 @@ def not_joined(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -401,12 +409,16 @@ def not_joined(subset=None, show_ipv4=False):
 
         salt-run manage.not_joined
     '''
-    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='joined')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_not_state(subset=subset, show_ip=show_ip, state='joined')
 
 
-def allowed(subset=None, show_ipv4=False):
+def allowed(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -414,7 +426,7 @@ def allowed(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -423,12 +435,16 @@ def allowed(subset=None, show_ipv4=False):
 
         salt-run manage.allowed
     '''
-    return list_state(subset=subset, show_ipv4=show_ipv4, state='allowed')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_state(subset=subset, show_ip=show_ip, state='allowed')
 
 
-def not_allowed(subset=None, show_ipv4=False):
+def not_allowed(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
@@ -436,7 +452,7 @@ def not_allowed(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -445,12 +461,16 @@ def not_allowed(subset=None, show_ipv4=False):
 
         salt-run manage.not_allowed
     '''
-    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='allowed')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_not_state(subset=subset, show_ip=show_ip, state='allowed')
 
 
-def alived(subset=None, show_ipv4=False):
+def alived(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -458,7 +478,7 @@ def alived(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -467,12 +487,16 @@ def alived(subset=None, show_ipv4=False):
 
         salt-run manage.alived
     '''
-    return list_state(subset=subset, show_ipv4=show_ipv4, state='alived')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_state(subset=subset, show_ip=show_ip, state='alived')
 
 
-def not_alived(subset=None, show_ipv4=False):
+def not_alived(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
@@ -480,7 +504,7 @@ def not_alived(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -489,12 +513,16 @@ def not_alived(subset=None, show_ipv4=False):
 
         salt-run manage.not_alived
     '''
-    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='alived')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_not_state(subset=subset, show_ip=show_ip, state='alived')
 
 
-def reaped(subset=None, show_ipv4=False):
+def reaped(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
@@ -502,7 +530,7 @@ def reaped(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -511,12 +539,16 @@ def reaped(subset=None, show_ipv4=False):
 
         salt-run manage.reaped
     '''
-    return list_state(subset=subset, show_ipv4=show_ipv4, state='reaped')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_state(subset=subset, show_ip=show_ip, state='reaped')
 
 
-def not_reaped(subset=None, show_ipv4=False):
+def not_reaped(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
+    .. versionchanged:: Fluorine
+        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
+        includes IPv6 addresses for IPv6-connected minions.
 
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
@@ -524,7 +556,7 @@ def not_reaped(subset=None, show_ipv4=False):
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
-    show_ipv4 : False
+    show_ip : False
         Also show the IP address each minion is connecting from.
 
     CLI Example:
@@ -533,7 +565,8 @@ def not_reaped(subset=None, show_ipv4=False):
 
         salt-run manage.not_reaped
     '''
-    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='reaped')
+    show_ip = _show_ip_migration(show_ip, show_ipv4)
+    return list_not_state(subset=subset, show_ip=show_ip, state='reaped')
 
 
 def get_stats(estate=None, stack='road'):
@@ -598,7 +631,7 @@ def lane_stats(estate=None):
     return get_stats(estate=estate, stack='lane')
 
 
-def safe_accept(target, tgt_type='glob', expr_form=None):
+def safe_accept(target, tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -613,12 +646,6 @@ def safe_accept(target, tgt_type='glob', expr_form=None):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        _warn_expr_form()
-        tgt_type = expr_form
-
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 

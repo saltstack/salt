@@ -20,10 +20,12 @@ import tempfile
 import re
 import datetime
 import ast
+import sys
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -130,6 +132,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
             value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
+
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_str(name)
+    value = salt.utils.stringutils.to_str(value)
 
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
@@ -316,9 +322,9 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_unicode(fp_.read())
+            return salt.utils.stringutils.to_str(fp_.read())
     else:
-        return input_
+        return salt.utils.stringutils.to_str(input_)
 
 
 def _parse_subject(subject):
@@ -335,9 +341,8 @@ def _parse_subject(subject):
             if val:
                 ret[nid_name] = val
                 nids.append(nid_num)
-        except TypeError as e:
-            if e.args and e.args[0] == 'No string argument provided':
-                pass
+        except TypeError as err:
+            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 
@@ -372,7 +377,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return passphrase
+        return salt.utils.stringutils.to_str(passphrase)
     return f
 
 
@@ -433,8 +438,7 @@ def get_pem_entry(text, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----\\
-                MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
+        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
     '''
     text = _text_or_file(text)
     # Replace encoded newlines
@@ -494,7 +498,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return salt.utils.stringutils.to_bytes(ret, encoding='ascii')
 
 
 def get_pem_entries(glob_path):
@@ -679,12 +683,12 @@ def get_public_key(key, passphrase=None, asObj=False):
 
     if isinstance(key, M2Crypto.X509.X509):
         rsa = key.get_pubkey().get_rsa()
-        text = ''
+        text = b''
     else:
         text = _text_or_file(key)
         text = get_pem_entry(text)
 
-    if text.startswith('-----BEGIN PUBLIC KEY-----'):
+    if text.startswith(b'-----BEGIN PUBLIC KEY-----'):
         if not asObj:
             return text
         bio = M2Crypto.BIO.MemoryBuffer()
@@ -692,14 +696,14 @@ def get_public_key(key, passphrase=None, asObj=False):
         rsa = M2Crypto.RSA.load_pub_key_bio(bio)
 
     bio = M2Crypto.BIO.MemoryBuffer()
-    if text.startswith('-----BEGIN CERTIFICATE-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE-----'):
         cert = M2Crypto.X509.load_cert_string(text)
         rsa = cert.get_pubkey().get_rsa()
-    if text.startswith('-----BEGIN CERTIFICATE REQUEST-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE REQUEST-----'):
         csr = M2Crypto.X509.load_request_string(text)
         rsa = csr.get_pubkey().get_rsa()
-    if (text.startswith('-----BEGIN PRIVATE KEY-----') or
-            text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
+    if (text.startswith(b'-----BEGIN PRIVATE KEY-----') or
+            text.startswith(b'-----BEGIN RSA PRIVATE KEY-----')):
         rsa = M2Crypto.RSA.load_key_string(
             text, callback=_passphrase_callback(passphrase))
 
@@ -753,32 +757,29 @@ def write_pem(text, path, overwrite=True, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.write_pem \\
-            "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." \\
-            path=/etc/pki/mycert.crt
+        salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
-    old_umask = os.umask(0o77)
-    text = get_pem_entry(text, pem_type=pem_type)
-    _dhparams = ''
-    _private_key = ''
-    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-            not overwrite:
-        _filecontents = _text_or_file(path)
-        try:
-            _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-        except salt.exceptions.SaltInvocationError:
-            pass
-        try:
-            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-        except salt.exceptions.SaltInvocationError:
-            pass
-    with salt.utils.files.fopen(path, 'w') as _fp:
-        if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-            _fp.write(salt.utils.stringutils.to_str(_private_key))
-        _fp.write(text)
-        if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-            _fp.write(salt.utils.stringutils.to_str(_dhparams))
-    os.umask(old_umask)
+    with salt.utils.files.set_umask(0o077):
+        text = get_pem_entry(text, pem_type=pem_type)
+        _dhparams = ''
+        _private_key = ''
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
+                not overwrite:
+            _filecontents = _text_or_file(path)
+            try:
+                _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
+            except salt.exceptions.SaltInvocationError:
+                pass
+            try:
+                _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
+            except salt.exceptions.SaltInvocationError:
+                pass
+        with salt.utils.files.fopen(path, 'w') as _fp:
+            if pem_type and pem_type == 'CERTIFICATE' and _private_key:
+                _fp.write(salt.utils.stringutils.to_str(_private_key))
+            _fp.write(text)
+            if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
+                _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
 
 
@@ -849,7 +850,7 @@ def create_private_key(path=None,
             pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
-        return bio.read_all()
+        return salt.utils.stringutils.to_str(bio.read_all())
 
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
@@ -922,12 +923,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
     .. code-block:: bash
 
-        salt '*' x509.create_crl path=/etc/pki/mykey.key \\
-                signing_private_key=/etc/pki/ca.key \\
-                signing_cert=/etc/pki/ca.crt \\
-                revoked="{'compromized-web-key': \\
-                {'certificate': '/etc/pki/certs/www1.crt', \\
-                'revocation_date': '2015-03-01 00:00:00'}}"
+        salt '*' x509.create_crl path=/etc/pki/mykey.key signing_private_key=/etc/pki/ca.key signing_cert=/etc/pki/ca.crt revoked="{'compromized-web-key': {'certificate': '/etc/pki/certs/www1.crt', 'revocation_date': '2015-03-01 00:00:00'}}"
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these
     # functions because Client operations like creating CRLs shouldn't require
@@ -950,7 +946,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        serial_number = six.text_type(int(serial_number, 16))
+        # OpenSSL bindings requires this to be a non-unicode string
+        serial_number = salt.utils.stringutils.to_str(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -971,7 +968,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev.set_rev_date(rev_date)
 
         if 'reason' in rev_item:
-            rev.set_reason(rev_item['reason'])
+            # Same here for OpenSSL bindings and non-unicode strings
+            reason = salt.utils.stringutils.to_str(rev_item['reason'])
+            rev.set_reason(reason)
 
         crl.add_revoked(rev)
 
@@ -1026,8 +1025,7 @@ def sign_remote_certificate(argdic, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.sign_remote_certificate argdic="{'public_key': \\
-                '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
+        salt '*' x509.sign_remote_certificate argdic="{'public_key': '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
     '''
     if 'signing_policy' not in argdic:
         return 'signing_policy must be specified'
@@ -1216,7 +1214,7 @@ def create_certificate(
 
     extensions:
         The following arguments set X509v3 Extension values. If the value
-        starts with ``critical ``, the extension will be marked as critical.
+        starts with ``critical``, the extension will be marked as critical.
 
         Some special extensions are ``subjectKeyIdentifier`` and
         ``authorityKeyIdentifier``.
@@ -1342,8 +1340,7 @@ def create_certificate(
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt \\
-        signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
     if not path and not text and \
@@ -1430,7 +1427,14 @@ def create_certificate(
     if 'serial_number' not in kwargs:
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
-    cert.set_serial_number(int(kwargs['serial_number'].replace(':', ''), 16))
+    serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
+    # With Python3 we occasionally end up with an INT
+    # that is too large because Python3 no longer supports long INTs.
+    # If we're larger than the maxsize value
+    # then we adjust the serial number.
+    if serial_number > sys.maxsize:
+        serial_number = serial_number - sys.maxsize
+    cert.set_serial_number(serial_number)
 
     # Set validity dates
     # pylint: disable=no-member
@@ -1579,8 +1583,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.create_csr path=/etc/pki/myca.csr \\
-                public_key='/etc/pki/myca.key' CN='My Cert
+        salt '*' x509.create_csr path=/etc/pki/myca.csr public_key='/etc/pki/myca.key' CN='My Cert'
     '''
 
     if not path and not text:

@@ -67,9 +67,11 @@ class SaltCacheLoader(BaseLoader):
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
-        self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
+        self._file_client = None
+        # Instantiate the fileclient
+        self.file_client()
 
     def file_client(self):
         '''
@@ -96,20 +98,51 @@ class SaltCacheLoader(BaseLoader):
             self.cached.append(template)
 
     def get_source(self, environment, template):
-        # checks for relative '..' paths
-        if '..' in template:
-            log.warning(
-                'Discarded template path \'%s\', relative paths are '
-                'prohibited', template
-            )
-            raise TemplateNotFound(template)
+        '''
+        Salt-specific loader to find imported jinja files.
 
-        self.check_cache(template)
+        Jinja imports will be interpreted as originating from the top
+        of each of the directories in the searchpath when the template
+        name does not begin with './' or '../'.  When a template name
+        begins with './' or '../' then the import will be relative to
+        the importing file.
+
+        '''
+        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        _template = template
+        if template.split('/', 1)[0] in ('..', '.'):
+            is_relative = True
+        else:
+            is_relative = False
+        # checks for relative '..' paths that step-out of file_roots
+        if is_relative:
+            # Starts with a relative path indicator
+
+            if not environment or 'tpldir' not in environment.globals:
+                log.warning(
+                    'Relative path "%s" cannot be resolved without an environment',
+                    template
+                )
+                raise TemplateNotFound
+            base_path = environment.globals['tpldir']
+            _template = os.path.normpath('/'.join((base_path, _template)))
+            if _template.split('/', 1)[0] == '..':
+                log.warning(
+                    'Discarded template path "%s": attempts to'
+                    ' ascend outside of salt://', template
+                )
+                raise TemplateNotFound(template)
+
+        self.check_cache(_template)
 
         if environment and template:
-            tpldir = os.path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(_template).replace('\\', '/')
+            tplfile = _template
+            if is_relative:
+                tpldir = environment.globals.get('tpldir', tpldir)
+                tplfile = template
             tpldata = {
-                'tplfile': template,
+                'tplfile': tplfile,
                 'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
@@ -117,7 +150,7 @@ class SaltCacheLoader(BaseLoader):
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = os.path.join(spath, template)
+            filepath = os.path.join(spath, _template)
             try:
                 with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
@@ -203,7 +236,7 @@ def skip_filter(data):
     '''
     Suppress data output
 
-    .. code-balock:: yaml
+    .. code-block:: yaml
 
         {% my_string = "foo" %}
 
@@ -274,6 +307,26 @@ def to_bool(val):
     if not isinstance(val, collections.Hashable):
         return len(val) > 0
     return False
+
+
+@jinja_filter('tojson')
+def tojson(val, indent=None):
+    '''
+    Implementation of tojson filter (only present in Jinja 2.9 and later). If
+    Jinja 2.9 or later is installed, then the upstream version of this filter
+    will be used.
+    '''
+    options = {'ensure_ascii': True}
+    if indent is not None:
+        options['indent'] = indent
+    return (
+        salt.utils.json.dumps(
+            val, **options
+        ).replace('<', '\\u003c')
+         .replace('>', '\\u003e')
+         .replace('&', '\\u0026')
+         .replace("'", '\\u0027')
+    )
 
 
 @jinja_filter('quote')
@@ -486,6 +539,14 @@ def lst_avg(lst):
 
         2.5
     '''
+    salt.utils.versions.warn_until(
+        'Neon',
+        'This results of this function are currently being rounded.'
+        'Beginning in the Salt Neon release, results will no longer be '
+        'rounded and this warning will be removed.',
+        stacklevel=3
+    )
+
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
@@ -747,8 +808,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -850,6 +910,24 @@ class SerializerExtension(Extension, object):
             value = six.text_type(value)
         try:
             return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
+        except salt.utils.yaml.YAMLError as exc:
+            msg = 'Encountered error loading yaml: '
+            try:
+                # Reported line is off by one, add 1 to correct it
+                line = exc.problem_mark.line + 1
+                buf = exc.problem_mark.buffer
+                problem = exc.problem
+            except AttributeError:
+                # No context information available in the exception, fall back
+                # to the stringified version of the exception.
+                msg += six.text_type(exc)
+            else:
+                msg += '{0}\n'.format(problem)
+                msg += salt.utils.stringutils.get_context(
+                    buf,
+                    line,
+                    marker='    <======================')
+            raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
@@ -869,7 +947,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

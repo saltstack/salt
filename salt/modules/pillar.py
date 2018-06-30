@@ -40,10 +40,10 @@ def get(key,
     '''
     .. versionadded:: 0.14
 
-    Attempt to retrieve the named value from pillar, if the named value is not
-    available return the passed default. The default return is an empty string
-    except __opts__['pillar_raise_on_missing'] is set to True, in which case a
-    KeyError will be raised.
+    Attempt to retrieve the named value from :ref:`in-memory pillar data
+    <pillar-in-memory>`. If the pillar key is not present in the in-memory
+    pillar, then the value specified in the ``default`` option (described
+    below) will be returned.
 
     If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
@@ -53,10 +53,21 @@ def get(key,
 
         {'pkg': {'apache': 'httpd'}}
 
-    To retrieve the value associated with the apache key in the pkg dict this
-    key can be passed::
+    To retrieve the value associated with the ``apache`` key in the ``pkg``
+    dict this key can be passed as::
 
         pkg:apache
+
+    key
+        The pillar key to get value from
+
+    default
+        The value specified by this option will be returned if the desired
+        pillar key does not exist.
+
+        If a default value is specified, then it will be an empty string,
+        unless :conf_minion:`pillar_raise_on_missing` is set to ``True``, in
+        which case an error will be raised.
 
     merge : ``False``
         If ``True``, the retrieved values will be merged into the passed
@@ -359,6 +370,28 @@ def item(*args, **kwargs):
 
         .. versionadded:: 2015.8.0
 
+    pillarenv
+        If specified, this function will query the master to generate fresh
+        pillar data on the fly, specifically from the requested pillar
+        environment. Note that this can produce different pillar data than
+        executing this function without an environment, as its normal behavior
+        is just to return a value from minion's pillar data in memory (which
+        can be sourced from more than one pillar environment).
+
+        Using this argument will not affect the pillar data in memory. It will
+        however be slightly slower and use more resources on the master due to
+        the need for the master to generate and send the minion fresh pillar
+        data. This tradeoff in performance however allows for the use case
+        where pillar data is desired only from a single environment.
+
+        .. versionadded:: 2017.7.6,2018.3.1
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: 2017.7.6,2018.3.1
+
     CLI Examples:
 
     .. code-block:: bash
@@ -370,11 +403,17 @@ def item(*args, **kwargs):
     ret = {}
     default = kwargs.get('default', '')
     delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
+    pillarenv = kwargs.get('pillarenv', None)
+    saltenv = kwargs.get('saltenv', None)
+
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
-                __pillar__,
+                pillar_dict,
                 arg,
                 default,
                 delimiter)

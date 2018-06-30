@@ -29,10 +29,11 @@ import os
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
-from salt.utils.locales import sdecode, sdecode_if_string
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six import string_types, iteritems
@@ -67,6 +68,7 @@ def _changes(name,
              roomnumber='',
              workphone='',
              homephone='',
+             other='',
              loginclass=None,
              date=None,
              mindays=0,
@@ -77,7 +79,9 @@ def _changes(name,
              win_homedrive=None,
              win_profile=None,
              win_logonscript=None,
-             win_description=None):
+             win_description=None,
+             allow_uid_change=False,
+             allow_gid_change=False):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
@@ -152,8 +156,8 @@ def _changes(name,
             change['expire'] = expire
 
     # GECOS fields
-    fullname = sdecode_if_string(fullname)
-    lusr['fullname'] = sdecode_if_string(lusr['fullname'])
+    fullname = salt.utils.data.decode(fullname)
+    lusr['fullname'] = salt.utils.data.decode(lusr['fullname'])
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
@@ -169,27 +173,51 @@ def _changes(name,
     # and ignore these parameters if these functions do not exist.
     if 'user.chroomnumber' in __salt__ \
             and roomnumber is not None:
-        roomnumber = sdecode_if_string(roomnumber)
-        lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
+        roomnumber = salt.utils.data.decode(roomnumber)
+        lusr['roomnumber'] = salt.utils.data.decode(lusr['roomnumber'])
         if lusr['roomnumber'] != roomnumber:
             change['roomnumber'] = roomnumber
     if 'user.chworkphone' in __salt__ \
             and workphone is not None:
-        workphone = sdecode_if_string(workphone)
-        lusr['workphone'] = sdecode_if_string(lusr['workphone'])
+        workphone = salt.utils.data.decode(workphone)
+        lusr['workphone'] = salt.utils.data.decode(lusr['workphone'])
         if lusr['workphone'] != workphone:
             change['workphone'] = workphone
     if 'user.chhomephone' in __salt__ \
             and homephone is not None:
-        homephone = sdecode_if_string(homephone)
-        lusr['homephone'] = sdecode_if_string(lusr['homephone'])
+        homephone = salt.utils.data.decode(homephone)
+        lusr['homephone'] = salt.utils.data.decode(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    if 'user.chother' in __salt__ and other is not None:
+        other = salt.utils.data.decode(other)
+        lusr['other'] = salt.utils.data.decode(lusr['other'])
+        if lusr['other'] != other:
+            change['other'] = other
     # OpenBSD/FreeBSD login class
     if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if loginclass:
             if __salt__['user.get_loginclass'](name) != loginclass:
                 change['loginclass'] = loginclass
+
+    errors = []
+    if not allow_uid_change and 'uid' in change:
+        errors.append(
+            'Changing uid ({0} -> {1}) not permitted, set allow_uid_change to '
+            'True to force this change. Note that this will not change file '
+            'ownership.'.format(lusr['uid'], uid)
+        )
+    if not allow_gid_change and 'gid' in change:
+        errors.append(
+            'Changing gid ({0} -> {1}) not permitted, set allow_gid_change to '
+            'True to force this change. Note that this will not change file '
+            'ownership.'.format(lusr['gid'], gid)
+        )
+    if errors:
+        raise CommandExecutionError(
+            'Encountered error checking for needed changes',
+            info=errors
+        )
 
     return change
 
@@ -214,6 +242,7 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            other=None,
             loginclass=None,
             date=None,
             mindays=None,
@@ -225,7 +254,9 @@ def present(name,
             win_profile=None,
             win_logonscript=None,
             win_description=None,
-            nologinit=False):
+            nologinit=False,
+            allow_uid_change=False,
+            allow_gid_change=False):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -233,16 +264,28 @@ def present(name,
         The name of the user to manage
 
     uid
-        The user id to assign, if left empty then the next available user id
-        will be assigned
+        The user id to assign. If not specified, and the user does not exist,
+        then the next available uid will be assigned.
 
     gid
-        The default group id. Also accepts group name.
+        The id of the default group to assign to the user. Either a group name
+        or gid can be used. If not specified, and the user does not exist, then
+        he next available gid will be assigned.
 
-    gid_from_name
-        If True, the default group id will be set to the id of the group with
-        the same name as the user. If the group does not exist the state will
-        fail. Default is ``False``.
+    gid_from_name : False
+        If ``True``, the default group id will be set to the id of the group
+        with the same name as the user. If the group does not exist the state
+        will fail.
+
+    allow_uid_change : False
+        Set to ``True`` to allow the state to update the uid.
+
+        .. versionadded:: 2018.3.1
+
+    allow_gid_change : False
+        Set to ``True`` to allow the state to update the gid.
+
+        .. versionadded:: 2018.3.1
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -341,7 +384,10 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
-        If GECOS field contains more than 3 commas, this field will have the rest of 'em
+
+    other
+        The user's other attribute (not supported in MacOS)
+        If GECOS field contains more than 4 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -405,13 +451,15 @@ def present(name,
         password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
-        fullname = sdecode(fullname)
+        fullname = salt.utils.data.decode(fullname)
     if roomnumber is not None:
-        roomnumber = sdecode(roomnumber)
+        roomnumber = salt.utils.data.decode(roomnumber)
     if workphone is not None:
-        workphone = sdecode(workphone)
+        workphone = salt.utils.data.decode(workphone)
     if homephone is not None:
-        homephone = sdecode(homephone)
+        homephone = salt.utils.data.decode(homephone)
+    if other is not None:
+        other = salt.utils.data.decode(other)
 
     # createhome not supported on Windows or Mac
     if __grains__['kernel'] in ('Darwin', 'Windows'):
@@ -424,7 +472,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
+    for gecos_field in [fullname, roomnumber, workphone]:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
@@ -466,33 +514,41 @@ def present(name,
             ret['result'] = False
             return ret
 
-    changes = _changes(name,
-                       uid,
-                       gid,
-                       groups,
-                       present_optgroups,
-                       remove_groups,
-                       home,
-                       createhome,
-                       password,
-                       enforce_password,
-                       empty_password,
-                       shell,
-                       fullname,
-                       roomnumber,
-                       workphone,
-                       homephone,
-                       loginclass,
-                       date,
-                       mindays,
-                       maxdays,
-                       inactdays,
-                       warndays,
-                       expire,
-                       win_homedrive,
-                       win_profile,
-                       win_logonscript,
-                       win_description)
+    try:
+        changes = _changes(name,
+                           uid,
+                           gid,
+                           groups,
+                           present_optgroups,
+                           remove_groups,
+                           home,
+                           createhome,
+                           password,
+                           enforce_password,
+                           empty_password,
+                           shell,
+                           fullname,
+                           roomnumber,
+                           workphone,
+                           homephone,
+                           other,
+                           loginclass,
+                           date,
+                           mindays,
+                           maxdays,
+                           inactdays,
+                           warndays,
+                           expire,
+                           win_homedrive,
+                           win_profile,
+                           win_logonscript,
+                           win_description,
+                           allow_uid_change,
+                           allow_gid_change)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
 
     if changes:
         if __opts__['test']:
@@ -611,6 +667,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           other,
                            loginclass,
                            date,
                            mindays,
@@ -621,7 +678,13 @@ def present(name,
                            win_homedrive,
                            win_profile,
                            win_logonscript,
-                           win_description)
+                           win_description,
+                           allow_uid_change=True,
+                           allow_gid_change=True)
+        # allow_uid_change and allow_gid_change passed as True to avoid race
+        # conditions where a uid/gid is modified outside of Salt. If an
+        # unauthorized change was requested, it would have been caught the
+        # first time we ran _changes().
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(
@@ -656,6 +719,7 @@ def present(name,
                       'roomnumber': roomnumber,
                       'workphone': workphone,
                       'homephone': homephone,
+                      'other': other,
                       'createhome': createhome,
                       'nologinit': nologinit,
                       'loginclass': loginclass}

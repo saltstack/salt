@@ -2,17 +2,19 @@
 '''
 Glance module for interacting with OpenStack Glance
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 
 Example configuration
 
 .. code-block:: yaml
+
     glance:
       cloud: default
 
 .. code-block:: yaml
+
     glance:
       auth:
         username: admin

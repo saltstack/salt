@@ -5,6 +5,7 @@ Raet Ioflo Behavior Unittests
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from salt.ext.six.moves import map
+import importlib
 # pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -40,6 +41,9 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         '''
         Call super if override so House Framer and Frame are setup correctly
         '''
+        behaviors = ['salt.daemons.flo', 'salt.daemons.test.plan']
+        for behavior in behaviors:
+            mod = importlib.import_module(behavior)
         super(PresenterTestCase, self).setUp()
 
     def tearDown(self):

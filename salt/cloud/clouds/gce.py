@@ -70,10 +70,11 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    # This work-around for Issue #32743 is no longer needed for libcloud >=
+    # 1.4.0. However, older versions of libcloud must still be supported with
+    # this work-around. This work-around can be removed when the required
+    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
+    # implemented in Salt 2018.3.0).
     if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
@@ -2373,21 +2374,30 @@ def destroy(vm_name, call=None):
 
 def create_attach_volumes(name, kwargs, call=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Create and attach multiple volumes to a node. The 'volumes' and 'node'
     arguments are required, where 'node' is a libcloud node, and 'volumes'
     is a list of maps, where each map contains:
 
-    'size': The size of the new disk in GB. Required.
-    'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
-    'image': An image to use for this new disk. Optional.
-    'snapshot': A snapshot to use for this new disk. Optional.
-    'auto_delete': An option(bool) to keep or remove the disk upon
-                   instance deletion. Optional, defaults to False.
+    size
+        The size of the new disk in GB. Required.
+
+    type
+        The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
+
+    image
+        An image to use for this new disk. Optional.
+
+    snapshot
+        A snapshot to use for this new disk. Optional.
+
+    auto_delete
+        An option(bool) to keep or remove the disk upon instance deletion.
+        Optional, defaults to False.
 
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
-
-    .. versionadded:: 2017.7.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(

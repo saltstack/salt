@@ -183,7 +183,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -222,7 +222,7 @@ def show_args():
     '''
     Show which arguments map to which flags and options.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -249,14 +249,14 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         alias for log_file
     conf_file : string
         optional path to alternative configuration file
-    **kwargs : boolean|string|int
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     .. note::
         ``name`` and ``pattern`` were kept for backwards compatibility reasons.
 
         ``name`` is an alias for the ``entryname`` argument, ``pattern`` is an alias
-        for ``log_file``. These aliasses wil only be used if the ``entryname`` and
+        for ``log_file``. These aliases will only be used if the ``entryname`` and
         ``log_file`` arguments are not passed.
 
         For a full list of arguments see ```logadm.show_args```.

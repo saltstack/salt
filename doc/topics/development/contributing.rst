@@ -60,7 +60,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
         isolated into separate branches.
 
     If you're working on a bug or documentation fix, create your branch from
-    the oldest release branch that contains the bug or requires the documentation
+    the oldest **supported** main release branch that contains the bug or requires the documentation
     update. See :ref:`Which Salt Branch? <which-salt-branch>`.
 
     .. code-block:: bash
@@ -154,7 +154,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
             nothing to commit, working tree clean
 
         Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
-        ``--force`` to the end of the ``git push`` command to get the changes
+        ``--force-with-lease`` to the end of the ``git push`` command to get the changes
         pushed to your fork. Pulling or merging, while they will resolve the
         non-fast-forward issue, will likely add extra commits to the pull
         request which were not part of your changes.
@@ -212,8 +212,11 @@ There are three different kinds of branches in use: develop, main release
 branches, and dot release branches.
 
 - All feature work should go into the ``develop`` branch.
-- Bug fixes and documentation changes should go into the oldest supported
-  **main** release branch affected by the the bug or documentation change.
+- Bug fixes and documentation changes should go into the oldest **supported
+  main** release branch affected by the the bug or documentation change (you
+  can use the blame button in github to figure out when the bug was introduced).
+  Supported releases are the last 2 releases. For example, if the latest release
+  is 2018.3, the last two release are 2018.3 and 2017.7.
   Main release branches are named after a year and month, such as
   ``2016.11`` and ``2017.7``.
 - Hot fixes, as determined by SaltStack's release team, should be submitted
@@ -223,7 +226,7 @@ branches, and dot release branches.
 .. note::
 
     GitHub will open pull requests against Salt's main branch, ``develop``,
-    byndefault. Be sure to check which branch is selected when creating the
+    by default. Be sure to check which branch is selected when creating the
     pull request.
 
 The Develop Branch
@@ -247,7 +250,7 @@ Main Release Branches
 =====================
 
 The current release branch is the most recent stable release. Pull requests
-containing bug fixes or documentation changes should be made against the main
+containing bug fixes or documentation changes should be made against the oldest supported main
 release branch that is affected.
 
 The branch name will be a date-based name such as ``2016.11``.
@@ -282,9 +285,9 @@ The Salt repository follows a "Merge Forward" policy. The merge-forward
 behavior means that changes submitted to older main release branches will
 automatically be "merged-forward" into the newer branches.
 
-For example, a pull request is merged into ``2016.11``. Then, the entire
-``2016.11`` branch is merged-forward into the ``2017.7`` branch, and the
-``2017.7`` branch is merged-forward into the ``develop`` branch.
+For example, a pull request is merged into ``2017.7``. Then, the entire
+``2017.7`` branch is merged-forward into the ``2018.3`` branch, and the
+``2018.3`` branch is merged-forward into the ``develop`` branch.
 
 This process makes is easy for contributors to make only one pull-request
 against an older branch, but allows the change to propagate to all **main**

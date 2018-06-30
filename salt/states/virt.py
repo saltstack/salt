@@ -63,30 +63,30 @@ def keys(name, basepath='/etc/pki', **kwargs):
         country
             The country that the certificate should use.  Defaults to US.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         state
             The state that the certificate should use.  Defaults to Utah.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         locality
             The locality that the certificate should use.
             Defaults to Salt Lake City.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         organization
             The organization that the certificate should use.
             Defaults to Salted.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         expiration_days
             The number of days that the certificate should be valid for.
             Defaults to 365 days (1 year)
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
@@ -158,14 +158,14 @@ def _virt_call(domain, function, section, comment, **kwargs):
     targeted_domains = fnmatch.filter(__salt__['virt.list_domains'](), domain)
     changed_domains = list()
     ignored_domains = list()
-    for domain in targeted_domains:
+    for targeted_domain in targeted_domains:
         try:
-            response = __salt__['virt.{0}'.format(function)](domain, **kwargs)
+            response = __salt__['virt.{0}'.format(function)](targeted_domain, **kwargs)
             if isinstance(response, dict):
                 response = response['name']
-            changed_domains.append({'domain': domain, function: response})
+            changed_domains.append({'domain': targeted_domain, function: response})
         except libvirt.libvirtError as err:
-            ignored_domains.append({'domain': domain, 'issue': six.text_type(err)})
+            ignored_domains.append({'domain': targeted_domain, 'issue': six.text_type(err)})
     if not changed_domains:
         ret['result'] = False
         ret['comment'] = 'No changes had happened'
@@ -247,13 +247,17 @@ def running(name, **kwargs):
                 __salt__['virt.start'](name)
                 ret['changes'][name] = 'Domain started'
                 ret['comment'] = 'Domain {0} started'.format(name)
+            else:
+                ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
             kwargs = salt.utils.args.clean_kwargs(**kwargs)
             __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
-    except libvirt.libvirtError:
-        ret['comment'] = 'Domain {0} exists and is running'.format(name)
+    except libvirt.libvirtError as err:
+        # Something bad happened when starting the VM, report it
+        ret['comment'] = six.text_type(err)
+        ret['result'] = False
 
     return ret
 
@@ -333,7 +337,7 @@ def saved(name, suffix=None):
     return _virt_call(name, 'snapshot', 'saved', 'Snapshots has been taken', suffix=suffix)
 
 
-def reverted(name, snapshot=None, cleanup=False):
+def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-outer-name
     '''
     .. deprecated:: 2016.3.0
 
@@ -388,5 +392,111 @@ def reverted(name, snapshot=None, cleanup=False):
         ret['comment'] = six.text_type(err)
     except CommandExecutionError as err:
         ret['comment'] = six.text_type(err)
+
+    return ret
+
+
+def network_define(name, bridge, forward, **kwargs):
+    '''
+    Defines and starts a new network with specified arguments.
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.network_define
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_define:
+            - bridge: main
+            - forward: bridge
+            - vport: openvswitch
+            - tag: 180
+            - autostart: True
+            - start: True
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''
+           }
+
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    vport = kwargs.pop('vport', None)
+    tag = kwargs.pop('tag', None)
+    autostart = kwargs.pop('autostart', True)
+    start = kwargs.pop('start', True)
+
+    try:
+        result = __salt__['virt.net_define'](name, bridge, forward, vport, tag=tag, autostart=autostart, start=start)
+        if result:
+            ret['changes'][name] = 'Network {0} has been created'.format(name)
+            ret['result'] = True
+        else:
+            ret['comment'] = 'Network {0} created fail'.format(name)
+    except libvirt.libvirtError as err:
+        if err.get_error_code() == libvirt.VIR_ERR_NETWORK_EXIST or libvirt.VIR_ERR_OPERATION_FAILED:
+            ret['result'] = True
+            ret['comment'] = 'The network already exist'
+        else:
+            ret['comment'] = err.get_error_message()
+
+    return ret
+
+
+def pool_define(name, **kwargs):
+    '''
+    Defines and starts a new pool with specified arguments.
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_define
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_define:
+            - ptype: logical
+            - target: pool
+            - source: sda1
+            - autostart: True
+            - start: True
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''
+           }
+
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ptype = kwargs.pop('ptype', None)
+    target = kwargs.pop('target', None)
+    source = kwargs.pop('source', None)
+    autostart = kwargs.pop('autostart', True)
+    start = kwargs.pop('start', True)
+
+    try:
+        result = __salt__['virt.pool_define_build'](name, ptype=ptype, target=target,
+                                                    source=source, autostart=autostart, start=start)
+        if result:
+            if 'Pool exist' in result:
+                if 'Pool update' in result:
+                    ret['changes'][name] = 'Pool {0} has been updated'.format(name)
+                else:
+                    ret['comment'] = 'Pool {0} already exist'.format(name)
+            else:
+                ret['changes'][name] = 'Pool {0} has been created'.format(name)
+            ret['result'] = True
+        else:
+            ret['comment'] = 'Pool {0} created fail'.format(name)
+    except libvirt.libvirtError as err:
+        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
+            ret['result'] = True
+            ret['comment'] = 'The pool already exist'
+        ret['comment'] = err.get_error_message()
 
     return ret

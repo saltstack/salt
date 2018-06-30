@@ -1,8 +1,8 @@
 .. _all-salt.clouds:
 
-===============================
-Full list of Salt Cloud modules
-===============================
+=============
+cloud modules
+=============
 
 .. currentmodule:: salt.cloud.clouds
 
@@ -23,6 +23,7 @@ Full list of Salt Cloud modules
     lxc
     msazure
     nova
+    oneandone
     opennebula
     openstack
     parallels

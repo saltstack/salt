@@ -758,7 +758,7 @@ def get_template_image(kwargs=None, call=None):
     '''
     Returns a template's image from the given template name.
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     .. code-block:: bash
 
@@ -921,7 +921,7 @@ def _get_device_template(disk, disk_info, template=None):
     '''
     Returns the template format to create a disk in open nebula
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     '''
     def _require_disk_opts(*args):
@@ -971,7 +971,7 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    Optional vm_ dict options for overwriting template:
+    Optional vm\_ dict options for overwriting template:
 
     region_id
         Optional - OpenNebula Zone ID
@@ -2369,6 +2369,9 @@ def template_clone(call=None, kwargs=None):
     template_name
         The name of the template to be cloned. Can be used instead of ``template_id``.
 
+    clone_images
+        Optional, defaults to False. Indicates if the images attached to the template should be cloned as well.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2387,6 +2390,7 @@ def template_clone(call=None, kwargs=None):
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
+    clone_images = kwargs.get('clone_images', False)
 
     if name is None:
         raise SaltCloudSystemExit(
@@ -2410,7 +2414,7 @@ def template_clone(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    response = server.one.template.clone(auth, int(template_id), name)
+    response = server.one.template.clone(auth, int(template_id), name, clone_images)
 
     data = {
         'action': 'template.clone',
@@ -4566,7 +4570,7 @@ def _list_nodes(full=False):
                 pass
 
         vms[name]['id'] = vm.find('ID').text
-        if vm.find('TEMPLATE').find('TEMPLATE_ID'):
+        if 'TEMPLATE_ID' in vm.find('TEMPLATE'):
             vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
         vms[name]['name'] = name
         vms[name]['size'] = {'cpu': cpu_size, 'memory': memory_size}

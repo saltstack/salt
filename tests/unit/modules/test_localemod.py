@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
@@ -40,6 +40,11 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
       X11 Layout: us
        X11 Model: pc105
     '''
+    locale_ctl_notset = '''
+   System Locale: n/a
+       VC Keymap: n/a
+      X11 Layout: n/a
+    '''
     locale_ctl_out_empty = ''
     locale_ctl_out_broken = '''
     System error:Recursive traversal of loopback mount points
@@ -64,7 +69,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                         {'cmd.run': MagicMock(return_value='A\nB')}):
             assert localemod.list_avail() == ['A', 'B']
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out)})
     def test_localectl_status_parser(self):
         '''
@@ -79,9 +84,36 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert 'LANG' in out['system_locale']
         assert 'LANGUAGE' in out['system_locale']
         assert out['system_locale']['LANG'] == out['system_locale']['LANGUAGE'] == 'de_DE.utf8'
-        assert out['vc_keymap'] == 'n/a'
-        assert out['x11_layout'] == 'us'
-        assert out['x11_model'] == 'pc105'
+        assert isinstance(out['vc_keymap'], dict)
+        assert 'data' in out['vc_keymap']
+        assert out['vc_keymap']['data'] is None
+        assert isinstance(out['x11_layout'], dict)
+        assert 'data' in out['x11_layout']
+        assert out['x11_layout']['data'] == 'us'
+        assert isinstance(out['x11_model'], dict)
+        assert 'data' in out['x11_model']
+        assert out['x11_model']['data'] == 'pc105'
+
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_notset)})
+    def test_localectl_status_parser_notset(self):
+        '''
+        Test localectl status parser.
+        :return:
+        '''
+        out = localemod._localectl_status()
+        assert isinstance(out, dict)
+        for key in ['system_locale', 'vc_keymap', 'x11_layout']:
+            assert key in out
+        assert isinstance(out['system_locale'], dict)
+        assert 'data' in out['system_locale']
+        assert out['system_locale']['data'] is None
+        assert isinstance(out['vc_keymap'], dict)
+        assert 'data' in out['vc_keymap']
+        assert out['vc_keymap']['data'] is None
+        assert isinstance(out['x11_layout'], dict)
+        assert 'data' in out['x11_layout']
+        assert out['x11_layout']['data'] is None
 
     @patch('salt.modules.localemod.dbus', MagicMock())
     def test_dbus_locale_parser_matches(self):
@@ -119,7 +151,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert msg == ('Odd locale parameter "Fatal error right in front of screen" detected in dbus locale output.'
                            ' This should not happen. You should probably investigate what caused this.')
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.log', MagicMock())
     def test_localectl_status_parser_no_systemd(self):
         '''
@@ -131,21 +163,21 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert 'Unable to find "localectl"' in six.text_type(err)
         assert not localemod.log.debug.called
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_empty)})
     def test_localectl_status_parser_empty(self):
         with pytest.raises(CommandExecutionError) as err:
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in six.text_type(err)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_broken)})
     def test_localectl_status_parser_broken(self):
         with pytest.raises(CommandExecutionError) as err:
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in six.text_type(err)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_structure)})
     def test_localectl_status_parser_structure(self):
         out = localemod._localectl_status()
@@ -154,9 +186,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert isinstance(out[key], dict)
             for in_key in out[key]:
                 assert isinstance(out[key][in_key], six.text_type)
-        assert isinstance(out['reason'], six.text_type)
+        assert isinstance(out['reason']['data'], six.text_type)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
@@ -169,7 +201,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert localemod.get_locale() == 'de_DE.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
@@ -182,7 +214,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert localemod.get_locale() == 'en_US.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
@@ -197,7 +229,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^RC_LANG" /etc/sysconfig/language'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
@@ -210,7 +242,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^LANG=" /etc/sysconfig/i18n'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
@@ -223,7 +255,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^LANG=" /etc/default/locale'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
@@ -236,12 +268,12 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'eselect --brief locale show'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_get_locale_with_no_systemd_slowlaris(self):
+    def test_get_locale_with_no_systemd_solaris(self):
         '''
         Test getting current system locale with systemd and dbus available on Solaris.
         :return:
@@ -249,7 +281,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^LANG=" /etc/default/init'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 8, 'oscodename': 'DrunkDragon'})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
@@ -263,7 +295,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             localemod.get_locale()
         assert '"DrunkDragon" is unsupported' in six.text_type(err)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
@@ -277,7 +309,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.set_locale(loc)
         assert localemod._localectl_set.call_args[0][0] == 'de_DE.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', True)
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
@@ -291,7 +323,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.set_locale(loc)
         assert localemod._localectl_set.call_args[0][0] == 'de_DE.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse', 'osmajorrelease': 12})
     @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -310,7 +342,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^RC_LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'RC_LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -329,7 +361,6 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/update-locale'))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
@@ -349,7 +380,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
@@ -367,7 +398,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert 'Cannot set locale: "update-locale" was not found.' in six.text_type(err)
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -383,16 +414,16 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert localemod.__salt__['cmd.retcode'].call_args[0][0] == 'eselect --brief locale set de_DE.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['de_DE.utf8']),
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_with_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_with_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus available on Slowlaris.
+        Test setting current system locale with systemd and dbus available on Solaris.
         The list_avail returns the proper locale.
         :return:
         '''
@@ -404,16 +435,16 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_without_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_without_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus is not available on Slowlaris.
+        Test setting current system locale with systemd and dbus is not available on Solaris.
         The list_avail does not return the proper locale.
         :return:
         '''
@@ -422,7 +453,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert not localemod.__salt__['file.replace'].called
 
-    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
@@ -610,6 +641,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
             assert localemod.gen_locale('en_US.UTF-8', verbose=True) == ret
 
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     def test_parse_localectl(self):
         localectl_out = ('   System Locale: LANG=en_US.UTF-8\n'
                          '                  LANGUAGE=en_US:en\n'

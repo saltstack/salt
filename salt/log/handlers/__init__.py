@@ -17,6 +17,7 @@ import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -102,6 +103,20 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler
     '''
     Syslog handler which properly handles exc_info on a per handler basis
     '''
+    def handleError(self, record):
+        '''
+        Override the default error handling mechanism for py3
+        Deal with syslog os errors when the log file does not exist
+        '''
+        handled = False
+        if sys.stderr and sys.version_info >= (3, 5, 4):
+            t, v, tb = sys.exc_info()
+            if t.__name__ in 'FileNotFoundError':
+                sys.stderr.write('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.\n')
+                handled = True
+
+        if not handled:
+            super(SysLogHandler, self).handleError(record)
 
 
 class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.RotatingFileHandler, NewStyleClassMixIn):
@@ -176,9 +191,9 @@ if sys.version_info < (3, 2):
             '''
             try:
                 self.queue.put_nowait(record)
-            except self.queue.Full:
+            except queue.Full:
                 sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log', record
+                                 'unable to write "{0}" to log'.format(record)
                                  )
 
         def prepare(self, record):

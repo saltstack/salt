@@ -313,7 +313,6 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
 def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None,
                  save_format="{2}\n{0}\n{3}\n{1}\n"):
     '''
-
     .. versionadded:: 2015.8.0
 
     Ensure the IAM access keys are present.
@@ -342,9 +341,10 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         that contains a dict with region, key and keyid.
 
     save_format (dict)
-        Save format is repeated for each key. Default format is "{2}\n{0}\n{3}\n{1}\n",
-        where {0} and {1} are placeholders for new key_id and key respectively,
-        whereas {2} and {3} are "key_id-{number}" and 'key-{number}' strings kept for compatibility.
+        Save format is repeated for each key. Default format is
+        "{2}\\n{0}\\n{3}\\n{1}\\n", where {0} and {1} are placeholders for new
+        key_id and key respectively, whereas {2} and {3} are "key_id-{number}"
+        and 'key-{number}' strings kept for compatibility.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -1324,7 +1324,7 @@ def account_policy(name=None, allow_users_to_change_password=None,
                                                            region, key, keyid, profile):
         return ret
     ret['comment'] = 'Account policy is not changed.'
-    ret['changes'] = None
+    ret['changes'] = {}
     ret['result'] = False
     return ret
 
@@ -1610,7 +1610,6 @@ def policy_absent(name,
 
 def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
-
     .. versionadded:: 2016.11.0
 
     Ensure the SAML provider with the specified name is present.
@@ -1668,7 +1667,6 @@ def saml_provider_present(name, saml_metadata_document, region=None, key=None, k
 
 def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
-
     .. versionadded:: 2016.11.0
 
     Ensure the SAML provider with the specified name is absent.

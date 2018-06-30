@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.cp
@@ -55,6 +55,8 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             testfile_contents = fh_.read()
 
         for idx, minion in enumerate(minions):
+            if 'localhost' in minion:
+                continue
             ret = self.run_salt(
                 '--out yaml {0} file.directory_exists {1}'.format(
                     pipes.quote(minion), TMP
@@ -82,7 +84,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 pipes.quote(minion_testfile)
             ))
 
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
@@ -138,7 +140,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
             ret = self.run_script(
                 self._call_binary_,
-                '--out pprint --config-dir {0} \'*\' {1} {0}/{2}'.format(
+                '--out pprint --config-dir {0} \'*minion\' {1} {0}/{2}'.format(
                     config_dir,
                     fn_,
                     os.path.basename(fn_),

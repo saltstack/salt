@@ -15,7 +15,7 @@ In the minion configuration file, the following block is required:
   mandrill:
     key: <API_KEY>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import Python libs

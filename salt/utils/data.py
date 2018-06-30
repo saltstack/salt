@@ -68,31 +68,57 @@ def compare_lists(old=None, new=None):
 
 
 def decode(data, encoding=None, errors='strict', keep=False,
-           preserve_dict_class=False, preserve_tuples=False):
+           normalize=False, preserve_dict_class=False, preserve_tuples=False,
+           to_str=False):
     '''
-    Generic function which will decode whichever type is passed, if necessary
+    Generic function which will decode whichever type is passed, if necessary.
+    Optionally use to_str=True to ensure strings are str types and not unicode
+    on Python 2.
 
     If `strict` is True, and `keep` is False, and we fail to decode, a
     UnicodeDecodeError will be raised. Passing `keep` as True allows for the
     original value to silently be returned in cases where decoding fails. This
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs, such as in the case of cp.recv.
+
+    If `normalize` is True, then unicodedata.normalize() will be used to
+    normalize unicode strings down to a single code point per glyph. It is
+    recommended not to normalize unless you know what you're doing. For
+    instance, if `data` contains a dictionary, it is possible that normalizing
+    will lead to data loss because the following two strings will normalize to
+    the same value:
+
+    - u'\\u044f\\u0438\\u0306\\u0446\\u0430.txt'
+    - u'\\u044f\\u0439\\u0446\\u0430.txt'
+
+    One good use case for normalization is in the test suite. For example, on
+    some platforms such as Mac OS, os.listdir() will produce the first of the
+    two strings above, in which "й" is represented as two code points (i.e. one
+    for the base character, and one for the breve mark). Normalizing allows for
+    a more reliable test case.
     '''
+    _decode_func = salt.utils.stringutils.to_unicode \
+        if not to_str \
+        else salt.utils.stringutils.to_str
     if isinstance(data, collections.Mapping):
-        return decode_dict(data, encoding, errors, keep,
-                           preserve_dict_class, preserve_tuples)
+        return decode_dict(data, encoding, errors, keep, normalize,
+                           preserve_dict_class, preserve_tuples, to_str)
     elif isinstance(data, list):
-        return decode_list(data, encoding, errors, keep,
-                           preserve_dict_class, preserve_tuples)
+        return decode_list(data, encoding, errors, keep, normalize,
+                           preserve_dict_class, preserve_tuples, to_str)
     elif isinstance(data, tuple):
-        return decode_tuple(data, encoding, errors, keep, preserve_dict_class) \
+        return decode_tuple(data, encoding, errors, keep, normalize,
+                            preserve_dict_class, to_str) \
             if preserve_tuples \
-            else decode_list(data, encoding, errors, keep,
-                             preserve_dict_class, preserve_tuples)
+            else decode_list(data, encoding, errors, keep, normalize,
+                             preserve_dict_class, preserve_tuples, to_str)
     else:
         try:
-            return salt.utils.stringutils.to_unicode(data, encoding, errors)
+            data = _decode_func(data, encoding, errors, normalize)
         except TypeError:
+            # to_unicode raises a TypeError when input is not a
+            # string/bytestring/bytearray. This is expected and simply means we
+            # are going to leave the value as-is.
             pass
         except UnicodeDecodeError:
             if not keep:
@@ -101,42 +127,55 @@ def decode(data, encoding=None, errors='strict', keep=False,
 
 
 def decode_dict(data, encoding=None, errors='strict', keep=False,
-                preserve_dict_class=False, preserve_tuples=False):
+                normalize=False, preserve_dict_class=False,
+                preserve_tuples=False, to_str=False):
     '''
-    Decode all string values to Unicode
+    Decode all string values to Unicode. Optionally use to_str=True to ensure
+    strings are str types and not unicode on Python 2.
     '''
+    _decode_func = salt.utils.stringutils.to_unicode \
+        if not to_str \
+        else salt.utils.stringutils.to_str
     # Make sure we preserve OrderedDicts
     rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
         if isinstance(key, tuple):
-            key = decode_tuple(key, encoding, errors, keep, preserve_dict_class) \
+            key = decode_tuple(key, encoding, errors, keep, normalize,
+                               preserve_dict_class, to_str) \
                 if preserve_tuples \
-                else decode_list(key, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+                else decode_list(key, encoding, errors, keep, normalize,
+                                 preserve_dict_class, preserve_tuples, to_str)
         else:
             try:
-                key = salt.utils.stringutils.to_unicode(key, encoding, errors)
+                key = _decode_func(key, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
                     raise
 
         if isinstance(value, list):
-            value = decode_list(value, encoding, errors, keep,
-                                preserve_dict_class, preserve_tuples)
+            value = decode_list(value, encoding, errors, keep, normalize,
+                                preserve_dict_class, preserve_tuples, to_str)
         elif isinstance(value, tuple):
-            value = decode_tuple(value, encoding, errors, keep, preserve_dict_class) \
+            value = decode_tuple(value, encoding, errors, keep, normalize,
+                                 preserve_dict_class, to_str) \
                 if preserve_tuples \
-                else decode_list(value, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+                else decode_list(value, encoding, errors, keep, normalize,
+                                 preserve_dict_class, preserve_tuples, to_str)
         elif isinstance(value, collections.Mapping):
-            value = decode_dict(value, encoding, errors, keep,
-                                preserve_dict_class, preserve_tuples)
+            value = decode_dict(value, encoding, errors, keep, normalize,
+                                preserve_dict_class, preserve_tuples, to_str)
         else:
             try:
-                value = salt.utils.stringutils.to_unicode(value, encoding, errors)
+                value = _decode_func(value, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
@@ -147,27 +186,36 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
 
 
 def decode_list(data, encoding=None, errors='strict', keep=False,
-                preserve_dict_class=False, preserve_tuples=False):
+                normalize=False, preserve_dict_class=False,
+                preserve_tuples=False, to_str=False):
     '''
-    Decode all string values to Unicode
+    Decode all string values to Unicode. Optionally use to_str=True to ensure
+    strings are str types and not unicode on Python 2.
     '''
+    _decode_func = salt.utils.stringutils.to_unicode \
+        if not to_str \
+        else salt.utils.stringutils.to_str
     rv = []
     for item in data:
         if isinstance(item, list):
-            item = decode_list(item, encoding, errors, keep,
-                               preserve_dict_class, preserve_tuples)
+            item = decode_list(item, encoding, errors, keep, normalize,
+                               preserve_dict_class, preserve_tuples, to_str)
         elif isinstance(item, tuple):
-            item = decode_tuple(item, encoding, errors, keep, preserve_dict_class) \
+            item = decode_tuple(item, encoding, errors, keep, normalize,
+                                preserve_dict_class, to_str) \
                 if preserve_tuples \
-                else decode_list(item, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+                else decode_list(item, encoding, errors, keep, normalize,
+                                 preserve_dict_class, preserve_tuples, to_str)
         elif isinstance(item, collections.Mapping):
-            item = decode_dict(item, encoding, errors, keep,
-                               preserve_dict_class, preserve_tuples)
+            item = decode_dict(item, encoding, errors, keep, normalize,
+                               preserve_dict_class, preserve_tuples, to_str)
         else:
             try:
-                item = salt.utils.stringutils.to_unicode(item, encoding, errors)
+                item = _decode_func(item, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
@@ -178,12 +226,15 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
 
 
 def decode_tuple(data, encoding=None, errors='strict', keep=False,
-                 preserve_dict_class=False):
+                 normalize=False, preserve_dict_class=False, to_str=False):
     '''
-    Decode all string values to Unicode
+    Decode all string values to Unicode. Optionally use to_str=True to ensure
+    strings are str types and not unicode on Python 2.
     '''
     return tuple(
-        decode_list(data, encoding, errors, keep, preserve_dict_class, True))
+        decode_list(data, encoding, errors, keep, normalize,
+                    preserve_dict_class, True, to_str)
+    )
 
 
 def encode(data, encoding=None, errors='strict', keep=False,
@@ -212,6 +263,9 @@ def encode(data, encoding=None, errors='strict', keep=False,
         try:
             return salt.utils.stringutils.to_bytes(data, encoding, errors)
         except TypeError:
+            # to_bytes raises a TypeError when input is not a
+            # string/bytestring/bytearray. This is expected and simply
+            # means we are going to leave the value as-is.
             pass
         except UnicodeEncodeError:
             if not keep:
@@ -220,7 +274,7 @@ def encode(data, encoding=None, errors='strict', keep=False,
 
 
 @jinja_filter('json_decode_dict')  # Remove this for Neon
-@jinja_filter('json_encode_dict')
+@jinja_filter('json_encode_dict')  # Remove this for Neon
 def encode_dict(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -237,6 +291,9 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
             try:
                 key = salt.utils.stringutils.to_bytes(key, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
@@ -257,6 +314,9 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
             try:
                 value = salt.utils.stringutils.to_bytes(value, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
@@ -267,7 +327,7 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
 
 
 @jinja_filter('json_decode_list')  # Remove this for Neon
-@jinja_filter('json_encode_list')
+@jinja_filter('json_encode_list')  # Remove this for Neon
 def encode_list(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -290,6 +350,9 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
             try:
                 item = salt.utils.stringutils.to_bytes(item, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
@@ -516,7 +579,7 @@ def subdict_match(data,
                            exact_match=exact_match):
                 return True
             continue
-        if isinstance(match, list):
+        if isinstance(match, (list, tuple)):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):

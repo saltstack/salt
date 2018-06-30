@@ -70,6 +70,7 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
     log when making a connection using SSH, review the libssh2 details listed
@@ -196,7 +197,7 @@ master:
          - gitfs
 
    .. note::
-       ``git`` also works here. Prior to the Oxygen release, *only* ``git``
+       ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
        would work.
 
 2. Specify one or more ``git://``, ``https://``, ``file://``, or ``ssh://``
@@ -314,9 +315,9 @@ configured gitfs remotes):
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_refspecs` (new in 2017.7.0)
-* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
-* :conf_master:`gitfs_ref_types` (new in Oxygen)
-* :conf_master:`gitfs_update_interval` (new in Oxygen)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
+* :conf_master:`gitfs_ref_types` (new in 2018.3.0)
+* :conf_master:`gitfs_update_interval` (new in 2018.3.0)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -370,7 +371,7 @@ tremendous amount of customization. Here's some example usage:
        ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
        available to per-remote configurations.
 
-    The ``all_saltenvs`` parameter is new in the Oxygen release.
+    The ``all_saltenvs`` parameter is new in the 2018.3.0 release.
 
 In the example configuration above, the following is true:
 
@@ -526,7 +527,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -553,7 +554,7 @@ single branch.
 Update Intervals
 ================
 
-Prior to the Oxygen release, GitFS would update its fileserver backends as part
+Prior to the 2018.3.0 release, GitFS would update its fileserver backends as part
 of a dedicated "maintenance" process, in which various routine maintenance
 tasks were performed. This tied the update interval to the
 :conf_master:`loop_interval` config option, and also forced all fileservers to
@@ -596,9 +597,8 @@ overrides all levels below it):
    .. code-block:: yaml
 
        gitfs_saltenv:
-         - saltenv:
-           - dev:
-             - mountpoint: salt://bar
+         - dev:
+           - mountpoint: salt://bar
 
 3. Per-remote configuration parameter
 
@@ -699,15 +699,24 @@ repository to be served up from the Salt fileserver path
 Mountpoints can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+Using gitfs in Masterless Mode
+==============================
+
+Since 2014.7.0, gitfs can be used in masterless mode. To do so, simply add the
+gitfs configuration parameters (and set :conf_master:`fileserver_backend`) in
+the _minion_ config file instead of the master config file.
+
+
 Using gitfs Alongside Other Backends
 ====================================
 
 Sometimes it may make sense to use multiple backends; for instance, if ``sls``
 files are stored in git but larger files are stored directly on the master.
 
-The cascading lookup logic used for multiple remotes is also used with
-multiple backends. If the ``fileserver_backend`` option contains
-multiple backends:
+The cascading lookup logic used for multiple remotes is also used with multiple
+backends. If the :conf_master:`fileserver_backend` option contains multiple
+backends:
 
 .. code-block:: yaml
 
@@ -718,7 +727,6 @@ multiple backends:
 Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
-
 
 Branches, Environments, and Top Files
 =====================================
@@ -993,7 +1001,7 @@ If not, then the easiest way to add the key is to su to the user (usually
 ``root``) under which the salt-master runs and attempt to login to the
 server via SSH:
 
-.. code-block:: bash
+.. code-block:: text
 
     $ su -
     Password:

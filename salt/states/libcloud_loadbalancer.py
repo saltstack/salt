@@ -5,14 +5,14 @@ Apache Libcloud Load Balancer State
 
 Manage load balancers using libcloud
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+    :codeauthor: ``Anthony Shaw <anthonyshaw@apache.org>``
 
 Apache Libcloud load balancer management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/loadbalancer/supported_providers.html
 
 Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Cloud providers

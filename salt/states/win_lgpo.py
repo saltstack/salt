@@ -23,7 +23,7 @@ Example single policy configuration
 
 .. code-block:: yaml
 
-    Acount lockout duration:
+    Account lockout duration:
       gpo.set:
         - setting: 120
         - policy_class: Machine
@@ -55,7 +55,7 @@ Multiple policy configuration
             - user_policy:
                 Do not process the legacy run list: Enabled
 
-.. code-block:: yaml
+.. code-block:: text
 
     server_policy:
       lgpo.set:

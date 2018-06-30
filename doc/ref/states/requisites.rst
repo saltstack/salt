@@ -24,7 +24,7 @@ the targeting state. The following example demonstrates a direct requisite:
 .. code-block:: yaml
 
     vim:
-      pkg.installed: []
+      pkg.installed
 
     /etc/vimrc:
       file.managed:
@@ -86,7 +86,7 @@ State target matching
 ~~~~~~~~~~~~~~~~~~~~~
 
 In order to understand how state targets are matched, it is helpful to know
-:ref:`how the state compiler is working <compiler_ordering>`. Consider the following
+:ref:`how the state compiler is working <compiler-ordering>`. Consider the following
 example:
 
 .. code-block:: yaml
@@ -257,13 +257,13 @@ large groups of states easily in any requisite statement.
 require_any
 ~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The use of ``require_any`` demands that one of the required states executes before the
 dependent state. The state containing the ``require_any`` requisite is defined as the
 dependent state. The states specified in the ``require_any`` statement are defined as the
 required states. If at least one of the required state's execution succeeds, the dependent state
-will then execute. If at least one of the required state's execution fails, the dependent state
+will then execute.  If all of the executions by the required states fail, the dependent state
 will not execute.
 
 .. code-block:: yaml
@@ -380,7 +380,7 @@ to Salt ensuring that the service is running.
 watch_any
 ~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The state containing the ``watch_any`` requisite is defined as the watching
 state. The states specified in the ``watch_any`` statement are defined as the watched
@@ -410,10 +410,11 @@ exactly like the ``require`` requisite (the watching state will execute if
       service.running:
         - watch_any:
           - file: /etc/apache2/sites-available/site1.conf
-          - file: /etc/apache2/sites-available/site2.conf
+          - file: apache2-site2
       file.managed:
         - name: /etc/apache2/sites-available/site1.conf
         - source: salt://apache2/files/site1.conf
+    apache2-site2:
       file.managed:
         - name: /etc/apache2/sites-available/site2.conf
         - source: salt://apache2/files/site2.conf
@@ -506,6 +507,15 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. note::
 
+    Setting failhard (:ref:`globally <global-failhard>` or in
+    :ref:`the failing state <state-level-failhard>`) to ``True`` will cause
+    ``onfail``, ``onfail_in`` and ``onfail_any`` requisites to be ignored.
+    If you want to combine a global failhard set to True with ``onfail``,
+    ``onfail_in`` or ``onfail_any``, you will have to explicitly set failhard
+    to ``False`` (overriding the global setting) in the state that could fail.
+
+.. note::
+
     Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
     multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
@@ -517,7 +527,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 onfail_any
 ~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``onfail_any`` requisite allows for reactions to happen strictly as a response
 to the failure of at least one other state. This can be used in a number of ways, such as
@@ -616,7 +626,7 @@ if any of the watched states changes.
 onchanges_any
 ~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``onchanges_any`` requisite makes a state only apply one of the required states
 generates changes, and if one of the watched state's "result" is ``True``. This can be
@@ -663,7 +673,7 @@ id declaration. This is useful when many files need to have the same defaults.
         - group: apache
         - mode: 755
 
-    /etc/bar.conf
+    /etc/bar.conf:
       file.managed:
         - source: salt://bar.conf
         - use:
@@ -851,6 +861,17 @@ Reload
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
 
+.. code-block:: yaml
+
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+
+    grains_read:
+      module.run:
+       - name: grains.items
+
 .. _unless-requisite:
 
 Unless
@@ -1003,10 +1024,10 @@ same privileges as the salt-minion.
     comment-repo:
       file.replace:
         - name: /etc/yum.repos.d/fedora.repo
-        - pattern: ^enabled=0
+        - pattern: '^enabled=0'
         - repl: enabled=1
         - check_cmd:
-          - ! grep 'enabled=0' /etc/yum.repos.d/fedora.repo
+          - "! grep 'enabled=0' /etc/yum.repos.d/fedora.repo"
 
 This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
 replace them with ``enabled=1``. The ``check_cmd`` is just a bash command. It

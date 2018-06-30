@@ -80,7 +80,7 @@ def daemonize(redirect_out=True):
     os.chdir('/')
     # noinspection PyArgumentList
     os.setsid()
-    os.umask(18)
+    os.umask(0o022)  # pylint: disable=blacklisted-function
 
     # do second fork
     try:
@@ -231,7 +231,7 @@ def get_pidfile(pidfile):
             pid = pdf.read().strip()
         return int(pid)
     except (OSError, IOError, TypeError, ValueError):
-        return None
+        return -1
 
 
 def clean_proc(proc, wait_for_kill=10):
@@ -376,20 +376,30 @@ class ProcessManager(object):
             kwargs = {}
 
         if salt.utils.platform.is_windows():
-            # Need to ensure that 'log_queue' is correctly transferred to
-            # processes that inherit from 'MultiprocessingProcess'.
+            # Need to ensure that 'log_queue' and 'log_queue_level' is
+            # correctly transferred to processes that inherit from
+            # 'MultiprocessingProcess'.
             if type(MultiprocessingProcess) is type(tgt) and (
                     issubclass(tgt, MultiprocessingProcess)):
                 need_log_queue = True
             else:
                 need_log_queue = False
 
-            if need_log_queue and 'log_queue' not in kwargs:
-                if hasattr(self, 'log_queue'):
-                    kwargs['log_queue'] = self.log_queue
-                else:
-                    kwargs['log_queue'] = (
-                            salt.log.setup.get_multiprocessing_logging_queue())
+            if need_log_queue:
+                if 'log_queue' not in kwargs:
+                    if hasattr(self, 'log_queue'):
+                        kwargs['log_queue'] = self.log_queue
+                    else:
+                        kwargs['log_queue'] = (
+                            salt.log.setup.get_multiprocessing_logging_queue()
+                        )
+                if 'log_queue_level' not in kwargs:
+                    if hasattr(self, 'log_queue_level'):
+                        kwargs['log_queue_level'] = self.log_queue_level
+                    else:
+                        kwargs['log_queue_level'] = (
+                            salt.log.setup.get_multiprocessing_logging_level()
+                        )
 
         # create a nicer name for the debug log
         if name is None:
@@ -686,8 +696,14 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # salt.log.setup.get_multiprocessing_logging_queue().
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
+        self.log_queue_level = kwargs.pop('log_queue_level', None)
+        if self.log_queue_level is None:
+            self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        else:
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+
         # Call __init__ from 'multiprocessing.Process' only after removing
-        # 'log_queue' from kwargs.
+        # 'log_queue' and 'log_queue_level' from kwargs.
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
         if salt.utils.platform.is_windows():
@@ -732,6 +748,8 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         kwargs = self._kwargs_for_getstate
         if 'log_queue' not in kwargs:
             kwargs['log_queue'] = self.log_queue
+        if 'log_queue_level' not in kwargs:
+            kwargs['log_queue_level'] = self.log_queue_level
         # Remove the version of these in the parent process since
         # they are no longer needed.
         del self._args_for_getstate

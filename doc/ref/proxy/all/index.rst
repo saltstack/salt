@@ -12,6 +12,7 @@ proxy modules
 
     cimc
     chronos
+    cimc
     cisconso
     dummy
     esxi
@@ -19,6 +20,7 @@ proxy modules
     junos
     marathon
     napalm
+    netmiko_px
     nxos
     panos
     philips_hue

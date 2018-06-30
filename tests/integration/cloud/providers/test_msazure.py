@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Python Libs
@@ -45,7 +45,7 @@ def __has_required_azure():
         else:
             version = LooseVersion(azure.common.__version__)
 
-        if REQUIRED_AZURE <= version:
+        if LooseVersion(REQUIRED_AZURE) <= version:
             return True
     return False
 

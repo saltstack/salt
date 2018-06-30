@@ -21,6 +21,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
+    Mock,
     MagicMock,
     call,
     mock_open,
@@ -83,6 +84,20 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
+
+            mock_serializer = Mock(return_value='')
+            with patch.dict(filestate.__serializers__,
+                            {'json.serialize': mock_serializer}):
+                filestate.serialize(
+                    '/tmp',
+                    dataset,
+                    formatter='json',
+                    serializer_opts=[{'indent': 8}])
+                mock_serializer.assert_called_with(
+                    dataset,
+                    indent=8,
+                    separators=(',', ': '),
+                    sort_keys=True)
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -237,15 +252,46 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'exists', mock_f):
                         with patch.object(os.path, 'lexists', mock_t):
-                            comt = ('File exists where the backup target SALT'
-                                    ' should go')
+                            comt = (
+                                'Symlink & backup dest exists and Force not '
+                                'set. {0} -> {1} - backup: {2}'.format(
+                                    name,
+                                    target,
+                                    os.path.join(test_dir, 'SALT')
+                                )
+                            )
                             ret.update({'comment': comt,
                                         'result': False,
                                         'pchanges': {'new': name}})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group, backupname='SALT'),
-                                                 ret)
+                            self.assertDictEqual(
+                                filestate.symlink(
+                                    name, target, user=user,
+                                    group=group, backupname='SALT'
+                                ),
+                                ret
+                            )
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isfile', mock_t):
+                    comt = ('Backupname must be an absolute path '
+                            'or a file name: {0}').format('tmp/SALT')
+                    ret.update({'comment': comt,
+                                'result': False,
+                                'pchanges': {'new': name}})
+                    self.assertDictEqual(
+                        filestate.symlink(
+                            name, target, user=user,
+                            group=group, backupname='tmp/SALT'
+                        ),
+                        ret
+                    )
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -1202,76 +1248,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 self.assertDictEqual(filestate.prepend
                                                      (name, text=text), ret)
 
-    # 'patch' function tests: 1
-
-    def test_patch(self):
-        '''
-        Test to apply a patch to a file.
-        '''
-        name = '/opt/file.txt'
-        source = 'salt://file.patch'
-        ha_sh = 'md5=e138491e9d5b97023cea823fe17bac22'
-
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
-
-        comt = ('Must provide name to file.patch')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.patch(''), ret)
-
-        comt = ('{0}: file not found'.format(name))
-        ret.update({'comment': comt, 'name': name})
-        self.assertDictEqual(filestate.patch(name), ret)
-
-        mock_t = MagicMock(return_value=True)
-        mock_true = MagicMock(side_effect=[True, False, False, False, False])
-        mock_false = MagicMock(side_effect=[False, True, True, True])
-        mock_ret = MagicMock(return_value={'retcode': True})
-        with patch.object(os.path, 'isabs', mock_t):
-            with patch.object(os.path, 'exists', mock_t):
-                comt = ('Source is required')
-                ret.update({'comment': comt})
-                self.assertDictEqual(filestate.patch(name), ret)
-
-                comt = ('Hash is required')
-                ret.update({'comment': comt})
-                self.assertDictEqual(filestate.patch(name, source=source), ret)
-
-                with patch.dict(filestate.__salt__,
-                                {'file.check_hash': mock_true,
-                                 'cp.cache_file': mock_false,
-                                 'file.patch': mock_ret}):
-                    comt = ('Patch is already applied')
-                    ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(filestate.patch(name, source=source,
-                                                         hash=ha_sh), ret)
-
-                    comt = ("Unable to cache salt://file.patch"
-                            " from saltenv 'base'")
-                    ret.update({'comment': comt, 'result': False})
-                    self.assertDictEqual(filestate.patch(name, source=source,
-                                                         hash=ha_sh), ret)
-
-                    with patch.dict(filestate.__opts__, {'test': True}):
-                        comt = ('File /opt/file.txt will be patched')
-                        ret.update({'comment': comt, 'result': None,
-                                    'changes': {'retcode': True}})
-                        self.assertDictEqual(filestate.patch(name,
-                                                             source=source,
-                                                             hash=ha_sh), ret)
-
-                    with patch.dict(filestate.__opts__, {'test': False}):
-                        ret.update({'comment': '', 'result': False})
-                        self.assertDictEqual(filestate.patch(name,
-                                                             source=source,
-                                                             hash=ha_sh), ret)
-
-                        self.assertDictEqual(filestate.patch
-                                             (name, source=source, hash=ha_sh,
-                                              dry_run_first=False), ret)
-
     # 'touch' function tests: 1
 
     def test_touch(self):
@@ -1336,7 +1312,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         comt = ('Must provide name to file.copy')
         ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.copy('', source), ret)
+        self.assertDictEqual(filestate.copy_('', source), ret)
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -1348,13 +1324,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'isabs', mock_f):
             comt = ('Specified file {0} is not an absolute path'.format(name))
             ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.copy(name, source), ret)
+            self.assertDictEqual(filestate.copy_(name, source), ret)
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.object(os.path, 'exists', mock_f):
                 comt = ('Source file "{0}" is not present'.format(source))
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(filestate.copy(name, source), ret)
+                self.assertDictEqual(filestate.copy_(name, source), ret)
 
             with patch.object(os.path, 'exists', mock_t):
                 with patch.dict(filestate.__salt__,
@@ -1374,8 +1350,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         comt = ('User salt is not available Group saltstack'
                                 ' is not available')
                     ret.update({'comment': comt, 'result': False})
-                    self.assertDictEqual(filestate.copy(name, source, user=user,
-                                                        group=group), ret)
+                    self.assertDictEqual(filestate.copy_(name, source, user=user,
+                                                         group=group), ret)
 
                     comt1 = ('Failed to delete "{0}" in preparation for'
                              ' forced move'.format(name))
@@ -1391,7 +1367,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                 {'file.remove': mock_io}):
                                     ret.update({'comment': comt1,
                                                 'result': False})
-                                    self.assertDictEqual(filestate.copy
+                                    self.assertDictEqual(filestate.copy_
                                                          (name, source,
                                                           preserve=True,
                                                           force=True), ret)
@@ -1399,14 +1375,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 with patch.object(os.path, 'isfile', mock_t):
                                     ret.update({'comment': comt2,
                                                 'result': True})
-                                    self.assertDictEqual(filestate.copy
+                                    self.assertDictEqual(filestate.copy_
                                                          (name, source,
                                                           preserve=True), ret)
 
                         with patch.object(os.path, 'lexists', mock_f):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 ret.update({'comment': comt3, 'result': None})
-                                self.assertDictEqual(filestate.copy
+                                self.assertDictEqual(filestate.copy_
                                                      (name, source,
                                                       preserve=True), ret)
 
@@ -1414,7 +1390,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 comt = ('The target directory /tmp is'
                                         ' not present')
                                 ret.update({'comment': comt, 'result': False})
-                                self.assertDictEqual(filestate.copy
+                                self.assertDictEqual(filestate.copy_
                                                      (name, source,
                                                       preserve=True), ret)
 
@@ -1846,3 +1822,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+
+class TestFindKeepFiles(TestCase):
+
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    def test__find_keep_files_unix(self):
+        keep = filestate._find_keep_files(
+            '/test/parent_folder',
+            ['/test/parent_folder/meh.txt']
+        )
+        expected = [
+            '/',
+            '/test',
+            '/test/parent_folder',
+            '/test/parent_folder/meh.txt',
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual
+
+    @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
+    def test__find_keep_files_win32(self):
+        keep = filestate._find_keep_files(
+            'c:\\test\\parent_folder',
+            ['C:\\test\\parent_folder\\meh-2.txt']
+        )
+        expected = [
+            'c:\\',
+            'c:\\test',
+            'c:\\test\\parent_folder',
+            'c:\\test\\parent_folder\\meh-2.txt'
+        ]
+        actual = sorted(list(keep))
+        assert actual == expected, actual

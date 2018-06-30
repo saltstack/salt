@@ -54,11 +54,47 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
             merge_lists)
 
 
+def merge_all(lst, strategy='smart', renderer='yaml', merge_lists=False):
+    '''
+    .. versionadded:: Fluorine
+
+    Merge a list of objects into each other in order
+
+    :type lst: Iterable
+    :param lst: List of objects to be merged.
+
+    :type strategy: String
+    :param strategy: Merge strategy. See utils.dictupdate.
+
+    :type renderer: String
+    :param renderer:
+        Renderer type. Used to determine strategy when strategy is 'smart'.
+
+    :type merge_lists: Bool
+    :param merge_lists: Defines whether to merge embedded object lists.
+
+    CLI Example:
+
+    .. code-block:: shell
+
+        $ salt-call --output=txt slsutil.merge_all '[{foo: Foo}, {foo: Bar}]'
+        local: {u'foo': u'Bar'}
+    '''
+
+    ret = {}
+    for obj in lst:
+        ret = salt.utils.dictupdate.merge(
+            ret, obj, strategy, renderer, merge_lists
+        )
+
+    return ret
+
+
 def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     '''
     Parse a string or file through Salt's renderer system
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
        Add support for Salt fileserver URIs.
 
     This is an open-ended function and can be used for a variety of tasks. It

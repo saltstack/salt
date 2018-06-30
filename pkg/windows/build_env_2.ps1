@@ -157,7 +157,7 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
     # Install Microsoft Visual C++ for Python2.7
     Write-Output " - Installing $($ini['Prerequisites']['VCforPython']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCforPython'])"
-    $p    = Start-Process msiexec.exe -ArgumentList "/i $file /qb ALLUSERS=1" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec.exe -ArgumentList "/i $file /quiet ALLUSERS=1" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python2Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python2']) . . ."
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=`"$($ini['Settings']['Python2Dir'])`"" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec -ArgumentList "/i $file /quiet ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=`"$($ini['Settings']['Python2Dir'])`"" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -197,17 +197,17 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 } else {
     $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
     if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
         Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
+        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
-    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
+    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
 }
 
 #==============================================================================
@@ -218,32 +218,24 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
         Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
-    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================
-# Install PyWin32 from wheel file
+# Cleaning Up PyWin32
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing PyWin32 . . ."
+Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
 Write-Output " ----------------------------------------------------------------"
-# Download
-$file = "$($ini[$bitPrograms]['PyWin322'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-DownloadFileWithProgress $url $file
-
-# Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."

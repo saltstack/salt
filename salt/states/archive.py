@@ -66,14 +66,28 @@ def _gen_checksum(path):
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path.join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
-    return salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path.join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a different drive (Windows)
+        if six.text_type(exc).startswith('path is on'):
+            drive, path = os.path.splitdrive(path)
+            relpath = salt.utils.path.join(
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
+            )
+        else:
+            raise
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
@@ -664,21 +678,6 @@ def extracted(name,
         # Neither was passed, default is True
         keep_source = True
 
-    if 'keep_source' in kwargs and 'keep' in kwargs:
-        ret.setdefault('warnings', []).append(
-            'Both \'keep_source\' and \'keep\' were used. Since these both '
-            'do the same thing, \'keep\' was ignored.'
-        )
-        keep_source = bool(kwargs.pop('keep_source'))
-        kwargs.pop('keep')
-    elif 'keep_source' in kwargs:
-        keep_source = bool(kwargs.pop('keep_source'))
-    elif 'keep' in kwargs:
-        keep_source = bool(kwargs.pop('keep'))
-    else:
-        # Neither was passed, default is True
-        keep_source = True
-
     if not _path_is_abs(name):
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
@@ -696,7 +695,7 @@ def extracted(name,
         # True
         # >>> os.path.isfile('/tmp/foo.txt/')
         # False
-        name = name.rstrip('/')
+        name = name.rstrip(os.sep)
         if os.path.isfile(name):
             ret['comment'] = '{0} exists and is not a directory'.format(name)
             return ret
@@ -728,6 +727,11 @@ def extracted(name,
                     .format(name)
                 )
                 return ret
+
+    if if_missing is not None and os.path.exists(if_missing):
+        ret['result'] = True
+        ret['comment'] = 'Path {0} exists'.format(if_missing)
+        return ret
 
     if user or group:
         if salt.utils.platform.is_windows():
@@ -966,7 +970,7 @@ def extracted(name,
 
         if result['result']:
             # Get the path of the file in the minion cache
-            cached = __salt__['cp.is_cached'](source_match)
+            cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
         else:
             log.debug(
                 'failed to download %s',
@@ -1100,7 +1104,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1269,7 +1273,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1511,7 +1515,7 @@ def extracted(name,
         if not if_missing:
             # If is_missing was used, and both a) the archive had never been
             # extracted, and b) the path referred to by if_missing exists, then
-            # enforce_missing would contain paths of top_levle dirs/files that
+            # enforce_missing would contain paths of top_level dirs/files that
             # _would_ have been extracted. Since if_missing can be used as a
             # semaphore to conditionally extract, we don't want to make this a
             # case where the state fails, so we only fail the state if

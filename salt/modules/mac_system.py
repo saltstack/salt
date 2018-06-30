@@ -8,6 +8,7 @@ System module for sleeping, restarting, and shutting down the system on Mac OS X
     Using this module will enable ``atrun`` on the system if it is disabled.
 '''
 from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import python libs
 try:  # python 3
@@ -18,9 +19,10 @@ except ImportError:  # python 2
 import getpass
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.mac_utils
 import salt.utils.platform
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 __virtualname__ = 'system'
 
@@ -47,15 +49,69 @@ def _atrun_enabled():
     '''
     Check to see if atrun is enabled on the system
     '''
-    return __salt__['service.enabled']('com.apple.atrun')
+    name = 'com.apple.atrun'
+    services = salt.utils.mac_utils.available_services()
+    label = None
+
+    if name in services:
+        label = services[name]['plist']['Label']
+    else:
+        for service in six.itervalues(services):
+            if service['file_path'].lower() == name:
+                # Match on full path
+                label = service['plist']['Label']
+                break
+            basename, ext = os.path.splitext(service['file_name'])
+            if basename.lower() == name:
+                # Match on basename
+                label = service['plist']['Label']
+                break
+
+    if not label:
+        return False
+
+    try:
+        # Collect information on service: will raise an error if it fails
+        salt.utils.mac_utils.launchctl('list',
+                                       label,
+                                       return_stdout=True)
+        return True
+    except CommandExecutionError:
+        return False
 
 
 def _enable_atrun():
     '''
     Enable and start the atrun daemon
     '''
-    __salt__['service.enable']('com.apple.atrun')
-    __salt__['service.start']('com.apple.atrun')
+    name = 'com.apple.atrun'
+    services = salt.utils.mac_utils.available_services()
+    label = None
+    path = None
+
+    if name in services:
+        label = services[name]['plist']['Label']
+        path = services[name]['file_path']
+    else:
+        for service in six.itervalues(services):
+            if service['file_path'].lower() == name:
+                # Match on full path
+                label = service['plist']['Label']
+                path = service['file_path']
+                break
+            basename, ext = os.path.splitext(service['file_name'])
+            if basename.lower() == name:
+                # Match on basename
+                label = service['plist']['Label']
+                path = service['file_path']
+                break
+
+    if not label:
+        return False
+
+    salt.utils.mac_utils.launchctl('enable',
+                                   'system/{0}'.format(label))
+    salt.utils.mac_utils.launchctl('load', path)
     return _atrun_enabled()
 
 
@@ -79,17 +135,18 @@ def halt(at_time=None):
     Halt a running system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -108,17 +165,18 @@ def sleep(at_time=None):
     sleep.
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -136,17 +194,18 @@ def restart(at_time=None):
     Restart the system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -164,17 +223,18 @@ def shutdown(at_time=None):
     Shutdown the system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -213,8 +273,8 @@ def set_remote_login(enable):
     Set the remote login (SSH) to either on or off.
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -265,8 +325,8 @@ def set_remote_events(enable):
     AppleScripts)
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -455,7 +515,7 @@ def get_restart_delay():
     power failure.
 
     :return: A string value representing the number of seconds the system will
-    delay restart after power loss
+        delay restart after power loss
     :rtype: str
 
     CLI Example:
@@ -542,8 +602,8 @@ def set_disable_keyboard_on_lock(enable):
     enclosure lock is engaged.
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -600,20 +660,17 @@ def set_boot_arch(arch='default'):
     Set the kernel to boot in 32 or 64 bit mode on next boot.
 
     .. note::
-
-        This command fails with the following error:
-
-        ``changes to kernel architecture failed to save!``
-
-        The setting is not updated. This is either an apple bug, not available
-        on the test system, or a result of system files now being locked down in
-        macOS (SIP Protection).
+        When this function fails with the error ``changes to kernel
+        architecture failed to save!``, then the boot arch is not updated.
+        This is either an Apple bug, not available on the test system, or a
+        result of system files being locked down in macOS (SIP Protection).
 
     :param str arch: A string representing the desired architecture. If no
-    value is passed, default is assumed. Valid values include:
-    - i386
-    - x86_64
-    - default
+        value is passed, default is assumed. Valid values include:
+
+        - i386
+        - x86_64
+        - default
 
     :return: True if successful, False if not
     :rtype: bool

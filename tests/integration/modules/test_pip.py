@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     tests.integration.modules.pip
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,9 +9,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import pwd
-import shutil
 import re
+import shutil
 import tempfile
 
 # Import Salt Testing libs
@@ -23,6 +22,7 @@ from tests.support.helpers import skip_if_not_root
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
@@ -48,7 +48,7 @@ class PipModuleTest(ModuleCase):
         '''
         return any(w in ret for w in ['URLError', 'Download error'])
 
-    def pip_successful_install(self, target, expect=('tox', 'pep8',)):
+    def pip_successful_install(self, target, expect=('irc3-plugins-test', 'pep8',)):
         '''
         isolate regex for extracting `successful install` message from pip
         '''
@@ -74,23 +74,33 @@ class PipModuleTest(ModuleCase):
 
         # Let's remove the pip binary
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
+        site_dir = self.run_function('virtualenv.get_distribution_path', [self.venv_dir, 'pip'])
+        if salt.utils.platform.is_windows():
+            pip_bin = os.path.join(self.venv_dir, 'Scripts', 'pip.exe')
+            site_dir = os.path.join(self.venv_dir, 'lib', 'site-packages')
         if not os.path.isfile(pip_bin):
             self.skipTest(
                 'Failed to find the pip binary to the test virtualenv'
             )
         os.remove(pip_bin)
 
+        # Also remove the pip dir from site-packages
+        # This is needed now that we're using python -m pip instead of the
+        # pip binary directly. python -m pip will still work even if the
+        # pip binary is missing
+        shutil.rmtree(os.path.join(site_dir, 'pip'))
+
         # Let's run a pip depending functions
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=self.venv_dir)
             self.assertIn(
                 'Command required for \'{0}\' not found: '
-                'Could not find a `pip` binary in virtualenv'.format(func),
+                'Could not find a `pip` binary'.format(func),
                 ret
             )
 
     @skip_if_not_root
-    def test_requirements_as_list_of_chains__sans_no_chown__cwd_set__absolute_file_path(self):
+    def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -103,17 +113,16 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.files.fopen(req1b_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.files.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         requirements_list = [req1_filename, req2_filename]
 
         ret = self.run_function(
-            'pip.install', requirements=requirements_list, user=this_user,
+            'pip.install', requirements=requirements_list,
             bin_env=self.venv_dir, cwd=self.venv_dir
         )
         try:
@@ -128,7 +137,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_requirements_as_list_of_chains__sans_no_chown__cwd_not_set__absolute_file_path(self):
+    def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -141,18 +150,16 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
         with salt.utils.files.fopen(req1b_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
         with salt.utils.files.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         requirements_list = [req1_filename, req2_filename]
 
         ret = self.run_function(
-            'pip.install', requirements=requirements_list, user=this_user,
-            bin_env=self.venv_dir
+            'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
         try:
             self.assertEqual(ret['retcode'], 0)
@@ -167,23 +174,21 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_requirements_as_list__sans_no_chown__absolute_file_path(self):
+    def test_requirements_as_list__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
         with salt.utils.files.fopen(req1_filename, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8\n')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         requirements_list = [req1_filename, req2_filename]
 
         ret = self.run_function(
-            'pip.install', requirements=requirements_list, user=this_user,
-            bin_env=self.venv_dir
+            'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
 
         found = self.pip_successful_install(ret['stdout'])
@@ -198,7 +203,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_requirements_as_list__sans_no_chown__non_absolute_file_path(self):
+    def test_requirements_as_list__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -211,15 +216,14 @@ class PipModuleTest(ModuleCase):
         req2_filepath = os.path.join(req_cwd, req2_filename)
 
         with salt.utils.files.fopen(req1_filepath, 'w') as f:
-            f.write('tox\n')
+            f.write('irc3-plugins-test\n')
         with salt.utils.files.fopen(req2_filepath, 'w') as f:
             f.write('pep8\n')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         requirements_list = [req1_filename, req2_filename]
 
         ret = self.run_function(
-            'pip.install', requirements=requirements_list, user=this_user,
+            'pip.install', requirements=requirements_list,
             bin_env=self.venv_dir, cwd=req_cwd
         )
         try:
@@ -234,7 +238,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_chained_requirements__sans_no_chown__absolute_file_path(self):
+    def test_chained_requirements__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -247,10 +251,8 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         ret = self.run_function(
-            'pip.install', requirements=req1_filename, user=this_user,
-            bin_env=self.venv_dir
+            'pip.install', requirements=req1_filename, bin_env=self.venv_dir
         )
         try:
             self.assertEqual(ret['retcode'], 0)
@@ -261,7 +263,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_chained_requirements__sans_no_chown__non_absolute_file_path(self):
+    def test_chained_requirements__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -278,10 +280,9 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req2_file, 'w') as f:
             f.write('pep8')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         ret = self.run_function(
-            'pip.install', requirements=req1_filename, user=this_user,
-            no_chown=False, cwd=req_basepath, bin_env=self.venv_dir
+            'pip.install', requirements=req1_filename, cwd=req_basepath,
+            bin_env=self.venv_dir
         )
         try:
             self.assertEqual(ret['retcode'], 0)
@@ -292,7 +293,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skip_if_not_root
-    def test_issue_4805_nested_requirements_user_no_chown(self):
+    def test_issue_4805_nested_requirements(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -303,11 +304,8 @@ class PipModuleTest(ModuleCase):
         with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
-        this_user = pwd.getpwuid(os.getuid())[0]
         ret = self.run_function(
-            'pip.install', requirements=req1_filename, user=this_user,
-            no_chown=True, bin_env=self.venv_dir
-        )
+            'pip.install', requirements=req1_filename, bin_env=self.venv_dir)
         if self._check_download_error(ret['stdout']):
             self.skipTest('Test skipped due to pip download error')
         try:
@@ -433,12 +431,22 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
+    @skipIf(not os.path.isfile('pip3'), 'test where pip3 is installed')
+    @skipIf(salt.utils.platform.is_windows(), 'test specific for linux usage of /bin/python')
+    def test_system_pip3(self):
+        self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env='/bin/pip3')
+        ret1 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
+        self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env='/bin/pip3')
+        ret2 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
+        assert 'lazyimport==0.0.1' in ret1
+        assert ret2 == ''
+
     def tearDown(self):
         super(PipModuleTest, self).tearDown()
         if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir)
+            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
         if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp)
+            shutil.rmtree(self.pip_temp, ignore_errors=True)
         del self.venv_dir
         del self.venv_test_dir
         del self.pip_temp

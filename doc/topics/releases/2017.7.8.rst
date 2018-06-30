@@ -1,0 +1,31 @@
+========================================
+In Progress: Salt 2017.7.8 Release Notes
+========================================
+
+Version 2017.7.8 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+This release is still in progress and has not been released yet.
+
+New win_snmp behavior
+=====================
+
+- :py:func:`win_snmp.get_community_names
+  <salt.modules.win_snmp.get_community_names>` now returns the SNMP settings
+  actually in effect on the box. If settings are managed via GroupPolicy, those
+  settings will be returned. Otherwise, normal settings are returned.
+
+- :py:func:`win_snmp.set_community_names
+  <salt.modules.win_snmp.set_community_names>` now raises an error when SNMP
+  settings are being managed by GroupPolicy.
+
+Option Added to Disable Docker Mine Updates
+===========================================
+
+When a docker container is added, removed, started, stopped, etc., the results
+of a :py:func:`docker.ps verbose=True all=True host=True
+<salt.modules.dockermod.ps>` are sent to the :ref:`mine <salt-mine>`, to be
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`.
+
+A new config option (:conf_minion:`docker.update_mine`) has been added.  When
+set to ``False``, Salt will not send this information to the mine. This is
+useful in cases where sensitive information is stored in the container's
+environment.

@@ -41,14 +41,6 @@ try:
 except ImportError:
     HAS_CAPIRCA = False
 
-try:
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
 import salt.utils.napalm
 
 # ------------------------------------------------------------------------------
@@ -70,7 +62,7 @@ def __virtual__():
     '''
     This module requires both NAPALM and Capirca.
     '''
-    if HAS_CAPIRCA and HAS_NAPALM:
+    if HAS_CAPIRCA and salt.utils.napalm.virtual(__opts__, __virtualname__, __file__):
         return __virtualname__
     else:
         return (False, 'The netacl state cannot be loaded: \
@@ -155,7 +147,7 @@ def term(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     source_service
         A special service to choose from. This is a helper so the user is able to
@@ -174,13 +166,13 @@ def term(name,
         select a source just using the name, instead of specifying a destination_port and protocol.
         Allows the same options as ``source_service``.
 
-    **term_fields
-        Term attributes.
-        To see what fields are supported, please consult the list of supported keywords_.
-            Some platforms have few other optional_ keywords.
+    term_fields
+        Term attributes. To see what fields are supported, please consult the
+        list of supported keywords_. Some platforms have few other optional_
+        keywords.
 
-            .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
-            .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
+        .. _keywords: https://github.com/google/capirca/wiki/Policy-format#keywords
+        .. _optional: https://github.com/google/capirca/wiki/Policy-format#optionally-supported-keywords
 
     .. note::
         The following fields are accepted:
@@ -305,8 +297,9 @@ def term(name,
                 - bgpd
 
     .. note::
-        The port fields ``source_port`` and ``destination_port`` can be used as above to select either
-        a single value, either a list of values, but also they can select port ranges. Example:
+        The port fields ``source_port`` and ``destination_port`` can be used as
+        above to select either a single value, either a list of values, but
+        also they can select port ranges. Example:
 
         .. code-block:: yaml
 
@@ -324,7 +317,7 @@ def term(name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.bjm01:
         ----------
@@ -407,7 +400,7 @@ def term(name,
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::
@@ -527,7 +520,7 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     CLI Example:
 
@@ -537,7 +530,7 @@ def filter(name,  # pylint: disable=redefined-builtin
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.flw01:
         ----------
@@ -637,7 +630,7 @@ def filter(name,  # pylint: disable=redefined-builtin
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::
@@ -711,7 +704,7 @@ def managed(name,
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     merge_pillar: ``False``
-        Merge the ``filters`` wil the corresponding values from the pillar. Default: ``False``.
+        Merge the ``filters`` will the corresponding values from the pillar. Default: ``False``.
 
         .. note::
             By default this state does not merge, to avoid any unexpected behaviours.
@@ -747,7 +740,7 @@ def managed(name,
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     CLI Example:
 
@@ -757,10 +750,10 @@ def managed(name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
         edge01.bjm01:
-            ----------
+        -------------
                       ID: netacl_example
                 Function: netacl.managed
                   Result: None
@@ -934,7 +927,7 @@ def managed(name,
     .. note::
         The first method allows the user to eventually apply complex manipulation
         and / or retrieve the data from external services before passing the
-        data to the state. The second one is more straighforward, for less
+        data to the state. The second one is more straightforward, for less
         complex cases when loading the data directly from the pillar is sufficient.
 
     .. note::

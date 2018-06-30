@@ -147,6 +147,7 @@ def search(pkg_name):
 def latest_version(*names, **kwargs):
     '''
     .. versionchanged: 2016.3.0
+
     Return the latest version of the named package available for upgrade or
     installation.
 
@@ -181,7 +182,9 @@ def latest_version(*names, **kwargs):
 
         out = __salt__['cmd.run'](cmd, output_loglevel='trace')
         for line in out.splitlines():
-            p = line.split(',' if _supports_parsing() else None)
+            if line.startswith('No results found for'):
+                return pkglist
+            p = line.split(';' if _supports_parsing() else None)
 
             if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
@@ -190,7 +193,7 @@ def latest_version(*names, **kwargs):
                 s = _splitpkg(p[0])
                 if s:
                     if not s[0] in pkglist:
-                        if len(p) > 1 and p[1] == '<':
+                        if len(p) > 1 and p[1] in ('<', '', '='):
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
@@ -229,7 +232,7 @@ def refresh_db(force=False):
     force
         Pass -f so that the cache is always refreshed.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     CLI Example:
@@ -261,6 +264,7 @@ def refresh_db(force=False):
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
     .. versionchanged: 2016.3.0
+
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -312,7 +316,7 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     refresh
         Whether or not to refresh the package database before installing.
@@ -654,6 +658,7 @@ def file_list(package):
 def file_dict(*packages):
     '''
     .. versionchanged: 2016.3.0
+
     List the files that belong to a package.
 
     CLI Examples:
@@ -669,7 +674,6 @@ def file_dict(*packages):
     for package in packages:
         cmd = ['pkg_info', '-qL', package]
         ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
         files[package] = []
         for line in ret['stderr'].splitlines():
             errors.append(line)
@@ -681,7 +685,7 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret:
+    for field in list(ret):
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret

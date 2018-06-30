@@ -3,7 +3,7 @@
 Output Module
 =============
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Execution module that processes JSON serializable data
 and returns string having the format as processed by the outputters.
@@ -47,7 +47,7 @@ def out_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -74,7 +74,7 @@ def string_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -101,7 +101,7 @@ def html_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:

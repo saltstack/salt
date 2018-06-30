@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
-import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -242,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        expr_form=None):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -288,17 +286,6 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -374,10 +361,18 @@ def flush():
 
 def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     '''
-    Get all mine data for 'docker.get_containers' and run an aggregation
-    routine. The "interfaces" parameter allows for specifying which network
-    interfaces to select ip addresses from. The "cidrs" parameter allows for
-    specifying a list of cidrs which the ip address must match.
+    .. versionchanged:: 2017.7.8,2018.3.3
+        When :conf_minion:`docker.update_mine` is set to ``False`` for a given
+        minion, no mine data will be populated for that minion, and thus none
+        will be returned for it.
+    .. versionchanged:: Fluorine
+        :conf_minion:`docker.update_mine` now defaults to ``False``
+
+    Get all mine data for :py:func:`docker.ps <salt.modules.dockermod.ps_>` and
+    run an aggregation routine. The ``interfaces`` parameter allows for
+    specifying the network interfaces from which to select IP addresses. The
+    ``cidrs`` parameter allows for specifying a list of subnets which the IP
+    address must match.
 
     with_container_id
         Boolean, to expose container_id in the list of results

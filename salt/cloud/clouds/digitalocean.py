@@ -83,9 +83,10 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('personal_access_token',)
+        opts=__opts__,
+        provider=__active_provider_name__ or __virtualname__,
+        aliases=__virtual_aliases__,
+        required_keys=('personal_access_token',)
     )
 
 
@@ -161,7 +162,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    items = query(method='sizes')
+    items = query(method='sizes', command='?per_page=100')
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}

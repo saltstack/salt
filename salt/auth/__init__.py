@@ -44,7 +44,8 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'eauth',
     'fun',
     'kwarg',
-    'match'
+    'match',
+    'print_event'
 ])
 
 
@@ -283,7 +284,7 @@ class LoadAuth(object):
             return False
 
         if load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
+            log.debug('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -361,6 +362,7 @@ class LoadAuth(object):
         eauth = token['eauth'] if token else load['eauth']
         if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
+            log.debug('The eauth system "%s" is not enabled', eauth)
             log.warning('Authorization failure occurred.')
             return None
 
@@ -371,6 +373,9 @@ class LoadAuth(object):
             name = self.load_name(load)  # The username we are attempting to auth with
             groups = self.get_groups(load)  # The groups this user belongs to
         eauth_config = self.opts['external_auth'][eauth]
+        if not eauth_config:
+            log.debug('eauth "%s" configuration is empty', eauth)
+
         if not groups:
             groups = []
 
@@ -389,7 +394,7 @@ class LoadAuth(object):
 
     def check_authentication(self, load, auth_type, key=None, show_username=False):
         '''
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         Go through various checks to see if the token/eauth/user can be authenticated.
 
@@ -690,6 +695,7 @@ class Resolver(object):
         if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
+            print("Available eauth types: {0}".format(", ".join(self.auth.file_mapping.keys())))
             return ret
 
         args = salt.utils.args.arg_lookup(self.auth[fstr])

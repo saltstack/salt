@@ -15,9 +15,16 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
-* `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
-* `AutoRest swagger generator Python client runtime (Azure-specific module) <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4
+* `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
+* `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
+* `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
+* `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
+* `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
+* `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
+* `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
+* `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
+* `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
+* `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 
@@ -162,12 +169,18 @@ fields, separated by the pipe (``|``) character:
     sku: Such as 14.04.5-LTS or 2012-R2-Datacenter
     version: Such as 14.04.201612050 or latest
 
-It is possible to specify the URL of a custom image that you have access to,
-such as:
+It is possible to specify the URL or resource ID path of a custom image that you
+have access to, such as:
 
 .. code-block:: yaml
 
     https://<mystorage>.blob.core.windows.net/system/Microsoft.Compute/Images/<mystorage>/template-osDisk.01234567-890a-bcdef0123-4567890abcde.vhd
+
+or:
+
+.. code-block:: yaml
+
+    /subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/myRG/providers/Microsoft.Compute/images/myImage
 
 size
 ----
@@ -228,9 +241,10 @@ etc) will be created in.
 
 network_resource_group
 ----------------------
-Optional. If specified, then the VM will be connected to the network resources
-in this group, rather than the group that it was created in. The VM interfaces
-and IPs will remain in the configured ``resource_group`` with the VM.
+Optional. If specified, then the VM will be connected to the virtual network
+in this resource group, rather than the parent resource group of the instance.
+The VM interfaces and IPs will remain in the configured ``resource_group`` with
+the VM.
 
 network
 -------
@@ -240,6 +254,11 @@ subnet
 ------
 Optional. The subnet inside the virtual network that the VM will be spun up in.
 Default is ``default``.
+
+allocate_public_ip
+------------------
+Optional. Default is ``False``. If set to ``True``, a public IP will
+be created and assigned to the VM.
 
 load_balancer
 -------------
@@ -274,6 +293,26 @@ availability_set
 ----------------
 Optional. If set, the VM will be added to the specified availability set.
 
+volumes
+-------
+
+Optional. A list of dictionaries describing data disks to attach to the
+instance can be specified using this setting. The data disk dictionaries are
+passed entirely to the `Azure DataDisk object
+<https://docs.microsoft.com/en-us/python/api/azure.mgmt.compute.v2017_12_01.models.datadisk?view=azure-python>`_,
+so ad-hoc options can be handled as long as they are valid properties of the
+object.
+
+.. code-block:: yaml
+
+    volumes:
+    - disk_size_gb: 50
+      caching: ReadWrite
+    - disk_size_gb: 100
+      caching: ReadWrite
+      managed_disk:
+        storage_account_type: Standard_LRS
+
 cleanup_disks
 -------------
 Optional. Default is ``False``. If set to ``True``, disks will be cleaned up
@@ -297,7 +336,7 @@ Optional. Default is ``False``. Normally when a VM is deleted, its associated
 interfaces and IPs are retained. This is useful if you expect the deleted VM
 to be recreated with the same name and network settings. If you would like
 interfaces and IPs to be deleted when their associated VM is deleted, set this
-to ``True``. 
+to ``True``.
 
 userdata
 --------
@@ -314,6 +353,18 @@ userdata_file
 Optional. The path to a file to be read and submitted to Azure as user data.
 How this is used depends on the operating system that is being deployed. If
 used, any ``userdata`` setting will be ignored.
+
+userdata_sendkeys
+-----------------
+Optional. Set to ``True`` in order to generate salt minion keys and provide
+them as variables to the userdata script when running it through the template
+renderer. The keys can be referenced as ``{{opts['priv_key']}}`` and
+``{{opts['pub_key']}}``.
+
+userdata_template
+-----------------
+Optional. Enter the renderer, such as ``jinja``, to be used for the userdata
+script template.
 
 wait_for_ip_timeout
 -------------------

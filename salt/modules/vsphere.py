@@ -4,7 +4,7 @@ Manage VMware vCenter servers and ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstaley.com>
 
 Dependencies
 ============
@@ -3944,7 +3944,7 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
     Note: The ``dvs_name`` param will override any name set in ``dvs_dict``.
 
     dvs_dict
-        Dict representation of the new DVS (exmaple in salt.states.dvs)
+        Dict representation of the new DVS (example in salt.states.dvs)
 
     dvs_name
         Name of the DVS to be created.
@@ -4019,7 +4019,7 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
 
     dvs_dict
         Dictionary with the values the DVS should be update with
-        (exmaple in salt.states.dvs)
+        (example in salt.states.dvs)
 
     dvs
         Name of the DVS to be updated.
@@ -4479,7 +4479,7 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs,
 
     portgroup_dict
         Dictionary with the config values the portgroup should be created with
-        (exmaple in salt.states.dvs).
+        (example in salt.states.dvs).
 
     portgroup_name
         Name of the portgroup to be created.
@@ -4526,7 +4526,7 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
 
     portgroup_dict
         Dictionary with the values the portgroup should be update with
-        (exmaple in salt.states.dvs).
+        (example in salt.states.dvs).
 
     portgroup
         Name of the portgroup to be updated.
@@ -4813,7 +4813,7 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
 
     policy_dict
         Dictionary containing the changes to apply to the policy.
-        (exmaple in salt.states.pbm)
+        (example in salt.states.pbm)
 
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
@@ -4853,7 +4853,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 
     policy_dict
         Dictionary containing the changes to apply to the policy.
-        (exmaple in salt.states.pbm)
+        (example in salt.states.pbm)
 
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
@@ -6472,7 +6472,7 @@ def configure_host_cache(enabled, datastore=None, swap_size_MiB=None,
 
     swap_size_MiB
         Swap size in Mibibytes. Needs to be set if enabled is ``true``. Must be
-        smaller thant the datastore size.
+        smaller than the datastore size.
 
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
@@ -7595,7 +7595,7 @@ def _apply_hard_disk(unit_number, key, operation, disk_label=None, size=None,
         Action which should be done on the device add or edit
 
     disk_label
-        Label of the new disk, can be overriden
+        Label of the new disk, can be overridden
 
     size
         Size of the disk
@@ -9059,8 +9059,7 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
 
     .. code-block:: bash
 
-        salt vm_minion vsphere.create_vm vm_name=vmname \
-        cpu='{count: 2, nested: True}' ...
+        salt vm_minion vsphere.create_vm vm_name=vmname cpu='{count: 2, nested: True}' ...
 
     vm_name
         Name of the virtual machine
@@ -9090,7 +9089,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
 
     devices
         interfaces
+
         .. code-block:: bash
+
             interfaces:
               adapter: 'Network adapter 1'
               name: vlan100
@@ -9103,7 +9104,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
                 start_connected: True
 
         disks
+
         .. code-block:: bash
+
             disks:
               adapter: 'Hard disk 1'
               size: 16
@@ -9116,14 +9119,18 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
               filename: 'vm/mydisk.vmdk'
 
         scsi_devices
+
         .. code-block:: bash
+
             scsi_devices:
               controller: 'SCSI controller 0'
               type: paravirtual
               bus_sharing: no_sharing
 
         serial_ports
+
         .. code-block:: bash
+
             serial_ports:
               adapter: 'Serial port 1'
               type: network
@@ -9138,7 +9145,9 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore,
               yield: False
 
         cd_drives
+
         .. code-block:: bash
+
             cd_drives:
               adapter: 'CD/DVD drive 0'
               controller: 'IDE 0'

@@ -11,35 +11,46 @@ Two configurations can be set to modify the highstate outputter. These values
 can be set in the master config to change the output of the ``salt`` command or
 set in the minion config to change the output of the ``salt-call`` command.
 
-state_verbose:
+state_verbose
     By default `state_verbose` is set to `True`, setting this to `False` will
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
     The highstate outputter has six output modes,
     ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
+
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
+
     * If ``terse`` is used, then the output is greatly simplified and shown in
       only one line.
+
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
+
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
+
     * If ``filter`` is used, then either or both of two different filters can be
       used: ``exclude`` or ``terse``.
+
         * for ``exclude``, state.highstate expects a list of states to be excluded (or ``None``)
           followed by ``True`` for terse output or ``False`` for regular output.
           Because of parsing nuances, if only one of these is used, it must still
           contain a comma. For instance: `exclude=True,`.
+
         * for ``terse``, state.highstate expects simply ``True`` or ``False``.
+
       These can be set as such from the command line, or in the Salt config as
       `state_output_exclude` or `state_output_terse`, respectively.
+
     The output modes have one modifier:
+
     ``full_id``, ``terse_id``, ``mixed_id``, ``changes_id`` and ``filter_id``
     If ``_id`` is used, then the corresponding form will be used, but the value for ``name``
     will be drawn from the state ID. This is useful for cases where the name
     value might be very long and hard to read.
+
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
@@ -105,6 +116,7 @@ Example output with no special settings in configuration files:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import pprint
+import re
 import textwrap
 
 # Import salt libs
@@ -141,8 +153,9 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     if 'data' in data:
         data = data.pop('data')
 
+    indent_level = kwargs.get('indent_level', 1)
     ret = [
-        _format_host(host, hostdata)[0]
+        _format_host(host, hostdata, indent_level=indent_level)[0]
         for host, hostdata in six.iteritems(data)
     ]
     if ret:
@@ -155,7 +168,11 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     return ''
 
 
-def _format_host(host, data):
+def _format_host(host, data, indent_level=1):
+    '''
+    Main highstate formatter. can be called recursively if a nested highstate
+    contains other highstates (ie in an orchestration)
+    '''
     host = salt.utils.data.decode(host)
 
     colors = salt.utils.color.get_colors(
@@ -217,15 +234,17 @@ def _format_host(host, data):
                 try:
                     rdurations.append(float(rduration))
                 except ValueError:
-                    log.error('Cannot parse a float from duration {0}'
-                              .format(ret.get('duration', 0)))
+                    log.error('Cannot parse a float from duration %s', ret.get('duration', 0))
 
             tcolor = colors['GREEN']
-            orchestration = ret.get('__orchestration__', False)
-            schanged, ctext = _format_changes(ret['changes'], orchestration)
-            if not ctext and 'pchanges' in ret:
-                schanged, ctext = _format_changes(ret['pchanges'], orchestration)
-            nchanges += 1 if schanged else 0
+            if ret.get('name') in ['state.orch', 'state.orchestrate', 'state.sls']:
+                nested = output(ret['changes']['return'], indent_level=indent_level+1)
+                ctext = re.sub('^', ' ' * 14 * indent_level, '\n'+nested, flags=re.MULTILINE)
+                schanged = True
+                nchanges += 1
+            else:
+                schanged, ctext = _format_changes(ret['changes'])
+                nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \

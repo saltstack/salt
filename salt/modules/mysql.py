@@ -35,6 +35,7 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import hashlib
 import time
 import logging
 import re
@@ -51,13 +52,14 @@ import salt.utils.stringutils
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
+
 try:
-    # Try to import MySQLdb
+    # Trying to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    HAS_MYSQLDB = True
+    from MySQLdb.connections import OperationalError
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -67,10 +69,9 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.constants import FIELD_TYPE, FLAG
-        HAS_MYSQLDB = True
+        from MySQLdb.err import OperationalError
     except ImportError:
-        # No MySQL Connector installed, return False
-        HAS_MYSQLDB = False
+        MySQLdb = None
 
 log = logging.getLogger(__name__)
 
@@ -195,11 +196,15 @@ And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 
 def __virtual__():
     '''
-    Only load this module if the mysql libraries exist
+    Confirm that a python mysql client is installed.
     '''
-    if HAS_MYSQLDB:
-        return True
-    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
+
+
+def __mysql_hash_password(password):
+    _password = hashlib.sha1(password).digest()
+    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
+    return _password
 
 
 def __check_table(name, table, **connection_args):
@@ -331,7 +336,7 @@ def _connect(**kwargs):
         connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -647,7 +652,7 @@ def query(database, query, **connection_args):
     log.debug('Using db: %s to run query %s', database, query)
     try:
         affected = _execute(cur, query)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -772,7 +777,7 @@ def status(**connection_args):
     qry = 'SHOW STATUS'
     try:
         _execute(cur, qry)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -1203,6 +1208,7 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' passwordless=True
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
+    server_version = version(**connection_args)
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1234,8 +1240,14 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
-        args['password'] = six.text_type(password)
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            # Hash the password before comparing
+            _password = __mysql_hash_password(password)
+            qry += ' AND ' + password_column + ' = %(password)s'
+        else:
+            _password = password
+            qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
+        args['password'] = six.text_type(_password)
     elif password_hash:
         qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
@@ -1333,6 +1345,7 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
+    server_version = version(**connection_args)
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1353,7 +1366,10 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        qry += ' IDENTIFIED BY PASSWORD %(password)s'
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            qry += ' IDENTIFIED BY %(password)s'
+        else:
+            qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if salt.utils.data.is_true(unix_socket):
@@ -1433,9 +1449,13 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
+    server_version = version(**connection_args)
     args = {}
     if password is not None:
-        password_sql = 'PASSWORD(%(password)s)'
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            password_sql = '%(password)s'
+        else:
+            password_sql = 'PASSWORD(%(password)s)'
         args['password'] = password
     elif password_hash is not None:
         password_sql = '%(password)s'
@@ -1691,11 +1711,11 @@ def __grant_generate(grant,
     table = db_part[2]
 
     if escape:
-        if dbc is not '*':
+        if dbc != '*':
             # _ and % are authorized on GRANT queries and should get escaped
             # on the db name, but only if not requesting a table level grant
-            dbc = quote_identifier(dbc, for_grants=(table is '*'))
-        if table is not '*':
+            dbc = quote_identifier(dbc, for_grants=(table == '*'))
+        if table != '*':
             table = quote_identifier(table)
     # identifiers cannot be used as values, and same thing for grants
     qry = 'GRANT {0} ON {1}.{2} TO %(user)s@%(host)s'.format(grant, dbc, table)
@@ -1790,8 +1810,10 @@ def grant_exists(grant,
             if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
+            grant_tokens_database = grant_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
+            target_tokens_database = target_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
             if grant_tokens['user'] == target_tokens['user'] and \
-                    grant_tokens['database'] == target_tokens['database'] and \
+                    grant_tokens_database == target_tokens_database and \
                     grant_tokens['host'] == target_tokens['host'] and \
                     set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
@@ -1893,16 +1915,16 @@ def grant_revoke(grant,
     db_part = database.rpartition('.')
     dbc = db_part[0]
     table = db_part[2]
-    if dbc is not '*':
+    if dbc != '*':
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
-        s_database = quote_identifier(dbc, for_grants=(table is '*'))
-    if dbc is '*':
+        s_database = quote_identifier(dbc, for_grants=(table == '*'))
+    if dbc == '*':
         # add revoke for *.*
         # before the modification query send to mysql will looks like
         # REVOKE SELECT ON `*`.* FROM %(user)s@%(host)s
         s_database = dbc
-    if table is not '*':
+    if table != '*':
         table = quote_identifier(table)
     # identifiers cannot be used as values, same thing for grants
     qry = 'REVOKE {0} ON {1}.{2} FROM %(user)s@%(host)s;'.format(
