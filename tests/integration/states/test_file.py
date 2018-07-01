@@ -2488,6 +2488,32 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
 
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_48336_file_managed_mode_setuid(self, user, group):
+        '''
+        Ensure that mode is correct with changing of ownership and group
+        symlinks)
+        '''
+        tempfile = os.path.join(TMP, 'temp_file_issue_48336')
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed', name=tempfile,
+            user=user, group=group, mode='4750',
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Check that the owner and group are correct, and
+        # the mode is what we expect
+        temp_file_stats = os.stat(tempfile)
+        self.assertEqual(six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode))), '04750')
+        self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
