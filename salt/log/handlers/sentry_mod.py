@@ -8,7 +8,7 @@
     This module provides a `Sentry`_ logging handler. Sentry is an open source
     error tracking platform that provides deep context about exceptions that
     happen in production. Details about stack traces along with the context
-    variables available at the time of the exeption are easily browsable and
+    variables available at the time of the exception are easily browsable and
     filterable from the online interface. For more details please see
     `Sentry`_.
 

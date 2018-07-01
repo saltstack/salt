@@ -98,7 +98,7 @@ def _get_zone_sysconfig():
 
 
 def _get_zone_etc_localtime():
-    tzfile = '/etc/localtime'
+    tzfile = _get_localtime_path()
     tzdir = '/usr/share/zoneinfo/'
     tzdir_len = len(tzdir)
     try:
@@ -281,8 +281,9 @@ def set_zone(timezone):
     if not os.path.exists(zonepath) and 'AIX' not in __grains__['os_family']:
         return 'Zone does not exist: {0}'.format(zonepath)
 
-    if os.path.exists('/etc/localtime'):
-        os.unlink('/etc/localtime')
+    tzfile = _get_localtime_path()
+    if os.path.exists(tzfile):
+        os.unlink(tzfile)
 
     if 'Solaris' in __grains__['os_family']:
         __salt__['file.sed'](
@@ -300,7 +301,7 @@ def set_zone(timezone):
         __salt__['cmd.retcode'](cmd, python_shell=False)
         return False
     else:
-        os.symlink(zonepath, '/etc/localtime')
+        os.symlink(zonepath, tzfile)
 
     if 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
@@ -345,10 +346,10 @@ def zone_compare(timezone):
         return timezone == get_zone()
 
     if 'FreeBSD' in __grains__['os_family']:
-        if not os.path.isfile(_get_etc_localtime_path()):
+        if not os.path.isfile(_get_localtime_path()):
             return timezone == get_zone()
 
-    tzfile = _get_etc_localtime_path()
+    tzfile = _get_localtime_path()
     zonepath = _get_zone_file(timezone)
     try:
         return filecmp.cmp(tzfile, zonepath, shallow=False)
@@ -364,7 +365,9 @@ def zone_compare(timezone):
         raise
 
 
-def _get_etc_localtime_path():
+def _get_localtime_path():
+    if 'NILinuxRT' in __grains__['os_family'] and 'nilrt' in __grains__['lsb_distrib_id']:
+        return '/etc/natinst/share/localtime'
     return '/etc/localtime'
 
 

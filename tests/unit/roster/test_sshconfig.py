@@ -79,13 +79,11 @@ class SSHConfigRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
     def test_all(self):
         with patch('salt.utils.files.fopen', self.mock_fp):
             with patch('salt.roster.sshconfig._get_ssh_config_file'):
-                self.mock_fp.return_value.__iter__.return_value = _SAMPLE_SSH_CONFIG.splitlines()
                 targets = sshconfig.targets('*')
         self.assertEqual(targets, _ALL)
 
     def test_abc_glob(self):
         with patch('salt.utils.files.fopen', self.mock_fp):
             with patch('salt.roster.sshconfig._get_ssh_config_file'):
-                self.mock_fp.return_value.__iter__.return_value = _SAMPLE_SSH_CONFIG.splitlines()
                 targets = sshconfig.targets('abc*')
         self.assertEqual(targets, _ABC_GLOB)

@@ -129,54 +129,56 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'ClusterShell',
     'ClusterShell.NodeSet',
-    'django',
-    'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
-    'nagios_json',
-    'psutil',
-    'pycassa',
-    'pymongo',
-    'rabbitmq_server',
-    'redis',
-    #'requests',
-    #'requests.exceptions',
-    'rpm',
-    'rpmUtils',
-    'rpmUtils.arch',
-    'yum',
     'OpenSSL',
-    'zfs',
-    'salt.ext.six.moves.winreg',
-    'win32security',
-    'ntsecuritycon',
-    'napalm',
+    'avahi',
+    'boto.regioninfo',
+    'concurrent',
+    'dbus',
+    'django',
+    'dns',
+    'dns.resolver',
     'dson',
     'hjson',
     'jnpr',
-    'json',
-    'lxml',
-    'lxml.etree',
     'jnpr.junos',
     'jnpr.junos.utils',
     'jnpr.junos.utils.config',
     'jnpr.junos.utils.sw',
-    'dns',
-    'dns.resolver',
+    'json',
     'keyring',
+    'libvirt',
+    'lxml',
+    'lxml.etree',
+    'msgpack',
+    'nagios_json',
+    'napalm',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
     'netaddr.core.AddrFormatError',
+    'ntsecuritycon',
+    'psutil',
+    'pycassa',
+    'pyconnman',
+    'pyiface',
+    'pymongo',
     'pyroute2',
     'pyroute2.ipdb',
-    'avahi',
-    'dbus',
+    'rabbitmq_server',
+    'redis',
+    'rpm',
+    'rpmUtils',
+    'rpmUtils.arch',
+    'salt.ext.six.moves.winreg',
     'twisted',
     'twisted.internet',
     'twisted.internet.protocol',
     'twisted.internet.protocol.DatagramProtocol',
-    'msgpack',
+    'win32security',
+    'yum',
+    'zfs',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -213,6 +215,8 @@ sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 # Define a fake version attribute for the following libs.
 sys.modules['cherrypy'].config = mock_decorator_with_params
+sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -252,8 +256,8 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2018.3.1'  # latest release
-previous_release = '2017.7.6'  # latest release from previous branch
+latest_release = '2018.3.2'  # latest release
+previous_release = '2017.7.7'  # latest release from previous branch
 previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch

@@ -2045,9 +2045,14 @@ def line(path, content=None, match=None, mode=None, location=None,
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.files.fopen
-                mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
+                if six.PY2 and salt.utils.platform.is_windows():
+                    mode = 'wb'
+                    body = salt.utils.data.encode_list(body)
+                else:
+                    mode = 'w'
+                    body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(''.join(body))
+                fh_.writelines(body)
             finally:
                 if fh_:
                     fh_.close()
@@ -4459,7 +4464,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get('name', ''))
+            perms['lattrs'] = ''.join(lattrs.get(name, ''))
             # Remove attributes on file so changes can be enforced.
             if perms['lattrs']:
                 chattr(name, operator='remove', attributes=perms['lattrs'])

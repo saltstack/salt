@@ -597,9 +597,8 @@ overrides all levels below it):
    .. code-block:: yaml
 
        gitfs_saltenv:
-         - saltenv:
-           - dev:
-             - mountpoint: salt://bar
+         - dev:
+           - mountpoint: salt://bar
 
 3. Per-remote configuration parameter
 

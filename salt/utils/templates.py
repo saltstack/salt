@@ -357,8 +357,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    tojson_filter = jinja_env.filters.get('tojson')
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    if tojson_filter is not None:
+        # Use the existing tojson filter, if present (jinja2 >= 2.9)
+        jinja_env.filters['tojson'] = tojson_filter
     jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals

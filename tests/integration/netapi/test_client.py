@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP_CONF_DIR
 
 # Import Salt libs
@@ -36,6 +36,19 @@ class NetapiClientTest(TestCase):
 
         ret = self.netapi.run(low)
         self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
+
+    @skipIf(True, 'Failing on the develop branch - investigate/fix for Fluorine')
+    def test_local_batch(self):
+        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
+        low.update(self.eauth_creds)
+
+        ret = self.netapi.run(low)
+        rets = []
+        for _ret in ret:
+            rets.append(_ret)
+        self.assertIn({'localhost': True}, rets)
+        self.assertIn({'sub_minion': True}, rets)
+        self.assertIn({'minion': True}, rets)
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}

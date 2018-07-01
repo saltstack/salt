@@ -185,10 +185,15 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn(UNICODE_DIRNAME, ret)
 
     def test_symlink_list(self):
-        if self.test_symlink_list_file_roots:
-            self.opts['file_roots'] = self.test_symlink_list_file_roots
-        ret = roots.symlink_list({'saltenv': 'base'})
-        self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
+        orig_file_roots = self.opts['file_roots']
+        try:
+            if self.test_symlink_list_file_roots:
+                self.opts['file_roots'] = self.test_symlink_list_file_roots
+            ret = roots.symlink_list({'saltenv': 'base'})
+            self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
+        finally:
+            if self.test_symlink_list_file_roots:
+                self.opts['file_roots'] = orig_file_roots
 
 
 class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):

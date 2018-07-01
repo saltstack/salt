@@ -283,6 +283,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -372,6 +373,7 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule
@@ -426,6 +428,7 @@ execution modules
     system
     system_profiler
     systemd
+    template
     telegram
     telemetry
     temp

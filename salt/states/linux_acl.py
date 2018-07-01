@@ -345,11 +345,15 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                 _current_acl_types.append(current_acl_name.encode('utf-8'))
                 diff_perms = _octal_perms == key[current_acl_name]['octal']
         if acl_type == 'user':
-            if _origin_owner and _origin_owner in _current_acl_types:
+            try:
                 _current_acl_types.remove(_origin_owner)
+            except ValueError:
+                pass
         else:
-            if _origin_group and _origin_group in _current_acl_types:
+            try:
                 _current_acl_types.remove(_origin_group)
+            except ValueError:
+                pass
         diff_acls = set(_current_acl_types) ^ set(acl_names)
         if not diff_acls and diff_perms and not force:
             ret = {'name': name,
