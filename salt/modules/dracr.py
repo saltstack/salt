@@ -15,7 +15,7 @@ import re
 import salt.utils.path
 
 # Import Salt libs
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltException
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -146,43 +146,57 @@ def __execute_ret(
 
     return cmd
 
-def get_property(host=None,
-                     admin_username=None, admin_password=None, property=None):
-    '''
+
+def get_property(host=None, admin_username=None, admin_password=None, property=None):
+    """
+    .. versionadded:: 2018.3.2
     Return specific property
-    '''
+    """
     if property is None:
-        raise SaltException('No property specified!')
-    ret = __execute_ret('get %s' % property, host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)
+        raise SaltException("No property specified!")
+    ret = __execute_ret(
+        "get {0}".format(property),
+        host=host,
+        admin_username=admin_username,
+        admin_password=admin_password,
+    )
     return ret
 
-def set_property(host=None,
-                     admin_username=None, admin_password=None, property=None, value=None):
-    '''
+
+def set_property(
+    host=None, admin_username=None, admin_password=None, property=None, value=None
+):
+    """
+    .. versionadded:: 2018.3.2
     Set specific property
-    '''
+    """
     if property is None:
-        raise SaltException('No property specified!')
+        raise SaltException("No property specified!")
     elif value is None:
-        raise SaltException('No value specified!')
-    ret = __execute_ret('set %s %s' % (property, value), host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)
+        raise SaltException("No value specified!")
+    ret = __execute_ret(
+        "set {0} {1}".format(property, value),
+        host=host,
+        admin_username=admin_username,
+        admin_password=admin_password,
+    )
     return ret
 
-def property_present(host=None, admin_username=None, admin_password=None, property=None, value=None):
 
-    '''
+def ensure_property_set(
+    host=None, admin_username=None, admin_password=None, property=None, value=None
+):
+    """
+    .. versionadded:: 2018.3.2
     Ensure that property is set
-    '''
+    """
     ret = get_property(host, admin_username, admin_password, property)
-    if ret['stdout'] == value:
+    if ret["stdout"] == value:
         return True
 
     ret = set_property(host, admin_username, admin_password, property, value)
     return ret
+
 
 def get_dns_dracname(host=None, admin_username=None, admin_password=None):
 
