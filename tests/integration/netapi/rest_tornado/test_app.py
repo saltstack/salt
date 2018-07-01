@@ -264,6 +264,10 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 'tgt': '*',
                 'fun': 'test.ping',
               }
+
+        self.application.opts['order_masters'] = True
+        self.application.opts['syndic_wait'] = 5
+
         response = self.fetch('/',
                               method='POST',
                               body=salt.utils.json.dumps(low),
