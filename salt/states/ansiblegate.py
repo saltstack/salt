@@ -47,11 +47,14 @@ except ImportError as err:
 # Import salt modules
 import salt.fileclient
 import salt.ext.six as six
+from salt.utils.decorators import depends
+import salt.utils.decorators.path
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'ansible'
 
 
+@depends('ansible')
 class AnsibleState(object):
     '''
     Ansible state caller.
@@ -104,7 +107,7 @@ def __virtual__():
     Disable, if Ansible is not available around on the Minion.
     '''
     setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))   # pylint: disable=W0108
-    return ansible is not None
+    return __virtualname__
 
 
 def _client():
@@ -133,6 +136,7 @@ def _changes(plays):
     return changes
 
 
+@salt.utils.decorators.path.which('ansible-playbook')
 def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=None):
     '''
     Run Ansible Playbooks

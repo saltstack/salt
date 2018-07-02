@@ -39,6 +39,8 @@ import subprocess
 
 import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
+from salt.utils.decorators import depends
+import salt.utils.decorators.path
 import salt.utils.platform
 import salt.utils.timed_subprocess
 import salt.utils.yaml
@@ -228,10 +230,10 @@ def __virtual__():
         _resolver = AnsibleModuleResolver(__opts__).resolve().install()
         _caller = AnsibleModuleCaller(_resolver)
         _set_callables(list())
+    return __virtualname__
 
-    return ret, msg
 
-
+@depends('ansible')
 def help(module=None, *args):
     '''
     Display help on Ansible standard module.
@@ -271,6 +273,7 @@ def help(module=None, *args):
     return ret
 
 
+@depends('ansible')
 def list(pattern=None):
     '''
     Lists available modules.
@@ -279,6 +282,7 @@ def list(pattern=None):
     return _resolver.get_modules_list(pattern=pattern)
 
 
+@salt.utils.decorators.path.which('ansible-playbook')
 def playbooks(playbook, rundir=None, check=False, diff=False, extra_vars=None,
               flush_cache=False, forks=5, inventory=None, limit=None,
               list_hosts=False, list_tags=False, list_tasks=False,
