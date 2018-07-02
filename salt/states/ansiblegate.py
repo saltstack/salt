@@ -39,10 +39,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import sys
-try:
-    import ansible
-except ImportError as err:
-    ansible = None
 
 # Import salt modules
 import salt.fileclient
