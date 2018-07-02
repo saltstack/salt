@@ -596,7 +596,6 @@ class OrchEventTest(ShellCase):
             transport=self.master_opts['transport'],
             opts=self.master_opts)
 
-        start_time = time.time()
         jid = self.run_run_plus(
             'state.orchestrate',
             'main',
