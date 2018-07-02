@@ -2510,7 +2510,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Check that the owner and group are correct, and
         # the mode is what we expect
         temp_file_stats = os.stat(tempfile)
-        self.assertEqual(six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode))), '04750')
+
+        # Normalize the mode
+        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = salt.utils.normalize_mode(temp_file_mode)
+
+        self.assertEqual(temp_file_mode, '4750')
         self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
         self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
 
