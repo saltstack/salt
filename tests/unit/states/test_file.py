@@ -1175,6 +1175,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to ensure that some text appears at the beginning of a file.
         '''
         name = '/etc/motd'
+        if salt.utils.is_windows():
+            name = 'c:\\etc\\motd'
         source = ['salt://motd/hr-messages.tmpl']
         sources = ['salt://motd/devops-messages.tmpl']
         text = ['Trust no one unless you have eaten much salt with him.']
@@ -1203,12 +1205,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                          'cp.get_template': mock_f,
                          'file.search': mock_f,
                          'file.prepend': mock_t}):
-            with patch.object(os.path, 'isdir', mock_t):
-                comt = ('The following files will be changed:\n/etc:'
-                        ' directory - new\n')
-                ret.update({'comment': comt, 'name': name, 'pchanges': {'/etc': {'directory': 'new'}}})
-                self.assertDictEqual(filestate.prepend(name, makedirs=True),
-                                     ret)
+            comt = ('The following files will be changed:\n/etc:'
+                    ' directory - new\n')
+            pchanges = {'/etc': {'directory': 'new'}}
+            if salt.utils.is_windows():
+                comt = 'The directory "c:\\etc" will be changed'
+                pchanges = {'c:\\etc': {'directory': 'new'}}
+            ret.update({'comment': comt, 'name': name, 'pchanges': pchanges})
+            self.assertDictEqual(filestate.prepend(name, makedirs=True),
+                                 ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
