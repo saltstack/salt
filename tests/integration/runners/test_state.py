@@ -443,7 +443,7 @@ class OrchEventTest(ShellCase):
             __reload_config=True).get('jid')
 
         if jid is None:
-            raise Exception('jid missing from run_run_plus output')
+            raise salt.exceptions.SaltInvocationError('jid missing from run_run_plus output')
 
         signal.signal(signal.SIGALRM, self.alarm_handler)
         signal.alarm(self.timeout)
@@ -453,7 +453,7 @@ class OrchEventTest(ShellCase):
                 event = listener.get_event(full=True)
                 if event is None:
                     continue
-                if event['tag'] == 'salt/run/{0}/ret'.format(jid):
+                if event.get('tag', '') == 'salt/run/{0}/ret'.format(jid):
                     received = True
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
