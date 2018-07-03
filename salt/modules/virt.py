@@ -3909,7 +3909,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     return cpu.toxml()
 
 
-def net_define(name, bridge, forward, **kwargs):
+def network_define(name, bridge, forward, **kwargs):
     '''
     Create libvirt network.
 
@@ -3928,7 +3928,7 @@ def net_define(name, bridge, forward, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.net_define network main bridge openvswitch
+        salt '*' virt.network_define network main bridge openvswitch
 
     .. versionadded:: Fluorine
     '''

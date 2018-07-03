@@ -567,7 +567,7 @@ def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-o
     return ret
 
 
-def network_define(name, bridge, forward, connection=None, username=None, password=None, **kwargs):
+def network_running(name, bridge, forward, connection=None, username=None, password=None, **kwargs):
     '''
     Defines and starts a new network with specified arguments.
 
@@ -595,12 +595,11 @@ def network_define(name, bridge, forward, connection=None, username=None, passwo
             - vport: openvswitch
             - tag: 180
             - autostart: True
-            - start: True
 
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': True,
            'comment': ''
            }
 
@@ -608,30 +607,32 @@ def network_define(name, bridge, forward, connection=None, username=None, passwo
     vport = kwargs.pop('vport', None)
     tag = kwargs.pop('tag', None)
     autostart = kwargs.pop('autostart', True)
-    start = kwargs.pop('start', True)
 
     try:
-        result = __salt__['virt.net_define'](name,
-                                             bridge,
-                                             forward,
-                                             vport,
-                                             tag=tag,
-                                             autostart=autostart,
-                                             start=start,
-                                             connection=connection,
-                                             username=username,
-                                             password=password)
-        if result:
-            ret['changes'][name] = 'Network {0} has been created'.format(name)
-            ret['result'] = True
+        info = __salt__['virt.network_info'](name, connection=connection, username=username, password=password)
+        if info:
+            if info['active']:
+                ret['comment'] = 'Network {0} exists and is running'.format(name)
+            else:
+                __salt__['virt.network_start'](name, connection=connection, username=username, password=password)
+                ret['changes'][name] = 'Network started'
+                ret['comment'] = 'Network {0} started'.format(name)
         else:
-            ret['comment'] = 'Network {0} created fail'.format(name)
+            __salt__['virt.network_define'](name,
+                                            bridge,
+                                            forward,
+                                            vport,
+                                            tag=tag,
+                                            autostart=autostart,
+                                            start=True,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+            ret['changes'][name] = 'Network defined and started'
+            ret['comment'] = 'Network {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
-        if err.get_error_code() == libvirt.VIR_ERR_NETWORK_EXIST or libvirt.VIR_ERR_OPERATION_FAILED:
-            ret['result'] = True
-            ret['comment'] = 'The network already exist'
-        else:
-            ret['comment'] = err.get_error_message()
+        ret['result'] = False
+        ret['comment'] = err.get_error_message()
 
     return ret
 
