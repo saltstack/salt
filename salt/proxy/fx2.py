@@ -327,7 +327,7 @@ def chconfig(cmd, *args, **kwargs):
 
     '''
     # Strip the __pub_ keys...is there a better way to do this?
-    for k in kwargs:
+    for k in list(kwargs):
         if k.startswith('__pub_'):
             kwargs.pop(k)
 

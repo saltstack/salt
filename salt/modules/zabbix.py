@@ -333,8 +333,8 @@ def compare_params(defined, existing, return_old_value=False):
     :param defined: Zabbix object definition taken from sls file.
     :param existing: Existing Zabbix object taken from result of an API call.
     :param return_old_value: Default False. If True, returns dict("old"=old_val, "new"=new_val) for rollback purpose.
-    :return: Params that are different from existing object. Result extended by object ID can be passed directly to
-    Zabbix API update method.
+    :return: Params that are different from existing object. Result extended by
+        object ID can be passed directly to Zabbix API update method.
     '''
     # Comparison of data types
     if not isinstance(defined, type(existing)):
@@ -460,11 +460,15 @@ def apiinfo_version(**connection_args):
 
 def user_create(alias, passwd, usrgrps, **connection_args):
     '''
-    Create new zabbix user.
-    NOTE: This function accepts all standard user properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
-
     .. versionadded:: 2016.3.0
+
+    Create new zabbix user
+
+    .. note::
+        This function accepts all standard user properties: keyword argument
+        names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
 
     :param alias: user alias
     :param passwd: user's password
@@ -615,11 +619,15 @@ def user_get(alias=None, userids=None, **connection_args):
 
 def user_update(userid, **connection_args):
     '''
-    Update existing users. NOTE: This function accepts all standard user properties: keyword argument names differ
-    depending on your zabbix version, see:
-    https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
-
     .. versionadded:: 2016.3.0
+
+    Update existing users
+
+    .. note::
+        This function accepts all standard user properties: keyword argument
+        names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
 
     :param userid: id of the user to update
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -650,11 +658,15 @@ def user_update(userid, **connection_args):
 
 def user_getmedia(userids=None, **connection_args):
     '''
-    Retrieve media according to the given parameters NOTE: This function accepts all standard usermedia.get properties:
-    keyword argument names differ depending on your zabbix version, see:
-    https://www.zabbix.com/documentation/3.2/manual/api/reference/usermedia/get
-
     .. versionadded:: 2016.3.0
+
+    Retrieve media according to the given parameters
+
+    .. note::
+        This function accepts all standard usermedia.get properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/3.2/manual/api/reference/usermedia/get
 
     :param userids: return only media that are used by the given users
 
@@ -803,11 +815,15 @@ def user_list(**connection_args):
 
 def usergroup_create(name, **connection_args):
     '''
-    Create new user group.
-    NOTE: This function accepts all standard user group properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
-
     .. versionadded:: 2016.3.0
+
+    Create new user group
+
+    .. note::
+        This function accepts all standard user group properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
 
     :param name: name of the user group
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -926,11 +942,15 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
 
 def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
     '''
-    Retrieve user groups according to the given parameters.
-    NOTE: This function accepts all usergroup_get properties: keyword argument names differ depending on your zabbix
-    version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/get
-
     .. versionadded:: 2016.3.0
+
+    Retrieve user groups according to the given parameters
+
+    .. note::
+        This function accepts all usergroup_get properties: keyword argument
+        names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/get
 
     :param name: names of the user groups
     :param usrgrpids: return only user groups with the given IDs
@@ -977,11 +997,15 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
 
 def usergroup_update(usrgrpid, **connection_args):
     '''
-    Update existing user group.
-    NOTE: This function accepts all standard user group properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/object#user_group
-
     .. versionadded:: 2016.3.0
+
+    Update existing user group
+
+    .. note::
+        This function accepts all standard user group properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/object#user_group
 
     :param usrgrpid: ID of the user group to update.
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -1043,11 +1067,15 @@ def usergroup_list(**connection_args):
 
 def host_create(host, groups, interfaces, **connection_args):
     '''
-    Create new host.
-    NOTE: This function accepts all standard host properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
-
     .. versionadded:: 2016.3.0
+
+    Create new host
+
+    .. note::
+        This function accepts all standard host properties: keyword argument
+        names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
 
     :param host: technical name of the host
     :param groups: groupids of host groups to add the host to
@@ -1055,8 +1083,9 @@ def host_create(host, groups, interfaces, **connection_args):
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
-    :param visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
-    to not mess with value supplied from Salt sls file.
+    :param visible_name: string with visible name of the host, use
+        'visible_name' instead of 'name' parameter to not mess with value
+        supplied from Salt sls file.
 
     return: ID of the created host.
 
@@ -1196,11 +1225,15 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
 
 def host_get(host=None, name=None, hostids=None, **connection_args):
     '''
-    Retrieve hosts according to the given parameters.
-    NOTE: This function accepts all optional host.get parameters: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/get
-
     .. versionadded:: 2016.3.0
+
+    Retrieve hosts according to the given parameters
+
+    .. note::
+        This function accepts all optional host.get parameters: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/get
 
     :param host: technical name of the host
     :param name: visible name of the host
@@ -1242,19 +1275,26 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
 
 def host_update(hostid, **connection_args):
     '''
-    Update existing hosts.
-    NOTE: This function accepts all standard host and host.update properties: keyword argument names differ depending
-    on your zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/update
-    https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
-
     .. versionadded:: 2016.3.0
+
+    Update existing hosts
+
+    .. note::
+        This function accepts all standard host and host.update properties:
+        keyword argument names differ depending on your zabbix version, see the
+        documentation for `host objects`_ and the documentation for `updating
+        hosts`_.
+
+        .. _`host objects`: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
+        .. _`updating hosts`: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/update
 
     :param hostid: ID of the host to update
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
-    :param visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
-    to not mess with value supplied from Salt sls file.
+    :param visible_name: string with visible name of the host, use
+        'visible_name' instead of 'name' parameter to not mess with value
+        supplied from Salt sls file.
 
     :return: ID of the updated host.
 
@@ -1402,11 +1442,15 @@ def host_list(**connection_args):
 
 def hostgroup_create(name, **connection_args):
     '''
-    Create a host group.
-    NOTE: This function accepts all standard host group properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
-
     .. versionadded:: 2016.3.0
+
+    Create a host group
+
+    .. note::
+        This function accepts all standard host group properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
 
     :param name: name of the host group
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -1532,11 +1576,15 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
 
 def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
     '''
-    Retrieve host groups according to the given parameters.
-    NOTE: This function accepts all standard hostgroup.get properities: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.2/manual/api/reference/hostgroup/get
-
     .. versionadded:: 2016.3.0
+
+    Retrieve host groups according to the given parameters
+
+    .. note::
+        This function accepts all standard hostgroup.get properities: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.2/manual/api/reference/hostgroup/get
 
     :param name: names of the host groups
     :param groupid: host group IDs
@@ -1581,11 +1629,15 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
 
 def hostgroup_update(groupid, name=None, **connection_args):
     '''
-    Update existing hosts group.
-    NOTE: This function accepts all standard host group properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
-
     .. versionadded:: 2016.3.0
+
+    Update existing hosts group
+
+    .. note::
+        This function accepts all standard host group properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
 
     :param groupid: ID of the host group to update
     :param name: name of the host group
@@ -1650,15 +1702,23 @@ def hostgroup_list(**connection_args):
 
 def hostinterface_get(hostids, **connection_args):
     '''
-    Retrieve host groups according to the given parameters.
-    NOTE: This function accepts all standard hostinterface.get properities: keyword argument names differ depending
-    on your zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/get
-
     .. versionadded:: 2016.3.0
 
+    Retrieve host groups according to the given parameters
+
+    .. note::
+        This function accepts all standard hostinterface.get properities:
+        keyword argument names differ depending on your zabbix version, see
+        here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/get
+
     :param hostids: Return only host interfaces used by the given hosts.
+
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
     :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
@@ -1687,23 +1747,40 @@ def hostinterface_get(hostids, **connection_args):
 
 def hostinterface_create(hostid, ip_, dns='', main=1, if_type=1, useip=1, port=None, **connection_args):
     '''
-    Create new host interface
-    NOTE: This function accepts all standard host group interface: keyword argument names differ depending
-    on your zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/hostinterface/object
-
     .. versionadded:: 2016.3.0
 
+    Create new host interface
+
+    .. note::
+        This function accepts all standard host group interface: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/3.0/manual/api/reference/hostinterface/object
+
     :param hostid: ID of the host the interface belongs to
+
     :param ip_: IP address used by the interface
+
     :param dns: DNS name used by the interface
+
     :param main: whether the interface is used as default on the host (0 - not default, 1 - default)
+
     :param port: port number used by the interface
-    :param if_type: Interface type (1 - agent; 2 - SNMP; 3 - IPMI; 4 - JMX)
-    :param useip: Whether the connection should be made via IP (0 - connect using host DNS name; 1 - connect using
-    host IP address for this host interface)
-    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
-    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
-    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :param type: Interface type (1 - agent; 2 - SNMP; 3 - IPMI; 4 - JMX)
+
+    :param useip: Whether the connection should be made via IP (0 - connect
+        using host DNS name; 1 - connect using host IP address for this host
+        interface)
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or
+        pillar, see module's docstring)
+
+    :param _connection_password: Optional - zabbix password (can also be set in
+        opts or pillar, see module's docstring)
+
+    :param _connection_url: Optional - url of zabbix frontend (can also be set
+        in opts, pillar, see module's docstring)
 
     :return: ID of the created host interface, False on failure.
 
@@ -1774,15 +1851,22 @@ def hostinterface_delete(interfaceids, **connection_args):
 
 def hostinterface_update(interfaceid, **connection_args):
     '''
-    Update host interface
-    NOTE: This function accepts all standard hostinterface: keyword argument names differ depending on your zabbix
-    version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/object#host_interface
-
     .. versionadded:: 2016.3.0
 
+    Update host interface
+
+    .. note::
+        This function accepts all standard hostinterface: keyword argument
+        names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/object#host_interface
+
     :param interfaceid: ID of the hostinterface to update
+
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
     :return: ID of the updated host interface, False on failure.
@@ -2138,9 +2222,13 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
 
 def mediatype_create(name, mediatype, **connection_args):
     '''
-    Create new mediatype.
-    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+    Create new mediatype
+
+    .. note::
+        This function accepts all standard mediatype properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
 
     :param mediatype: media type - 0: email, 1: script, 2: sms, 3: Jabber, 100: Ez Texting
     :param exec_path: exec path - Required for script and Ez Texting types, see Zabbix API docs
@@ -2216,9 +2304,13 @@ def mediatype_delete(mediatypeids, **connection_args):
 
 def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args):
     '''
-    Update existing mediatype.
-    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
-    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+    Update existing mediatype
+
+    .. note::
+        This function accepts all standard mediatype properties: keyword
+        argument names differ depending on your zabbix version, see here__.
+
+        .. __: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
 
     :param mediatypeid: ID of the mediatype to update
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
