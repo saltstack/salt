@@ -65,22 +65,25 @@ def _changes(name,
         if lgrp['members']:
             lgrp['members'] = [user.lower() for user in lgrp['members']]
         if members:
-            members = [salt.utils.win_functions.get_sam_name(user).lower() for user in members]
+            members = [salt.utils.win_functions.get_sam_name(
+                user).lower() for user in members]
         if addusers:
-            addusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in addusers]
+            addusers = [salt.utils.win_functions.get_sam_name(
+                user).lower() for user in addusers]
         if delusers:
-            delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
+            delusers = [salt.utils.win_functions.get_sam_name(
+                user).lower() for user in delusers]
 
     change = {}
     if gid:
-       try:
-           gid = int(gid)
-           if lgrp['gid'] != gid:
+        try:
+            gid = int(gid)
+            if lgrp['gid'] != gid:
                 change['gid'] = gid
-       except (TypeError, ValueError):
-           ret['result'] = False
-           ret['comment'] = 'Invalid gid'
-           return ret 
+        except (TypeError, ValueError):
+            ret['result'] = False
+            ret['comment'] = 'Invalid gid'
+            return ret
 
     if members:
         # -- if new member list if different than the current
@@ -213,7 +216,7 @@ def present(name,
         # Clear cached group data
         sys.modules[
             __salt__['test.ping'].__module__
-            ].__context__.pop('group.getent', None)
+        ].__context__.pop('group.getent', None)
         changes = _changes(name,
                            gid,
                            addusers,
