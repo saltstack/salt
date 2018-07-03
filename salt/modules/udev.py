@@ -170,6 +170,7 @@ def exportdb():
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' udev.exportdb
     '''
 

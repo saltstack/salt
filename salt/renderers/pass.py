@@ -1,44 +1,51 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Pass Renderer for Salt
+======================
 
 [pass](https://www.passwordstore.org/)
 
 .. versionadded:: 2017.7.0
 
-# Setup
-__Note__: `<user>` needs to be replaced with the user salt-master will be
-running as
+Setup
+-----
 
-1. Have private gpg loaded into `user`'s gpg keyring
-   * Example salt code
-        ```
-        load_private_gpg_key:
-          cmd.run:
-            - name: gpg --import <location_of_private_gpg_key>
-            - unless: gpg --list-keys '<gpg_name>'
-        ```
-1. Said private key's public key should have been used when encrypting pass
-entries that are of interest for pillar data
-1. Fetch and keep local pass git repo up-to-date
-   * Example salt code
-        ```
-        update_pass:
-          git.latest:
-            - force_reset: True
-            - name: <git_repo>
-            - target: /<user>/.password-store
-            - identity: <location_of_ssh_private_key>
-            - require:
-              - cmd: load_private_gpg_key
-        ```
-1. Install pass binary
-   * Example salt code
-        ```
-        pass:
-          pkg.installed
-        ```
-"""
+.. note::
+    ``<user>`` needs to be replaced with the user salt-master will be running
+    as
+
+1. Have private gpg loaded into `user`'s gpg keyring. Example:
+
+   .. code-block:: yaml
+
+       load_private_gpg_key:
+         cmd.run:
+           - name: gpg --import <location_of_private_gpg_key>
+           - unless: gpg --list-keys '<gpg_name>'
+
+2. Said private key's public key should have been used when encrypting pass
+   entries that are of interest for pillar data.
+
+3. Fetch and keep local pass git repo up-to-date
+
+   .. code-block:: yaml
+
+       update_pass:
+         git.latest:
+           - force_reset: True
+           - name: <git_repo>
+           - target: /<user>/.password-store
+           - identity: <location_of_ssh_private_key>
+           - require:
+             - cmd: load_private_gpg_key
+
+4. Install pass binary
+
+   .. code-block:: yaml
+
+       pass:
+         pkg.installed
+'''
 
 # Import python libs
 from __future__ import absolute_import

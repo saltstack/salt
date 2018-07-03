@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Thomas Jackson <jacksontj.89@gmail.com>`
+    :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 '''
 
 # Import python libs

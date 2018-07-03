@@ -13,6 +13,7 @@ be configured in either the minion or master configuration file. This profile
 requires very little. For example:
 
 .. code-block:: yaml
+
     myconsul:
       driver: consul
       host: 127.0.0.1

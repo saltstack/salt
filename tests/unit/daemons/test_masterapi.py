@@ -2,12 +2,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt libs
 import salt.config
 import salt.daemons.masterapi as masterapi
 
 # Import Salt Testing Libs
+from tests.support.paths import TMP_CONF_DIR
 from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
@@ -33,7 +35,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(None)
+        opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 

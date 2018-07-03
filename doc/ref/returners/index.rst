@@ -71,9 +71,9 @@ Other optional functions can be included to add support for
         '''
         # Get a redis connection
         serv = redis.Redis(
-                    host='redis-serv.example.com',
-                    port=6379,
-                    db='0')
+            host='redis-serv.example.com',
+            port=6379,
+            db='0')
         serv.sadd("%(id)s:jobs" % ret, ret['jid'])
         serv.set("%(jid)s:%(id)s" % ret, json.dumps(ret['return']))
         serv.sadd('jobs', ret['jid'])
@@ -349,7 +349,7 @@ infrastructure, all events seen by a salt master may be logged to one or
 more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to the returner(s) which should be designated as the handler 
+master config to the returner(s) which should be designated as the handler
 for event returns.
 
 .. note::

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Dave Rawks (dave@pandora.com)`
+    :codeauthor: Dave Rawks (dave@pandora.com)
 
 
     tests.unit.modules.parted_test

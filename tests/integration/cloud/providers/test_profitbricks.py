@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Ethan Devenport <ethand@stackpointcloud.com>`
+    :codeauthor: Ethan Devenport <ethand@stackpointcloud.com>
 '''
 
 # Import Python Libs

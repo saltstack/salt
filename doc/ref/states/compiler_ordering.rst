@@ -1,3 +1,5 @@
+.. _compiler-ordering:
+
 =====================================
 Understanding State Compiler Ordering
 =====================================
