@@ -212,6 +212,7 @@ import logging
 from salt._compat import ElementTree as ET
 import salt.exceptions
 import salt.utils.xmlutil as xml
+from salt.ext import six
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['panos']
@@ -366,18 +367,18 @@ def call(payload=None):
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
 
-    if str(r['status']) not in ['200', '201', '204']:
-        if str(r['status']) == '400':
+    if six.text_type(r['status']) not in ['200', '201', '204']:
+        if six.text_type(r['status']) == '400':
             raise salt.exceptions.CommandExecutionError(
                 "The server cannot process the request due to a client error.")
-        elif str(r['status']) == '401':
+        elif six.text_type(r['status']) == '401':
             raise salt.exceptions.CommandExecutionError(
                 "The server cannot process the request because it lacks valid authentication "
                 "credentials for the target resource.")
-        elif str(r['status']) == '403':
+        elif six.text_type(r['status']) == '403':
             raise salt.exceptions.CommandExecutionError(
                 "The server refused to authorize the request.")
-        elif str(r['status']) == '404':
+        elif six.text_type(r['status']) == '404':
             raise salt.exceptions.CommandExecutionError(
                 "The requested resource could not be found.")
         else:
