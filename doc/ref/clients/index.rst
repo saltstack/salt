@@ -89,7 +89,7 @@ Salt Caller
     :members: cmd
 
 Salt Proxy Caller
------------
+-----------------
 
 .. autoclass:: salt.client.ProxyCaller
     :members: cmd

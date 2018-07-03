@@ -3782,7 +3782,7 @@ class ProxyMinion(Minion):
 class SProxyMinion(SMinion):
     '''
     Create an object that has loaded all of the minion module functions,
-    grains, modules, returners etc.  The SMinion allows developers to
+    grains, modules, returners etc.  The SProxyMinion allows developers to
     generate all of the salt minion functions and present them with these
     functions for general use.
     '''
@@ -3825,6 +3825,8 @@ class SProxyMinion(SMinion):
 
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=False, proxy=self.proxy)
         self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
+        self.matcher = Matcher(self.opts, self.functions)
+        self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
         fq_proxyname = self.opts['proxy']['proxytype']
