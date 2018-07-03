@@ -254,7 +254,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                          os_type=None, arch=None,
                                          disk=None, disks=None, nic=None, interfaces=None,
                                          graphics=None, hypervisor=None,
-                                         seed=True, install=True, pub_key=None, priv_key=None)
+                                         seed=True, install=True, pub_key=None, priv_key=None,
+                                         connection=None, username=None, password=None)
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.vm_state': MagicMock(side_effect=CommandExecutionError('not found')),
