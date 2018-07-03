@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Python Libs
@@ -24,7 +24,7 @@ from tests.support import win_installer
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
-TIMEOUT = 1000
+TIMEOUT = 1200
 
 
 class EC2Test(ShellCase):
@@ -118,7 +118,7 @@ class EC2Test(ShellCase):
         self.INSTALLER = self._ensure_installer()
 
     def override_profile_config(self, name, data):
-        conf_path = os.path.join(self.get_config_dir(), 'cloud.profiles.d', 'ec2.conf')
+        conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
         with salt.utils.files.fopen(conf_path, 'r') as fp:
             conf = yaml.safe_load(fp)
         conf[name].update(data)
@@ -132,7 +132,7 @@ class EC2Test(ShellCase):
         returned.
         '''
         src = os.path.join(FILES, name)
-        dst = os.path.join(self.get_config_dir(), name)
+        dst = os.path.join(self.config_dir, name)
         with salt.utils.files.fopen(src, 'rb') as sfp:
             with salt.utils.files.fopen(dst, 'wb') as dfp:
                 dfp.write(sfp.read())

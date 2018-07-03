@@ -10,17 +10,17 @@ Beacon to fire events at login of users as registered in the wtmp file
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals
+import datetime
 import logging
 import os
 import struct
-import time
 
 # Import salt libs
 import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import map
 # pylint: enable=import-error
@@ -102,8 +102,8 @@ def _check_time_range(time_range, now):
     Check time range
     '''
     if _TIME_SUPPORTED:
-        _start = int(time.mktime(dateutil_parser.parse(time_range['start']).timetuple()))
-        _end = int(time.mktime(dateutil_parser.parse(time_range['end']).timetuple()))
+        _start = dateutil_parser.parse(time_range['start'])
+        _end = dateutil_parser.parse(time_range['end'])
 
         return bool(_start <= now <= _end)
     else:
@@ -248,7 +248,7 @@ def beacon(config):
         else:
             fp_.seek(loc)
         while True:
-            now = int(time.time())
+            now = datetime.datetime.now()
             raw = fp_.read(SIZE)
             if len(raw) != SIZE:
                 return ret
@@ -257,7 +257,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], salt.ext.six.string_types):
+                if isinstance(event[field], six.string_types):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip('\x00')

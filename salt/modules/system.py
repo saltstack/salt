@@ -256,10 +256,10 @@ def get_system_time(utc_offset=None):
     Get the system time.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
 
@@ -290,10 +290,10 @@ def set_system_time(newtime, utc_offset=None):
         Meaning you may have to quote the text twice from the command line.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
 
@@ -317,10 +317,10 @@ def get_system_date_time(utc_offset=None):
     Get the system date/time.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system time in YYYY-MM-DD hh:mm:ss format.
     :rtype: str
 
@@ -358,10 +358,10 @@ def set_system_date_time(years=None,
     :param int minutes: Minutes digit: 0 - 59
     :param int seconds: Seconds digit: 0 - 59
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: True if successful. Otherwise False.
     :rtype: bool
 
@@ -410,10 +410,10 @@ def get_system_date(utc_offset=None):
     Get the system date
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system date.
     :rtype: str
 
@@ -432,7 +432,8 @@ def set_system_date(newdate, utc_offset=None):
     Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
-        The date to set. Can be any of the following formats
+        The date to set. Can be any of the following formats:
+
         - YYYY-MM-DD
         - MM-DD-YYYY
         - MM-DD-YY
@@ -465,9 +466,9 @@ def set_system_date(newdate, utc_offset=None):
 # Note that _FixedOffset(0) is a way to build a UTC tzinfo object.
 
 class _FixedOffset(tzinfo):
-    """
+    '''
     Fixed offset in minutes east from UTC.
-    """
+    '''
 
     def __init__(self, offset):
         super(self.__class__, self).__init__()

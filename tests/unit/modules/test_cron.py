@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: Mike Place <mp@saltstack.com>
 '''
 
 # Import python libs
@@ -13,7 +13,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 # Import Salt libs
 import salt.modules.cron as cron
-from salt.ext.six.moves import builtins, StringIO
+from salt.ext.six.moves import builtins, range, StringIO
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
@@ -31,6 +31,12 @@ STUB_CRON_SPACES = """
 TEST_VAR="a string with plenty of spaces"
 # SALT_CRON_IDENTIFIER:echo "must  be  double  spaced"
 11 * * * * echo "must  be  double  spaced"
+"""
+STUB_AT_SIGN = """
+# Lines below here are managed by Salt, do not edit
+# SALT_CRON_IDENTIFIER:echo "cron with @ sign"
+@daily echo "cron with @ sign"
+@daily
 """
 
 L = '# Lines below here are managed by Salt, do not edit\n'
@@ -545,6 +551,21 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     'special': []}
             self.assertEqual(eret, ret)
 
+    def test_cron_at_sign(self):
+        with patch.dict(cron.__grains__, {'os': None}), \
+                patch('salt.modules.cron.raw_cron',
+                      MagicMock(return_value=STUB_AT_SIGN)):
+            ret = cron.list_tab('root')
+            eret = {'crons': [],
+                    'env': [],
+                    'pre': [''],
+                    'special': [{u'cmd': u'echo "cron with @ sign"',
+                                 u'comment': u'',
+                                 u'commented': False,
+                                 u'identifier': u'echo "cron with @ sign"',
+                                 u'spec': u'@daily'}]}
+            self.assertDictEqual(eret, ret)
+
     def test__load_tab(self):
         with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
                 patch('salt.modules.cron.raw_cron',
@@ -935,7 +956,17 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                                     month=STUB_CRON_TIMESTAMP['month'])
         self.assertDictEqual(ret, STUB_CRON_TIMESTAMP)
 
-    ## FIXME: More sophisticated _get_cron_date_time checks should be added here.
+    def test__get_cron_date_time_daymonth_max(self):
+        ret = cron._get_cron_date_time(minute='random',
+                                       hour='random',
+                                       daymonth='random',
+                                       dayweek='random',
+                                       month='random')
+        self.assertTrue(int(ret['minute']) in range(0, 60))
+        self.assertTrue(int(ret['hour']) in range(0, 24))
+        self.assertTrue(int(ret['daymonth']) in range(1, 32))
+        self.assertTrue(int(ret['dayweek']) in range(0, 8))
+        self.assertTrue(int(ret['month']) in range(1, 13))
 
     def test_set_job(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -952,6 +983,33 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                                   '# WERE YOU LOOKING FOR ME?\n',
                                   '1 2 3 4 5 /bin/echo NOT A DROID\n'])
             cron._write_cron_lines.call_args.assert_called_with(expected_call)
+
+    def test_rm_special(self):
+        with patch.dict(cron.__grains__, {'os': None}), \
+                patch('salt.modules.cron._write_cron_lines',
+                      new=MagicMock(return_value={'retcode': False})), \
+                              patch('salt.modules.cron.raw_cron',
+                                    new=MagicMock(return_value=STUB_AT_SIGN)):
+            ret = cron.rm_special('root', 'echo "cron with @ sign"', special='@daily', identifier='echo "cron with @ sign"')
+            self.assertEqual('removed', ret)
+
+    def test_rm_special_default_special(self):
+        with patch.dict(cron.__grains__, {'os': None}), \
+                patch('salt.modules.cron._write_cron_lines',
+                      new=MagicMock(return_value={'retcode': False})), \
+                              patch('salt.modules.cron.raw_cron',
+                                    new=MagicMock(return_value=STUB_AT_SIGN)):
+            ret = cron.rm_special('root', 'echo "cron with @ sign"', identifier='echo "cron with @ sign"')
+            self.assertEqual('removed', ret)
+
+    def test_rm_special_absent(self):
+        with patch.dict(cron.__grains__, {'os': None}), \
+                patch('salt.modules.cron._write_cron_lines',
+                      new=MagicMock(return_value={'retcode': False})), \
+                              patch('salt.modules.cron.raw_cron',
+                                    new=MagicMock(return_value=STUB_AT_SIGN)):
+            ret = cron.rm_special('root', 'echo "there is no job"', identifier='echo "there is no job"')
+            self.assertEqual('absent', ret)
 
     def test_rm_job_is_absent(self):
         with patch.dict(cron.__grains__, {'os': None}), \

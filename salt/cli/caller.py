@@ -120,7 +120,7 @@ class BaseCaller(object):
         '''
         Print out the grains
         '''
-        grains = salt.loader.grains(self.opts)
+        grains = self.minion.opts.get('grains') or salt.loader.grains(self.opts)
         salt.output.display_output({'local': grains}, 'grains', self.opts)
 
     def run(self):

@@ -281,6 +281,10 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
             ),
             'priv': priv,
+            'priv_passwd': self.opts.get(
+                'ssh_priv_passwd',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_priv_passwd']
+            ),
             'timeout': self.opts.get(
                 'ssh_timeout',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
@@ -824,6 +828,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
+            priv_passwd=None,
             timeout=30,
             sudo=False,
             tty=False,
@@ -885,6 +890,7 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
+                'priv_passwd': priv_passwd,
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty,
@@ -1243,7 +1249,10 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             shim_tmp_file.write(salt.utils.stringutils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)).decode('ascii'), extension)
+        target_shim_file = '.{0}.{1}'.format(
+            binascii.hexlify(os.urandom(6)).decode('ascii'),
+            extension
+        )
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
@@ -1387,6 +1396,30 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
 
+        def _version_mismatch_error():
+            messages = {
+                2: {
+                    6: 'Install Python 2.7 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.7 / Python 3 targets',
+                    7: 'Install Python 2.6 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.6 / Python 3 targets',
+                },
+                3: {
+                    'default': '- Install Python 2.6/2.7 Salt dependencies on the Salt SSH \n'
+                               '  master to interact with Python 2.6/2.7 targets\n'
+                               '- Install Python 3 on the target machine(s)',
+                },
+                'default': 'Matching major/minor Python release (>=2.6) needed both on the Salt SSH \n'
+                           'master and target machine',
+            }
+            major, minor = sys.version_info[:2]
+            help_msg = (
+                messages.get(major, {}).get(minor)
+                or messages.get(major, {}).get('default')
+                or messages['default']
+            )
+            return 'Python version error. Recommendation(s) follow:\n' + help_msg
+
         errors = [
             (
                 (),
@@ -1396,7 +1429,7 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
+                _version_mismatch_error()
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),

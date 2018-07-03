@@ -29,7 +29,7 @@ def iter_installers(content):
         x = m.groups()[0]
         if not x.startswith(PREFIX):
             continue
-        if x.endswith('zip'):
+        if x.endswith(('zip', 'sha256')):
             continue
         if installer:
             if x != installer + '.md5':
@@ -54,7 +54,8 @@ def latest_version(repo=REPO):
     '''
     Return the latest version found on the salt repository webpage.
     '''
-    for name, md5 in iter_installers(requests.get(repo).content):
+    content = requests.get(repo).content.decode('utf-8')
+    for name, md5 in iter_installers(content):
         pass
     return split_installer(name)[0]
 

@@ -1087,11 +1087,9 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1329,11 +1327,9 @@ def shell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1544,11 +1540,9 @@ def run_stdout(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1742,11 +1736,9 @@ def run_stderr(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1964,11 +1956,9 @@ def run_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2153,11 +2143,9 @@ def retcode(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2401,11 +2389,9 @@ def script(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2647,11 +2633,9 @@ def script_retcode(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2970,7 +2954,8 @@ def run_chroot(root,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
-CLI Example:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3453,11 +3438,9 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -3757,11 +3740,9 @@ def powershell_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -4016,11 +3997,9 @@ def run_bg(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 

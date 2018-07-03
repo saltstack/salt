@@ -320,8 +320,8 @@ def list_tasks(location='\\'):
     List all tasks located in a specific location in the task scheduler.
 
     :param str location: A string value representing the folder from which you
-    want to list tasks. Default is '\\' which is the root for the task
-    scheduler (C:\Windows\System32\tasks).
+        want to list tasks. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :return: Returns a list of tasks.
     :rtype: list
@@ -353,8 +353,8 @@ def list_folders(location='\\'):
     List all folders located in a specific location in the task scheduler.
 
     :param str location: A string value representing the folder from which you
-    want to list tasks. Default is '\\' which is the root for the task
-    scheduler (C:\Windows\System32\tasks).
+        want to list tasks. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :return: Returns a list of folders.
     :rtype: list
@@ -388,8 +388,8 @@ def list_triggers(name, location='\\'):
     :param str name: The name of the task for which list triggers.
 
     :param str location: A string value representing the location of the task
-    from which to list triggers. Default is '\\' which is the root for the task
-    scheduler (C:\Windows\System32\tasks).
+        from which to list triggers. Default is '\\' which is the root for the
+        task scheduler (C:\Windows\System32\tasks).
 
     :return: Returns a list of triggers.
     :rtype: list
@@ -424,8 +424,8 @@ def list_actions(name, location='\\'):
     :param str name: The name of the task for which list actions.
 
     :param str location: A string value representing the location of the task
-    from which to list actions. Default is '\\' which is the root for the task
-    scheduler (C:\Windows\System32\tasks).
+        from which to list actions. Default is '\\' which is the root for the
+        task scheduler (C:\Windows\System32\tasks).
 
     :return: Returns a list of actions.
     :rtype: list
@@ -463,23 +463,24 @@ def create_task(name,
     Create a new task in the designated location. This function has many keyword
     arguments that are not listed here. For additional arguments see:
 
-    - py:function::`edit_task`
-    - py:function::`add_action`
-    - py:function::`add_trigger`
+    - :py:func:`edit_task`
+    - :py:func:`add_action`
+    - :py:func:`add_trigger`
 
     :param str name: The name of the task. This will be displayed in the task
-    scheduler.
+        scheduler.
 
     :param str location: A string value representing the location in which to
-    create the task. Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        create the task. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :param str user_name: The user account under which to run the task. To
-    specify the 'System' account, use 'System'. The password will be ignored.
+        specify the 'System' account, use 'System'. The password will be
+        ignored.
 
     :param str password: The password to use for authentication. This should set
-    the task to run whether the user is logged in or not, but is currently not
-    working.
+        the task to run whether the user is logged in or not, but is currently
+        not working.
 
     :param bool force: If the task exists, overwrite the existing task.
 
@@ -545,24 +546,25 @@ def create_task_from_xml(name,
     Create a task based on XML. Source can be a file or a string of XML.
 
     :param str name: The name of the task. This will be displayed in the task
-    scheduler.
+        scheduler.
 
     :param str location: A string value representing the location in which to
-    create the task. Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        create the task. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :param str xml_text: A string of xml representing the task to be created.
-    This will be overridden by `xml_path` if passed.
+        This will be overridden by `xml_path` if passed.
 
     :param str xml_path: The path to an XML file on the local system containing
-    the xml that defines the task. This will override `xml_text`
+        the xml that defines the task. This will override `xml_text`
 
     :param str user_name: The user account under which to run the task. To
-    specify the 'System' account, use 'System'. The password will be ignored.
+        specify the 'System' account, use 'System'. The password will be
+        ignored.
 
     :param str password: The password to use for authentication. This should set
-    the task to run whether the user is logged in or not, but is currently not
-    working.
+        the task to run whether the user is logged in or not, but is currently
+        not working.
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -641,11 +643,11 @@ def create_folder(name, location='\\'):
     Create a folder in which to create tasks.
 
     :param str name: The name of the folder. This will be displayed in the task
-    scheduler.
+        scheduler.
 
     :param str location: A string value representing the location in which to
-    create the folder. Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        create the folder. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -711,40 +713,44 @@ def edit_task(name=None,
     Edit the parameters of a task. Triggers and Actions cannot be edited yet.
 
     :param str name: The name of the task. This will be displayed in the task
-    scheduler.
+        scheduler.
 
     :param str location: A string value representing the location in which to
-    create the task. Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        create the task. Default is '\\' which is the root for the task
+        scheduler (C:\Windows\System32\tasks).
 
     :param str user_name: The user account under which to run the task. To
-    specify the 'System' account, use 'System'. The password will be ignored.
+        specify the 'System' account, use 'System'. The password will be
+        ignored.
 
     :param str password: The password to use for authentication. This should set
-    the task to run whether the user is logged in or not, but is currently not
-    working.
+        the task to run whether the user is logged in or not, but is currently
+        not working.
 
-    .. note:: The combination of user_name and password determine how the task
-    runs. For example, if a username is passed without at password the task will
-    only run when the user is logged in. If a password is passed as well the
-    task will run whether the user is logged on or not. If you pass 'System' as
-    the username the task will run as the system account (the password parameter
-    is ignored.
+    .. note::
+        The combination of user_name and password determine how the task runs.
+        For example, if a username is passed without at password the task will
+        only run when the user is logged in. If a password is passed as well
+        the task will run whether the user is logged on or not. If you pass
+        'System' as the username the task will run as the system account (the
+        password parameter is ignored.
 
     :param str description: A string representing the text that will be
-    displayed in the description field in the task scheduler.
+        displayed in the description field in the task scheduler.
 
     :param bool enabled: A boolean value representing whether or not the task is
-    enabled.
+        enabled.
 
     :param bool hidden: A boolean value representing whether or not the task is
-    hidden.
+        hidden.
 
     :param bool run_if_idle: Boolean value that indicates that the Task
-    Scheduler will run the task only if the computer is in an idle state.
+        Scheduler will run the task only if the computer is in an idle state.
 
     :param str idle_duration: A value that indicates the amount of time that the
-    computer must be in an idle state before the task is run. Valid values are:
+        computer must be in an idle state before the task is run. Valid values
+        are:
+
     - 1 minute
     - 5 minutes
     - 10 minutes
@@ -753,8 +759,9 @@ def edit_task(name=None,
     - 1 hour
 
     :param str idle_wait_timeout: A value that indicates the amount of time that
-    the Task Scheduler will wait for an idle condition to occur. Valid values
-    are:
+        the Task Scheduler will wait for an idle condition to occur. Valid
+        values are:
+
     - Do not wait
     - 1 minute
     - 5 minutes
@@ -765,39 +772,40 @@ def edit_task(name=None,
     - 2 hours
 
     :param bool idle_stop_on_end: Boolean value that indicates that the Task
-    Scheduler will terminate the task if the idle condition ends before the task
-    is completed.
+        Scheduler will terminate the task if the idle condition ends before the
+        task is completed.
 
     :param bool idle_restart: Boolean value that indicates whether the task is
-    restarted when the computer cycles into an idle condition more than once.
+        restarted when the computer cycles into an idle condition more than
+        once.
 
     :param bool ac_only: Boolean value that indicates that the Task Scheduler
-    will launch the task only while on AC power.
+        will launch the task only while on AC power.
 
     :param bool stop_if_on_batteries: Boolean value that indicates that the task
-    will be stopped if the computer begins to run on battery power.
+        will be stopped if the computer begins to run on battery power.
 
     :param bool wake_to_run: Boolean value that indicates that the Task
-    Scheduler will wake the computer when it is time to run the task.
+        Scheduler will wake the computer when it is time to run the task.
 
     :param bool run_if_network: Boolean value that indicates that the Task
-    Scheduler will run the task only when a network is available.
+        Scheduler will run the task only when a network is available.
 
     :param guid network_id: GUID value that identifies a network profile.
 
     :param str network_name: Sets the name of a network profile. The name is
-    used for display purposes.
+        used for display purposes.
 
     :param bool allow_demand_start: Boolean value that indicates that the task
-    can be started by using either the Run command or the Context menu.
+        can be started by using either the Run command or the Context menu.
 
     :param bool start_when_available: Boolean value that indicates that the Task
-    Scheduler can start the task at any time after its scheduled time has
-    passed.
+        Scheduler can start the task at any time after its scheduled time has
+        passed.
 
     :param restart_every: A value that specifies the interval between task
-    restart attempts. Valid values are:
-    :type: bool str
+        restart attempts. Valid values are:
+
     - False (to disable)
     - 1 minute
     - 5 minutes
@@ -808,11 +816,11 @@ def edit_task(name=None,
     - 2 hours
 
     :param int restart_count: The number of times the Task Scheduler will
-    attempt to restart the task. Valid values are integers 1 - 999.
+        attempt to restart the task. Valid values are integers 1 - 999.
 
     :param execution_time_limit: The amount of time allowed to complete the
-    task. Valid values are:
-    :type: bool str
+        task. Valid values are:
+
     - False (to disable)
     - 1 hour
     - 2 hours
@@ -823,12 +831,12 @@ def edit_task(name=None,
     - 3 days
 
     :param bool force_stop: Boolean value that indicates that the task may be
-    terminated by using TerminateProcess.
+        terminated by using TerminateProcess.
 
     :param delete_after: The amount of time that the Task Scheduler will
-    wait before deleting the task after it expires. Requires a trigger with an
-    expiration date. Valid values are:
-    :type: bool str
+        wait before deleting the task after it expires. Requires a trigger with
+        an expiration date. Valid values are:
+
     - False (to disable)
     - Immediately
     - 30 days
@@ -837,7 +845,8 @@ def edit_task(name=None,
     - 365 days
 
     :param str multiple_instances: Sets the policy that defines how the Task
-    Scheduler deals with multiple instances of the task. Valid values are:
+        Scheduler deals with multiple instances of the task. Valid values are:
+
     - Parallel
     - Queue
     - No New Instance
@@ -1019,8 +1028,8 @@ def delete_task(name, location='\\'):
     :param str name: The name of the task to delete.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1058,9 +1067,9 @@ def delete_folder(name, location='\\'):
 
     :param str name: The name of the folder to delete.
 
-    :param str location: A string value representing the location of the folder.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+    :param str location: A string value representing the location of the
+        folder.  Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1100,8 +1109,8 @@ def run(name, location='\\'):
     :param str name: The name of the task to run.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1139,8 +1148,8 @@ def run_wait(name, location='\\'):
     :param str name: The name of the task to run.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1196,8 +1205,8 @@ def stop(name, location='\\'):
     :param str name: The name of the task to stop.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1235,15 +1244,17 @@ def status(name, location='\\'):
     :param str name: The name of the task for which to return the status
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: The current status of the task. Will be one of the following:
+
     - Unknown
     - Disabled
     - Queued
     - Ready
     - Running
+
     :rtype: string
 
     CLI Example:
@@ -1275,8 +1286,8 @@ def info(name, location='\\'):
     :param str name: The name of the task for which to return the status
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return:
     :rtype: dict
@@ -1413,41 +1424,39 @@ def add_action(name=None,
     :param str name: The name of the task to which to add the action.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :param str action_type: The type of action to add. There are three action
-    types. Each one requires its own set of Keyword Arguments (kwargs). Valid
-    values are:
-    - Execute
-    - Email
-    - Message
+        types. Each one requires its own set of Keyword Arguments (kwargs). Valid
+        values are:
 
-    **kwargs**
+        - Execute
+        - Email
+        - Message
 
-    Required kwargs for each value:
+    Required arguments for each action_type:
 
-    *Execute*
-    Execute a command or an executable.
+    **Execute** - Execute a command or an executable
 
     :param str cmd: (required) The command / executable to run.
 
     :param str arguments: (optional) Arguments to be passed to the command /
-    executable. To launch a script the first command will need to be the
-    interpreter for the script. For example, to run a vbscript you would
-    pass `cscript.exe` in the `cmd` parameter and pass the script in the
-    `arguments` parameter as follows:
+        executable. To launch a script the first command will need to be the
+        interpreter for the script. For example, to run a vbscript you would
+        pass `cscript.exe` in the `cmd` parameter and pass the script in the
+        `arguments` parameter as follows:
 
-    - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
+        - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
 
-    Batch files do not need an interpreter and may be passed to the cmd
-    parameter directly.
+        Batch files do not need an interpreter and may be passed to the cmd
+        parameter directly.
 
     :param str start_in: (optional) The current working directory for the
-    command.
+        command.
 
-    *Email*
-    Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
+    **Email** - Send and email. Requires ``server``, ``from``, and ``to`` or
+    ``cc``.
 
     :param str from: The sender
     :param str reply_to: Who to reply to
@@ -1458,12 +1467,12 @@ def add_action(name=None,
     :param str body: The Message Body of the email
     :param str server: The server used to send the email
     :param list attachments: A list of attachments. These will be the paths to
-    the files to attach. ie:
-    attachments=['C:\attachment1.txt', 'C:\attachment2.txt']
+        the files to attach. ie: ``attachments="['C:\attachment1.txt',
+        'C:\attachment2.txt']"``
 
-    *Message*
-    Display a dialog box. The task must be set to "Run only when user is logged
-    on" in order for the dialog box to display. Both parameters are required.
+    **Message** - Display a dialog box. The task must be set to "Run only when
+    user is logged on" in order for the dialog box to display. Both parameters
+    are required.
 
     :param str title: The dialog box title.
     :param str message: The dialog box message body
@@ -1633,15 +1642,16 @@ def add_trigger(name=None,
                 delay=None,
                 **kwargs):
     r'''
-
     :param str name: The name of the task to which to add the trigger.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
-    :param str trigger_type: The type of trigger to create. This is defined when
-    the trigger is created and cannot be changed later. Options are as follows:
+    :param str trigger_type: The type of trigger to create. This is defined
+        when the trigger is created and cannot be changed later. Options are as
+        follows:
+
     - Event
     - Once
     - Daily
@@ -1655,11 +1665,12 @@ def add_trigger(name=None,
     - OnSessionChange
 
     :param bool trigger_enabled: Boolean value that indicates whether the
-    trigger is enabled.
+        trigger is enabled.
 
     :param str start_date: The date when the trigger is activated. If no value
-    is passed, the current date will be used. Can be one of the following
-    formats:
+        is passed, the current date will be used. Can be one of the following
+        formats:
+
     - %Y-%m-%d
     - %m-%d-%y
     - %m-%d-%Y
@@ -1668,15 +1679,17 @@ def add_trigger(name=None,
     - %Y/%m/%d
 
     :param str start_time: The time when the trigger is activated. If no value
-    is passed, midnight will be used. Can be one of the following formats:
+        is passed, midnight will be used. Can be one of the following formats:
+
     - %I:%M:%S %p
     - %I:%M %p
     - %H:%M:%S
     - %H:%M
 
     :param str end_date: The date when the trigger is deactivated. The trigger
-    cannot start the task after it is deactivated. Can be one of the following
-    formats:
+        cannot start the task after it is deactivated. Can be one of the
+        following formats:
+
     - %Y-%m-%d
     - %m-%d-%y
     - %m-%d-%Y
@@ -1685,15 +1698,17 @@ def add_trigger(name=None,
     - %Y/%m/%d
 
     :param str end_time: The time when the trigger is deactivated. If the this
-    is not passed with ``end_date`` it will be set to midnight. Can be one of
-    the following formats:
+        is not passed with ``end_date`` it will be set to midnight. Can be one
+        of the following formats:
+
     - %I:%M:%S %p
     - %I:%M %p
     - %H:%M:%S
     - %H:%M
 
     :param str random_delay: The delay time that is randomly added to the start
-    time of the trigger. Valid values are:
+        time of the trigger. Valid values are:
+
     - 30 seconds
     - 1 minute
     - 30 minutes
@@ -1702,7 +1717,8 @@ def add_trigger(name=None,
     - 1 day
 
     :param str repeat_interval: The amount of time between each restart of the
-    task. Valid values are:
+        task. Valid values are:
+
     - 5 minutes
     - 10 minutes
     - 15 minutes
@@ -1710,7 +1726,8 @@ def add_trigger(name=None,
     - 1 hour
 
     :param str repeat_duration: How long the pattern is repeated. Valid values
-    are:
+        are:
+
     - Indefinitely
     - 15 minutes
     - 30 minutes
@@ -1719,11 +1736,12 @@ def add_trigger(name=None,
     - 1 day
 
     :param bool repeat_stop_at_duration_end: Boolean value that indicates if a
-    running instance of the task is stopped at the end of the repetition
-    pattern duration.
+        running instance of the task is stopped at the end of the repetition
+        pattern duration.
 
     :param str execution_time_limit: The maximum amount of time that the task
-    launched by the trigger is allowed to run. Valid values are:
+        launched by the trigger is allowed to run. Valid values are:
+
     - 30 minutes
     - 1 hour
     - 2 hours
@@ -1734,14 +1752,15 @@ def add_trigger(name=None,
     - 3 days (default)
 
     :param str delay: The time the trigger waits after its activation to start the task.
-    Valid values are:
-    - 15 seconds
-    - 30 seconds
-    - 1 minute
-    - 30 minutes
-    - 1 hour
-    - 8 hours
-    - 1 day
+        Valid values are:
+
+        - 15 seconds
+        - 30 seconds
+        - 1 minute
+        - 30 minutes
+        - 1 hour
+        - 8 hours
+        - 1 day
 
     **kwargs**
 
@@ -1749,65 +1768,72 @@ def add_trigger(name=None,
     being defined. They are as follows:
 
     *Event*
-    :param str subscription: An event definition in xml format that fires
-    the trigger. The easiest way to get this would is to create an event in
-    windows task scheduler and then copy the xml text.
+
+    :param str subscription: An event definition in xml format that fires the
+        trigger. The easiest way to get this would is to create an event in
+        windows task scheduler and then copy the xml text.
 
     *Once*
+
     No special parameters required.
 
     *Daily*
+
     :param int days_interval: The interval between days in the schedule. An
-    interval of 1 produces a daily schedule. An interval of 2 produces an
-    every-other day schedule. If no interval is specified, 1 is used. Valid
-    entries are 1 - 999.
+        interval of 1 produces a daily schedule. An interval of 2 produces an
+        every-other day schedule. If no interval is specified, 1 is used. Valid
+        entries are 1 - 999.
 
     *Weekly*
+
     :param int weeks_interval: The interval between weeks in the schedule.
-    An interval of 1 produces a weekly schedule. An interval of 2 produces
-    an every-other week schedule. If no interval is specified, 1 is used.
-    Valid entries are 1 - 52.
+        An interval of 1 produces a weekly schedule. An interval of 2 produces
+        an every-other week schedule. If no interval is specified, 1 is used.
+        Valid entries are 1 - 52.
 
     param list days_of_week: Sets the days of the week on which the task
-    runs. Should be a list. ie: ['Monday','Wednesday','Friday']. Valid
-    entries are the names of the days of the week.
+        runs. Should be a list. ie: ['Monday','Wednesday','Friday']. Valid
+        entries are the names of the days of the week.
 
     *Monthly*
+
     :param list months_of_year: Sets the months of the year during which the
-    task runs. Should be a list. ie: ['January','July']. Valid entries are
-    the full names of all the months.
+        task runs. Should be a list. ie: ['January','July']. Valid entries are
+        the full names of all the months.
 
     :param list days_of_month: Sets the days of the month during which the
-    task runs. Should be a list. ie: [1, 15, 'Last']. Options are all days
-    of the month 1 - 31 and the word 'Last' to indicate the last day of the
-    month.
+        task runs. Should be a list. ie: [1, 15, 'Last']. Options are all days
+        of the month 1 - 31 and the word 'Last' to indicate the last day of the
+        month.
 
     :param bool last_day_of_month: Boolean value that indicates that the
-    task runs on the last day of the month regardless of the actual date of
-    that day.
+        task runs on the last day of the month regardless of the actual date of
+        that day.
 
     You can set the task to run on the last day of the month by either
     including the word 'Last' in the list of days, or setting the parameter
     'last_day_of_month` equal to True.
 
     *MonthlyDay*
+
     :param list months_of_year: Sets the months of the year during which the
-    task runs. Should be a list. ie: ['January','July']. Valid entries are
-    the full names of all the months.
+        task runs. Should be a list. ie: ['January','July']. Valid entries are
+        the full names of all the months.
 
     :param list weeks_of_month: Sets the weeks of the month during which the
-    task runs. Should be a list. ie: ['First','Third']. Valid options are:
+        task runs. Should be a list. ie: ['First','Third']. Valid options are:
+
     - First
     - Second
     - Third
     - Fourth
 
-    :param bool last_week_of_month: Boolean value that indicates that the
-    task runs on the last week of the month.
+    :param bool last_week_of_month: Boolean value that indicates that the task
+        runs on the last week of the month.
 
-    :param list days_of_week: Sets the days of the week during which the
-    task runs. Should be a list. ie: ['Monday','Wednesday','Friday'].
-    Valid entries are the names of the days of the week.
+    :param list days_of_week: Sets the days of the week during which the task
+        runs. Should be a list. ie: ['Monday','Wednesday','Friday'].  Valid
+        entries are the names of the days of the week.
 
     *OnIdle*
     No special parameters required.
@@ -1822,13 +1848,15 @@ def add_trigger(name=None,
     No special parameters required.
 
     *OnSessionChange*
+
     :param str session_user_name: Sets the user for the Terminal Server
-    session. When a session state change is detected for this user, a task
-    is started. To detect session status change for any user, do not pass
-    this parameter.
+        session. When a session state change is detected for this user, a task
+        is started. To detect session status change for any user, do not pass
+        this parameter.
 
     :param str state_change: Sets the kind of Terminal Server session change
-    that would trigger a task launch. Valid options are:
+        that would trigger a task launch. Valid options are:
+
     - ConsoleConnect: When you connect to a user session (switch users)
     - ConsoleDisconnect: When you disconnect a user session (switch users)
     - RemoteConnect: When a user connects via Remote Desktop
@@ -2135,8 +2163,8 @@ def clear_triggers(name, location='\\'):
     :param str name: The name of the task from which to clear all triggers.
 
     :param str location: A string value representing the location of the task.
-    Default is '\\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+        Default is '\\' which is the root for the task scheduler
+        (C:\Windows\System32\tasks).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool

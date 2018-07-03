@@ -358,13 +358,14 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True])), \
                 patch('os.path.isdir', MagicMock(return_value=False)), \
                 patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
-            fopen_effect = [
-                mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,
-                mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
-                mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
-            ]
-            with patch('salt.utils.files.fopen') as fopen_mock:
-                fopen_mock.side_effect = fopen_effect
+            contents = {
+                '*/tmp/foo': [
+                    FILE_CONTENT['/tmp/foo']['pre'],
+                    FILE_CONTENT['/tmp/foo']['post'],
+                ],
+                '*/tmp/foo2': FILE_CONTENT['/tmp/foo2']['post'],
+            }
+            with patch('salt.utils.files.fopen', mock_open(read_data=contents)):
                 module_ret = {
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                     "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
@@ -387,12 +388,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                             "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
                         ])
                     }):
-            fopen_effect = [
-                mock_open(read_data="dummy binary").return_value,
-                mock_open(read_data="dummy binary").return_value,
-            ]
-            with patch('salt.utils.files.fopen') as fopen_mock:
-                fopen_mock.side_effect = fopen_effect
+            with patch('salt.utils.files.fopen', mock_open(read_data='dummy binary')):
                 module_ret = {
                     "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
                 }

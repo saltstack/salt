@@ -551,6 +551,9 @@ def function(
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
 
+            if m_ret is False:
+                m_func = False
+
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
