@@ -886,6 +886,10 @@ Example:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
+
 
 Recursively encodes all string elements of the list to bytes.
 
@@ -915,6 +919,9 @@ Returns:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
 
 Recursively encodes all string items in the dictionary to bytes.
 
@@ -933,6 +940,22 @@ Returns:
 
   {'a': '\xd0\x94'}
 
+
+.. jinja_ref:: tojson
+
+``tojson``
+----------
+
+.. versionadded:: 2018.3.3,Fluorine
+
+Dumps a data structure to JSON.
+
+This filter was added to provide this functionality to hosts which have a
+Jinja release older than version 2.9 installed. If Jinja 2.9 or newer is
+installed, then the upstream version of the filter will be used. See the
+`upstream docs`__ for more information.
+
+.. __: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
 .. jinja_ref:: random_hash
 
