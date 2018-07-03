@@ -637,19 +637,37 @@ def network_running(name, bridge, forward, connection=None, username=None, passw
     return ret
 
 
-def pool_define(name, connection=None, username=None, password=None, **kwargs):
+def pool_running(name,
+                 ptype=None,
+                 target=None,
+                 permissions=None,
+                 source=None,
+                 transient=False,
+                 autostart=True,
+                 connection=None,
+                 username=None,
+                 password=None):
     '''
     Defines and starts a new pool with specified arguments.
 
+    .. versionadded:: Fluorine
+
+    :param ptype: libvirt pool type
+    :param target: full path to the target device or folder. (Default: ``None``)
+    :param permissions:
+        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source:
+        dictionary containing keys matching the ``source_*`` parameters in function
+        :func:`salt.modules.virt.pool_define`.
+    :param transient:
+        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+    :param autostart:
+        Whether to start the pool when booting the host. (Default: ``True``)
+    :param start:
+        When ``True``, define and start the pool, otherwise the pool will be left stopped.
     :param connection: libvirt connection URI, overriding defaults
-
-        .. versionadded:: Fluorine
     :param username: username to connect with, overriding defaults
-
-        .. versionadded:: Fluorine
     :param password: password to connect with, overriding defaults
-
-        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -660,51 +678,73 @@ def pool_define(name, connection=None, username=None, password=None, **kwargs):
 
         pool_name:
           virt.pool_define:
-            - ptype: logical
-            - target: pool
-            - source: sda1
+            - ptype: netfs
+            - target: /mnt/cifs
+            - permissions:
+                - mode: 0770
+                - owner: 1000
+                - group: 100
+            - source:
+                - dir: samba_share
+                - hosts:
+                   one.example.com
+                   two.example.com
+                - format: cifs
             - autostart: True
-            - start: True
 
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': True,
            'comment': ''
            }
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    ptype = kwargs.pop('ptype', None)
-    target = kwargs.pop('target', None)
-    source = kwargs.pop('source', None)
-    autostart = kwargs.pop('autostart', True)
-    start = kwargs.pop('start', True)
-
     try:
-        result = __salt__['virt.pool_define_build'](name,
-                                                    ptype=ptype,
-                                                    target=target,
-                                                    source=source,
-                                                    autostart=autostart,
-                                                    start=start,
+        info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        if info:
+            if info['state'] == 'running':
+                ret['comment'] = 'Pool {0} exists and is running'.format(name)
+            else:
+                __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
+                ret['changes'][name] = 'Pool started'
+                ret['comment'] = 'Pool {0} started'.format(name)
+        else:
+            __salt__['virt.pool_define'](name,
+                                         ptype=ptype,
+                                         target=target,
+                                         permissions=permissions,
+                                         source_devices=(source or {}).get('devices', None),
+                                         source_dir=(source or {}).get('dir', None),
+                                         source_adapter=(source or {}).get('adapter', None),
+                                         source_hosts=(source or {}).get('hosts', None),
+                                         source_auth=(source or {}).get('auth', None),
+                                         source_name=(source or {}).get('name', None),
+                                         source_format=(source or {}).get('format', None),
+                                         transient=transient,
+                                         start=True,
+                                         connection=connection,
+                                         username=username,
+                                         password=password)
+            if autostart:
+                __salt__['virt.pool_set_autostart'](name,
+                                                    state='on' if autostart else 'off',
                                                     connection=connection,
                                                     username=username,
                                                     password=password)
-        if result:
-            if 'Pool exist' in result:
-                if 'Pool update' in result:
-                    ret['changes'][name] = 'Pool {0} has been updated'.format(name)
-                else:
-                    ret['comment'] = 'Pool {0} already exist'.format(name)
-            else:
-                ret['changes'][name] = 'Pool {0} has been created'.format(name)
-            ret['result'] = True
-        else:
-            ret['comment'] = 'Pool {0} created fail'.format(name)
+
+            __salt__['virt.pool_build'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+
+            __salt__['virt.pool_start'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+            ret['changes'][name] = 'Pool defined and started'
+            ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
-        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
-            ret['result'] = True
-            ret['comment'] = 'The pool already exist'
         ret['comment'] = err.get_error_message()
+        ret['result'] = False
 
     return ret
