@@ -255,7 +255,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
                                          disk=None, disks=None, nic=None, interfaces=None,
                                          graphics=None, hypervisor=None,
-                                         seed=True, install=True, pub_key=None, priv_key=None)
+                                         seed=True, install=True, pub_key=None, priv_key=None,
+                                         connection=None, username=None, password=None)
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.vm_state': MagicMock(side_effect=CommandExecutionError('not found')),

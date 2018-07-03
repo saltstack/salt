@@ -250,7 +250,9 @@ def running(name,
             install=True,
             pub_key=None,
             priv_key=None,
-            **kwargs):
+            connection=None,
+            username=None,
+            password=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -368,8 +370,6 @@ def running(name,
            'comment': '{0} is running'.format(name)
            }
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-
     try:
         try:
             __salt__['virt.vm_state'](name)
@@ -380,7 +380,6 @@ def running(name,
             else:
                 ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
-            kwargs = salt.utils.args.clean_kwargs(**kwargs)
             if image:
                 salt.utils.versions.warn_until(
                     'Sodium',
@@ -401,7 +400,9 @@ def running(name,
                                   install=install,
                                   pub_key=pub_key,
                                   priv_key=priv_key,
-                                  **kwargs)
+                                  connection=connection,
+                                  username=username,
+                                  password=password)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
@@ -567,7 +568,15 @@ def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-o
     return ret
 
 
-def network_running(name, bridge, forward, connection=None, username=None, password=None, **kwargs):
+def network_running(name,
+                    bridge,
+                    forward,
+                    vport=None,
+                    tag=None,
+                    autostart=True,
+                    connection=None,
+                    username=None,
+                    password=None):
     '''
     Defines and starts a new network with specified arguments.
 
@@ -602,11 +611,6 @@ def network_running(name, bridge, forward, connection=None, username=None, passw
            'result': True,
            'comment': ''
            }
-
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    vport = kwargs.pop('vport', None)
-    tag = kwargs.pop('tag', None)
-    autostart = kwargs.pop('autostart', True)
 
     try:
         info = __salt__['virt.network_info'](name, connection=connection, username=username, password=password)
