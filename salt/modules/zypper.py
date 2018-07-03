@@ -727,7 +727,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
                 line,
                 osarch=__grains__['osarch']
             )
-            if pkginfo is not None:
+            if pkginfo:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
                 pkgver = pkginfo.version
                 epoch = ''
