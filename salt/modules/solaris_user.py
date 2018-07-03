@@ -12,7 +12,7 @@ Manage users with the useradd command
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     import pwd
     HAS_PWD = True
@@ -54,10 +54,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': str(gecos_field[0]),
-                'roomnumber': str(gecos_field[1]),
-                'workphone': str(gecos_field[2]),
-                'homephone': str(gecos_field[3])}
+        return {'fullname': six.text_type(gecos_field[0]),
+                'roomnumber': six.text_type(gecos_field[1]),
+                'workphone': six.text_type(gecos_field[2]),
+                'homephone': six.text_type(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -76,7 +76,7 @@ def _update_gecos(name, key, value):
     Common code to change a user's GECOS information
     '''
     if not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -438,8 +438,11 @@ def list_groups(name):
 def list_users():
     '''
     Return a list of all users
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])

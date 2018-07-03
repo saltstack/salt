@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Dave Rawks (dave@pandora.com)`
+    :codeauthor: Dave Rawks (dave@pandora.com)
 
 
     tests.unit.modules.parted_test
@@ -8,7 +8,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin

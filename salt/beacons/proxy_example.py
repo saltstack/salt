@@ -10,7 +10,7 @@ Example beacon to use with salt-proxy
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import salt libs

@@ -34,7 +34,7 @@ Manage users with the pw command
 # someuser:*:1001:1001::0:0:SomeUser Name:/home/someuser:/bin/sh
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import copy
 import logging
 try:
@@ -49,7 +49,6 @@ from salt.ext import six
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
-import salt.utils.locales
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
 
@@ -84,10 +83,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
-                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
-                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
-                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.data.decode(gecos_field[0]),
+                'roomnumber': salt.utils.data.decode(gecos_field[1]),
+                'workphone': salt.utils.data.decode(gecos_field[2]),
+                'homephone': salt.utils.data.decode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -106,7 +105,7 @@ def _update_gecos(name, key, value):
     Common code to change a user's GECOS information
     '''
     if not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False

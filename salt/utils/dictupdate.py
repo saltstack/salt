@@ -5,7 +5,7 @@ http://stackoverflow.com/a/3233356
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 # Import 3rd-party libs
@@ -102,7 +102,7 @@ def merge_overwrite(obj_a, obj_b, merge_lists=False):
 
 def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
-        if renderer == 'yamlex' or renderer.startswith('yamlex_'):
+        if renderer.split('|')[-1] == 'yamlex' or renderer.startswith('yamlex_'):
             strategy = 'aggregate'
         else:
             strategy = 'recurse'
@@ -121,8 +121,10 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
         # we just do not want to log an error
         merged = merge_recurse(obj_a, obj_b)
     else:
-        log.warning('Unknown merging strategy \'{0}\', '
-                    'fallback to recurse'.format(strategy))
+        log.warning(
+            'Unknown merging strategy \'%s\', fallback to recurse',
+            strategy
+        )
         merged = merge_recurse(obj_a, obj_b)
 
     return merged

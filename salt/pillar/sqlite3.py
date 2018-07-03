@@ -46,7 +46,7 @@ Complete Example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 from contextlib import contextmanager
@@ -84,7 +84,7 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
             _opts = __opts__.get('sqlite3', {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for SQLite3 pillar {0}'.format(attr))
+                log.debug('Using default for SQLite3 pillar %s', attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -102,7 +102,7 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         try:
             yield cursor
         except sqlite3.Error as err:
-            log.exception('Error in ext_pillar SQLite3: {0}'.format(err.args))
+            log.exception('Error in ext_pillar SQLite3: %s', err.args)
         finally:
             conn.close()
 

@@ -88,16 +88,16 @@ This is the format that an inventory script needs to output to work with ansible
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import fnmatch
-import json
 import subprocess
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
 from salt.roster import get_roster_file
 
@@ -247,7 +247,7 @@ class Script(Target):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
-        self.inventory = json.loads(salt.utils.stringutils.to_str(inventory))
+        self.inventory = salt.utils.json.loads(salt.utils.stringutils.to_str(inventory))
         self.meta = self.inventory.get('_meta', {})
         self.groups = dict()
         self.hostvars = dict()

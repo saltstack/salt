@@ -16,7 +16,7 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -24,6 +24,10 @@ import logging
 # Import Salt libs
 import salt.utils.functools
 import salt.utils.platform
+
+# Import 3rd party libs
+from salt.ext import six
+
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +52,7 @@ def computer_desc(name):
         The desired computer description
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},
@@ -88,7 +92,7 @@ def computer_name(name):
         The desired computer name
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},

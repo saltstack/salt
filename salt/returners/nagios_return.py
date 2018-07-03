@@ -48,7 +48,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return nagios --return_kwargs '{"service": "service-name"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import cgi
@@ -56,12 +56,20 @@ import logging
 
 import salt.returners
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext import six
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'nagios_nrdp'
+
+
+def __virtual__():
+    '''
+    Return virtualname
+    '''
+    return 'nagios.list_plugins' in __salt__
 
 
 def _get_options(ret=None):
@@ -80,7 +88,7 @@ def _get_options(ret=None):
                                                    __salt__=__salt__,
                                                    __opts__=__opts__)
 
-    log.debug('attrs {0}'.format(attrs))
+    log.debug('attrs %s', attrs)
     if 'checktype' not in _options or _options['checktype'] == '':
         # default to passive check type
         _options['checktype'] = '1'
@@ -92,7 +100,7 @@ def _get_options(ret=None):
         _options['checktype'] = '1'
 
     # checktype should be a string
-    _options['checktype'] = str(_options['checktype'])
+    _options['checktype'] = six.text_type(_options['checktype'])
 
     return _options
 
@@ -111,11 +119,11 @@ def _prepare_xml(options=None, state=None):
 
     # No service defined then we set the status of the hostname
     if 'service' in options and options['service'] != '':
-        xml += "<checkresult type='service' checktype='"+str(options['checktype'])+"'>"
+        xml += "<checkresult type='service' checktype='" + six.text_type(options['checktype'])+"'>"
         xml += "<hostname>"+cgi.escape(options['hostname'], True)+"</hostname>"
         xml += "<servicename>"+cgi.escape(options['service'], True)+"</servicename>"
     else:
-        xml += "<checkresult type='host' checktype='"+str(options['checktype'])+"'>"
+        xml += "<checkresult type='host' checktype='" + six.text_type(options['checktype'])+"'>"
         xml += "<hostname>"+cgi.escape(options['hostname'], True)+"</hostname>"
 
     xml += "<state>"+_state+"</state>"
@@ -169,15 +177,11 @@ def _post_data(options=None, xml=None):
             log.error('No content returned from Nagios NRDP.')
             return False
     else:
-        log.error('Error returned from Nagios NRDP.  Status code: {0}.'.format(res.status_code))
+        log.error(
+            'Error returned from Nagios NRDP. Status code: %s.',
+            res.status_code
+        )
         return False
-
-
-def __virtual__():
-    '''
-    Return virtualname
-    '''
-    return 'nagios.list_plugins' in __salt__
 
 
 def returner(ret):
@@ -186,7 +190,7 @@ def returner(ret):
     '''
 
     _options = _get_options(ret)
-    log.debug('_options {0}'.format(_options))
+    log.debug('_options %s', _options)
     _options['hostname'] = ret.get('id')
 
     if 'url' not in _options or _options['url'] == '':

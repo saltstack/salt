@@ -10,7 +10,7 @@ from Microsoft IIS.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Define the module's virtual name
@@ -481,7 +481,7 @@ def container_setting(name, container, settings=None):
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
     :param str settings: A dictionary of the setting names and their values.
-    Example of usage for the ``AppPools`` container:
+        Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
 
@@ -777,20 +777,28 @@ def remove_vdir(name, site, app='/'):
 
 
 def set_app(name, site, settings=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
+    .. versionadded:: 2017.7.0
+
     Set the value of the setting for an IIS web application.
+
     .. note::
-        This function only configures existing app.
-        Params are case sensitive.
+        This function only configures existing app. Params are case sensitive.
+
     :param str name: The IIS application.
     :param str site: The IIS site name.
     :param str settings: A dictionary of the setting names and their values.
-    :available settings:    physicalPath: The physical path of the webapp.
-    :                       applicationPool: The application pool for the webapp.
-    :                       userName: "connectAs" user
-    :                       password: "connectAs" password for user
+
+    Available settings:
+
+    - ``physicalPath`` - The physical path of the webapp
+    - ``applicationPool`` - The application pool for the webapp
+    - ``userName`` "connectAs" user
+    - ``password`` "connectAs" password for user
+
     :rtype: bool
-    .. versionadded:: 2017.7.0
+
     Example of usage:
 
     .. code-block:: yaml
@@ -800,11 +808,12 @@ def set_app(name, site, settings=None):
                 - name: app0
                 - site: Default Web Site
                 - settings:
-                    userName: domain\user
+                    userName: domain\\user
                     password: pass
                     physicalPath: c:\inetpub\wwwroot
                     applicationPool: appPool0
     '''
+    # pylint: enable=anomalous-backslash-in-string
     ret = {'name': name,
            'changes': {},
            'comment': str(),

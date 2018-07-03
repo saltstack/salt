@@ -15,9 +15,9 @@ Management of logs using Solaris logadm.
         TODO
 
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -51,7 +51,8 @@ def rotate(name, **kwargs):
 
     name : string
         alias for entryname
-    **kwargs : boolean|string|int
+
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     '''
@@ -60,28 +61,28 @@ def rotate(name, **kwargs):
            'result': None,
            'comment': ''}
 
-    ## cleanup kwargs
+    # cleanup kwargs
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
-    ## inject name as entryname
+    # inject name as entryname
     if 'entryname' not in kwargs:
         kwargs['entryname'] = name
 
-    ## figure out log_file and entryname
+    # figure out log_file and entryname
     if 'log_file' not in kwargs or not kwargs['log_file']:
         if 'entryname' in kwargs and kwargs['entryname']:
             if kwargs['entryname'].startswith('/'):
                 kwargs['log_file'] = kwargs['entryname']
 
-    ## check for log_file
+    # check for log_file
     if 'log_file' not in kwargs or not kwargs['log_file']:
         ret['result'] = False
         ret['comment'] = 'Missing log_file attribute!'
     else:
-        ## lookup old configuration
+        # lookup old configuration
         old_config = __salt__['logadm.list_conf']()
 
-        ## remove existing entry
+        # remove existing entry
         if kwargs['log_file'] in old_config:
             res = __salt__['logadm.remove'](kwargs['entryname'] if 'entryname' in kwargs else kwargs['log_file'])
             ret['result'] = 'Error' not in res
@@ -89,7 +90,7 @@ def rotate(name, **kwargs):
                 ret['comment'] = res['Error']
                 ret['changes'] = {}
 
-        ## add new entry
+        # add new entry
         res = __salt__['logadm.rotate'](name, **kwargs)
         ret['result'] = 'Error' not in res
         if ret['result']:
@@ -103,8 +104,8 @@ def rotate(name, **kwargs):
             log.debug(ret['changes'])
         else:
             ret['comment'] = res['Error']
-            ## NOTE: we need to remove the log file first
-            ##       potentially the log configuraiton can get lost :s
+            # NOTE: we need to remove the log file first
+            #       potentially the log configuraiton can get lost :s
             if kwargs['log_file'] in old_config:
                 ret['changes'] = {kwargs['log_file']: None}
             else:
@@ -131,10 +132,10 @@ def remove(name, log_file=None):
            'result': None,
            'comment': ''}
 
-    ## retrieve all log configuration
+    # retrieve all log configuration
     config = __salt__['logadm.list_conf']()
 
-    ## figure out log_file and name
+    # figure out log_file and name
     if not log_file:
         if name.startswith('/'):
             log_file = name
@@ -151,7 +152,7 @@ def remove(name, log_file=None):
                     name = config[log]['entryname']
                 break
 
-    ## remove log if needed
+    # remove log if needed
     if log_file in config:
         res = __salt__['logadm.remove'](name if name else log_file)
         ret['result'] = 'Error' not in res

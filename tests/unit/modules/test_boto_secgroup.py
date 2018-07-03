@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 from copy import deepcopy
+import os.path
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import TESTS_DIR
 
 # Import Salt libs
 import salt.config
@@ -23,6 +25,7 @@ import salt.modules.boto_secgroup as boto_secgroup
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2  # pylint: enable=unused-import
     HAS_BOTO = True
 except ImportError:

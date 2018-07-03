@@ -17,11 +17,12 @@ Support for Opkg
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import os
 import re
 import logging
+import errno
 
 # Import salt libs
 import salt.utils.args
@@ -30,6 +31,7 @@ import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -54,14 +56,83 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
+NILRT_RESTARTCHECK_STATE_PATH = '/var/lib/salt/restartcheck_state'
+
+
+def _update_nilrt_restart_state():
+    '''
+    NILRT systems determine whether to reboot after various package operations
+    including but not limited to kernel module installs/removals by checking
+    specific file md5sums & timestamps. These files are touched/modified by
+    the post-install/post-remove functions of their respective packages.
+
+    The opkg module uses this function to store/update those file timestamps
+    and checksums to be used later by the restartcheck module.
+
+    '''
+    __salt__['cmd.shell']('stat -c %Y /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.timestamp'
+                          .format(NILRT_RESTARTCHECK_STATE_PATH))
+    __salt__['cmd.shell']('md5sum /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.md5sum'
+                          .format(NILRT_RESTARTCHECK_STATE_PATH))
+
+    # We can't assume nisysapi.ini always exists like modules.dep
+    nisysapi_path = '/usr/local/natinst/share/nisysapi.ini'
+    if os.path.exists(nisysapi_path):
+        __salt__['cmd.shell']('stat -c %Y {0} >{1}/nisysapi.ini.timestamp'
+                              .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
+        __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
+                              .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
+
+
+def _get_restartcheck_result(errors):
+    '''
+    Return restartcheck result and append errors (if any) to ``errors``
+    '''
+    rs_result = __salt__['restartcheck.restartcheck'](verbose=False)
+    if isinstance(rs_result, dict) and 'comment' in rs_result:
+        errors.append(rs_result['comment'])
+    return rs_result
+
+
+def _process_restartcheck_result(rs_result):
+    '''
+    Check restartcheck output to see if system/service restarts were requested
+    and take appropriate action.
+    '''
+    if 'No packages seem to need to be restarted' in rs_result:
+        return
+    for rstr in rs_result:
+        if 'System restart required' in rstr:
+            _update_nilrt_restart_state()
+            __salt__['system.set_reboot_required_witnessed']()
+        else:
+            service = os.path.join('/etc/init.d', rstr)
+            if os.path.exists(service):
+                __salt__['cmd.run']([service, 'restart'])
+
 
 def __virtual__():
     '''
     Confirm this module is on a nilrt based system
     '''
-    if __grains__.get('os_family', False) == 'NILinuxRT':
+    if __grains__.get('os_family') == 'NILinuxRT':
+        try:
+            os.makedirs(NILRT_RESTARTCHECK_STATE_PATH)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                return False, 'Error creating {0} (-{1}): {2}'.format(
+                    NILRT_RESTARTCHECK_STATE_PATH,
+                    exc.errno,
+                    exc.strerror)
+        # modules.dep always exists, make sure it's restart state files also exist
+        if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
+                os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
+            _update_nilrt_restart_state()
         return __virtualname__
-    return (False, "Module opkg only works on nilrt based systems")
+
+    if os.path.isdir(OPKG_CONFDIR):
+        return __virtualname__
+    return False, "Module opkg only works on OpenEmbedded based systems"
 
 
 def latest_version(*names, **kwargs):
@@ -148,7 +219,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
         If True, raise an error with a list of the package databases that
         encountered errors.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -193,9 +264,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     # On a non-zero exit code where no failed repos were found, raise an
     # exception because this appears to be a different kind of error.
     if call['retcode'] != 0 and not error_repos:
-        raise CommandExecutionError(
-            '{0}'.format(out)
-        )
+        raise CommandExecutionError(out)
 
     return ret
 
@@ -413,11 +482,15 @@ def install(name=None,
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -476,11 +549,15 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
+    rs_result = _get_restartcheck_result(errors)
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered removing package(s)',
             info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -537,6 +614,8 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
            'comment': '',
            }
 
+    errors = []
+
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -551,10 +630,17 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
+        errors.append(result)
+
+    rs_result = _get_restartcheck_result(errors)
+
+    if errors:
         raise CommandExecutionError(
             'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            info={'errors': errors, 'changes': ret}
         )
+
+    _process_restartcheck_result(rs_result)
 
     return ret
 
@@ -741,9 +827,7 @@ def _set_state(pkg, state):
     ret = {}
     valid_states = ('hold', 'noprune', 'user', 'ok', 'installed', 'unpacked')
     if state not in valid_states:
-        raise SaltInvocationError(
-            'Invalid state: {0}'.format(state)
-        )
+        raise SaltInvocationError('Invalid state: {0}'.format(state))
     oldstate = _get_state(pkg)
     cmd = ['opkg', 'flag']
     cmd.append(state)
@@ -828,9 +912,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=unused-argument
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
-        raise CommandExecutionError(
-                '{0}'.format(comment)
-        )
+        raise CommandExecutionError(comment)
     else:
         out = call['stdout']
 
@@ -951,9 +1033,7 @@ def info_installed(*names, **kwargs):
                 else:
                     comment += call['stdout']
 
-                raise CommandExecutionError(
-                    '{0}'.format(comment)
-                )
+                raise CommandExecutionError(comment)
             ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
     else:
         # All installed packages
@@ -968,9 +1048,7 @@ def info_installed(*names, **kwargs):
             else:
                 comment += call['stdout']
 
-            raise CommandExecutionError(
-                '{0}'.format(comment)
-            )
+            raise CommandExecutionError(comment)
         ret.update(_process_info_installed_output(call['stdout'], filter_attrs))
 
     return ret
@@ -1006,7 +1084,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split(':', 1)[-1] if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -1040,7 +1118,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
     '''
-    Lists all repos on /etc/opkg/*.conf
+    Lists all repos on ``/etc/opkg/*.conf``
 
     CLI Example:
 
@@ -1054,6 +1132,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
         if filename.endswith(".conf"):
             with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
                 for line in conf_file:
+                    line = salt.utils.stringutils.to_unicode(line)
                     if regex.search(line):
                         repo = {}
                         if line.startswith('#'):
@@ -1077,7 +1156,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
 
 def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Display a repo from the /etc/opkg/*.conf
+    Display a repo from the ``/etc/opkg/*.conf``
 
     CLI Examples:
 
@@ -1103,12 +1182,13 @@ def _del_repo_from_file(alias, filepath):
         output = []
         regex = re.compile(REPO_REGEXP)
         for line in fhandle:
+            line = salt.utils.stringutils.to_unicode(line)
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
                 cols = salt.utils.args.shlex_split(line.strip())
                 if alias != cols[1]:
-                    output.append(line)
+                    output.append(salt.utils.stringutils.to_str(line))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
@@ -1127,7 +1207,7 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
-        fhandle.write(repostr)
+        fhandle.write(salt.utils.stringutils.to_str(repostr))
 
 
 def _mod_repo_in_file(alias, repostr, filepath):
@@ -1137,18 +1217,20 @@ def _mod_repo_in_file(alias, repostr, filepath):
     with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
-            cols = salt.utils.args.shlex_split(line.strip())
+            cols = salt.utils.args.shlex_split(
+                salt.utils.stringutils.to_unicode(line).strip()
+            )
             if alias not in cols:
                 output.append(line)
             else:
-                output.append(repostr + '\n')
+                output.append(salt.utils.stringutils.to_str(repostr + '\n'))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
 def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Delete a repo from /etc/opkg/*.conf
+    Delete a repo from ``/etc/opkg/*.conf``
 
     If the file does not contain any other repo configuration, the file itself
     will be deleted.
@@ -1353,5 +1435,5 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret

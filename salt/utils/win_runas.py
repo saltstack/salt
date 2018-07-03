@@ -4,7 +4,7 @@ Run processes as a different user in Windows
 
 Based on a solution from http://stackoverflow.com/questions/29566330
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libraries
 import os
@@ -46,8 +46,8 @@ def __virtual__():
 
 if HAS_WIN32:
     # ctypes definitions
-    kernel32 = ctypes.WinDLL('kernel32')
-    advapi32 = ctypes.WinDLL('advapi32')
+    kernel32 = ctypes.WinDLL(str('kernel32'))  # future lint: disable=blacklisted-function
+    advapi32 = ctypes.WinDLL(str('advapi32'))  # future lint: disable=blacklisted-function
 
     INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
     INVALID_DWORD_VALUE = wintypes.DWORD(-1).value  # ~WinAPI

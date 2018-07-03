@@ -9,7 +9,6 @@ on a single system to test scale capabilities
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
-import pwd
 import time
 import signal
 import optparse
@@ -24,11 +23,12 @@ import uuid
 # Import salt libs
 import salt
 import salt.utils.files
+import salt.utils.yaml
 
 # Import third party libs
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import tests.support.helpers
 
 
 OSES = [
@@ -148,7 +148,7 @@ def parse():
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
-    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
+    parser.add_option('-u', '--user', default=tests.support.helpers.this_user())
 
     options, _args = parser.parse_args()
 
@@ -301,7 +301,7 @@ class MinionSwarm(Swarm):
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'minion')
             with salt.utils.files.fopen(spath) as conf:
-                data = yaml.load(conf) or {}
+                data = salt.utils.yaml.safe_load(conf) or {}
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)
@@ -360,7 +360,7 @@ class MinionSwarm(Swarm):
             data['grains']['uuid'] = str(uuid.uuid4())
 
         with salt.utils.files.fopen(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+            salt.utils.yaml.safe_dump(data, fp_)
         self.confs.add(dpath)
 
     def prep_configs(self):
@@ -414,7 +414,7 @@ class MasterSwarm(Swarm):
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'master')
             with salt.utils.files.fopen(spath) as conf:
-                data = yaml.load(conf)
+                data = salt.utils.yaml.safe_load(conf)
         data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
             'open_mode': True  # TODO Pre-seed keys
@@ -424,7 +424,7 @@ class MasterSwarm(Swarm):
         path = os.path.join(self.conf, 'master')
 
         with salt.utils.files.fopen(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+            salt.utils.yaml.safe_dump(data, fp_)
 
     def shutdown(self):
         print('Killing master')

@@ -128,7 +128,7 @@ should match what you see when you look at the properties for an object.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -602,7 +602,7 @@ def dacl(obj_name=None, obj_type='file'):
                     raise SaltInvocationError(
                         'Invalid access mode: {0}'.format(access_mode))
             except Exception as exc:
-                return False, 'Error: {0}'.format(str(exc))
+                return False, 'Error: {0}'.format(exc)
 
             return True
 
@@ -867,7 +867,10 @@ def dacl(obj_name=None, obj_type='file'):
             '''
             # Get the principal from the sid (object sid)
             sid = win32security.ConvertSidToStringSid(ace[2])
-            principal = get_name(sid)
+            try:
+                principal = get_name(sid)
+            except CommandExecutionError:
+                principal = sid
 
             # Get the ace type
             ace_type = self.ace_type[ace[0][0]]
@@ -1099,8 +1102,13 @@ def get_name(principal):
     Gets the name from the specified principal.
 
     Args:
-        principal (str): Find the Normalized name based on this. Can be a PySID
-        object, a SID string, or a user name in any capitalization.
+        principal (str):
+            Find the Normalized name based on this. Can be a PySID object, a SID
+            string, or a user name in any capitalization.
+
+            .. note::
+                Searching based on the user name can be slow on hosts connected
+                to large Active Directory domains.
 
     Returns:
         str: The name that corresponds to the passed principal
@@ -1112,34 +1120,35 @@ def get_name(principal):
         salt.utils.win_dacl.get_name('S-1-5-32-544')
         salt.utils.win_dacl.get_name('adminisTrators')
     '''
-    # If None is passed, use the Universal Well-known SID for "Null SID"
-    if principal is None:
-        principal = 'S-1-0-0'
+    # If this is a PySID object, use it
+    if isinstance(principal, pywintypes.SIDType):
+        sid_obj = principal
+    else:
+        # If None is passed, use the Universal Well-known SID for "Null SID"
+        if principal is None:
+            principal = 'S-1-0-0'
+        # Try Converting String SID to SID Object first as it's least expensive
+        try:
+            sid_obj = win32security.ConvertStringSidToSid(principal)
+        except pywintypes.error:
+            # Try Getting the SID Object by Name Lookup last
+            # This is expensive, especially on large AD Domains
+            try:
+                sid_obj = win32security.LookupAccountName(None, principal)[0]
+            except pywintypes.error:
+                # This is not a PySID object, a SID String, or a valid Account
+                # Name. Just pass it and let the LookupAccountSid function try
+                # to resolve it
+                sid_obj = principal
 
-    # Assume PySID object
-    sid_obj = principal
-
-    # Name
-    try:
-        sid_obj = win32security.LookupAccountName(None, principal)[0]
-    except (pywintypes.error, TypeError):
-        pass
-
-    # String SID
-    try:
-        sid_obj = win32security.ConvertStringSidToSid(principal)
-    except (pywintypes.error, TypeError):
-        pass
-
+    # By now we should have a valid PySID object
     try:
         return win32security.LookupAccountSid(None, sid_obj)[0]
     except (pywintypes.error, TypeError) as exc:
+        message = 'Error resolving "{0}"'.format(principal)
         if type(exc) == pywintypes.error:
             win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
-            message = 'Error resolving {0} ({1})'.format(principal, win_error)
-        else:
-            message = 'Error resolving {0}'.format(principal)
-
+            message = '{0}: {1}'.format(message, win_error)
         raise CommandExecutionError(message)
 
 
@@ -1170,17 +1179,17 @@ def get_owner(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        owner_sid = 'S-1-1-0'
+        owner_sid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            owner_sid = 'S-1-1-0'
+            owner_sid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
                 'Failed to get owner: {0}'.format(exc.strerror))
 
-    return get_name(win32security.ConvertSidToStringSid(owner_sid))
+    return get_name(owner_sid)
 
 
 def get_primary_group(obj_name):
@@ -1210,12 +1219,12 @@ def get_primary_group(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        primary_group_gid = 'S-1-1-0'
+        primary_group_gid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            primary_group_gid = 'S-1-1-0'
+            primary_group_gid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
                 'Failed to set permissions: {0}'.format(exc.strerror))
@@ -1282,9 +1291,8 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the owner: %s', principal, exc)
+        raise CommandExecutionError('Failed to set owner: {0}'.format(exc))
 
     return True
 
@@ -1355,11 +1363,8 @@ def set_primary_group(obj_name, principal, obj_type='file'):
             obj_flags.element['group'],
             None, gid, None, None)
     except pywintypes.error as exc:
-        log.debug(
-            'Failed to make {0} the primary group: {1}'
-            ''.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set primary group: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the primary group: %s', principal, exc)
+        raise CommandExecutionError('Failed to set primary group: {0}'.format(exc))
 
     return True
 

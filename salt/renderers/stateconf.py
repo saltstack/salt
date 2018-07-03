@@ -27,15 +27,16 @@ A flexible renderer that takes a templating engine and a data format
 #
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 import re
 import getopt
 import copy
-from os import path as ospath
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
@@ -75,7 +76,7 @@ def __init__(opts):
     STATE_NAME = STATE_FUNC.split('.')[0]
 
 
-MOD_BASENAME = ospath.basename(__file__)
+MOD_BASENAME = os.path.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
     'Invalid use of {0} renderer!\n'
     '''Usage: #!{1} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
@@ -108,7 +109,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
     implicit_require = False
 
     def process_sls_data(data, context=None, extract=False):
-        sls_dir = ospath.dirname(sls.replace('.', ospath.sep)) if '.' in sls else sls
+        sls_dir = os.path.dirname(sls.replace('.', os.path.sep)) if '.' in sls else sls
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
 
         if context:
@@ -156,8 +157,8 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise
         except Exception as err:
             log.exception(
-                'Error found while pre-processing the salt file '
-                '{0}:\n{1}'.format(sls, err)
+                'Error found while pre-processing the salt file %s:\n%s',
+                sls, err
             )
             from salt.state import State
             state = State(__opts__)
@@ -207,9 +208,9 @@ def render(input, saltenv='base', sls='', argline='', **kws):
 
         if isinstance(input, six.string_types):
             with salt.utils.files.fopen(input, 'r') as ifile:
-                sls_templ = ifile.read()
+                sls_templ = salt.utils.stringutils.to_unicode(ifile.read())
         else:  # assume file-like
-            sls_templ = input.read()
+            sls_templ = salt.utils.stringutils.to_unicode(input.read())
 
         # first pass to extract the state configuration
         match = re.search(__opts__['stateconf_end_marker'], sls_templ)
@@ -235,7 +236,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
 
     if log.isEnabledFor(logging.DEBUG):
         import pprint  # FIXME: pprint OrderedDict
-        log.debug('Rendered sls: {0}'.format(pprint.pformat(data)))
+        log.debug('Rendered sls: %s', pprint.pformat(data))
     return data
 
 
@@ -362,10 +363,8 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
             yield sid, states, sname, args
 
 
-REQUISITES = set([
-    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in',
-    'onchanges', 'onchanges_in', 'onfail', 'onfail_in'
-])
+REQUISITES = ('require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in', 'onchanges',
+              'onchanges_in', 'onfail', 'onfail_in')
 
 
 def rename_state_ids(data, sls, is_extend=False):
@@ -406,8 +405,8 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-REQUIRE = set(['require', 'watch', 'listen', 'onchanges', 'onfail'])
-REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in'])
+REQUIRE = ('require', 'watch', 'listen', 'onchanges', 'onfail')
+REQUIRE_IN = ('require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in')
 EXTENDED_REQUIRE = {}
 EXTENDED_REQUIRE_IN = {}
 
@@ -489,7 +488,7 @@ def add_start_state(data, sls):
     # the start state is either the first state whose id declaration has
     # no __sls__, or it's the first state whose id declaration has a
     # __sls__ == sls.
-    non_sids = set(['include', 'exclude', 'extend'])
+    non_sids = ('include', 'exclude', 'extend')
     for sid, states in six.iteritems(data):
         if sid in non_sids or sid.startswith('__'):
             continue
@@ -511,7 +510,7 @@ def add_goal_state(data):
     else:
         reqlist = []
         for sid, states, state, _ in \
-                statelist(data, set(['include', 'exclude', 'extend'])):
+                statelist(data, ('include', 'exclude', 'extend')):
             if '__sls__' in states:
                 # Then id declaration must have been included from a
                 # rendered sls. Currently, this is only possible with

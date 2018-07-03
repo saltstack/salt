@@ -12,7 +12,7 @@ Module for the management of MacOS systems that use launchd/launchctl
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import plistlib
@@ -20,7 +20,9 @@ import fnmatch
 import re
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.decorators as decorators
@@ -78,7 +80,7 @@ def _available_services():
     '''
     available_services = dict()
     for launch_dir in _launchd_paths():
-        for root, dirs, files in os.walk(launch_dir):
+        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
             for filename in files:
                 file_path = os.path.join(root, filename)
                 # Follow symbolic links of files in _launchd_paths
@@ -91,7 +93,9 @@ def _available_services():
                     # This assumes most of the plist files
                     # will be already in XML format
                     with salt.utils.files.fopen(file_path):
-                        plist = plistlib.readPlist(true_path)
+                        plist = plistlib.readPlist(
+                            salt.utils.data.decode(true_path)
+                        )
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
@@ -221,7 +225,7 @@ def status(name, runas=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

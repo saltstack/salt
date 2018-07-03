@@ -41,6 +41,11 @@ Grains data can be listed by using the 'grains.items' module:
 
 .. _static-custom-grains:
 
+Using grains in a state
+=======================
+
+To use a grain in a state you can access it via `{{ grains['key'] }}`.
+
 Grains in the Minion Config
 ===========================
 
@@ -80,11 +85,20 @@ same way as in the above example, only without a top-level ``grains:`` key:
 
 .. note::
 
-    The content of ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+    Grains in ``/etc/salt/grains`` are ignored if you specify the same grains in the minion config.
 
 .. note::
 
     Grains are static, and since they are not often changed, they will need a grains refresh when they are updated. You can do this by calling: ``salt minion saltutil.refresh_modules``
+
+.. note::
+
+    You can equally configure static grains for Proxy Minions.
+    As multiple Proxy Minion processes can run on the same machine, you need
+    to index the files using the Minion ID, under ``/etc/salt/proxy.d/<minion ID>/grains``.
+    For example, the grains for the Proxy Minion ``router1`` can be defined
+    under ``/etc/salt/proxy.d/router1/grains``, while the grains for the
+    Proxy Minion ``switch7`` can be put in ``/etc/salt/proxy.d/switch7/grains``.
 
 Matching Grains in the Top File
 ===============================
@@ -115,9 +129,9 @@ Writing Grains
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
-functions in a grains module must return a Python :ref:`dict
-<python2:typesmapping>`, where the dictionary keys are the names of grains, and
-each key's value is that value for that grain.
+functions in a grains module must return a :ref:`Python dictionary
+<typesmapping>`, where the dictionary keys are the names of grains, and each
+key's value is that value for that grain.
 
 Custom grains modules should be placed in a subdirectory named ``_grains``
 located under the :conf_master:`file_roots` specified by the master config
@@ -260,6 +274,11 @@ grain will override that core grain. Similarly, grains from
 ``/etc/salt/minion`` override both core grains and custom grain modules, and
 grains in ``_grains`` will override *any* grains of the same name.
 
+For custom grains, if the function takes an argument ``grains``, then the
+previously rendered grains will be passed in.  Because the rest of the grains
+could be rendered in any order, the only grains that can be relied upon to be
+passed in are ``core`` grains. This was added in the Fluorine release.
+
 
 Examples of Grains
 ==================
@@ -278,3 +297,9 @@ Syncing grains can be done a number of ways, they are automatically synced when
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+
+.. note::
+
+    When the :conf_minion:`grains_cache` is set to False, the grains dictionary is built
+    and stored in memory on the minion. Every time the minion restarts or
+    ``saltutil.refresh_grains`` is run, the grain dictionary is rebuilt from scratch.

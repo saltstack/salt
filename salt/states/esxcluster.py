@@ -40,13 +40,14 @@ Module was developed against.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import traceback
 import sys
 
 # Import Salt Libs
 import salt.exceptions
+from salt.ext import six
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
@@ -281,7 +282,7 @@ def cluster_configured(name, cluster_config):
             __salt__['vsphere.disconnect'](si)
         ret.update({
             'result': False,
-            'comment': str(exc)})
+            'comment': six.text_type(exc)})
         return ret
 
 

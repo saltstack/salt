@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place (mp@saltstack.com)`
+    :codeauthor: Mike Place (mp@saltstack.com)
 
 
     tests.unit.modules.mysql
@@ -8,7 +8,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -54,10 +54,12 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
-        with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
-            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                ret = mysql.user_create('testuser')
-                self.assertEqual(False, ret)
+        # mock the version of MySQL
+        with patch.object(mysql, 'version', MagicMock(return_value='8.0.10')):
+            with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                    ret = mysql.user_create('testuser')
+                    self.assertEqual(False, ret)
 
     def test_user_create(self):
         '''

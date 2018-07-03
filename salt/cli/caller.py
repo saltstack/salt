@@ -5,7 +5,7 @@ minion modules.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -101,7 +101,7 @@ class BaseCaller(object):
         try:
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(six.text_type(exc))
 
     def print_docs(self):
         '''
@@ -120,7 +120,7 @@ class BaseCaller(object):
         '''
         Print out the grains
         '''
-        grains = salt.loader.grains(self.opts)
+        grains = self.minion.opts.get('grains') or salt.loader.grains(self.opts)
         salt.output.display_output({'local': grains}, 'grains', self.opts)
 
     def run(self):
@@ -145,8 +145,10 @@ class BaseCaller(object):
                 print_ret = ret.get('return', {})
             salt.output.display_output(
                     {'local': print_ret},
-                    out,
-                    self.opts)
+                    out=out,
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
         except SaltInvocationError as err:
@@ -228,11 +230,11 @@ class BaseCaller(object):
                 self.opts['log_level'].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
@@ -372,8 +374,10 @@ class RAETCaller(BaseCaller):
                 self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
-                    ret.get('out', 'nested'),
-                    self.opts)
+                    out=ret.get('out', 'nested'),
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
 
@@ -416,7 +420,7 @@ class RAETCaller(BaseCaller):
                                    name='manor',
                                    lanename=lanename,
                                    dirpath=sockdirpath))
-        log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
+        log.debug("Created Caller Jobber Stack %s\n", stack.name)
 
         return stack
 

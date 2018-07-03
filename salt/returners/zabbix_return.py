@@ -20,7 +20,7 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -70,6 +70,10 @@ def zabbix_send(key, host, output):
                 flag = "false"
         if flag == 'false':
             cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
+
+
+def save_load(jid, load, minions=None):
+    pass
 
 
 def returner(ret):

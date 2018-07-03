@@ -24,7 +24,7 @@ as above.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -61,10 +61,10 @@ def auth(username, password):
     result = salt.utils.http.query(url, method='POST', data=data, status=True,
                                    decode=True)
     if result['status'] == 200:
-        log.debug('eauth REST call returned 200: {0}'.format(result))
+        log.debug('eauth REST call returned 200: %s', result)
         if result['dict'] is not None:
             return result['dict']
         return True
     else:
-        log.debug('eauth REST call failed: {0}'.format(result))
+        log.debug('eauth REST call failed: %s', result)
         return False

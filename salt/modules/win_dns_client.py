@@ -2,7 +2,7 @@
 '''
 Module for configuring DNS Client on Windows systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -50,7 +50,7 @@ def get_dns_servers(interface='Local Area Connection'):
                     return list(iface_config.DNSServerSearchOrder)
                 except TypeError:
                     return []
-    log.debug('Interface "{0}" not found'.format(interface))
+    log.debug('Interface "%s" not found', interface)
     return False
 
 

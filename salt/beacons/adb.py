@@ -6,7 +6,7 @@ Beacon to emit adb device state changes for Android devices
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Salt libs
@@ -54,7 +54,7 @@ def validate(config):
                       'sideload', 'unauthorized', 'unknown', 'missing']
             if any(s not in states for s in _config['states']):
                 log.info('Need a one of the following adb '
-                         'states: {0}'.format(', '.join(states)))
+                         'states: %s', ', '.join(states))
                 return False, ('Need a one of the following adb '
                                'states: {0}'.format(', '.join(states)))
     return True, 'Valid beacon configuration'

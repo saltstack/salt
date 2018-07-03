@@ -1,5 +1,5 @@
 GitPython==0.3.2.RC1
-dateutils
+python-dateutil
 pyghmi
 croniter
 Mako

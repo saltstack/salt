@@ -66,6 +66,7 @@ Management of Keystone users
         - description: OpenStack Compute Service
 
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():

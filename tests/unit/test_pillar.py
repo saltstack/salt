@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
-
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
 
     tests.unit.pillar_test
     ~~~~~~~~~~~~~~~~~~~~~~
@@ -296,7 +295,35 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
-    def test_malformed_pillar_sls(self):
+    def test_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
+        self.assertEqual(pillar.opts['file_roots'],
+                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
+
+    def test_ignored_dynamic_pillarenv(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']},
+            'file_roots': {'base': ['/srv/salt/base'], 'dev': ['/svr/salt/dev']},
+            'extension_modules': '',
+        }
+        pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
+        self.assertEqual(pillar.opts['file_roots'], {'base': ['/srv/pillar/base']})
+
+    @patch('salt.fileclient.Client.list_states')
+    def test_malformed_pillar_sls(self, mock_list_states):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
                 'renderer': 'json',
@@ -315,6 +342,8 @@ class PillarTestCase(TestCase):
                 'osrelease': '13.04',
                 'kernel': 'Linux'
             }
+
+            mock_list_states.return_value = ['foo', 'blah']
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             # Mock getting the proper template files
             pillar.client.get_state = MagicMock(
@@ -373,7 +402,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using empty key directive
@@ -383,7 +412,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using simple non-nested key
@@ -404,6 +433,68 @@ class PillarTestCase(TestCase):
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
                 ({'foo': 'bar', 'nested': {'level': {'foo': 'bar2'}}}, [])
+            )
+
+    def test_includes_override_sls(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {},
+            'file_roots': {},
+            'extension_modules': ''
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+        with patch('salt.pillar.compile_template') as compile_template, \
+                patch.object(salt.pillar.Pillar, '_Pillar__gather_avail',
+                             MagicMock(return_value={'base': ['blah', 'foo']})):
+
+            # Test with option set to True
+            opts['pillar_includes_override_sls'] = True
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar2'}, [])
+            )
+
+            # Test with option set to False
+            opts['pillar_includes_override_sls'] = False
+            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+            # Mock getting the proper template files
+            pillar.client.get_state = MagicMock(
+                return_value={
+                    'dest': '/path/to/pillar/files/foo.sls',
+                    'source': 'salt://foo.sls'
+                }
+            )
+
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['blah']},
+                {'foo': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar'}, [])
             )
 
     def test_topfile_order(self):
@@ -506,6 +597,35 @@ generic:
 
         client.get_state.side_effect = get_state
 
+    def test_include(self):
+        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
+            patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
+            opts = {
+                'renderer': 'yaml',
+                'renderer_blacklist': [],
+                'renderer_whitelist': [],
+                'state_top': '',
+                'pillar_roots': [],
+                'extension_modules': '',
+                'saltenv': 'base',
+                'file_roots': [],
+            }
+            grains = {
+                'os': 'Ubuntu',
+                'os_family': 'Debian',
+                'oscodename': 'raring',
+                'osfullname': 'Ubuntu',
+                'osrelease': '13.04',
+                'kernel': 'Linux'
+            }
+
+            self._setup_test_include_mocks(Matcher, get_file_client)
+            pillar = salt.pillar.Pillar(opts, grains, 'minion', 'base')
+            compiled_pillar = pillar.compile_pillar()
+            self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
+            self.assertEqual(compiled_pillar['foo1'], 'bar1')
+            self.assertEqual(compiled_pillar['foo2'], 'bar2')
+
     def _setup_test_include_mocks(self, Matcher, get_file_client):
         self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         top_file.write(b'''
@@ -522,26 +642,28 @@ base:
         init_sls.write(b'''
 include:
    - test.sub1
-   - test.sub2
+   - test.sub_wildcard*
 ''')
         init_sls.flush()
         self.sub1_sls = sub1_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub1_sls.write(b'''
-p1:
-   - value1_1
-   - value1_2
+foo1:
+  bar1
 ''')
         sub1_sls.flush()
         self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub2_sls.write(b'''
-p1:
-   - value1_3
-p2:
-   - value2_1
-   - value2_2
+foo2:
+  bar2
 ''')
         sub2_sls.flush()
 
+        self.sub_wildcard_1_sls = sub_wildcard_1_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+        sub_wildcard_1_sls.write(b'''
+foo_wildcard:
+   bar_wildcard
+''')
+        sub_wildcard_1_sls.flush()
         # Setup Matcher mock
         matcher = Matcher.return_value
         matcher.confirm_top.return_value = True
@@ -549,12 +671,14 @@ p2:
         # Setup fileclient mock
         client = get_file_client.return_value
         client.cache_file.return_value = self.top_file.name
+        client.list_states.return_value = ['top', 'test.init', 'test.sub1', 'test.sub2', 'test.sub_wildcard_1']
 
         def get_state(sls, env):
             return {
                 'test': {'path': '', 'dest': init_sls.name},
                 'test.sub1': {'path': '', 'dest': sub1_sls.name},
                 'test.sub2': {'path': '', 'dest': sub2_sls.name},
+                'test.sub_wildcard_1': {'path': '', 'dest': sub_wildcard_1_sls.name},
             }[sls]
 
         client.get_state.side_effect = get_state

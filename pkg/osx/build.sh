@@ -31,11 +31,20 @@
 #         ./build.sh v2015.8.3 2 /tmp/custom_pkg
 #
 ############################################################################
-echo -n -e "\033]0;Build: Variables\007"
+
+############################################################################
+# Make sure the script is launched with sudo
+############################################################################
+if [[ $(id -u) -ne 0 ]]
+    then
+        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+fi
 
 ############################################################################
 # Check passed parameters, set defaults
 ############################################################################
+echo -n -e "\033]0;Build: Variables\007"
+
 if [ "$1" == "" ]; then
     VERSION=`git describe`
 else
@@ -80,24 +89,24 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-sudo $PKGRESOURCES/build_env.sh $PYVER
+$PKGRESOURCES/build_env.sh $PYVER
 
 ############################################################################
 # Install Salt
 ############################################################################
 echo -n -e "\033]0;Build: Install Salt\007"
-sudo rm -rf $SRCDIR/build
-sudo rm -rf $SRCDIR/dist
-sudo $PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s"
-sudo $PYTHON $SRCDIR/setup.py install
+rm -rf $SRCDIR/build
+rm -rf $SRCDIR/dist
+$PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s"
+$PYTHON $SRCDIR/setup.py install
 
 ############################################################################
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-sudo $PKGRESOURCES/build_pkg.sh $VERSION $PYVER $PKGDIR
+$PKGRESOURCES/build_pkg.sh $VERSION $PYVER $PKGDIR
 
 ############################################################################
 # Sign Package
 ############################################################################
-sudo $PKGRESOURCES/build_sig.sh salt-$VERSION-py$PYVER-$CPUARCH.pkg salt-$VERSION-py$PYVER-$CPUARCH-signed.pkg
+$PKGRESOURCES/build_sig.sh salt-$VERSION-py$PYVER-$CPUARCH.pkg salt-$VERSION-py$PYVER-$CPUARCH-signed.pkg

@@ -8,7 +8,7 @@ data, modify the ACL of files/directories
             - win32con
             - salt.utils.win_dacl
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -30,7 +30,7 @@ import shutil  # do not remove, used in imported file.py functions
 import re  # do not remove, used in imported file.py functions
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
-import fileinput  # do not remove, used in imported file.py functions
+import io  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
 import mmap  # do not remove, used in imported file.py functions
 import glob  # do not remove, used in imported file.py functions
@@ -53,13 +53,14 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
         __clean_tmp, check_file_meta, _binary_replace,
         _splitlines_preserving_trailing_newline, restore_backup,
-        access, copy, readdir, rmdir, truncate, replace, delete_backup,
+        access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir)
+        _set_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol, _get_eol,
+        _insert_line_after, _insert_line_before)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils.functools import namespaced_function as _namespaced_function
@@ -110,14 +111,15 @@ def __virtual__():
             global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, line, _get_flags, extract_hash, comment_line
-            global access, copy, readdir, rmdir, truncate, replace, search
+            global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _get_line_indent, dirname, basename
-            global list_backups_dir, normpath_
+            global _regex_to_static, _set_line_indent, dirname, basename
+            global list_backups_dir, normpath_, _assert_occurrence, _starts_till
+            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -156,6 +158,7 @@ def __virtual__():
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
+            read = _namespaced_function(read, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())
@@ -172,7 +175,11 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
             _regex_to_static = _namespaced_function(_regex_to_static, globals())
-            _get_line_indent = _namespaced_function(_get_line_indent, globals())
+            _set_line_indent = _namespaced_function(_set_line_indent, globals())
+            _set_line_eol = _namespaced_function(_set_line_eol, globals())
+            _get_eol = _namespaced_function(_get_eol, globals())
+            _insert_line_after = _namespaced_function(_insert_line_after, globals())
+            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
@@ -180,6 +187,8 @@ def __virtual__():
             basename = _namespaced_function(basename, globals())
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
+            _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
+            _starts_till = _namespaced_function(_starts_till, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
@@ -251,8 +260,8 @@ def gid_to_group(gid):
     '''
     func_name = '{0}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
-                 'see function docs for details.'.format(func_name))
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     return uid_to_user(gid)
 
@@ -283,8 +292,8 @@ def group_to_gid(group):
     '''
     func_name = '{0}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
-                 'see function docs for details.'.format(func_name))
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     if group is None:
         return ''
@@ -406,9 +415,9 @@ def get_gid(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is the '
-                 'uid.'.format(func_name))
+                 'uid.', func_name)
 
     return get_uid(path, follow_symlinks)
 
@@ -450,9 +459,9 @@ def get_group(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is the '
-                 'user (owner).'.format(func_name))
+                 'user (owner).', func_name)
 
     return get_user(path, follow_symlinks)
 
@@ -604,9 +613,9 @@ def get_mode(path):
 
     func_name = '{0}.get_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is '
-                 'always None.'.format(func_name))
+                 'always None.', func_name)
 
     return None
 
@@ -650,11 +659,11 @@ def lchown(path, user, group=None, pgroup=None):
     if group:
         func_name = '{0}.lchown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using {0} on '
-                     'Windows systems; see function docs for details.'
-                     ''.format(func_name))
-        log.debug('win_file.py {0} Ignoring the group parameter for {1}'
-                  ''.format(func_name, path))
+            log.info('The group parameter has no effect when using %s on '
+                     'Windows systems; see function docs for details.',
+                     func_name)
+        log.debug('win_file.py %s Ignoring the group parameter for %s',
+                  func_name, path)
         group = None
 
     return chown(path, user, group, pgroup, follow_symlinks=False)
@@ -698,11 +707,11 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if group is not None:
         func_name = '{0}.chown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using {0} on '
-                     'Windows systems; see function docs for details.'
-                     ''.format(func_name))
-        log.debug('win_file.py {0} Ignoring the group parameter for {1}'
-                  ''.format(func_name, path))
+            log.info('The group parameter has no effect when using %s on '
+                     'Windows systems; see function docs for details.',
+                     func_name)
+        log.debug('win_file.py %s Ignoring the group parameter for %s',
+                  func_name, path)
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
@@ -781,16 +790,16 @@ def chgrp(path, group):
     '''
     func_name = '{0}.chgrp'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; see '
-                 'function docs for details.'.format(func_name))
-    log.debug('win_file.py {0} Doing nothing for {1}'.format(func_name, path))
+        log.info('The function %s should not be used on Windows systems; see '
+                 'function docs for details.', func_name)
+    log.debug('win_file.py %s Doing nothing for %s', func_name, path)
 
     return None
 
 
 def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
-    Return a dict containing the stats for a given file
+    Return a dict containing the stats about a given file
 
     Under Windows, `gid` will equal `uid` and `group` will equal `user`.
 
@@ -819,6 +828,8 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
 
         salt '*' file.stats /etc/passwd
     '''
+    # This is to mirror the behavior of file.py. `check_file_meta` expects an
+    # empty dictionary when the file does not exist
     if not os.path.exists(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
 
@@ -841,7 +852,7 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
@@ -1025,9 +1036,9 @@ def set_mode(path, mode):
     '''
     func_name = '{0}.set_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function {0} should not be used on Windows systems; '
+        log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. The value returned is '
-                 'always None. Use set_perms instead.'.format(func_name))
+                 'always None. Use set_perms instead.', func_name)
 
     return get_mode(path)
 
@@ -1266,7 +1277,7 @@ def mkdir(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1344,7 +1355,7 @@ def makedirs_(path,
 
         owner (str):
             The owner of the directory. If not passed, it will be the account
-            that created the directly, likely SYSTEM
+            that created the directory, likely SYSTEM.
 
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
@@ -1379,7 +1390,7 @@ def makedirs_(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -1466,7 +1477,7 @@ def makedirs_perms(path,
 
         owner (str):
             The owner of the directory. If not passed, it will be the account
-            that created the directory, likely SYSTEM
+            that created the directory, likely SYSTEM.
 
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
@@ -1501,10 +1512,10 @@ def makedirs_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        bool: True if successful, otherwise raises an error
 
     CLI Example:
 
@@ -1601,7 +1612,7 @@ def check_perms(path,
             ``True``.
 
         reset (bool):
-            ``True`` wil show what permisisons will be removed by resetting the
+            ``True`` will show what permisisons will be removed by resetting the
             DACL. ``False`` will do nothing. Default is ``False``.
 
     Returns:
@@ -1620,6 +1631,9 @@ def check_perms(path,
         # Specify advanced attributes with a list
         salt '*' file.check_perms C:\\Temp\\ {} Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
+    if not os.path.exists(path):
+        raise CommandExecutionError('Path not found: {0}'.format(path))
+
     path = os.path.expanduser(path)
 
     if not ret:
@@ -2021,7 +2035,7 @@ def set_perms(path,
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``.
 
-            .. versionadded: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         bool: True if successful
@@ -2066,7 +2080,8 @@ def set_perms(path,
             try:
                 user_name = salt.utils.win_dacl.get_name(user)
             except CommandExecutionError:
-                log.debug('Deny Perms: User "{0}" missing from Target System'.format(user))
+                log.debug('Deny Perms: User "%s" missing from Target System',
+                          user)
                 continue
 
             # Get applies_to
@@ -2099,7 +2114,8 @@ def set_perms(path,
             try:
                 user_name = salt.utils.win_dacl.get_name(user)
             except CommandExecutionError:
-                log.debug('Grant Perms: User "{0}" missing from Target System'.format(user))
+                log.debug('Grant Perms: User "%s" missing from Target System',
+                          user)
                 continue
 
             # Get applies_to

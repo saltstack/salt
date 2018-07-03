@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Thayne Harbaugh (tharbaug@adobe.com)`
+    :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 
     tests.integration.shell.proxy
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt tests libs
@@ -55,7 +55,7 @@ class ProxyTest(testprogram.TestProgramCase):
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             proxy.shutdown()
 
     def test_exit_status_unknown_user(self):
@@ -85,7 +85,7 @@ class ProxyTest(testprogram.TestProgramCase):
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             proxy.shutdown()
 
     # pylint: disable=invalid-name
@@ -114,7 +114,7 @@ class ProxyTest(testprogram.TestProgramCase):
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             proxy.shutdown()
 
     def test_exit_status_correct_usage(self):

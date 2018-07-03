@@ -15,7 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -27,6 +27,7 @@ import logging
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,6 @@ __func_alias__ = {
     'list_': 'list',
 }
 
-
 VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
                    'cyl', 'chs', 'compact'])
 
@@ -51,16 +51,16 @@ def __virtual__():
     '''
     if salt.utils.platform.is_windows():
         return (False, 'The parted execution module failed to load '
-                'Windows systems are not supported.')
+                       'Windows systems are not supported.')
     if not salt.utils.path.which('parted'):
         return (False, 'The parted execution module failed to load '
-                'parted binary is not in the path.')
+                       'parted binary is not in the path.')
     if not salt.utils.path.which('lsblk'):
         return (False, 'The parted execution module failed to load '
-                'lsblk binary is not in the path.')
+                       'lsblk binary is not in the path.')
     if not salt.utils.path.which('partprobe'):
         return (False, 'The parted execution module failed to load '
-                'partprobe binary is not in the path.')
+                       'partprobe binary is not in the path.')
     return __virtualname__
 
 
@@ -93,7 +93,7 @@ def _validate_partition_boundary(boundary):
     '''
     try:
         for unit in VALID_UNITS:
-            if str(boundary).endswith(unit):
+            if six.text_type(boundary).endswith(unit):
                 return
         int(boundary)
     except Exception:
@@ -363,6 +363,16 @@ def system_types():
     return ret
 
 
+def _is_fstype(fs_type):
+    '''
+    Check if file system type is supported in module
+    :param fs_type: file system type
+    :return: True if fs_type is supported in this module, False otherwise
+    '''
+    return fs_type in set(['ext2', 'ext3', 'ext4', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs'])
+
+
 def mkfs(device, fs_type):
     '''
     Makes a file system <fs_type> on partition <device>, destroying all data
@@ -377,8 +387,7 @@ def mkfs(device, fs_type):
     '''
     _validate_device(device)
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs']):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
     if fs_type == 'NTFS':
@@ -439,8 +448,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs', 'zfs']):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
@@ -486,8 +494,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
             'Invalid part_type passed to partition.mkpartfs'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpartfs'
         )
@@ -641,7 +648,7 @@ def set_(device, minor, flag, state):
         )
 
     if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
         raise CommandExecutionError('Invalid flag passed to partition.set')
 
     if state not in set(['on', 'off']):
@@ -673,7 +680,7 @@ def toggle(device, partition, flag):
         )
 
     if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                       'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
         raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
     cmd = 'parted -m -s {0} toggle {1} {2}'.format(device, partition, flag)

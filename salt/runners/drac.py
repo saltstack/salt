@@ -14,7 +14,7 @@ configuration file.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import 3rd-party libs
@@ -60,7 +60,7 @@ def __connect(hostname, timeout=20, username=None, password=None):
     try:
         client.connect(hostname, username=username, password=password, timeout=timeout)
     except Exception as e:
-        log.error('Unable to connect to {0}: {1}'.format(hostname, e))
+        log.error('Unable to connect to %s: %s', hostname, e)
         return False
 
     return client
@@ -108,14 +108,14 @@ def pxe(hostname, timeout=20, username=None, password=None):
 
     if isinstance(client, paramiko.SSHClient):
         for i, cmd in enumerate(_cmds, 1):
-            log.info('Executing command {0}'.format(i))
+            log.info('Executing command %s', i)
 
             (stdin, stdout, stderr) = client.exec_command(cmd)
 
         if 'successful' in stdout.readline():
-            log.info('Executing command: {0}'.format(cmd))
+            log.info('Executing command: %s', cmd)
         else:
-            log.error('Unable to execute: {0}'.format(cmd))
+            log.error('Unable to execute: %s', cmd)
             return False
 
     return True

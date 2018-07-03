@@ -2,7 +2,7 @@
 '''
 Support for Debconf
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -12,6 +12,7 @@ import re
 # Import salt libs
 import salt.utils.path
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ def set_(package, question, type, value, *extra):
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
     line = "{0} {1} {2} {3}".format(package, question, type, value)
-    os.write(fd_, line)
+    os.write(fd_, salt.utils.stringutils.to_bytes(line))
     os.close(fd_)
 
     _set_file(fname)

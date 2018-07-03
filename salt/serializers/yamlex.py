@@ -103,10 +103,10 @@
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
-from __future__ import absolute_import
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import datetime
-from copy import copy
+import logging
 
 
 # Import Salt Libs
@@ -150,14 +150,17 @@ def deserialize(stream_or_string, **options):
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
+        log.exception('Error encountered while deserializing')
         err_type = ERROR_MAP.get(error.problem, 'Unknown yaml render error')
         line_num = error.problem_mark.line + 1
         raise DeserializationError(err_type,
                                    line_num,
                                    error.problem_mark.buffer)
     except ConstructorError as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
     except Exception as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
 
@@ -178,6 +181,7 @@ def serialize(obj, **options):
             return response[:-1]
         return response
     except Exception as error:
+        log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
 
@@ -215,11 +219,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
             # !reset instruction applies on document only.
             # It tells to reset previous decoded value for this present key.
-            reset = key_node.tag == u'!reset'
+            reset = key_node.tag == '!reset'
 
             # even if !aggregate tag apply only to values and not keys
             # it's a reason to act as a such nazi.
-            if key_node.tag == u'!aggregate':
+            if key_node.tag == '!aggregate':
                 log.warning('!aggregate applies on values only, not on keys')
                 value_node.tag = key_node.tag
                 key_node.tag = self.resolve_sls_tag(key_node)[0]
@@ -270,7 +274,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
         obj = self.construct_object(node, deep)
         if obj is None:
@@ -287,7 +291,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
 
         return self.construct_object(node, deep)
@@ -322,7 +326,6 @@ Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pa
 Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
-Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class SLSMap(OrderedDict):

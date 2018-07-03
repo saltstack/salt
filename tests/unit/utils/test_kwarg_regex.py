@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     unit.utils.kwarg_regex_test
@@ -8,7 +8,7 @@
 '''
 
 # Import Pytohn libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase

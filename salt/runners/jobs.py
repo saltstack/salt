@@ -4,7 +4,7 @@ A convenience system to manage jobs, both active and already run
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
@@ -70,9 +70,10 @@ def active(display_progress=False):
     for jid in ret:
         returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if minion not in ret[jid]['Returned']:
-                ret[jid]['Returned'].append(minion)
+        if data:
+            for minion in data:
+                if minion not in ret[jid]['Returned']:
+                    ret[jid]['Returned'].append(minion)
 
     return ret
 
@@ -133,15 +134,16 @@ def lookup_jid(jid,
     targeted_minions = data.get('Minions', [])
     returns = data.get('Result', {})
 
-    for minion in returns:
-        if display_progress:
-            __jid_event__.fire_event({'message': minion}, 'progress')
-        if u'return' in returns[minion]:
-            if returned:
-                ret[minion] = returns[minion].get(u'return')
-        else:
-            if returned:
-                ret[minion] = returns[minion].get('return')
+    if returns:
+        for minion in returns:
+            if display_progress:
+                __jid_event__.fire_event({'message': minion}, 'progress')
+            if u'return' in returns[minion]:
+                if returned:
+                    ret[minion] = returns[minion].get(u'return')
+            else:
+                if returned:
+                    ret[minion] = returns[minion].get('return')
     if missing:
         for minion_id in (x for x in targeted_minions if x not in returns):
             ret[minion_id] = 'Minion did not return'
@@ -519,8 +521,12 @@ def last_run(ext_source=None,
             log.info('The metadata parameter must be specified as a dictionary')
             return False
 
-    _all_jobs = list_jobs(ext_source, outputter, metadata,
-                          function, target, display_progress)
+    _all_jobs = list_jobs(ext_source=ext_source,
+                          outputter=outputter,
+                          search_metadata=metadata,
+                          search_function=function,
+                          search_target=target,
+                          display_progress=display_progress)
     if _all_jobs:
         last_job = sorted(_all_jobs)[-1]
         return print_job(last_job, ext_source)
@@ -541,6 +547,10 @@ def _format_job_instance(job):
     '''
     Helper to format a job instance
     '''
+    if not job:
+        ret = {'Error': 'Cannot contact returner or no job with this jid'}
+        return ret
+
     ret = {'Function': job.get('fun', 'unknown-function'),
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns

@@ -23,11 +23,16 @@ Oracle DataBase connection module
 
     .. code-block:: yaml
 
-        oracle.dbs: list of known based
-        oracle.dbs.<db>.uri: connection credentials in format:
-            user/password@host[:port]/sid[ as {sysdba|sysoper}]
+        oracle:
+          dbs:
+            <db>:
+              uri: connection credentials in format:
+            user/password@host[:port]/sid[ servicename as {sysdba|sysoper}]
+              optional keyword servicename will determine whether it is a sid or service_name
+            <db>:
+              uri: .....
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import logging
@@ -92,19 +97,29 @@ def _connect(uri):
     else:
         credentials = uri_l[0]
         mode = 0
+
+    serv_name = False
     userpass, hostportsid = credentials.split('@')
     user, password = userpass.split('/')
     hostport, sid = hostportsid.split('/')
+    if 'servicename' in sid:
+        serv_name = True
+        sid = sid.split('servicename')[0].strip()
     hostport_l = hostport.split(':')
     if len(hostport_l) == 2:
         host, port = hostport_l
     else:
         host = hostport_l[0]
         port = 1521
-    log.debug('connect: {0}'.format((user, password, host, port, sid, mode)))
+    log.debug('connect: %s', (user, password, host, port, sid, mode))
     # force UTF-8 client encoding
     os.environ['NLS_LANG'] = '.AL32UTF8'
-    conn = cx_Oracle.connect(user, password,
+    if serv_name:
+        conn = cx_Oracle.connect(user, password,
+                             cx_Oracle.makedsn(host, port, service_name=sid),
+                             mode)
+    else:
+        conn = cx_Oracle.connect(user, password,
                              cx_Oracle.makedsn(host, port, sid),
                              mode)
     conn.outputtypehandler = _unicode_output
@@ -122,7 +137,7 @@ def run_query(db, query):
 
         salt '*' oracle.run_query my_db "select * from my_table"
     '''
-    log.debug('run query on {0}: {1}'.format(db, query))
+    log.debug('run query on %s: %s', db, query)
     conn = _connect(show_dbs(db)[db]['uri'])
     return conn.cursor().execute(query).fetchall()
 
@@ -139,14 +154,14 @@ def show_dbs(*dbs):
         salt '*' oracle.show_dbs my_db
     '''
     if dbs:
-        log.debug('get dbs from pillar: {0}'.format(dbs))
+        log.debug('get dbs from pillar: %s', dbs)
         result = {}
         for db in dbs:
             result[db] = __salt__['pillar.get']('oracle:dbs:' + db)
         return result
     else:
         pillar_dbs = __salt__['pillar.get']('oracle:dbs')
-        log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
+        log.debug('get all (%s) dbs from pillar', len(pillar_dbs))
         return pillar_dbs
 
 
@@ -168,12 +183,12 @@ def version(*dbs):
         ]
     result = {}
     if dbs:
-        log.debug('get db versions for: {0}'.format(dbs))
+        log.debug('get db versions for: %s', dbs)
         for db in dbs:
             if db in pillar_dbs:
                 result[db] = get_version(db)
     else:
-        log.debug('get all({0}) dbs versions'.format(len(dbs)))
+        log.debug('get all (%s) dbs versions', len(dbs))
         for db in dbs:
             result[db] = get_version(db)
     return result
@@ -190,7 +205,7 @@ def client_version():
 
         salt '*' oracle.client_version
     '''
-    return '.'.join((str(x) for x in cx_Oracle.clientversion()))
+    return '.'.join((six.text_type(x) for x in cx_Oracle.clientversion()))
 
 
 def show_pillar(item=None):

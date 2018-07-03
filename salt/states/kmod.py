@@ -30,6 +30,7 @@ Multiple modules can be specified for both kmod.present and kmod.absent.
           - snd_timer
           - snd
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
@@ -120,12 +121,18 @@ def present(name, persist=False, mods=None):
     # The remaining modules are not loaded and are available for loading
     available = list(set(not_loaded) - set(unavailable))
     loaded = {'yes': [], 'no': [], 'failed': []}
+    loaded_by_dependency = []
     for mod in available:
+        if mod in loaded_by_dependency:
+            loaded['yes'].append(mod)
+            continue
         load_result = __salt__['kmod.load'](mod, persist)
         if isinstance(load_result, (list, tuple)):
             if len(load_result) > 0:
                 for module in load_result:
                     ret['changes'][module] = 'loaded'
+                    if module != mod:
+                        loaded_by_dependency.append(module)
                 loaded['yes'].append(mod)
             else:
                 ret['result'] = False

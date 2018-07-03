@@ -36,6 +36,9 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.verify
+import salt.utils.yaml
+import salt.utils.user
 import salt.syspaths
 from salt.template import compile_template
 
@@ -47,7 +50,6 @@ except ImportError:
         import Crypto.Random
     except ImportError:
         pass  # pycrypto < 2.1
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 
@@ -185,6 +187,10 @@ class CloudClient(object):
         else:
             self.opts = salt.config.cloud_config(path)
 
+        # Check the cache-dir exists. If not, create it.
+        v_dirs = [self.opts['cachedir']]
+        salt.utils.verify.verify_env(v_dirs, salt.utils.user.get_user())
+
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
                 driver = provider['driver']
@@ -197,6 +203,10 @@ class CloudClient(object):
                 profile['profile'] = name
                 self.opts['profiles'].update({name: profile})
                 self.opts['providers'][provider][driver]['profiles'].update({name: profile})
+            for name, map_dct in six.iteritems(pillars.pop('maps', {})):
+                if 'maps' not in self.opts:
+                    self.opts['maps'] = {}
+                self.opts['maps'][name] = map_dct
             self.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
@@ -234,7 +244,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in list(_providers).copy():
+                for provider in _providers.copy():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts
@@ -319,22 +329,22 @@ class CloudClient(object):
 
             >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
             >>> client.profile('do_512_git', names=['minion01',])
-            {'minion01': {u'backups_active': 'False',
-                    u'created_at': '2014-09-04T18:10:15Z',
-                    u'droplet': {u'event_id': 31000502,
-                                 u'id': 2530006,
-                                 u'image_id': 5140006,
-                                 u'name': u'minion01',
-                                 u'size_id': 66},
-                    u'id': '2530006',
-                    u'image_id': '5140006',
-                    u'ip_address': '107.XXX.XXX.XXX',
-                    u'locked': 'True',
-                    u'name': 'minion01',
-                    u'private_ip_address': None,
-                    u'region_id': '4',
-                    u'size_id': '66',
-                    u'status': 'new'}}
+            {'minion01': {'backups_active': 'False',
+                    'created_at': '2014-09-04T18:10:15Z',
+                    'droplet': {'event_id': 31000502,
+                                 'id': 2530006,
+                                 'image_id': 5140006,
+                                 'name': 'minion01',
+                                 'size_id': 66},
+                    'id': '2530006',
+                    'image_id': '5140006',
+                    'ip_address': '107.XXX.XXX.XXX',
+                    'locked': 'True',
+                    'name': 'minion01',
+                    'private_ip_address': None,
+                    'region_id': '4',
+                    'size_id': '66',
+                    'status': 'new'}}
 
 
         '''
@@ -350,7 +360,7 @@ class CloudClient(object):
 
     def map_run(self, path=None, **kwargs):
         '''
-        Pass in a location for a map to execute
+        To execute a map
         '''
         kwarg = {}
         if path:
@@ -666,7 +676,7 @@ class Cloud(object):
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
                 # for minimum information, Otherwise still use query param.
-                if 'selected_query_option' not in opts and '{0}.list_nodes_min'.format(driver) in self.clouds:
+                if opts.get('selected_query_option') is None and '{0}.list_nodes_min'.format(driver) in self.clouds:
                     this_query = 'list_nodes_min'
 
                 fun = '{0}.{1}'.format(driver, this_query)
@@ -1388,7 +1398,7 @@ class Cloud(object):
 
         try:
             with salt.utils.files.fopen(self.opts['conf_file'], 'r') as mcc:
-                main_cloud_config = yaml.safe_load(mcc)
+                main_cloud_config = salt.utils.yaml.safe_load(mcc)
             if not main_cloud_config:
                 main_cloud_config = {}
         except KeyError:
@@ -1493,8 +1503,8 @@ class Cloud(object):
                             vm_name = vm_details['id']
                         else:
                             log.debug(
-                                'vm:{0} in provider:{1} is not in name '
-                                'list:\'{2}\''.format(vm_name, driver, names)
+                                'vm:%s in provider:%s is not in name '
+                                'list:\'%s\'', vm_name, driver, names
                             )
                             continue
 
@@ -1754,16 +1764,27 @@ class Map(Cloud):
 
     def read(self):
         '''
-        Read in the specified map file and return the map structure
+        Read in the specified map and return the map structure
         '''
         map_ = None
         if self.opts.get('map', None) is None:
             if self.opts.get('map_data', None) is None:
-                return {}
+                if self.opts.get('map_pillar', None) is None:
+                    pass
+                elif self.opts.get('map_pillar') not in self.opts.get('maps'):
+                    log.error(
+                        'The specified map not found in pillar at \'cloud:maps:{0}\''.format(
+                            self.opts['map_pillar'])
+                    )
+                    raise SaltCloudNotFound()
+                else:
+                    # 'map_pillar' is provided, try to use it
+                    map_ = self.opts['maps'][self.opts.get('map_pillar')]
             else:
+                # 'map_data' is provided, try to use it
                 map_ = self.opts['map_data']
-
-        if not map_:
+        else:
+            # 'map' is provided, try to use it
             local_minion_opts = copy.deepcopy(self.opts)
             local_minion_opts['file_client'] = 'local'
             self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -1780,7 +1801,7 @@ class Map(Cloud):
             else:
                 cached_map = self.opts['map']
             try:
-                renderer = self.opts.get('renderer', 'yaml_jinja')
+                renderer = self.opts.get('renderer', 'jinja|yaml')
                 rend = salt.loader.render(self.opts, {})
                 blacklist = self.opts.get('renderer_blacklist')
                 whitelist = self.opts.get('renderer_whitelist')
@@ -1796,10 +1817,13 @@ class Map(Cloud):
                 )
                 return {}
 
-        if 'include' in map_:
-            map_ = salt.config.include_config(
-                map_, self.opts['map'], verbose=False
-            )
+            if 'include' in map_:
+                map_ = salt.config.include_config(
+                    map_, self.opts['map'], verbose=False
+                )
+
+        if not map_:
+            return {}
 
         # Create expected data format if needed
         for profile, mapped in six.iteritems(map_.copy()):
@@ -1910,7 +1934,8 @@ class Map(Cloud):
         pmap = self.map_providers_parallel(cached=cached)
         exist = set()
         defined = set()
-        for profile_name, nodes in six.iteritems(self.rendered_map):
+        rendered_map = copy.deepcopy(self.rendered_map)
+        for profile_name, nodes in six.iteritems(rendered_map):
             if profile_name not in self.opts['profiles']:
                 msg = (
                     'The required profile, \'{0}\', defined in the map '
@@ -1928,21 +1953,23 @@ class Map(Cloud):
 
             profile_data = self.opts['profiles'].get(profile_name)
 
-            # Get associated provider data, in case something like size
-            # or image is specified in the provider file. See issue #32510.
-            alias, driver = profile_data.get('provider').split(':')
-            provider_details = self.opts['providers'][alias][driver].copy()
-            del provider_details['profiles']
-
-            # Update the provider details information with profile data
-            # Profile data should override provider data, if defined.
-            # This keeps map file data definitions consistent with -p usage.
-            provider_details.update(profile_data)
-            profile_data = provider_details
-
             for nodename, overrides in six.iteritems(nodes):
-                # Get the VM name
-                nodedata = copy.deepcopy(profile_data)
+                # Get associated provider data, in case something like size
+                # or image is specified in the provider file. See issue #32510.
+                if 'provider' in overrides and overrides['provider'] != profile_data['provider']:
+                    alias, driver = overrides.get('provider').split(':')
+                else:
+                    alias, driver = profile_data.get('provider').split(':')
+
+                provider_details = copy.deepcopy(self.opts['providers'][alias][driver])
+                del provider_details['profiles']
+
+                # Update the provider details information with profile data
+                # Profile data and node overrides should override provider data, if defined.
+                # This keeps map file data definitions consistent with -p usage.
+                salt.utils.dictupdate.update(provider_details, profile_data)
+                nodedata = copy.deepcopy(provider_details)
+
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes',
                                 'requires'):

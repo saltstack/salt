@@ -135,7 +135,7 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import logging
@@ -196,10 +196,10 @@ def alive(opts):
         # or regular minion
     is_alive_ret = call('is_alive', **{})
     if not is_alive_ret.get('result', False):
-        log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
-            proxyid=opts.get('id'),
-            comment=is_alive_ret.get('comment')
-        ))
+        log.debug(
+            '[%s] Unable to execute `is_alive`: %s',
+            opts.get('id'), is_alive_ret.get('comment')
+        )
         # if `is_alive` is not implemented by the underneath driver,
         # will consider the connection to be still alive
         # we don't want overly request connection reestablishment
@@ -207,10 +207,7 @@ def alive(opts):
         #       and return False to force reconnection
         return True
     flag = is_alive_ret.get('out', {}).get('is_alive', False)
-    log.debug('Is {proxyid} still alive? {answ}'.format(
-        proxyid=opts.get('id'),
-        answ='Yes.' if flag else 'No.'
-    ))
+    log.debug('Is %s still alive? %s', opts.get('id'), 'Yes.' if flag else 'No.')
     return flag
 
 
@@ -239,16 +236,7 @@ def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-    refresh_needed = False
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('out', {}))
-
-    if refresh_needed:
-        facts = call('get_facts', **{})
-        DETAILS['grains_cache'] = facts
-
-    return DETAILS.get('grains_cache', {})
+    return call('get_facts', **{})
 
 
 def grains_refresh():
@@ -277,13 +265,12 @@ def shutdown(opts):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
     except Exception as error:
+        port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
         log.error(
-            'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
-                hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-                error=error
-            )
+            'Cannot close connection with %s%s! Please check error: %s',
+            NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
+            ':{0}'.format(port) if port else '',
+            error
         )
 
     return True
@@ -304,11 +291,12 @@ def call(method, *args, **kwargs):
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
     :return: A dictionary with three keys:
 
-        * result (True/False): if the operation succeeded
-        * out (object): returns the object as-is from the call
-        * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
-        on the `correct driver repo`_ and make sure to read the FAQ_
+    - result (True/False): if the operation succeeded
+    - out (object): returns the object as-is from the call
+    - comment (string): provides more details in case the call failed
+    - traceback (string): complete traceback in case of exception. Please
+      submit an issue including this traceback on the `correct driver repo`_
+      and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
     .. _FAQ: https://github.com/napalm-automation/napalm#faq

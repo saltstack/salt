@@ -12,7 +12,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import PILLAR_DIR
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 
 # Import Salt libs
 import salt.utils.files
@@ -33,7 +33,7 @@ class MinionBlackoutTestCase(ModuleCase):
         with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as wfh:
             wfh.write(blackout_data)
         self.run_function('saltutil.refresh_pillar')
-        sleep(5)  # wait for minion to enter blackout mode
+        sleep(10)  # wait for minion to enter blackout mode
 
     def end_blackout(self):
         '''
@@ -44,8 +44,9 @@ class MinionBlackoutTestCase(ModuleCase):
                 minion_blackout: False
                 '''))
         self.run_function('saltutil.refresh_pillar')
-        sleep(5)  # wait for minion to exit blackout mode
+        sleep(10)  # wait for minion to exit blackout mode
 
+    @flaky
     def test_blackout(self):
         '''
         Test that basic minion blackout functionality works
@@ -60,6 +61,7 @@ class MinionBlackoutTestCase(ModuleCase):
         ret = self.run_function('test.ping')
         self.assertEqual(ret, True)
 
+    @flaky
     def test_blackout_whitelist(self):
         '''
         Test that minion blackout whitelist works
@@ -81,6 +83,7 @@ class MinionBlackoutTestCase(ModuleCase):
         finally:
             self.end_blackout()
 
+    @flaky
     def test_blackout_nonwhitelist(self):
         '''
         Test that minion refuses to run non-whitelisted functions during

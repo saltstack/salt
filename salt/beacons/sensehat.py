@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Beacon to monitor temperature, humidity and pressure using the SenseHat
-of a Raspberry Pi.
+Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
+===============================================================================
 
 .. versionadded:: 2017.7.0
 
@@ -10,9 +10,12 @@ of a Raspberry Pi.
 :depends:       sense_hat Python module
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+
 import logging
 import re
+
+from salt.ext import six
 from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
@@ -78,16 +81,16 @@ def beacon(config):
     for sensor in _config.get('sensors', {}):
         sensor_function = 'sensehat.get_{0}'.format(sensor)
         if sensor_function not in __salt__:
-            log.error('No sensor for meassuring {0}. Skipping.'.format(sensor))
+            log.error('No sensor for meassuring %s. Skipping.', sensor)
             continue
 
         sensor_config = _config['sensors'][sensor]
         if isinstance(sensor_config, list):
-            sensor_min = str(sensor_config[0])
-            sensor_max = str(sensor_config[1])
+            sensor_min = six.text_type(sensor_config[0])
+            sensor_max = six.text_type(sensor_config[1])
         else:
             sensor_min = min_default.get(sensor, '0')
-            sensor_max = str(sensor_config)
+            sensor_max = six.text_type(sensor_config)
 
         if '%' in sensor_min:
             sensor_min = re.sub('%', '', sensor_min)

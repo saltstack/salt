@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Palo Alto compatibility to Salt.
+Module to provide Palo Alto compatibility to Salt
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Configuration
 =============
@@ -17,7 +17,7 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
+    :py:mod:`Palo Alto Proxy Module <salt.proxy.panos>`
 
 About
 =====
@@ -29,7 +29,7 @@ through the XML API or through a brokered connection to Panorama.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 

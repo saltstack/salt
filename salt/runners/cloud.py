@@ -6,7 +6,7 @@ The Salt Cloud Runner
 This runner wraps the functionality of salt cloud making salt cloud routines
 available to all internal apis via the runner system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -164,7 +164,7 @@ def action(func=None,
             instances,
             provider,
             instance,
-            **salt.utils.args.clean_kwargs(**kwargs)
+            salt.utils.args.clean_kwargs(**kwargs)
         )
     except SaltCloudConfigError as err:
         log.error(err)

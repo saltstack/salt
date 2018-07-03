@@ -6,6 +6,8 @@ and the set of routes for a particular VM is called its routing table.
 For each packet leaving a virtual machine, the system searches that machine's
 routing table for a single best matching route.
 
+.. versionadded:: 2018.3.0
+
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.
 
@@ -13,9 +15,16 @@ through your gateway instance.
 :maturity:   new
 :depends:    google-api-python-client
 :platform:   Linux
+
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# Import salt libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 try:
@@ -33,8 +42,8 @@ def __virtual__():
     Check for googleapiclient api
     '''
     if HAS_LIB is False:
-        log.info("Required google API's(googleapiclient, oauth2client) not found")
-    return (HAS_LIB, "Required google API's(googleapiclient, oauth2client) not found")
+        return False, 'Required dependencies \'googleapiclient\' and/or \'oauth2client\' were not found.'
+    return __virtualname__
 
 
 def _get_network(project_id, network_name, service):
@@ -113,10 +122,10 @@ def route_create(credential_file=None,
     routes = service.routes()
 
     routes_config = {
-        'name': str(name),
-        'network': _get_network(project_id, str(network),
+        'name': six.text_type(name),
+        'network': _get_network(project_id, six.text_type(network),
                                 service=service)['selfLink'],
-        'destRange': str(dest_range),
+        'destRange': six.text_type(dest_range),
         'nextHopInstance': _get_instance(project_id, instance_zone,
                                          next_hop_instance,
                                          service=service)['selfLink'],

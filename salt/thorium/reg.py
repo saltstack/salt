@@ -5,7 +5,7 @@ values are stored and computed, such as averages etc.
 '''
 
 # import python libs
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 import salt.utils.stringutils
 
 __func_alias__ = {
@@ -53,7 +53,7 @@ def list_(name, add, match, stamp=False, prune=0):
 
     If ``stamp`` is True, then the timestamp from the event will also be added
     if ``prune`` is set to an integer higher than ``0``, then only the last
-        ``prune`` values will be kept in the list.
+    ``prune`` values will be kept in the list.
 
     USAGE:
 

@@ -4,7 +4,7 @@ Module for editing date/time settings on macOS
 
  .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 from datetime import datetime
@@ -80,10 +80,11 @@ def set_date(date):
     Set the current month, day, and year
 
     :param str date: The date to set. Valid date formats are:
-    - %m:%d:%y
-    - %m:%d:%Y
-    - %m/%d/%y
-    - %m/%d/%Y
+
+        - %m:%d:%y
+        - %m:%d:%Y
+        - %m/%d/%y
+        - %m/%d/%Y
 
     :return: True if successful, False if not
     :rtype: bool
@@ -125,8 +126,8 @@ def set_time(time):
     '''
     Sets the current time. Must be in 24 hour format.
 
-    :param str time: The time to set in 24 hour format.
-    The value must be double quoted. ie: '"17:46"'
+    :param str time: The time to set in 24 hour format.  The value must be
+        double quoted. ie: '"17:46"'
 
     :return: True if successful, False if not
     :rtype: bool
@@ -332,8 +333,9 @@ def set_time_server(time_server='time.apple.com'):
     Designates a network time server. Enter the IP address or DNS name for the
     network time server.
 
-    :param time_server: IP or DNS name of the network time server. If nothing is
-    passed the time server will be set to the macOS default of 'time.apple.com'
+    :param time_server: IP or DNS name of the network time server. If nothing
+        is passed the time server will be set to the macOS default of
+        'time.apple.com'
     :type: str
 
     :return: True if successful, False if not

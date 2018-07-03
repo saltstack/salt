@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Justin Anderson <janderson@saltstack.com>`
+    :codeauthor: Justin Anderson <janderson@saltstack.com>
 '''
 
 # Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Salt Libs

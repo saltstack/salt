@@ -13,7 +13,7 @@ section of your ``master`` configuration file:
     ext_pillar:
       - venafi: True
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import salt.cache
 import salt.syspaths as syspaths

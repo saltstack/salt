@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
@@ -21,5 +21,8 @@ class SSHGrainsTest(SSHCase):
         test grains.items with salt-ssh
         '''
         ret = self.run_function('grains.items')
-        self.assertEqual(ret['kernel'], 'Linux')
+        grain = 'Linux'
+        if salt.utils.platform.is_darwin():
+            grain = 'Darwin'
+        self.assertEqual(ret['kernel'], grain)
         self.assertTrue(isinstance(ret, dict))

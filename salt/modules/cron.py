@@ -7,19 +7,21 @@ Work with cron
     backslash-escape percent characters and any other metacharacters that might
     be interpreted incorrectly by the shell.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 import random
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
+
+from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.locales import sdecode
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
@@ -33,13 +35,15 @@ def __virtual__():
         return (False, 'Cannot load cron module: crontab command not found')
 
 
-def _encode(string):
+def _ensure_string(val):
+    # Account for cases where the identifier is not a string
+    # which would cause to_unicode to fail.
+    if not isinstance(val, six.string_types):
+        val = str(val)  # future lint: enable=blacklisted-function
     try:
-        string = salt.utils.stringutils.to_str(string)
+        return salt.utils.stringutils.to_unicode(val)
     except TypeError:
-        if not string:
-            string = ''
-    return "{0}".format(string)
+        return ''
 
 
 def _cron_id(cron):
@@ -50,7 +54,7 @@ def _cron_id(cron):
     else:
         cid = SALT_CRON_NO_IDENTIFIER
     if cid:
-        return _encode(cid)
+        return _ensure_string(cid)
 
 
 def _cron_matched(cron, cmd, identifier=None):
@@ -67,7 +71,7 @@ def _cron_matched(cron, cmd, identifier=None):
     if cid:
         if not identifier:
             identifier = SALT_CRON_NO_IDENTIFIER
-        eidentifier = _encode(identifier)
+        eidentifier = _ensure_string(identifier)
         # old style second round
         # after saving crontab, we must check that if
         # we have not the same command, but the default id
@@ -149,8 +153,24 @@ def _render_tab(lst):
                             cron['cmd']
                             )
                    )
-    for spec in lst['special']:
-        ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
+    for cron in lst['special']:
+        if cron['comment'] is not None or cron['identifier'] is not None:
+            comment = '#'
+            if cron['comment']:
+                comment += ' {0}'.format(
+                    cron['comment'].rstrip().replace('\n', '\n# '))
+            if cron['identifier']:
+                comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
+                                             cron['identifier'])
+
+            comment += '\n'
+            ret.append(comment)
+        ret.append('{0}{1} {2}\n'.format(
+                            cron['commented'] is True and '#DISABLED#' or '',
+                            cron['spec'],
+                            cron['cmd']
+                            )
+                  )
     return ret
 
 
@@ -226,6 +246,7 @@ def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
+    lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
     path = salt.utils.files.mkstemp()
     if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
         # In some cases crontab command should be executed as user rather than root
@@ -248,8 +269,8 @@ def _date_time_match(cron, **kwargs):
     Returns true if the minute, hour, etc. params match their counterparts from
     the dict returned from list_tab().
     '''
-    return all([kwargs.get(x) is None or cron[x] == str(kwargs[x])
-                or (str(kwargs[x]).lower() == 'random' and cron[x] != '*')
+    return all([kwargs.get(x) is None or cron[x] == six.text_type(kwargs[x])
+                or (six.text_type(kwargs[x]).lower() == 'random' and cron[x] != '*')
                 for x in ('minute', 'hour', 'daymonth', 'month', 'dayweek')])
 
 
@@ -266,16 +287,22 @@ def raw_cron(user):
     if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
-                                           runas=user,
-                                           rstrip=False,
-                                           python_shell=False)).splitlines(True)
+        lines = salt.utils.data.decode(
+            __salt__['cmd.run_stdout'](cmd,
+                                       runas=user,
+                                       ignore_retcode=True,
+                                       rstrip=False,
+                                       python_shell=False)
+        ).splitlines(True)
     else:
         cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
-                                           rstrip=False,
-                                           python_shell=False)).splitlines(True)
+        lines = salt.utils.data.decode(
+            __salt__['cmd.run_stdout'](cmd,
+                                       ignore_retcode=True,
+                                       rstrip=False,
+                                       python_shell=False)
+        ).splitlines(True)
 
     if len(lines) != 0 and lines[0].startswith('# DO NOT EDIT THIS FILE - edit the master and reinstall.'):
         del lines[0:3]
@@ -319,7 +346,15 @@ def list_tab(user):
                     continue
                 dat['spec'] = comps[0]
                 dat['cmd'] = ' '.join(comps[1:])
+                dat['identifier'] = identifier
+                dat['comment'] = comment
+                dat['commented'] = False
+                if commented_cron_job:
+                    dat['commented'] = True
                 ret['special'].append(dat)
+                identifier = None
+                comment = None
+                commented_cron_job = False
             elif line.startswith('#'):
                 # It's a comment! Catch it!
                 comment_line = line.lstrip('# ')
@@ -365,11 +400,17 @@ def list_tab(user):
             ret['pre'].append(line)
     return ret
 
+
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
 
 
-def set_special(user, special, cmd):
+def set_special(user,
+                special,
+                cmd,
+                commented=False,
+                comment=None,
+                identifier=None):
     '''
     Set up a special command in the crontab.
 
@@ -381,11 +422,60 @@ def set_special(user, special, cmd):
     '''
     lst = list_tab(user)
     for cron in lst['special']:
-        if special == cron['spec'] and cmd == cron['cmd']:
+        cid = _cron_id(cron)
+        if _cron_matched(cron, cmd, identifier):
+            test_setted_id = (
+                cron['identifier'] is None
+                and SALT_CRON_NO_IDENTIFIER
+                or cron['identifier'])
+            tests = [(cron['comment'], comment),
+                     (cron['commented'], commented),
+                     (identifier, test_setted_id),
+                     (cron['spec'], special)]
+            if cid or identifier:
+                tests.append((cron['cmd'], cmd))
+            if any([_needs_change(x, y) for x, y in tests]):
+                rm_special(user, cmd, identifier=cid)
+
+                # Use old values when setting the new job if there was no
+                # change needed for a given parameter
+                if not _needs_change(cron['spec'], special):
+                    special = cron['spec']
+                if not _needs_change(cron['commented'], commented):
+                    commented = cron['commented']
+                if not _needs_change(cron['comment'], comment):
+                    comment = cron['comment']
+                if not _needs_change(cron['cmd'], cmd):
+                    cmd = cron['cmd']
+                    if (
+                        cid == SALT_CRON_NO_IDENTIFIER
+                    ):
+                        if identifier:
+                            cid = identifier
+                        if (
+                            cid == SALT_CRON_NO_IDENTIFIER
+                            and cron['identifier'] is None
+                        ):
+                            cid = None
+                        cron['identifier'] = cid
+                if not cid or (
+                    cid and not _needs_change(cid, identifier)
+                ):
+                    identifier = cid
+                jret = set_special(user, special, cmd, commented=commented,
+                                   comment=comment, identifier=identifier)
+                if jret == 'new':
+                    return 'updated'
+                else:
+                    return jret
             return 'present'
-    spec = {'spec': special,
-            'cmd': cmd}
-    lst['special'].append(spec)
+    cron = {'spec': special,
+            'cmd': cmd,
+            'identifier': identifier,
+            'comment': comment,
+            'commented': commented}
+    lst['special'].append(cron)
+
     comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
@@ -407,13 +497,13 @@ def _get_cron_date_time(**kwargs):
 
     ret = {}
     for param in ('minute', 'hour', 'month', 'dayweek'):
-        value = str(kwargs.get(param, '1')).lower()
+        value = six.text_type(kwargs.get(param, '1')).lower()
         if value == 'random':
-            ret[param] = str(random.sample(range_max[param], 1)[0])
+            ret[param] = six.text_type(random.sample(range_max[param], 1)[0])
         elif len(value.split(':')) == 2:
             cron_range = sorted(value.split(':'))
             start, end = int(cron_range[0]), int(cron_range[1])
-            ret[param] = str(random.randint(start, end))
+            ret[param] = six.text_type(random.randint(start, end))
         else:
             ret[param] = value
 
@@ -425,10 +515,10 @@ def _get_cron_date_time(**kwargs):
         # This catches both '2' and '*'
         daymonth_max = 28
 
-    daymonth = str(kwargs.get('daymonth', '1')).lower()
+    daymonth = six.text_type(kwargs.get('daymonth', '1')).lower()
     if daymonth == 'random':
         ret['daymonth'] = \
-            str(random.sample(list(list(range(1, (daymonth_max + 1)))), 1)[0])
+            six.text_type(random.sample(list(list(range(1, (daymonth_max + 1)))), 1)[0])
     else:
         ret['daymonth'] = daymonth
 
@@ -455,11 +545,11 @@ def set_job(user,
         salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     # Scrub the types
-    minute = str(minute).lower()
-    hour = str(hour).lower()
-    daymonth = str(daymonth).lower()
-    month = str(month).lower()
-    dayweek = str(dayweek).lower()
+    minute = six.text_type(minute).lower()
+    hour = six.text_type(hour).lower()
+    daymonth = six.text_type(daymonth).lower()
+    month = six.text_type(month).lower()
+    dayweek = six.text_type(dayweek).lower()
     lst = list_tab(user)
     for cron in lst['crons']:
         cid = _cron_id(cron)
@@ -538,7 +628,7 @@ def set_job(user,
     return 'new'
 
 
-def rm_special(user, special, cmd):
+def rm_special(user, cmd, special=None, identifier=None):
     '''
     Remove a special cron job for a specified user.
 
@@ -546,22 +636,28 @@ def rm_special(user, special, cmd):
 
     .. code-block:: bash
 
-        salt '*' cron.rm_job root @hourly /usr/bin/foo
+        salt '*' cron.rm_special root /usr/bin/foo
     '''
     lst = list_tab(user)
     ret = 'absent'
     rm_ = None
     for ind in range(len(lst['special'])):
-        if lst['special'][ind]['cmd'] == cmd and \
-                lst['special'][ind]['spec'] == special:
-            lst['special'].pop(ind)
-            rm_ = ind
+        if rm_ is not None:
+            break
+        if _cron_matched(lst['special'][ind], cmd, identifier=identifier):
+            if special is None:
+                # No special param was specified
+                rm_ = ind
+            else:
+                if lst['special'][ind]['spec'] == special:
+                    rm_ = ind
     if rm_ is not None:
+        lst['special'].pop(rm_)
         ret = 'removed'
-        comdat = _write_cron_lines(user, _render_tab(lst))
-        if comdat['retcode']:
-            # Failed to commit
-            return comdat['stderr']
+    comdat = _write_cron_lines(user, _render_tab(lst))
+    if comdat['retcode']:
+        # Failed to commit, return the error
+        return comdat['stderr']
     return ret
 
 

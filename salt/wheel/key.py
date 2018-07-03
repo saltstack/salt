@@ -24,11 +24,11 @@ sample above and use the :py:class:`WheelClient` functions to show how they can
 be called from a Python interpreter.
 
 The wheel key functions can also be called via a ``salt`` command at the CLI
-using the :ref:`saltutil execution module <salt.modules.saltutil>`.
+using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import hashlib
 import logging
@@ -259,7 +259,7 @@ def reject_dict(match, include_accepted=False, include_denied=False):
 
 
 def key_str(match):
-    '''
+    r'''
     Return information about the key. Returns a dictionary.
 
     match
@@ -321,12 +321,12 @@ def finger_master(hash_type=None):
 
 
 def gen(id_=None, keysize=2048):
-    '''
+    r'''
     Generate a key pair. No keys are stored on the master. A key pair is
     returned as a dict containing pub and priv keys. Returns a dictionary
     containing the the ``pub`` and ``priv`` keys with their generated values.
 
-    id_
+    id\_
         Set a name to generate a key pair for use with salt. If not specified,
         a random name will be specified.
 
@@ -346,6 +346,7 @@ def gen(id_=None, keysize=2048):
         ...
         QH3/W74X1+WTBlx4R2KGLYBiH+bCCFEQ/Zvcu4Xp4bIOPtRKozEQ==\n
         -----END RSA PRIVATE KEY-----'}
+
     '''
     if id_ is None:
         id_ = hashlib.sha512(os.urandom(32)).hexdigest()
@@ -356,9 +357,9 @@ def gen(id_=None, keysize=2048):
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
     pub = '{0}.pub'.format(priv[:priv.rindex('.')])
     with salt.utils.files.fopen(priv) as fp_:
-        ret['priv'] = fp_.read()
+        ret['priv'] = salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(pub) as fp_:
-        ret['pub'] = fp_.read()
+        ret['pub'] = salt.utils.stringutils.to_unicode(fp_.read())
 
     # The priv key is given the Read-Only attribute. The causes `os.remove` to
     # fail in Windows.
@@ -371,12 +372,12 @@ def gen(id_=None, keysize=2048):
 
 
 def gen_accept(id_, keysize=2048, force=False):
-    '''
+    r'''
     Generate a key pair then accept the public key. This function returns the
     key pair in a dict, only the public key is preserved on the master. Returns
     a dictionary.
 
-    id_
+    id\_
         The name of the minion for which to generate a key pair.
 
     keysize
@@ -416,7 +417,7 @@ def gen_accept(id_, keysize=2048, force=False):
     if os.path.isfile(acc_path) and not force:
         return {}
     with salt.utils.files.fopen(acc_path, 'w+') as fp_:
-        fp_.write(ret['pub'])
+        fp_.write(salt.utils.stringutils.to_str(ret['pub']))
     return ret
 
 

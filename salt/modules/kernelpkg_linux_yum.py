@@ -2,7 +2,7 @@
 '''
 Manage Linux kernel packages on YUM-based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 
@@ -108,7 +108,6 @@ def latest_installed():
         salt '*' kernelpkg.latest_installed
 
     .. note::
-
         This function may not return the same value as
         :py:func:`~salt.modules.kernelpkg_linux_yum.active` if a new kernel
         has been installed and the system has not yet been rebooted.
@@ -157,9 +156,9 @@ def upgrade(reboot=False, at_time=None):
         salt '*' kernelpkg.upgrade reboot=True at_time=1
 
     .. note::
-    An immediate reboot often shuts down the system before the minion
-    has a chance to return, resulting in errors. A minimal delay (1 minute)
-    is useful to ensure the result is delivered to the master.
+        An immediate reboot often shuts down the system before the minion has a
+        chance to return, resulting in errors. A minimal delay (1 minute) is
+        useful to ensure the result is delivered to the master.
     '''
     result = __salt__['pkg.upgrade'](name=_package_name())
     _needs_reboot = needs_reboot()
@@ -182,7 +181,7 @@ def upgrade(reboot=False, at_time=None):
 def upgrade_available():
     '''
     Detect if a new kernel version is available in the repositories.
-    Returns True if a new kernel is avaliable, False otherwise.
+    Returns True if a new kernel is available, False otherwise.
 
     CLI Example:
 
@@ -215,7 +214,7 @@ def remove(release):
         raise CommandExecutionError('Active kernel cannot be removed')
 
     target = '{0}-{1}'.format(_package_name(), release)
-    log.info('Removing kernel package {0}'.format(target))
+    log.info('Removing kernel package %s', target)
     old = __salt__['pkg.list_pkgs']()
 
     # Build the command string

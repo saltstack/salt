@@ -7,14 +7,15 @@ and the like, but also useful for basic HTTP testing.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import cgi
-import json
 import logging
-import os.path
+import os
 import pprint
 import socket
-import yaml
+import io
+import zlib
+import gzip
 import re
 
 import ssl
@@ -40,10 +41,13 @@ import salt.config
 import salt.loader
 import salt.syspaths
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
@@ -57,7 +61,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
@@ -92,6 +96,37 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
+
+
+def __decompressContent(coding, pgctnt):
+    '''
+    Decompress returned HTTP content depending on the specified encoding.
+    Currently supports identity/none, deflate, and gzip, which should
+    cover 99%+ of the content on the internet.
+    '''
+
+    log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
+
+    if coding == 'deflate':
+        pgctnt = zlib.decompress(pgctnt, -zlib.MAX_WBITS)
+
+    elif coding == 'gzip':
+        buf = io.BytesIO(pgctnt)
+        f = gzip.GzipFile(fileobj=buf)
+        pgctnt = f.read()
+
+    elif coding == "sdch":
+        raise ValueError("SDCH compression is not currently supported")
+    elif coding == "br":
+        raise ValueError("Brotli compression is not currently supported")
+    elif coding == "compress":
+        raise ValueError("LZW compression is not currently supported")
+
+    elif coding == 'identity':
+        pass
+
+    log.trace("Content size after decompression: %s", len(pgctnt))
+    return pgctnt
 
 
 @jinja_filter('http_query')
@@ -196,7 +231,9 @@ def query(url,
     # Make sure no secret fields show up in logs
     log_url = sanitize_url(url_full, hide_fields)
 
-    log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
+    log.debug('Requesting URL %s using %s method', log_url, method)
+    log.debug("Using backend: %s", backend)
+
     if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
@@ -206,9 +243,9 @@ def query(url,
                     for field in hide_fields:
                         if item == field:
                             log_data[item] = 'XXXXXXXXXX'
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+            log.trace('Request POST Data: %s', pprint.pformat(log_data))
         else:
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
+            log.trace('Request POST Data: %s', pprint.pformat(data))
 
     if header_file is not None:
         header_tpl = _render(
@@ -262,7 +299,7 @@ def query(url,
         sess = requests.Session()
         sess.auth = auth
         sess.headers.update(header_dict)
-        log.trace('Request Headers: {0}'.format(sess.headers))
+        log.trace('Request Headers: %s', sess.headers)
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
     elif backend == 'urllib2':
@@ -305,8 +342,8 @@ def query(url,
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['cert'] = cert
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that'
+                          ' was passed is not valid: %s', cert)
 
         result = sess.request(
             method, url, params=params, data=data, **req_kwargs
@@ -327,7 +364,8 @@ def query(url,
                 'body': result.content,
             }
 
-        log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
+        log.debug('Final URL location of Response: %s',
+                  sanitize_url(result.url, hide_fields))
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -349,10 +387,10 @@ def query(url,
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning('match_hostname() not available, SSL hostname checking '
-                         'not available. THIS CONNECTION MAY NOT BE SECURE!')
+                            'not available. THIS CONNECTION MAY NOT BE SECURE!')
             elif verify_ssl is False:
                 log.warning('SSL certificate verification has been explicitly '
-                         'disabled. THIS CONNECTION MAY NOT BE SECURE!')
+                            'disabled. THIS CONNECTION MAY NOT BE SECURE!')
             else:
                 if ':' in hostname:
                     hostname, port = hostname.split(':')
@@ -370,10 +408,9 @@ def query(url,
                 except CertificateError as exc:
                     ret['error'] = (
                         'The certificate was invalid. '
-                        'Error returned was: {0}'.format(
-                            pprint.pformat(exc)
+                        'Error returned was: %s',
+                        pprint.pformat(exc)
                         )
-                    )
                     return ret
 
                 # Client-side cert handling
@@ -387,7 +424,7 @@ def query(url,
                             cert_chain = cert
                     else:
                         log.error('The client-side certificate path that was '
-                                  'passed is not valid: {0}'.format(cert))
+                                  'passed is not valid: %s', cert)
                         return
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
@@ -411,7 +448,7 @@ def query(url,
         try:
             result = opener.open(request)
         except URLError as exc:
-            return {'Error': str(exc)}
+            return {'Error': six.text_type(exc)}
         if stream is True or handle is True:
             return {
                 'handle': result,
@@ -427,6 +464,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -442,8 +481,8 @@ def query(url,
                     req_kwargs['client_cert'] = cert[0]
                     req_kwargs['client_key'] = cert[1]
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that '
+                          'was passed is not valid: %s', cert)
 
         if isinstance(data, dict):
             data = _urlencode(data)
@@ -452,6 +491,7 @@ def query(url,
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -460,6 +500,13 @@ def query(url,
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
         proxy_password = opts.get('proxy_password', None)
+        no_proxy = opts.get('no_proxy', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
@@ -493,6 +540,7 @@ def query(url,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
                 header_callback=header_callback,
+                connect_timeout=connect_timeout,
                 request_timeout=timeout,
                 proxy_host=proxy_host,
                 proxy_port=proxy_port,
@@ -504,12 +552,12 @@ def query(url,
             )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
         except socket.gaierror as exc:
             if status is True:
                 ret['status'] = 0
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
 
         if stream is True or handle is True:
@@ -527,8 +575,10 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result_text.decode('utf-8')
         ret['body'] = result_text
-        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
+        if 'Set-Cookie' in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
@@ -542,14 +592,22 @@ def query(url,
             result_headers_dict[comps[0].strip()] = ':'.join(comps[1:]).strip()
         result_headers = result_headers_dict
 
-    log.debug('Response Status Code: {0}'.format(result_status_code))
-    log.trace('Response Headers: {0}'.format(result_headers))
-    log.trace('Response Cookies: {0}'.format(sess_cookies))
+    log.debug('Response Status Code: %s', result_status_code)
+    log.trace('Response Headers: %s', result_headers)
+    log.trace('Response Cookies: %s', sess_cookies)
+    # log.trace("Content: %s", result_text)
+
+    coding = result_headers.get('Content-Encoding', "identity")
+
+    # Requests will always decompress the content, and working around that is annoying.
+    if backend != 'requests':
+        result_text = __decompressContent(coding, result_text)
+
     try:
-        log.trace('Response Text: {0}'.format(result_text))
+        log.trace('Response Text: %s', result_text)
     except UnicodeEncodeError as exc:
-        log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
-                  'incompatibilities between requests and logging.').format(exc))
+        log.trace('Cannot Trace Log Response Text: %s. This may be due to '
+                  'incompatibilities between requests and logging.', exc)
 
     if text_out is not None:
         with salt.utils.files.fopen(text_out, 'w') as tof:
@@ -604,14 +662,14 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
+            ret['dict'] = salt.utils.json.loads(result_text)
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.data.decode(salt.utils.yaml.safe_load(result_text))
         else:
             text = True
 
@@ -712,7 +770,7 @@ def update_ca_bundle(
     if source is None:
         source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
 
-    log.debug('Attempting to download {0} to {1}'.format(source, target))
+    log.debug('Attempting to download %s to %s', source, target)
     query(
         source,
         text=True,
@@ -736,31 +794,28 @@ def update_ca_bundle(
         for cert_file in merge_files:
             if os.path.exists(cert_file):
                 log.debug(
-                    'Queueing up {0} to be appended to {1}'.format(
-                        cert_file, target
-                    )
+                    'Queueing up %s to be appended to %s',
+                    cert_file, target
                 )
                 try:
                     with salt.utils.files.fopen(cert_file, 'r') as fcf:
                         merge_content = '\n'.join((merge_content, fcf.read()))
                 except IOError as exc:
                     log.error(
-                        'Reading from {0} caused the following error: {1}'.format(
-                            cert_file, exc
-                        )
+                        'Reading from %s caused the following error: %s',
+                        cert_file, exc
                     )
 
         if merge_content:
-            log.debug('Appending merge_files to {0}'.format(target))
+            log.debug('Appending merge_files to %s', target)
             try:
                 with salt.utils.files.fopen(target, 'a') as tfp:
                     tfp.write('\n')
                     tfp.write(merge_content)
             except IOError as exc:
                 log.error(
-                    'Writing to {0} caused the following error: {1}'.format(
-                        target, exc
-                    )
+                    'Writing to %s caused the following error: %s',
+                    target, exc
                 )
 
 
@@ -772,15 +827,15 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
         ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
         if salt.utils.stringio.is_readable(ret):
             ret = ret.read()
-        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
-            ret = str(ret).split('\n', 1)[1]
+        if six.text_type(ret).startswith('#!') and not six.text_type(ret).startswith('#!/'):
+            ret = six.text_type(ret).split('\n', 1)[1]
         return ret
     with salt.utils.files.fopen(template, 'r') as fh_:
         return fh_.read()
@@ -853,12 +908,10 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie:
+        for item in list(cookie):
             if item in attribs:
                 continue
-            name = item
-            value = cookie[item]
-            del cookie[name]
+            value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
@@ -866,7 +919,7 @@ def parse_cookie_header(header):
 
         # Fill in missing required fields
         for req in reqd:
-            if req not in cookie.keys():
+            if req not in cookie:
                 cookie[req] = ''
         if cookie['version'] == '':
             cookie['version'] = 0
@@ -903,7 +956,7 @@ def sanitize_url(url, hide_fields):
             log_url += url_tmp
         return log_url.rstrip('&')
     else:
-        return str(url)
+        return six.text_type(url)
 
 
 def _sanitize_url_components(comp_list, field):

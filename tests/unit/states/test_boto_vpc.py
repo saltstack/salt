@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
+import os.path
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.paths import TESTS_DIR
+
 
 # Import Salt libs
-import salt.utils.boto
+import salt.config
+import salt.utils.botomod as botomod
 from salt.ext import six
 from salt.utils.versions import LooseVersion
 import salt.states.boto_vpc as boto_vpc
@@ -23,6 +27,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 
@@ -96,7 +101,7 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                 '__states__': self.salt_states,
                 '__serializers__': serializers,
             },
-            salt.utils.boto: {}
+            botomod: {}
         }
 
     @classmethod
@@ -133,7 +138,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests present on a VPC that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_present_result = self.salt_states['boto_vpc.present']('test', cidr_block)
 
         self.assertTrue(vpc_present_result['result'])
@@ -159,7 +164,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests absent on a VPC that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_absent_result = self.salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes'], {})
@@ -167,7 +172,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_absent_result = self.salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes']['new']['vpc'], None)
@@ -198,7 +203,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         Tests present on a resource that does not exist.
         '''
         vpc = self._create_vpc(name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                 name='test', vpc_name='test', **self.extra_kwargs)
 
@@ -211,7 +216,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
         resource = self._create_resource(vpc_id=vpc.id, name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                     name='test', vpc_name='test', **self.extra_kwargs)
         self.assertTrue(resource_present_result['result'])
@@ -233,7 +238,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         '''
         Tests absent on a resource that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes'], {})
@@ -243,7 +248,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name='test')
         self._create_resource(vpc_id=vpc.id, name='test')
 
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes']['new'][self.resource_type], None)
@@ -331,7 +336,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         vpc = self._create_vpc(name='test')
         igw = self._create_internet_gateway(name='test', vpc_id=vpc.id)
 
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             route_table_present_result = self.salt_states['boto_vpc.route_table_present'](
                     name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
                                                            'gateway_id': igw.id},

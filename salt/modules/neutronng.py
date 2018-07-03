@@ -2,17 +2,19 @@
 '''
 Neutron module for interacting with OpenStack Neutron
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 
 Example configuration
 
 .. code-block:: yaml
+
     neutron:
       cloud: default
 
 .. code-block:: yaml
+
     neutron:
       auth:
         username: admin
@@ -24,7 +26,7 @@ Example configuration
       identity_api_version: 3
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:
@@ -108,16 +110,23 @@ def network_create(auth=None, **kwargs):
     '''
     Create a network
 
-    Parameters:
-    Defaults: shared=False, admin_state_up=True, external=False,
-              provider=None, project_id=None
+    name
+        Name of the network being created
 
-    name (string): Name of the network being created.
-    shared (bool): Set the network as shared.
-    admin_state_up (bool): Set the network administrative state to up.
-    external (bool): Whether this network is externally accessible.
-    provider (dict): A dict of network provider options.
-    project_id (string): Specify the project ID this network will be created on.
+    shared : False
+        If ``True``, set the network as shared
+
+    admin_state_up : True
+        If ``True``, Set the network administrative state to "up"
+
+    external : False
+        Control whether or not this network is externally accessible
+
+    provider
+        An optional Python dictionary of network provider options
+
+    project_id
+        The project ID on which this network will be created
 
     CLI Example:
 
@@ -142,16 +151,15 @@ def network_delete(auth=None, **kwargs):
     '''
     Delete a network
 
-    Parameters:
-    name: Name or ID of the network being deleted.
+    name_or_id
+        Name or ID of the network being deleted
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' neutronng.network_delete name=network1
-        salt '*' neutronng.network_delete \
-          name=1dcac318a83b4610b7a7f7ba01465548
+        salt '*' neutronng.network_delete name_or_id=network1
+        salt '*' neutronng.network_delete name_or_id=1dcac318a83b4610b7a7f7ba01465548
 
     '''
     cloud = get_operator_cloud(auth)
@@ -163,10 +171,8 @@ def list_networks(auth=None, **kwargs):
     '''
     List networks
 
-    Parameters:
-    Defaults: filters=None
-
-    filters (dict): dict of filter conditions to push down
+    filters
+        A Python dictionary of filter conditions to push down
 
     CLI Example:
 
@@ -186,10 +192,8 @@ def network_get(auth=None, **kwargs):
     '''
     Get a single network
 
-    Parameters:
-    Defaults: filters=None
-
-    filters (dict): dict of filter conditions to push down
+    filters
+        A Python dictionary of filter conditions to push down
 
     CLI Example:
 
@@ -207,18 +211,57 @@ def subnet_create(auth=None, **kwargs):
     '''
     Create a subnet
 
-    Parameters:
-    Defaults: cidr=None, ip_version=4, enable_dhcp=False, subnet_name=None,
-              tenant_id=None, allocation_pools=None, gateway_ip=None,
-              disable_gateway_ip=False, dns_nameservers=None, host_routes=None,
-              ipv6_ra_mode=None, ipv6_address_mode=None,
-              use_default_subnetpool=False
+    network_name_or_id
+        The unique name or ID of the attached network. If a non-unique name is
+        supplied, an exception is raised.
 
-    allocation_pools:
-    A list of dictionaries of the start and end addresses for allocation pools.
+    cidr
+        The CIDR
 
-    dns_nameservers: A list of DNS name servers for the subnet.
-    host_routes: A list of host route dictionaries for the subnet.
+    ip_version
+        The IP version, which is 4 or 6.
+
+    enable_dhcp : False
+        Set to ``True`` if DHCP is enabled and ``False`` if disabled
+
+    subnet_name
+        The name of the subnet
+
+    tenant_id
+        The ID of the tenant who owns the network. Only administrative users
+        can specify a tenant ID other than their own.
+
+    allocation_pools
+        A list of dictionaries of the start and end addresses for the
+        allocation pools.
+
+    gateway_ip
+        The gateway IP address. When you specify both ``allocation_pools`` and
+        ``gateway_ip``, you must ensure that the gateway IP does not overlap
+        with the specified allocation pools.
+
+    disable_gateway_ip : False
+        Set to ``True`` if gateway IP address is disabled and ``False`` if
+        enabled. It is not allowed with ``gateway_ip``.
+
+    dns_nameservers
+        A list of DNS name servers for the subnet
+
+    host_routes
+        A list of host route dictionaries for the subnet
+
+    ipv6_ra_mode
+        IPv6 Router Advertisement mode. Valid values are ``dhcpv6-stateful``,
+        ``dhcpv6-stateless``, or ``slaac``.
+
+    ipv6_address_mode
+        IPv6 address mode. Valid values are ``dhcpv6-stateful``,
+        ``dhcpv6-stateless``, or ``slaac``.
+
+    use_default_subnetpool
+        If ``True``, use the default subnetpool for ``ip_version`` to obtain a
+        CIDR. It is required to pass ``None`` to the ``cidr`` argument when
+        enabling this option.
 
     CLI Example:
 
@@ -246,19 +289,38 @@ def subnet_update(auth=None, **kwargs):
     '''
     Update a subnet
 
-    Parameters:
-    Defaults: subnet_name=None, enable_dhcp=None, gateway_ip=None,\
-              disable_gateway_ip=None, allocation_pools=None, \
-              dns_nameservers=None, host_routes=None
+    name_or_id
+        Name or ID of the subnet to update
 
-    name: Name or ID of the subnet to update.
-    subnet_name: The new name of the subnet.
+    subnet_name
+        The new name of the subnet
+
+    enable_dhcp
+        Set to ``True`` if DHCP is enabled and ``False`` if disabled
+
+    gateway_ip
+        The gateway IP address. When you specify both allocation_pools and
+        gateway_ip, you must ensure that the gateway IP does not overlap with
+        the specified allocation pools.
+
+    disable_gateway_ip : False
+        Set to ``True`` if gateway IP address is disabled and False if enabled.
+        It is not allowed with ``gateway_ip``.
+
+    allocation_pools
+        A list of dictionaries of the start and end addresses for the
+        allocation pools.
+
+    dns_nameservers
+        A list of DNS name servers for the subnet
+
+    host_routes
+        A list of host route dictionaries for the subnet
 
     .. code-block:: bash
 
         salt '*' neutronng.subnet_update name=subnet1 subnet_name=subnet2
-        salt '*' neutronng.subnet_update name=subnet1\
-          dns_nameservers='["8.8.8.8", "8.8.8.7"]'
+        salt '*' neutronng.subnet_update name=subnet1 dns_nameservers='["8.8.8.8", "8.8.8.7"]'
 
     '''
     cloud = get_operator_cloud(auth)
@@ -270,8 +332,8 @@ def subnet_delete(auth=None, **kwargs):
     '''
     Delete a subnet
 
-    Parameters:
-    name: Name or ID of the subnet to update.
+    name
+        Name or ID of the subnet to update
 
     CLI Example:
 
@@ -291,10 +353,8 @@ def list_subnets(auth=None, **kwargs):
     '''
     List subnets
 
-    Parameters:
-    Defaults: filters=None
-
-    filters (dict): dict of filter conditions to push down
+    filters
+        A Python dictionary of filter conditions to push down
 
     CLI Example:
 
@@ -314,10 +374,8 @@ def subnet_get(auth=None, **kwargs):
     '''
     Get a single subnet
 
-    Parameters:
-    Defaults: filters=None
-
-    filters (dict): dict of filter conditions to push down
+    filters
+        A Python dictionary of filter conditions to push down
 
     CLI Example:
 
@@ -335,8 +393,8 @@ def security_group_create(auth=None, **kwargs):
     '''
     Create a security group. Use security_group_get to create default.
 
-    Parameters:
-    Defaults: project_id=None
+    project_id
+        The project ID on which this security group will be created
 
     CLI Example:
 
@@ -358,9 +416,14 @@ def security_group_update(secgroup=None, auth=None, **kwargs):
     '''
     Update a security group
 
-    secgroup: Name, ID or Raw Object of the security group to update.
-    name: New name for the security group.
-    description: New description for the security group.
+    secgroup
+        Name, ID or Raw Object of the security group to update
+
+    name
+        New name for the security group
+
+    description
+        New description for the security group
 
     CLI Example:
 
@@ -382,14 +445,14 @@ def security_group_delete(auth=None, **kwargs):
     '''
     Delete a security group
 
-    Parameters:
-    name: The name or unique ID of the security group.
+    name_or_id
+        The name or unique ID of the security group
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' neutronng.security_group_delete name=secgroup1
+        salt '*' neutronng.security_group_delete name_or_id=secgroup1
 
     '''
     cloud = get_operator_cloud(auth)
@@ -402,10 +465,8 @@ def security_group_get(auth=None, **kwargs):
     Get a single security group. This will create a default security group
     if one does not exist yet for a particular project id.
 
-    Parameters:
-    Defaults: filters=None
-
-    filters (dict): dict of filter conditions to push down
+    filters
+        A Python dictionary of filter conditions to push down
 
     CLI Example:
 
@@ -427,15 +488,48 @@ def security_group_rule_create(auth=None, **kwargs):
     '''
     Create a rule in a security group
 
-    Parameters:
-    Defaults: port_range_min=None, port_range_max=None, protocol=None,
-              remote_ip_prefix=None, remote_group_id=None, direction='ingress',
-              ethertype='IPv4', project_id=None
+    secgroup_name_or_id
+        The security group name or ID to associate with this security group
+        rule. If a non-unique group name is given, an exception is raised.
 
-    secgroup_name_or_id:
-        This is the Name or Id of security group you want to create a rule in.
-        However, it throws errors on non-unique security group names like
-        'default' even when you supply a project_id
+    port_range_min
+        The minimum port number in the range that is matched by the security
+        group rule. If the protocol is TCP or UDP, this value must be less than
+        or equal to the port_range_max attribute value. If nova is used by the
+        cloud provider for security groups, then a value of None will be
+        transformed to -1.
+
+    port_range_max
+        The maximum port number in the range that is matched by the security
+        group rule. The port_range_min attribute constrains the port_range_max
+        attribute. If nova is used by the cloud provider for security groups,
+        then a value of None will be transformed to -1.
+
+    protocol
+        The protocol that is matched by the security group rule.  Valid values
+        are ``None``, ``tcp``, ``udp``, and ``icmp``.
+
+    remote_ip_prefix
+        The remote IP prefix to be associated with this security group rule.
+        This attribute matches the specified IP prefix as the source IP address
+        of the IP packet.
+
+    remote_group_id
+        The remote group ID to be associated with this security group rule
+
+    direction
+        Either ``ingress`` or ``egress``; the direction in which the security
+        group rule is applied. For a compute instance, an ingress security
+        group rule is applied to incoming (ingress) traffic for that instance.
+        An egress rule is applied to traffic leaving the instance
+
+    ethertype
+        Must be IPv4 or IPv6, and addresses represented in CIDR must match the
+        ingress or egress rules
+
+    project_id
+        Specify the project ID this security group will be created on
+        (admin-only)
 
     CLI Example:
 
@@ -462,15 +556,14 @@ def security_group_rule_delete(auth=None, **kwargs):
     '''
     Delete a security group
 
-    Parameters:
-    rule_id (string): The unique ID of the security group rule.
+    name_or_id
+        The unique ID of the security group rule
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' neutronng.security_group_rule_delete\
-          rule_id=1dcac318a83b4610b7a7f7ba01465548
+        salt '*' neutronng.security_group_rule_delete name_or_id=1dcac318a83b4610b7a7f7ba01465548
 
     '''
     cloud = get_operator_cloud(auth)

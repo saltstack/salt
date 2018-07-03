@@ -9,7 +9,7 @@ found by reading the salt documentation:
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.stringutils
@@ -39,5 +39,17 @@ class PublisherACL(object):
             cmd = [cmd]
         for fun in cmd:
             if not salt.utils.stringutils.check_whitelist_blacklist(fun, blacklist=self.blacklist.get('modules', [])):
+                return True
+        return False
+
+    def user_is_whitelisted(self, user):
+        return salt.utils.stringutils.check_whitelist_blacklist(user, whitelist=self.blacklist.get('users', []))
+
+    def cmd_is_whitelisted(self, cmd):
+        # If this is a regular command, it is a single function
+        if isinstance(cmd, str):
+            cmd = [cmd]
+        for fun in cmd:
+            if salt.utils.stringutils.check_whitelist_blacklist(fun, whitelist=self.blacklist.get('modules', [])):
                 return True
         return False

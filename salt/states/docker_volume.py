@@ -30,7 +30,7 @@ Management of Docker volumes
 These states were moved from the :mod:`docker <salt.states.docker>` state
 module (formerly called **dockerng**) in the 2017.7.0 release.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

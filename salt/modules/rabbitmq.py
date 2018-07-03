@@ -4,26 +4,26 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
-from __future__ import absolute_import
-
-# Import python libs
-import json
-import re
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
-import os.path
 import random
+import re
 import string
 
-# Import salt libs
+# Import Salt libs
 import salt.utils.itertools
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
 from salt.ext import six
-from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -182,8 +182,8 @@ def _output_to_dict(cmdoutput, values_mapper=None):
             # set it to an empty string to preserve rabbitmq reporting behavior.
             # e.g. A user's permission string for '/' is set to ['', '', ''],
             # Rabbitmq reports this only as '/' from the rabbitmqctl command.
-            log.debug('Could not find any values for key \'{0}\'. '
-                      'Setting to \'{0}\' to an empty string.'.format(row))
+            log.debug('Could not find any values for key \'%s\'. '
+                      'Setting to \'%s\' to an empty string.', row, row)
             ret[row] = ''
             continue
         ret[key] = values_mapper(values)
@@ -225,6 +225,7 @@ def list_users(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_users', '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -248,6 +249,7 @@ def list_vhosts(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_vhosts', '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -322,6 +324,7 @@ def add_user(name, password=None, runas=None):
 
     res = __salt__['cmd.run_all'](
         cmd,
+        reset_system_locale=False,
         output_loglevel='quiet',
         runas=runas,
         python_shell=python_shell)
@@ -354,6 +357,7 @@ def delete_user(name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_user', name],
+        reset_system_locale=False,
         python_shell=False,
         runas=runas)
     msg = 'Deleted'
@@ -389,6 +393,7 @@ def change_password(name, password, runas=None):
         cmd = [RABBITMQCTL, 'change_password', name, password]
     res = __salt__['cmd.run_all'](
         cmd,
+        reset_system_locale=False,
         runas=runas,
         output_loglevel='quiet',
         python_shell=python_shell)
@@ -411,6 +416,7 @@ def clear_password(name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_password', name],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Password Cleared'
@@ -436,7 +442,7 @@ def check_password(name, password, runas=None):
         runas = salt.utils.user.get_user()
 
     try:
-        res = __salt__['cmd.run']([RABBITMQCTL, 'status'], runas=runas, python_shell=False)
+        res = __salt__['cmd.run']([RABBITMQCTL, 'status'], reset_system_locale=False, runas=runas, python_shell=False)
         server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
 
         if server_version is None:
@@ -468,6 +474,7 @@ def check_password(name, password, runas=None):
 
         res = __salt__['cmd.run_all'](
             cmd,
+            reset_system_locale=False,
             runas=runas,
             output_loglevel='quiet',
             python_shell=python_shell)
@@ -483,6 +490,7 @@ def check_password(name, password, runas=None):
 
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'eval', cmd],
+        reset_system_locale=False,
         runas=runas,
         output_loglevel='quiet',
         python_shell=False)
@@ -511,6 +519,7 @@ def add_vhost(vhost, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'add_vhost', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -532,6 +541,7 @@ def delete_vhost(vhost, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_vhost', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Deleted'
@@ -546,13 +556,14 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
+        salt '*' rabbitmq.set_permissions myvhost myuser
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'set_permissions', '-p',
          vhost, user, conf, write, read],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Permissions Set'
@@ -567,12 +578,13 @@ def list_permissions(vhost, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_permissions '/myvhost'
+        salt '*' rabbitmq.list_permissions /myvhost
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_permissions', '-q', '-p', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -587,12 +599,13 @@ def list_user_permissions(name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_user_permissions 'user'.
+        salt '*' rabbitmq.list_user_permissions user
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_user_permissions', name, '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -606,7 +619,7 @@ def set_user_tags(name, tags, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_user_tags 'myadmin' 'administrator'
+        salt '*' rabbitmq.set_user_tags myadmin administrator
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -616,6 +629,7 @@ def set_user_tags(name, tags, runas=None):
 
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'set_user_tags', name] + list(tags),
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = "Tag(s) set"
@@ -636,6 +650,7 @@ def status(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'status'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -656,6 +671,7 @@ def cluster_status(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'cluster_status'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -670,7 +686,7 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
+        salt '*' rabbitmq.join_cluster rabbit.example.com rabbit
     '''
     cmd = [RABBITMQCTL, 'join_cluster']
     if ram_node:
@@ -680,7 +696,7 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     stop_app(runas)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -700,6 +716,7 @@ def stop_app(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'stop_app'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -720,6 +737,7 @@ def start_app(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'start_app'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -740,6 +758,7 @@ def reset(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'reset'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -760,6 +779,7 @@ def force_reset(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'force_reset'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -780,7 +800,7 @@ def list_queues(runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q']
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -802,7 +822,7 @@ def list_queues_vhost(vhost, runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q', '-p', vhost]
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -818,40 +838,66 @@ def list_policies(vhost="/", runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.list_policies'
+        salt '*' rabbitmq.list_policies
     '''
     ret = {}
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_policies', '-q', '-p', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
     output = res['stdout']
+
+    if __grains__['os_family'] != 'FreeBSD':
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
+    else:
+        version = __salt__['pkg.version']('rabbitmq').split('-')[0]
+
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
+
         if len(parts) not in (5, 6):
             continue
+
         vhost, name = parts[0], parts[1]
         if vhost not in ret:
             ret[vhost] = {}
         ret[vhost][name] = {}
-        # How many fields are there? - 'apply_to' was inserted in position
-        # 2 at some point
-        offset = len(parts) - 5
-        if len(parts) == 6:
-            ret[vhost][name]['apply_to'] = parts[2]
-        ret[vhost][name].update({
-            'pattern': parts[offset+2],
-            'definition': parts[offset+3],
-            'priority': parts[offset+4]
-        })
+
+        if _LooseVersion(version) >= _LooseVersion("3.7"):
+            # in version 3.7 the position of apply_to and pattern has been
+            # switched
+            ret[vhost][name]['pattern'] = parts[2]
+            ret[vhost][name]['apply_to'] = parts[3]
+            ret[vhost][name]['definition'] = parts[4]
+            ret[vhost][name]['priority'] = parts[5]
+        else:
+            # How many fields are there? - 'apply_to' was inserted in position
+            # 2 at some point
+            # and in version 3.7 the position of apply_to and pattern has been
+            # switched
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
 
     return ret
 
 
-def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, runas=None):
+def set_policy(vhost,
+               name,
+               pattern,
+               definition,
+               priority=None,
+               runas=None,
+               apply_to=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
@@ -866,7 +912,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, r
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     if isinstance(definition, dict):
-        definition = json.dumps(definition)
+        definition = salt.utils.json.dumps(definition)
     if not isinstance(definition, six.string_types):
         raise SaltInvocationError(
             'The \'definition\' argument must be a dictionary or JSON string'
@@ -878,7 +924,8 @@ def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, r
         cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
     res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
-    log.debug('Set policy: {0}'.format(res['stdout']))
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    log.debug('Set policy: %s', res['stdout'])
     return _format_response(res, 'Set')
 
 
@@ -892,15 +939,16 @@ def delete_policy(vhost, name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.delete_policy / HA'
+        salt '*' rabbitmq.delete_policy / HA
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_policy', '-p', vhost, name],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
-    log.debug('Delete policy: {0}'.format(res['stdout']))
+    log.debug('Delete policy: %s', res['stdout'])
     return _format_response(res, 'Deleted')
 
 
@@ -935,7 +983,7 @@ def list_available_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -953,7 +1001,7 @@ def list_enabled_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -986,7 +1034,7 @@ def enable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'enable', name]
-    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Enabled')
 
 
@@ -1003,5 +1051,5 @@ def disable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'disable', name]
-    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Disabled')

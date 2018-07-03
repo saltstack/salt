@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -17,7 +17,7 @@ from salt.ext import six
 
 
 if six.PY2:
-    LIST_NOT_STR = "workers should be a list not a <type 'str'>"
+    LIST_NOT_STR = "workers should be a list not a <type 'unicode'>"
 else:
     LIST_NOT_STR = "workers should be a list not a <class 'str'>"
 

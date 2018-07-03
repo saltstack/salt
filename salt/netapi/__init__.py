@@ -2,7 +2,7 @@
 '''
 Make api awesomeness
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import inspect
 import os
@@ -42,6 +42,11 @@ class NetapiClient(object):
         Note, this will return an invalid success if the master crashed or was
         not shut down cleanly.
         '''
+        # Windows doesn't have IPC. Assume the master is running.
+        # At worse, it will error 500.
+        if salt.utils.platform.is_windows():
+            return True
+
         if self.opts['transport'] == 'tcp':
             ipc_file = 'publish_pull.ipc'
         else:

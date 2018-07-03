@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Eric Radman <ericshane@eradman.com>`
+    :codeauthor: Eric Radman <ericshane@eradman.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,6 +19,20 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.openbsdpkg as openbsdpkg
+
+
+class ListPackages(object):
+    def __init__(self):
+        self._iteration = 0
+
+    def __call__(self):
+        pkg_lists = [
+             {'vim': '7.4.1467p1-gtk2'},
+             {'png': '1.6.23', 'vim': '7.4.1467p1-gtk2', 'ruby': '2.3.1p1'}
+        ]
+        pkgs = pkg_lists[self._iteration]
+        self._iteration += 1
+        return pkgs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -64,18 +78,6 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         - a flavor is specified ('vim--gtk2')
         - a branch is specified ('ruby%2.3')
         '''
-        class ListPackages(object):
-            def __init__(self):
-                self._iteration = 0
-
-            def __call__(self):
-                pkg_lists = [
-                     {'vim': '7.4.1467p1-gtk2'},
-                     {'png': '1.6.23', 'vim': '7.4.1467p1-gtk2', 'ruby': '2.3.1p1'}
-                ]
-                pkgs = pkg_lists[self._iteration]
-                self._iteration += 1
-                return pkgs
 
         parsed_targets = (
             {'vim--gtk2': None, 'png': None, 'ruby%2.3': None},
@@ -109,3 +111,40 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
+
+    def test_upgrade_available(self):
+        '''
+        Test upgrade_available when an update is available.
+        '''
+        ret = MagicMock(return_value='5.4.2p0')
+        with patch('salt.modules.openbsdpkg.latest_version', ret):
+            self.assertTrue(openbsdpkg.upgrade_available('zsh'))
+
+    def test_upgrade_not_available(self):
+        '''
+        Test upgrade_available when an update is not available.
+        '''
+        ret = MagicMock(return_value='')
+        with patch('salt.modules.openbsdpkg.latest_version', ret):
+            self.assertFalse(openbsdpkg.upgrade_available('zsh'))
+
+    def test_upgrade(self):
+        '''
+        Test upgrading packages.
+        '''
+        ret = {}
+        pkg_add_u_stdout = [
+            'quirks-2.402 signed on 2018-01-02T16:30:59Z',
+            'Read shared items: ok'
+        ]
+        ret['stdout'] = '\n'.join(pkg_add_u_stdout)
+        ret['retcode'] = 0
+        run_all_mock = MagicMock(return_value=ret)
+        with patch.dict(openbsdpkg.__salt__, {'cmd.run_all': run_all_mock}):
+            with patch('salt.modules.openbsdpkg.list_pkgs', ListPackages()):
+                upgraded = openbsdpkg.upgrade()
+                expected = {
+                    'png': {'new': '1.6.23', 'old': ''},
+                    'ruby': {'new': '2.3.1p1', 'old': ''}
+                }
+                self.assertDictEqual(upgraded, expected)

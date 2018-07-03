@@ -103,7 +103,7 @@ A REST API for Salt
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
 
-        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+        .. deprecated:: 2016.11.9,2017.7.3,2018.3.0
 
             The "expire_responses" configuration setting, which corresponds
             to the ``timeout_monitor`` setting in CherryPy, is no longer
@@ -118,7 +118,7 @@ A REST API for Salt
     stats_disable_auth : False
         Do not require authentication to access the ``/stats`` endpoint.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -135,7 +135,7 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
 
         Warning! If you set this option to a custom web application, anything
-        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        that uses cookie-based authentication is vulnerable to XSRF attacks.
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
@@ -174,7 +174,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 
@@ -272,8 +272,8 @@ command:
 3.  Fill out the remaining parameters needed for the chosen client.
 
 The ``client`` field is a reference to the main Python classes used in Salt's
-Python API. Read the full :ref:`client interfaces <netapi-clients>`
-documentation, but in short:
+Python API. Read the full :ref:`Client APIs <client-apis>` documentation, but
+in short:
 
 * "local" uses :py:class:`LocalClient <salt.client.LocalClient>` which sends
   commands to Minions. Equivalent to the ``salt`` CLI command.
@@ -289,7 +289,7 @@ documentation, but in short:
 
 Most clients have variants like synchronous or asynchronous execution as well as
 others like batch execution. See the :ref:`full list of client interfaces
-<netapi-clients>`.
+<client-interfaces>`.
 
 Each client requires different arguments and sometimes has different syntax.
 For example, ``LocalClient`` requires the ``tgt`` argument because it forwards
@@ -585,7 +585,6 @@ import collections
 import itertools
 import functools
 import logging
-import json
 import os
 import signal
 import tarfile
@@ -607,7 +606,6 @@ except ImportError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed.')
 
-import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
@@ -615,9 +613,12 @@ import salt
 import salt.auth
 import salt.exceptions
 import salt.utils.event
+import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.yaml
 from salt.ext import six
+from salt.ext.six import BytesIO
 
 # Import salt-api libs
 import salt.netapi
@@ -834,9 +835,9 @@ def cors_tool():
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
 # preserve order of preference.
 ct_out_map = (
-    ('application/json', json.dumps),
+    ('application/json', salt.utils.json.dumps),
     ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
+        salt.utils.yaml.safe_dump, default_flow_style=False)),
 )
 
 
@@ -855,7 +856,9 @@ def hypermedia_handler(*args, **kwargs):
     try:
         cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
-    except (salt.exceptions.EauthAuthenticationError,
+    except (salt.exceptions.AuthenticationError,
+            salt.exceptions.AuthorizationError,
+            salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
     except salt.exceptions.SaltInvocationError:
@@ -950,18 +953,6 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
-    if six.PY3:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
-        entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body_str = contents.read()
-        body_bytes = salt.utils.stringutils.to_bytes(body_str)
-        body_bytes = six.BytesIO(body_bytes)
-        body_bytes.seek(0)
-        # Patch fp
-        entity.fp = body_bytes
-        del contents
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy._cpreqbody.process_urlencoded(entity)
@@ -980,13 +971,13 @@ def json_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
         del contents
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
@@ -1004,12 +995,12 @@ def yaml_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -1030,12 +1021,12 @@ def text_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         cherrypy.serving.request.unserialized_data = body
 
@@ -1175,10 +1166,6 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
-                if cherrypy.session.get('user'):
-                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
-                if cherrypy.session.get('groups'):
-                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -1216,7 +1203,7 @@ class LowDataAdapter(object):
 
             curl -i localhost:8000
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET / HTTP/1.1
             Host: localhost:8000
@@ -1224,7 +1211,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1268,7 +1255,7 @@ class LowDataAdapter(object):
                 -H "Content-type: application/json" \\
                 -d '[{"client": "local", "tgt": "*", "fun": "test.ping"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1280,7 +1267,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 200
@@ -1328,7 +1315,7 @@ class Minions(LowDataAdapter):
 
             curl -i localhost:8000/minions/ms-3
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /minions/ms-3 HTTP/1.1
             Host: localhost:8000
@@ -1336,7 +1323,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 129005
@@ -1372,8 +1359,8 @@ class Minions(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            :term:`lowstate` data describing Salt commands must be sent in the
-            request body. The ``client`` option will be set to
+            Lowstate data describing Salt commands must be sent in the request
+            body. The ``client`` option will be set to
             :py:meth:`~salt.client.LocalClient.local_async`.
 
         **Example request:**
@@ -1385,7 +1372,7 @@ class Minions(LowDataAdapter):
                 -H "Accept: application/x-yaml" \\
                 -d '[{"tgt": "*", "fun": "status.diskusage"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /minions HTTP/1.1
             Host: localhost:8000
@@ -1396,7 +1383,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 202 Accepted
             Content-Length: 86
@@ -1449,7 +1436,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs HTTP/1.1
             Host: localhost:8000
@@ -1457,7 +1444,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1478,7 +1465,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs/20121130104633606931
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs/20121130104633606931 HTTP/1.1
             Host: localhost:8000
@@ -1486,7 +1473,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1571,7 +1558,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys HTTP/1.1
             Host: localhost:8000
@@ -1579,7 +1566,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1600,7 +1587,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys/jerry
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys/jerry HTTP/1.1
             Host: localhost:8000
@@ -1608,7 +1595,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1685,14 +1672,14 @@ class Keys(LowDataAdapter):
                     -d eauth=pam \
                     -o jerry-salt-keys.tar
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /keys HTTP/1.1
             Host: localhost:8000
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 10240
@@ -1767,7 +1754,7 @@ class Login(LowDataAdapter):
 
             curl -i localhost:8000/login
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /login HTTP/1.1
             Host: localhost:8000
@@ -1775,7 +1762,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: text/html
@@ -1819,7 +1806,7 @@ class Login(LowDataAdapter):
                     "eauth": "auto"
                 }'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1832,7 +1819,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1878,9 +1865,6 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
-        cherrypy.session['user'] = token['name']
-        if 'groups' in token:
-            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -1971,7 +1955,7 @@ class Token(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -2032,8 +2016,8 @@ class Run(LowDataAdapter):
 
         .. http:post:: /run
 
-            An array of :term:`lowstate` data describing Salt commands must be
-            sent in the request body.
+            An array of lowstate data describing Salt commands must be sent in
+            the request body.
 
             :status 200: |200|
             :status 400: |400|
@@ -2070,7 +2054,7 @@ class Run(LowDataAdapter):
                     "token": "<salt eauth token here>"
                 }]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2082,7 +2066,7 @@ class Run(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -2098,7 +2082,7 @@ class Run(LowDataAdapter):
         The /run enpoint can also be used to issue commands using the salt-ssh
         subsystem.
 
-        When using salt-ssh, eauth credentials should not be supplied. Instad,
+        When using salt-ssh, eauth credentials should not be supplied. Instead,
         authentication should be handled by the SSH layer itself. The use of
         the salt-ssh client does not require a salt master to be running.
         Instead, only a roster file must be present in the salt configuration
@@ -2116,7 +2100,7 @@ class Run(LowDataAdapter):
                 -d tgt='*' \\
                 -d fun='test.ping'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2128,7 +2112,7 @@ class Run(LowDataAdapter):
 
         **Example SSH response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
                 return:
                 - silver:
@@ -2228,7 +2212,7 @@ class Events(object):
 
             curl -NsS localhost:8000/events
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
@@ -2240,7 +2224,7 @@ class Events(object):
         clients to only watch for certain tags without having to deserialze the
         JSON object each time.
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Connection: keep-alive
@@ -2283,7 +2267,7 @@ class Events(object):
           very busy and can quickly overwhelm the memory allocated to a
           browser tab.
 
-        A full, working proof-of-concept JavaScript appliction is available
+        A full, working proof-of-concept JavaScript application is available
         :blob:`adjacent to this file <salt/netapi/rest_cherrypy/index.html>`.
         It can be viewed by pointing a browser at the ``/app`` endpoint in a
         running ``rest_cherrypy`` instance.
@@ -2352,12 +2336,12 @@ class Events(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield u'retry: {0}\n'.format(400)
+            yield str('retry: 400\n')  # future lint: disable=blacklisted-function
 
             while True:
                 data = next(stream)
-                yield u'tag: {0}\n'.format(data.get('tag', ''))
-                yield u'data: {0}\n\n'.format(json.dumps(data))
+                yield str('tag: {0}\n').format(data.get('tag', ''))  # future lint: disable=blacklisted-function
+                yield str('data: {0}\n\n').format(salt.utils.json.dumps(data))  # future lint: disable=blacklisted-function
 
         return listen()
 
@@ -2426,7 +2410,7 @@ class WebsocketEndpoint(object):
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /ws HTTP/1.1
             Connection: Upgrade
@@ -2439,7 +2423,7 @@ class WebsocketEndpoint(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 101 Switching Protocols
             Upgrade: websocket
@@ -2538,8 +2522,10 @@ class WebsocketEndpoint(object):
                         if 'format_events' in kwargs:
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
-                            handler.send('data: {0}\n\n'.format(
-                                json.dumps(data)), False)
+                            handler.send(
+                                str('data: {0}\n\n').format(salt.utils.json.dumps(data)),  # future lint: disable=blacklisted-function
+                                False
+                            )
                     except UnicodeDecodeError:
                         logger.error(
                                 "Error: Salt event has non UTF-8 data:\n{0}"
@@ -2596,7 +2582,7 @@ class Webhook(object):
                         -d branch="${TRAVIS_BRANCH}" \
                         -d commit="${TRAVIS_COMMIT}"
 
-    .. seealso:: :ref:`events`, :ref:`reactor`
+    .. seealso:: :ref:`events`, :ref:`reactor <reactor>`
     '''
     exposed = True
     tag_base = ['salt', 'netapi', 'hook']
@@ -2640,7 +2626,7 @@ class Webhook(object):
                 -H 'Content-type: application/json' \\
                 -d '{"foo": "Foo!", "bar": "Bar!"}'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /hook HTTP/1.1
             Host: localhost:8000
@@ -2651,7 +2637,7 @@ class Webhook(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 14

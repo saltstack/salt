@@ -20,10 +20,10 @@ private key file:
     token: <NETBOX_USERNAME_API_TOKEN (OPTIONAL)>
     keyfile: </PATH/TO/NETBOX/KEY (OPTIONAL)>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from salt.exceptions import CommandExecutionError

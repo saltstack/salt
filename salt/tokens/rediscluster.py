@@ -15,7 +15,7 @@ Default values for these configs are as follow:
 :depends:   - redis-py-cluster Python package
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 try:
@@ -30,6 +30,8 @@ import logging
 import hashlib
 
 import salt.payload
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +55,10 @@ def _redis_client(opts):
     try:
         return rediscluster.StrictRedisCluster(host=redis_host, port=redis_port)
     except rediscluster.exceptions.RedisClusterException as err:
-        log.warning("Failed to connect to redis at {0}:{1} - {2}".format(redis_host, redis_port, err))
+        log.warning(
+            'Failed to connect to redis at %s:%s - %s',
+            redis_host, redis_port, err
+        )
         return None
 
 
@@ -71,19 +76,25 @@ def mk_token(opts, tdata):
     if not redis_client:
         return {}
     hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
-    tok = str(hash_type(os.urandom(512)).hexdigest())
+    tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
     try:
         while redis_client.get(tok) is not None:
-            tok = str(hash_type(os.urandom(512)).hexdigest())
+            tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
     except Exception as err:
-        log.warning("Authentication failure: cannot get token {0} from redis: {1}".format(tok, err))
+        log.warning(
+            'Authentication failure: cannot get token %s from redis: %s',
+            tok, err
+        )
         return {}
     tdata['token'] = tok
     serial = salt.payload.Serial(opts)
     try:
         redis_client.set(tok, serial.dumps(tdata))
     except Exception as err:
-        log.warning("Authentication failure: cannot save token {0} to redis: {1}".format(tok, err))
+        log.warning(
+            'Authentication failure: cannot save token %s to redis: %s',
+            tok, err
+        )
         return {}
     return tdata
 
@@ -104,7 +115,10 @@ def get_token(opts, tok):
         tdata = serial.loads(redis_client.get(tok))
         return tdata
     except Exception as err:
-        log.warning("Authentication failure: cannot get token {0} from redis: {1}".format(tok, err))
+        log.warning(
+            'Authentication failure: cannot get token %s from redis: %s',
+            tok, err
+        )
         return {}
 
 
@@ -123,7 +137,7 @@ def rm_token(opts, tok):
         redis_client.delete(tok)
         return {}
     except Exception as err:
-        log.warning("Could not remove token {0}: {1}".format(tok, err))
+        log.warning('Could not remove token %s: %s', tok, err)
 
 
 def list_tokens(opts):
@@ -141,5 +155,5 @@ def list_tokens(opts):
     try:
         return [k.decode('utf8') for k in redis_client.keys()]
     except Exception as err:
-        log.warning("Failed to list keys: {0}".format(err))
+        log.warning('Failed to list keys: %s', err)
         return []

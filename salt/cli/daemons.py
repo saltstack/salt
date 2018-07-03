@@ -4,7 +4,7 @@ Make me some salt!
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import warnings
 from salt.utils.verify import verify_log
@@ -69,9 +69,11 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :return:
         '''
         if self.config['hash_type'].lower() in ['md5', 'sha1']:
-            log.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
-                        'sha256 in Salt {d_name} config!'.format(
-                        h_type=self.config['hash_type'], d_name=self.__class__.__name__))
+            log.warning(
+                'IMPORTANT: Do not use %s hashing algorithm! Please set '
+                '"hash_type" to sha256 in Salt %s config!',
+                self.config['hash_type'], self.__class__.__name__
+            )
 
     def action_log_info(self, action):
         '''
@@ -80,7 +82,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param action
         :return:
         '''
-        log.info('{action} the Salt {d_name}'.format(d_name=self.__class__.__name__, action=action))
+        log.info('%s the Salt %s', action, self.__class__.__name__)
 
     def start_log_info(self):
         '''
@@ -88,7 +90,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        log.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
+        log.info('The Salt %s is starting up', self.__class__.__name__)
 
     def shutdown_log_info(self):
         '''
@@ -96,7 +98,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        log.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
+        log.info('The Salt %s is shut down', self.__class__.__name__)
 
     def environment_failure(self, error):
         '''
@@ -105,8 +107,10 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param error:
         :return:
         '''
-        log.exception('Failed to create environment for {d_name}: {reason}'.format(
-            d_name=self.__class__.__name__, reason=get_error_message(error)))
+        log.exception(
+            'Failed to create environment for %s: %s',
+            self.__class__.__name__, get_error_message(error)
+        )
         self.shutdown(error)
 
 
@@ -115,11 +119,12 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
     Creates a master server
     '''
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        # escalate signal to the process manager processes
-        self.master.process_manager.stop_restarting()
-        self.master.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.master.process_manager.kill_children()
+        if hasattr(self.master, 'process_manager'):  # IofloMaster has no process manager
+            # escalate signal to the process manager processes
+            self.master.process_manager.stop_restarting()
+            self.master.process_manager.send_signal_to_processes(signum)
+            # kill any remaining processes
+            self.master.process_manager.kill_children()
         super(Master, self)._handle_signals(signum, sigframe)
 
     def prepare(self):
@@ -147,7 +152,6 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                         os.path.join(self.config['cachedir'], 'jobs'),
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
-                        self.config['key_dir'],
                         self.config['token_dir'],
                         self.config['syndic_dir'],
                         self.config['sqlite_queue_dir'],
@@ -162,7 +166,7 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir'], self.config['key_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
@@ -230,7 +234,8 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.stop(signum)
+        if hasattr(self.minion, 'stop'):
+            self.minion.stop(signum)
         super(Minion, self)._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
@@ -283,18 +288,14 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        log.info(
-            'Setting up the Salt Minion "{0}"'.format(
-                self.config['id']
-            )
-        )
+        log.info('Setting up the Salt Minion "%s"', self.config['id'])
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
@@ -324,10 +325,8 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
             self.minion = salt.daemons.flo.IofloMinion(self.config)
         else:
             log.error(
-                'The transport \'{0}\' is not supported. Please use one of the following: '
-                'tcp, '
-                'raet, '
-                'or zeromq.'.format(transport)
+                'The transport \'%s\' is not supported. Please use one of '
+                'the following: tcp, raet, or zeromq.', transport
             )
             self.shutdown(1)
 
@@ -355,7 +354,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(error))
+                log.error(error)
                 self.shutdown(error.code)
 
     def call(self, cleanup_protecteds):
@@ -383,7 +382,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(exc))
+                log.error(exc)
                 self.shutdown(exc.code)
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -394,7 +393,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
         :param exitmsg
         '''
         self.action_log_info('Shutting down')
-        if hasattr(self, 'minion'):
+        if hasattr(self, 'minion') and hasattr(self.minion, 'destroy'):
             self.minion.destroy()
         super(Minion, self).shutdown(
             exitcode, ('The Salt {0} is shutdown. {1}'.format(
@@ -471,7 +470,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -531,7 +530,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(exc))
+                log.error(exc)
                 self.shutdown(exc.code)
 
     # def call(self, cleanup_protecteds):
@@ -580,7 +579,7 @@ class Syndic(salt.utils.parsers.SyndicOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)

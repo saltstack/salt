@@ -2,7 +2,7 @@
 '''Unit test for saltcheck execution module'''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os.path
 
 try:
@@ -35,7 +35,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         # Setting the environment to be local
         local_opts = salt.config.minion_config(
-            os.path.join(syspaths.CONFIG_DIR, u'minion'))
+            os.path.join(syspaths.CONFIG_DIR, 'minion'))
         local_opts['file_client'] = 'local'
         patcher = patch('salt.config.minion_config',
                         MagicMock(return_value=local_opts))

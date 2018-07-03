@@ -2,7 +2,7 @@
 '''
 Package support for the REST example
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -10,6 +10,9 @@ import logging
 # Import Salt libs
 import salt.utils.data
 import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -67,7 +70,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     if len(names) == 1:
-        return str(__proxy__['rest_sample.package_status'](names[0]))
+        return six.text_type(__proxy__['rest_sample.package_status'](names[0]))
 
 
 def upgrade(refresh=True, skip_verify=True, **kwargs):
@@ -90,9 +93,9 @@ def installed(
     p = __proxy__['rest_sample.package_status'](name)
     if version is None:
         if 'ret' in p:
-            return str(p['ret'])
+            return six.text_type(p['ret'])
         else:
             return True
     else:
         if p is not None:
-            return version == str(p)
+            return version == six.text_type(p)

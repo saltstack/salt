@@ -27,7 +27,7 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -38,6 +38,8 @@ import difflib
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
+import salt.utils.stringutils
+from salt.ext import six
 
 from salt.modules.augeas_cfg import METHOD_MAP
 
@@ -94,13 +96,13 @@ def _check_filepath(changes):
                     raise ValueError(error)
             filename = filename_
         except (ValueError, IndexError) as err:
-            log.error(str(err))
+            log.error(err)
             if 'error' not in locals():
                 error = 'Invalid formatted command, ' \
                                'see debug log for details: {0}' \
                                .format(change_)
             else:
-                error = str(err)
+                error = six.text_type(err)
             raise ValueError(error)
 
     filename = _workout_filename(filename)
@@ -273,7 +275,7 @@ def change(name, context=None, changes=None, lens=None,
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret['comment'] = 'Error: {0}'.format(str(err))
+            ret['comment'] = 'Error: {0}'.format(err)
             return ret
     else:
         filename = re.sub('^/files|/$', '', context)
@@ -287,10 +289,10 @@ def change(name, context=None, changes=None, lens=None,
         return ret
 
     old_file = []
-    if filename is not None:
-        if os.path.isfile(filename):
-            with salt.utils.files.fopen(filename, 'r') as file_:
-                old_file = file_.readlines()
+    if filename is not None and os.path.isfile(filename):
+        with salt.utils.files.fopen(filename, 'r') as file_:
+            old_file = [salt.utils.stringutils.to_unicode(x)
+                        for x in file_.readlines()]
 
     result = __salt__['augeas.execute'](
         context=context, lens=lens,
@@ -301,10 +303,12 @@ def change(name, context=None, changes=None, lens=None,
         ret['comment'] = 'Error: {0}'.format(result['error'])
         return ret
 
-    if old_file:
+    if filename is not None and os.path.isfile(filename):
         with salt.utils.files.fopen(filename, 'r') as file_:
+            new_file = [salt.utils.stringutils.to_unicode(x)
+                        for x in file_.readlines()]
             diff = ''.join(
-                difflib.unified_diff(old_file, file_.readlines(), n=0))
+                difflib.unified_diff(old_file, new_file, n=0))
 
         if diff:
             ret['comment'] = 'Changes have been saved'

@@ -3,7 +3,7 @@
 The daemons package is used to store implementations of the Salt Master and
 Minion enabling different transports.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python Libs
 import sys
 from collections import namedtuple, Iterable, Sequence, Mapping

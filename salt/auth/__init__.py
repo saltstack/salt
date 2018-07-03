@@ -14,13 +14,14 @@ so that any external authentication system can be used inside of Salt
 # 6. Interface to verify tokens
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import time
 import logging
 import random
 import getpass
 from salt.ext.six.moves import input
+from salt.ext import six
 
 # Import salt libs
 import salt.config
@@ -42,8 +43,12 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'gather_job_timeout',
     'kwarg',
-    'match'
+    'match',
+    'print_event',
+    'raw',
+    'yield_pub_data'
 ])
 
 
@@ -97,7 +102,7 @@ class LoadAuth(object):
             else:
                 return self.auth[fstr](*fcall['args'])
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return False
 
     def time_auth(self, load):
@@ -141,7 +146,7 @@ class LoadAuth(object):
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return None
 
     def __process_acl(self, load, auth_list):
@@ -157,7 +162,7 @@ class LoadAuth(object):
         try:
             return self.auth[fstr](auth_list, self.opts)
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return auth_list
 
     def get_groups(self, load):
@@ -282,7 +287,7 @@ class LoadAuth(object):
             return False
 
         if load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
+            log.debug('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -360,6 +365,7 @@ class LoadAuth(object):
         eauth = token['eauth'] if token else load['eauth']
         if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
+            log.debug('The eauth system "%s" is not enabled', eauth)
             log.warning('Authorization failure occurred.')
             return None
 
@@ -370,6 +376,9 @@ class LoadAuth(object):
             name = self.load_name(load)  # The username we are attempting to auth with
             groups = self.get_groups(load)  # The groups this user belongs to
         eauth_config = self.opts['external_auth'][eauth]
+        if not eauth_config:
+            log.debug('eauth "%s" configuration is empty', eauth)
+
         if not groups:
             groups = []
 
@@ -382,13 +391,13 @@ class LoadAuth(object):
 
         auth_list = self.__process_acl(load, auth_list)
 
-        log.trace("Compiled auth_list: {0}".format(auth_list))
+        log.trace('Compiled auth_list: %s', auth_list)
 
         return auth_list
 
     def check_authentication(self, load, auth_type, key=None, show_username=False):
         '''
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         Go through various checks to see if the token/eauth/user can be authenticated.
 
@@ -549,11 +558,7 @@ class Authorize(object):
         try:
             token = self.loadauth.get_tok(load['token'])
         except Exception as exc:
-            log.error(
-                'Exception occurred when generating auth token: {0}'.format(
-                    exc
-                )
-            )
+            log.error('Exception occurred when generating auth token: %s', exc)
             yield {}
         if not token:
             log.warning('Authentication failure of type "token" occurred.')
@@ -583,9 +588,7 @@ class Authorize(object):
                 if not self.loadauth.time_auth(load):
                     continue
             except Exception as exc:
-                log.error(
-                    'Exception occurred while authenticating: {0}'.format(exc)
-                )
+                log.error('Exception occurred while authenticating: %s', exc)
                 continue
             yield {'sub_auth': sub_auth, 'name': name}
         yield {}
@@ -671,7 +674,7 @@ class Resolver(object):
     def _send_token_request(self, load):
         if self.opts['transport'] in ('zeromq', 'tcp'):
             master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                         ':' + str(self.opts['ret_port'])
+                         ':' + six.text_type(self.opts['ret_port'])
             channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                                 crypt='clear',
                                                                 master_uri=master_uri)
@@ -695,6 +698,7 @@ class Resolver(object):
         if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
+            print("Available eauth types: {0}".format(", ".join(self.auth.file_mapping.keys())))
             return ret
 
         args = salt.utils.args.arg_lookup(self.auth[fstr])

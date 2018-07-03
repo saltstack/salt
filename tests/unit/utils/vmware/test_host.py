@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
+    :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
     Tests for host functions in salt.utils.vmware
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt testing libraries
@@ -30,7 +30,9 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetHostsTestCase(TestCase):
-    '''Tests for salt.utils.vmware.get_hosts'''
+    '''
+    Tests for salt.utils.vmware.get_hosts
+    '''
 
     def setUp(self):
         patches = (
@@ -103,7 +105,6 @@ class GetHostsTestCase(TestCase):
                         self.mock_si, datacenter_name='fake_datacenter',
                         cluster_name='fake_cluster')
         mock_get_dc.assert_called_once_with(self.mock_si, 'fake_datacenter')
-        mock_get_cl.assert_called_once_with(mock_dc, 'fake_cluster')
         mock_get_mors.assert_called_once_with(self.mock_si,
                                               vim.HostSystem,
                                               container_ref=mock_dc,

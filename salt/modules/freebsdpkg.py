@@ -72,7 +72,7 @@ variables, if set, but these values can also be overridden in several ways:
               pkg.installed:
                 - fromrepo: ftp://ftp2.freebsd.org/
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy

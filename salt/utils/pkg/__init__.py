@@ -3,7 +3,7 @@
 Common functions for managing package refreshes during states
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os

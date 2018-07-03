@@ -3,7 +3,7 @@
 CenturyLink Cloud Module
 ===================
 
-.. versionadded:: 0yxgen
+.. versionadded:: Oyxgen
 
 The CLC cloud module allows you to manage CLC Via the CLC SDK.
 
@@ -62,15 +62,16 @@ cloud configuration at
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import importlib
 import logging
 import time
-import json
+
 # Import salt libs
-import importlib
-from salt.exceptions import SaltCloudSystemExit
-# Import salt cloud libs
 import salt.config as config
+import salt.utils.json
+from salt.exceptions import SaltCloudSystemExit
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -157,8 +158,8 @@ def list_nodes_full(call=None, for_output=True):
     creds = get_creds()
     clc.v1.SetCredentials(creds["token"], creds["token_pass"])
     servers_raw = clc.v1.Server.GetServers(location=None)
-    servers_raw = json.dumps(servers_raw)
-    servers = json.loads(servers_raw)
+    servers_raw = salt.utils.json.dumps(servers_raw)
+    servers = salt.utils.json.loads(servers_raw)
     return servers
 
 
@@ -181,8 +182,8 @@ def get_monthly_estimate(call=None, for_output=True):
         )
     try:
         billing_raw = clc.v1.Billing.GetAccountSummary(alias=creds["accountalias"])
-        billing_raw = json.dumps(billing_raw)
-        billing = json.loads(billing_raw)
+        billing_raw = salt.utils.json.dumps(billing_raw)
+        billing = salt.utils.json.loads(billing_raw)
         billing = round(billing["MonthlyEstimate"], 2)
         return {"Monthly Estimate": billing}
     except RuntimeError:
@@ -201,8 +202,8 @@ def get_month_to_date(call=None, for_output=True):
         )
     try:
         billing_raw = clc.v1.Billing.GetAccountSummary(alias=creds["accountalias"])
-        billing_raw = json.dumps(billing_raw)
-        billing = json.loads(billing_raw)
+        billing_raw = salt.utils.json.dumps(billing_raw)
+        billing = salt.utils.json.loads(billing_raw)
         billing = round(billing["MonthToDateTotal"], 2)
         return {"Month To Date": billing}
     except RuntimeError:
@@ -243,8 +244,8 @@ def get_group_estimate(call=None, for_output=True, **kwargs):
         )
     try:
         billing_raw = clc.v1.Billing.GetGroupEstimate(group=group, alias=creds["accountalias"], location=location)
-        billing_raw = json.dumps(billing_raw)
-        billing = json.loads(billing_raw)
+        billing_raw = salt.utils.json.dumps(billing_raw)
+        billing = salt.utils.json.loads(billing_raw)
         estimate = round(billing["MonthlyEstimate"], 2)
         month_to_date = round(billing["MonthToDate"], 2)
         return {"Monthly Estimate": estimate, "Month to Date": month_to_date}
@@ -286,7 +287,7 @@ def get_build_status(req_id, nodename):
     get the build status from CLC to make sure we dont return to early
     '''
     counter = 0
-    req_id = str(req_id)
+    req_id = six.text_type(req_id)
     while counter < 10:
         queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
         if queue["PercentComplete"] == 100:
@@ -298,7 +299,8 @@ def get_build_status(req_id, nodename):
             return internal_ip_address
         else:
             counter = counter + 1
-            log.info("Creating Cloud VM " + nodename + " Time out in " + str(10 - counter) + " minutes")
+            log.info('Creating Cloud VM %s Time out in %s minutes',
+                     nodename, six.text_type(10 - counter))
             time.sleep(60)
 
 

@@ -5,18 +5,18 @@ data in a compatible format) via an HTML email or HTML file.
 
 .. versionadded:: 2017.7.0
 
-Similar results can be achieved by using smtp returner with a custom template,
+Similar results can be achieved by using the smtp returner with a custom template,
 except an attempt at writing such a template for the complex data structure
 returned by highstate function had proven to be a challenge, not to mention
-that smtp module doesn't support sending HTML mail at the moment.
+that the smtp module doesn't support sending HTML mail at the moment.
 
-The main goal of this returner was producing an easy to read email similar
+The main goal of this returner was to produce an easy to read email similar
 to the output of highstate outputter used by the CLI.
 
 This returner could be very useful during scheduled executions,
 but could also be useful for communicating the results of a manual execution.
 
-Returner configuration is controlled in a standart fashion either via
+Returner configuration is controlled in a standard fashion either via
 highstate group or an alternatively named group.
 
 .. code-block:: bash
@@ -29,7 +29,7 @@ To use the alternative configuration, append '--return_config config-name'
 
     salt '*' state.highstate --return highstate --return_config simple
 
-Here is an example of what configuration might look like:
+Here is an example of what the configuration might look like:
 
 .. code-block:: yaml
 
@@ -49,18 +49,18 @@ Here is an example of what configuration might look like:
 
 The *report_failures*, *report_changes*, and *report_everything* flags provide
 filtering of the results. If you want an email to be sent every time, then
-*reprot_everything* is your choice. If you want to be notified only when
+*report_everything* is your choice. If you want to be notified only when
 changes were successfully made use *report_changes*. And *report_failures* will
 generate an email if there were failures.
 
-The configuration allows you to run salt module function in case of
+The configuration allows you to run a salt module function in case of
 success (*success_function*) or failure (*failure_function*).
 
-Any salt function, including ones defined in _module folder of your salt
-repo could be used here. Their output will be displayed under the 'extra'
+Any salt function, including ones defined in the _module folder of your salt
+repo, could be used here and its output will be displayed under the 'extra'
 heading of the email.
 
-Supported values for *report_format* are html, json, and yaml. The later two
+Supported values for *report_format* are html, json, and yaml. The latter two
 are typically used for debugging purposes, but could be used for applying
 a template at some later stage.
 
@@ -70,26 +70,28 @@ the only other applicable option is *file_output*.
 In case of smtp delivery, smtp_* options demonstrated by the example above
 could be used to customize the email.
 
-As you might have noticed success and failure subject contain {id} and {host}
+As you might have noticed, the success and failure subjects contain {id} and {host}
 values. Any other grain name could be used. As opposed to using
 {{grains['id']}}, which will be rendered by the master and contain master's
 values at the time of pillar generation, these will contain minion values at
 the time of execution.
 
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import json
 import smtplib
 import cgi
 from email.mime.text import MIMEText
 
-import yaml
 from salt.ext.six.moves import range
 from salt.ext.six.moves import StringIO
+from salt.ext import six
 
 import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -167,12 +169,12 @@ def _generate_html_table(data, out, level=0, extra_style=''):
     Generate a single table of data
     '''
     print('<table style="{0}">'.format(
-        _lookup_style('table', ['table' + str(level)])), file=out)
+        _lookup_style('table', ['table' + six.text_type(level)])), file=out)
 
     firstone = True
 
-    row_style = 'row' + str(level)
-    cell_style = 'cell' + str(level)
+    row_style = 'row' + six.text_type(level)
+    cell_style = 'cell' + six.text_type(level)
 
     for subdata in data:
         first_style = 'first_first' if firstone else 'notfirst_first'
@@ -227,7 +229,7 @@ def _generate_html_table(data, out, level=0, extra_style=''):
                                 new_extra_style
                             ]
                         ),
-                        cgi.escape(str(value))
+                        cgi.escape(six.text_type(value))
                     ), file=out)
                 print('</tr>', file=out)
         elif isinstance(subdata, list):
@@ -252,7 +254,7 @@ def _generate_html_table(data, out, level=0, extra_style=''):
                     'td',
                     [cell_style, first_style, 'value', extra_style]
                 ),
-                cgi.escape(str(subdata))
+                cgi.escape(six.text_type(subdata))
             ), file=out)
             print('</tr>', file=out)
         firstone = False
@@ -293,8 +295,7 @@ def _generate_states_report(sorted_data):
     '''
     states = []
     for state, data in sorted_data:
-        module, stateid, name, function = \
-            [x.rstrip('_').lstrip('-') for x in state.split('|')]
+        module, stateid, name, function = state.split('_|-')
         module_function = '.'.join((module, function))
         result = data.get('result', '')
         single = [
@@ -356,10 +357,10 @@ def _generate_report(ret, setup):
 
     unchanged = total - failed - changed
 
-    log.debug('highstate total: {0}'.format(total))
-    log.debug('highstate failed: {0}'.format(failed))
-    log.debug('highstate unchanged: {0}'.format(unchanged))
-    log.debug('highstate changed: {0}'.format(changed))
+    log.debug('highstate total: %s', total)
+    log.debug('highstate failed: %s', failed)
+    log.debug('highstate unchanged: %s', unchanged)
+    log.debug('highstate changed: %s', changed)
 
     # generate report if required
     if setup.get('report_everything', False) or \
@@ -409,7 +410,7 @@ def _sprinkle(config_str):
     '''
     parts = [x for sub in config_str.split('{') for x in sub.split('}')]
     for i in range(1, len(parts), 2):
-        parts[i] = str(__grains__.get(parts[i], ''))
+        parts[i] = six.text_type(__grains__.get(parts[i], ''))
     return ''.join(parts)
 
 
@@ -419,13 +420,13 @@ def _produce_output(report, failed, setup):
     '''
     report_format = setup.get('report_format', 'yaml')
 
-    log.debug('highstate output format: {0}'.format(report_format))
+    log.debug('highstate output format: %s', report_format)
 
     if report_format == 'json':
-        report_text = json.dumps(report)
+        report_text = salt.utils.json.dumps(report)
     elif report_format == 'yaml':
         string_file = StringIO()
-        yaml.safe_dump(report, string_file, default_flow_style=False)
+        salt.utils.yaml.safe_dump(report, string_file, default_flow_style=False)
         string_file.seek(0)
         report_text = string_file.read()
     else:
@@ -436,12 +437,12 @@ def _produce_output(report, failed, setup):
 
     report_delivery = setup.get('report_delivery', 'file')
 
-    log.debug('highstate report_delivery: {0}'.format(report_delivery))
+    log.debug('highstate report_delivery: %s', report_delivery)
 
     if report_delivery == 'file':
         output_file = _sprinkle(setup.get('file_output', '/tmp/test.rpt'))
         with salt.utils.files.fopen(output_file, 'w') as out:
-            out.write(report_text)
+            out.write(salt.utils.stringutils.to_str(report_text))
     else:
         msg = MIMEText(report_text, report_format)
 
@@ -473,7 +474,7 @@ def returner(ret):
     '''
     setup = _get_options(ret)
 
-    log.debug('highstate setup {0}'.format(setup))
+    log.debug('highstate setup %s', setup)
 
     report, failed = _generate_report(ret, setup)
     if report:
@@ -491,8 +492,8 @@ def __test_html():
         file_output: '/srv/salt/_returners/test.rpt'
     '''
     with salt.utils.files.fopen('test.rpt', 'r') as input_file:
-        data_text = input_file.read()
-    data = yaml.safe_load(data_text)
+        data_text = salt.utils.stringutils.to_unicode(input_file.read())
+    data = salt.utils.yaml.safe_load(data_text)
 
     string_file = StringIO()
     _generate_html(data, string_file)
@@ -500,7 +501,7 @@ def __test_html():
     result = string_file.read()
 
     with salt.utils.files.fopen('test.html', 'w') as output:
-        output.write(result)
+        output.write(salt.utils.stringutils.to_str(result))
 
 
 if __name__ == '__main__':

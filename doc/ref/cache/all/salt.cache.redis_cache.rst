@@ -1,5 +1,5 @@
-salt.cache.redis_cache module
-=============================
+salt.cache.redis_cache
+======================
 
 .. automodule:: salt.cache.redis_cache
     :members:

@@ -12,7 +12,7 @@ External References
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import uuid
 import re
@@ -189,8 +189,8 @@ def _dmi_parse(data, clean=True, fields=None):
     for handle, dmi_raw in zip(dmi_raw, dmi_raw):
         handle, htype = [hline.split()[-1] for hline in handle.split(',')][0:2]
         dmi_raw = dmi_raw.split('\n')
-        # log.debug('{0} record contains {1}'.format(handle, dmi_raw))
-        log.debug('Parsing handle {0}'.format(handle))
+        # log.debug('%s record contains %s', handle, dmi_raw)
+        log.debug('Parsing handle %s', handle)
 
         # The first line of a handle is a description of the type
         record = {
@@ -205,7 +205,7 @@ def _dmi_parse(data, clean=True, fields=None):
                 dmi.append(record)
             continue
 
-        # log.debug('{0} record contains {1}'.format(record, dmi_raw))
+        # log.debug('%s record contains %s', record, dmi_raw)
         dmi_data = _dmi_data(dmi_raw, clean, fields)
         if len(dmi_data):
             record['data'] = dmi_data
@@ -262,7 +262,7 @@ def _dmi_data(dmi_raw, clean, fields):
             #        PNP is supported
             val = _dmi_cast(key, line.strip(), clean)
             if val is not None:
-                # log.debug('DMI key {0} gained list item {1}'.format(key, val))
+                # log.debug('DMI key %s gained list item %s', key, val)
                 key_data[1].append(val)
 
     return dmi_data
@@ -302,7 +302,7 @@ def _dmi_isclean(key, val):
                 return True
             except ValueError:
                 continue
-        log.trace('DMI {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
+        log.trace('DMI %s value %s is an invalid UUID', key, val.replace('\n', ' '))
         return False
     elif re.search('serial|part|version', key):
         # 'To be filled by O.E.M.

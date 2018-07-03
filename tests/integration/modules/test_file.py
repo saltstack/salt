@@ -1,13 +1,24 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import getpass
-import grp
-import pwd
 import os
 import shutil
 import sys
+
+# Posix only
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
+
+# Windows only
+try:
+    import win32file
+except ImportError:
+    pass
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -19,6 +30,16 @@ import salt.utils.files
 import salt.utils.platform
 
 
+def symlink(source, link_name):
+    '''
+    Handle symlinks on Windows with Python < 3.2
+    '''
+    if salt.utils.platform.is_windows():
+        win32file.CreateSymbolicLink(link_name, source)
+    else:
+        os.symlink(source, link_name)
+
+
 class FileModuleTest(ModuleCase):
     '''
     Validate the file module
@@ -26,27 +47,27 @@ class FileModuleTest(ModuleCase):
     def setUp(self):
         self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
-            fp.write('Hello\n')
+            fp.write(salt.utils.stringutils.to_str('Hello' + os.linesep))
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
         self.mysymlink = os.path.join(TMP, 'mysymlink')
-        if os.path.islink(self.mysymlink):
+        if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
-        os.symlink(self.myfile, self.mysymlink)
+        symlink(self.myfile, self.mysymlink)
         self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
-        if os.path.islink(self.mybadsymlink):
+        if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
-        os.symlink('/nonexistentpath', self.mybadsymlink)
+        symlink('/nonexistentpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
         if os.path.isfile(self.myfile):
             os.remove(self.myfile)
-        if os.path.islink(self.mysymlink):
+        if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
-        if os.path.islink(self.mybadsymlink):
+        if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
@@ -125,18 +146,20 @@ class FileModuleTest(ModuleCase):
             FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(TMP, 'src.txt')
         with salt.utils.files.fopen(src_file, 'w+') as fp:
-            fp.write('Hello\n')
+            fp.write(salt.utils.stringutils.to_str('Hello\n'))
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
         assert ret['retcode'] == 0, repr(ret)
         with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello\n')
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(fp.read()), 'Hello\n')
 
         ret = self.minion_run('file.patch', src_file, src_patch)
         assert ret['retcode'] == 0, repr(ret)
         with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello world\n')
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(fp.read()), 'Hello world\n')
 
     def test_remove_file(self):
         ret = self.run_function('file.remove', arg=[self.myfile])
@@ -174,3 +197,20 @@ class FileModuleTest(ModuleCase):
         ret = self.run_function('file.source_list', ['file://' + self.myfile,
                                                      'filehash', 'base'])
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+
+    def test_file_line_changes_format(self):
+        '''
+        Test file.line changes output formatting.
+
+        Issue #41474
+        '''
+        ret = self.minion_run('file.line', self.myfile, 'Goodbye',
+                              mode='insert', after='Hello')
+        self.assertIn('Hello' + os.linesep + '+Goodbye', ret)
+
+    def test_file_line_content(self):
+        self.minion_run('file.line', self.myfile, 'Goodbye',
+                        mode='insert', after='Hello')
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)

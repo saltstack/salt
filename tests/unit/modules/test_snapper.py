@@ -7,7 +7,7 @@ Unit tests for the Snapper module
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import Salt Testing libs
@@ -36,18 +36,18 @@ DBUS_RET = {
          {'userdata2': 'userval2', 'salt_jid': '20160607130930720112'}]
     ],
     'ListConfigs': [
-        [u'root', u'/', {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'}
+        ['root', '/', {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'}
         ]
     ],
     'GetFiles': [
@@ -86,18 +86,18 @@ MODULE_RET = {
         }
     ],
     'LISTCONFIGS': {
-        u'root': {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'
+        'root': {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'
         }
     },
     'GETFILES': {
@@ -239,7 +239,8 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
                 patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots'])):
             self.assertEqual(snapper.delete_snapshot(snapshots_ids=43), {"root": {"ids": [43], "status": "deleted"}})
-            self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]), {"root": {"ids": [42, 43], "status": "deleted"}})
+            self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]),
+                             {"root": {"ids": [42, 43], "status": "deleted"}})
 
     def test_delete_snapshot_id_fail(self):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
@@ -332,7 +333,8 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_diff_text_file(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43))), \
-                patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(side_effect=["/.snapshots/55/snapshot", ""])), \
+                patch('salt.modules.snapper.snapper.MountSnapshot',
+                      MagicMock(side_effect=["/.snapshots/55/snapshot", ""])), \
                 patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value="")), \
                 patch('os.path.isdir', MagicMock(return_value=False)), \
                 patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo2"])), \
@@ -356,13 +358,14 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True])), \
                 patch('os.path.isdir', MagicMock(return_value=False)), \
                 patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
-            fopen_effect = [
-                mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,
-                mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
-                mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
-            ]
-            with patch('salt.utils.files.fopen') as fopen_mock:
-                fopen_mock.side_effect = fopen_effect
+            contents = {
+                '*/tmp/foo': [
+                    FILE_CONTENT['/tmp/foo']['pre'],
+                    FILE_CONTENT['/tmp/foo']['post'],
+                ],
+                '*/tmp/foo2': FILE_CONTENT['/tmp/foo2']['post'],
+            }
+            with patch('salt.utils.files.fopen', mock_open(read_data=contents)):
                 module_ret = {
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                     "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
@@ -385,12 +388,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                             "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
                         ])
                     }):
-            fopen_effect = [
-                mock_open(read_data="dummy binary").return_value,
-                mock_open(read_data="dummy binary").return_value,
-            ]
-            with patch('salt.utils.files.fopen') as fopen_mock:
-                fopen_mock.side_effect = fopen_effect
+            with patch('salt.utils.files.fopen', mock_open(read_data='dummy binary')):
                 module_ret = {
                     "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
                 }

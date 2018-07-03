@@ -2,7 +2,7 @@
 '''
 Module for managing disks and blockdevices
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -250,7 +250,10 @@ def percent(args=None):
             log.error('Problem parsing disk usage information')
             ret = {}
     if args and args not in ret:
-        log.error('Problem parsing disk usage information: Partition \'{0}\' does not exist!'.format(args))
+        log.error(
+            'Problem parsing disk usage information: Partition \'%s\' '
+            'does not exist!', args
+        )
         ret = {}
     elif args:
         return ret[args]
@@ -354,7 +357,7 @@ def wipe(device):
     if out['retcode'] == 0:
         return True
     else:
-        log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
+        log.error('Error wiping device %s: %s', device, out['stderr'])
         return False
 
 
@@ -453,10 +456,10 @@ def format_(device,
 
         salt '*' disk.format /dev/sdX1
     '''
-    cmd = ['mkfs', '-t', str(fs_type)]
+    cmd = ['mkfs', '-t', six.text_type(fs_type)]
     if inode_size is not None:
         if fs_type[:3] == 'ext':
-            cmd.extend(['-i', str(inode_size)])
+            cmd.extend(['-i', six.text_type(inode_size)])
         elif fs_type == 'xfs':
             cmd.extend(['-i', 'size={0}'.format(inode_size)])
     if lazy_itable_init is not None:
@@ -467,7 +470,7 @@ def format_(device,
             cmd.append('-F')
         elif fs_type == 'xfs':
             cmd.append('-f')
-    cmd.append(str(device))
+    cmd.append(six.text_type(device))
 
     mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
     sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0

@@ -90,7 +90,7 @@ markers for specific list items:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import datetime
 import salt.exceptions
@@ -149,8 +149,8 @@ def beacon(config):
             try:
                 data = __salt__['status.{0}'.format(func)]()
             except salt.exceptions.CommandExecutionError as exc:
-                log.debug('Status beacon attempted to process function {0} '
-                          'but encountered error: {1}'.format(func, exc))
+                log.debug('Status beacon attempted to process function %s '
+                          'but encountered error: %s', func, exc)
                 continue
             if not isinstance(entry[func], list):
                 func_items = [entry[func]]

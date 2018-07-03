@@ -10,7 +10,7 @@ Pacemaker/Cororsync conifguration system (PCS)
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.path
@@ -147,10 +147,7 @@ def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' \\
-                          pcsuser='hacluster' \\
-                          pcspasswd='hoonetorg' \\
-                          extra_args=[ '--force' ]
+        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args="[ '--force' ]"
     '''
     cmd = ['pcs', 'cluster', 'auth']
 
@@ -201,8 +198,7 @@ def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.cluster_setup nodes='[ node1.example.org node2.example.org ]' \\
-                                   pcsclustername='pcscluster'
+        salt '*' pcs.cluster_setup nodes='[ node1.example.org node2.example.org ]' pcsclustername=pcscluster
     '''
     cmd = ['pcs', 'cluster', 'setup']
 
@@ -228,7 +224,7 @@ def cluster_node_add(node, extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.cluster_node_add node=node2.example.org'
+        salt '*' pcs.cluster_node_add node=node2.example.org
     '''
     cmd = ['pcs', 'cluster', 'node', 'add']
 
@@ -254,8 +250,7 @@ def cib_create(cibfile, scope='configuration', extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.cib_create cibfile='/tmp/VIP_apache_1.cib' \\
-                                'scope=False'
+        salt '*' pcs.cib_create cibfile='/tmp/VIP_apache_1.cib' scope=False
     '''
     cmd = ['pcs', 'cluster', 'cib', cibfile]
     if isinstance(scope, six.string_types):
@@ -281,8 +276,7 @@ def cib_push(cibfile, scope='configuration', extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.cib_push cibfile='/tmp/VIP_apache_1.cib' \\
-                              'scope=False'
+        salt '*' pcs.cib_push cibfile='/tmp/VIP_apache_1.cib' scope=False
     '''
     cmd = ['pcs', 'cluster', 'cib-push', cibfile]
     if isinstance(scope, six.string_types):
@@ -324,9 +318,7 @@ def prop_show(prop, extra_args=None, cibfile=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.prop_show cibfile='/tmp/2_node_cluster.cib' \\
-                               prop='no-quorum-policy' \\
-                               cibfile='/tmp/2_node_cluster.cib'
+        salt '*' pcs.prop_show cibfile='/tmp/2_node_cluster.cib' prop='no-quorum-policy' cibfile='/tmp/2_node_cluster.cib'
     '''
     return item_show(item='property', item_id=prop, extra_args=extra_args, cibfile=cibfile)
 
@@ -348,9 +340,7 @@ def prop_set(prop, value, extra_args=None, cibfile=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.prop_set prop='no-quorum-policy' \\
-                              value='ignore' \\
-                              cibfile='/tmp/2_node_cluster.cib'
+        salt '*' pcs.prop_set prop='no-quorum-policy' value='ignore' cibfile='/tmp/2_node_cluster.cib'
     '''
     return item_create(item='property',
                        item_id='{0}={1}'.format(prop, value),
@@ -375,8 +365,7 @@ def stonith_show(stonith_id, extra_args=None, cibfile=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.stonith_show stonith_id='eps_fence' \\
-                                  cibfile='/tmp/2_node_cluster.cib'
+        salt '*' pcs.stonith_show stonith_id='eps_fence' cibfile='/tmp/2_node_cluster.cib'
     '''
     return item_show(item='stonith', item_id=stonith_id, extra_args=extra_args, cibfile=cibfile)
 
@@ -398,19 +387,8 @@ def stonith_create(stonith_id, stonith_device_type, stonith_device_options=None,
 
     .. code-block:: bash
 
-        salt '*' pcs.stonith_create stonith_id='eps_fence' \\
-                                    stonith_device_type='fence_eps' \\
-                                    stonith_device_options="[ \\
-                                      'pcmk_host_map=node1.example.org:01;node2.example.org:02', \\
-                                      'ipaddr=myepsdevice.example.org', \\
-                                      'action=reboot', \\
-                                      'power_wait=5', \\
-                                      'verbose=1', \\
-                                      'debug=/var/log/pcsd/eps_fence.log', \\
-                                      'login=hidden', \\
-                                      'passwd=hoonetorg' \\
-                                    ]" \\
-                                    cibfile='/tmp/cib_for_stonith.cib'
+        salt '*' pcs.stonith_create stonith_id='eps_fence' stonith_device_type='fence_eps'
+                                    stonith_device_options="['pcmk_host_map=node1.example.org:01;node2.example.org:02', 'ipaddr=myepsdevice.example.org', 'action=reboot', 'power_wait=5', 'verbose=1', 'debug=/var/log/pcsd/eps_fence.log', 'login=hidden', 'passwd=hoonetorg']" cibfile='/tmp/cib_for_stonith.cib'
     '''
     return item_create(item='stonith',
                        item_id=stonith_id,
@@ -434,8 +412,7 @@ def resource_show(resource_id, extra_args=None, cibfile=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.resource_show resource_id='galera' \\
-                                   cibfile='/tmp/cib_for_galera.cib'
+        salt '*' pcs.resource_show resource_id='galera' cibfile='/tmp/cib_for_galera.cib'
     '''
     return item_show(item='resource', item_id=resource_id, extra_args=extra_args, cibfile=cibfile)
 
@@ -457,13 +434,7 @@ def resource_create(resource_id, resource_type, resource_options=None, cibfile=N
 
     .. code-block:: bash
 
-        salt '*' pcs.resource_create resource_id='galera' \\
-                         resource_type='ocf:heartbeat:galera' \\
-                         resource_options="[ \\
-                             'wsrep_cluster_address=gcomm://node1.example.org,node2.example.org,node3.example.org' \\
-                             '--master' \\
-                         ]" \\
-                         cibfile='/tmp/cib_for_galera.cib'
+        salt '*' pcs.resource_create resource_id='galera' resource_type='ocf:heartbeat:galera' resource_options="['wsrep_cluster_address=gcomm://node1.example.org,node2.example.org,node3.example.org', '--master']" cibfile='/tmp/cib_for_galera.cib'
     '''
     return item_create(item='resource',
                        item_id=resource_id,

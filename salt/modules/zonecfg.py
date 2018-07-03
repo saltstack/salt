@@ -12,7 +12,7 @@ Module for Solaris 10's zonecfg
 .. warning::
     Oracle Solaris 11's zonecfg is not supported by this module!
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -20,6 +20,7 @@ import re
 
 # Import Salt libs
 import salt.utils.args
+import salt.utils.data
 import salt.utils.decorators
 import salt.utils.files
 import salt.utils.path
@@ -176,7 +177,7 @@ def _sanitize_value(value):
             new_value.append(v)
             new_value.append(',')
         new_value.append(')')
-        return "".join(str(v) for v in new_value).replace(',)', ')')
+        return "".join(six.text_type(v) for v in new_value).replace(',)', ')')
     elif isinstance(value, list):
         new_value = []
         new_value.append('(')
@@ -191,7 +192,7 @@ def _sanitize_value(value):
                 new_value.append(item)
             new_value.append(',')
         new_value.append(')')
-        return "".join(str(v) for v in new_value).replace(',)', ')')
+        return "".join(six.text_type(v) for v in new_value).replace(',)', ')')
     else:
         # note: we can't use shelx or pipes quote here because it makes zonecfg barf
         return '"{0}"'.format(value) if ' ' in value else value
@@ -201,7 +202,10 @@ def _dump_cfg(cfg_file):
     '''Internal helper for debugging cfg files'''
     if __salt__['file.file_exists'](cfg_file):
         with salt.utils.files.fopen(cfg_file, 'r') as fp_:
-            log.debug("zonecfg - configuration file:\n{0}".format("".join(fp_.readlines())))
+            log.debug(
+                "zonecfg - configuration file:\n%s",
+                    "".join(salt.utils.data.decode(fp_.readlines()))
+            )
 
 
 def create(zone, brand, zonepath, force=False):
@@ -413,7 +417,7 @@ def _property(methode, zone, key, value):
             if methode == 'set':
                 if isinstance(value, dict) or isinstance(value, list):
                     value = _sanitize_value(value)
-                value = str(value).lower() if isinstance(value, bool) else str(value)
+                value = six.text_type(value).lower() if isinstance(value, bool) else six.text_type(value)
                 fp_.write("{0} {1}={2}\n".format(methode, key, _sanitize_value(value)))
             elif methode == 'clear':
                 fp_.write("{0} {1}\n".format(methode, key))
@@ -529,7 +533,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
                 value = kwargs[resource_selector]
                 if isinstance(value, dict) or isinstance(value, list):
                     value = _sanitize_value(value)
-                value = str(value).lower() if isinstance(value, bool) else str(value)
+                value = six.text_type(value).lower() if isinstance(value, bool) else six.text_type(value)
                 fp_.write("select {0} {1}={2}\n".format(resource_type, resource_selector, _sanitize_value(value)))
             else:
                 fp_.write("select {0}\n".format(resource_type))
@@ -538,7 +542,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
                 continue
             if isinstance(v, dict) or isinstance(v, list):
                 value = _sanitize_value(value)
-            value = str(v).lower() if isinstance(v, bool) else str(v)
+            value = six.text_type(v).lower() if isinstance(v, bool) else six.text_type(v)
             if k in _zonecfg_resource_setters[resource_type]:
                 fp_.write("set {0}={1}\n".format(k, _sanitize_value(value)))
             else:
@@ -574,7 +578,7 @@ def add_resource(zone, resource_type, **kwargs):
         name of zone
     resource_type : string
         type of resource
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     CLI Example:
@@ -596,7 +600,7 @@ def update_resource(zone, resource_type, resource_selector, **kwargs):
         type of resource
     resource_selector : string
         unique resource identifier
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     .. note::
@@ -739,7 +743,7 @@ def info(zone, show_all=False):
                     if 'name' in kv and 'value' in kv:
                         resdata[key][kv['name']] = kv['value']
                     else:
-                        log.warning('zonecfg.info - not sure how to deal with: {0}'.format(kv))
+                        log.warning('zonecfg.info - not sure how to deal with: %s', kv)
                 else:
                     resdata[key] = _parse_value(line.strip()[line.strip().index(':')+1:])
             # store property
@@ -755,7 +759,7 @@ def info(zone, show_all=False):
                     if 'name' in kv and 'value' in kv:
                         res[key][kv['name']] = kv['value']
                     else:
-                        log.warning('zonecfg.info - not sure how to deal with: {0}'.format(kv))
+                        log.warning('zonecfg.info - not sure how to deal with: %s', kv)
                 else:
                     ret[key] = _parse_value(line.strip()[line.strip().index(':')+1:])
         # store hanging resource

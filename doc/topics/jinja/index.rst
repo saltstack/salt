@@ -4,13 +4,12 @@
 Understanding Jinja
 ===================
 
-`Jinja <http://jinja.pocoo.org/docs/>`_ is the default templating language
-in SLS files.
+`Jinja`_ is the default templating language in SLS files.
+
+.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja in States
 ===============
-
-.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja is evaluated before YAML, which means it is evaluated before the States
 are run.
@@ -153,7 +152,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows to raise custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` jinja function.
 
 .. code-block:: jinja
 
@@ -176,10 +175,9 @@ Saltstack extends `builtin filters`_ with these custom filters:
 ``strftime``
 ------------
 
-Converts any time related object into a time based string. It requires a
-valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
-:ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-the official Python documentation.
+Converts any time related object into a time based string. It requires valid
+strftime directives. An exhaustive list can be found :ref:`here
+<strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -224,8 +222,8 @@ maps.
     {%- load_yaml as foo %}
     bar: {{ bar|yaml_encode }}
     baz: {{ baz|yaml_encode }}
-    baz: {{ zip|yaml_encode }}
-    baz: {{ zap|yaml_encode }}
+    zip: {{ zip|yaml_encode }}
+    zap: {{ zap|yaml_encode }}
     {%- endload %}
 
 In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
@@ -834,7 +832,7 @@ Returns:
 ----------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
@@ -869,26 +867,37 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: json_decode_list
+.. jinja_ref:: json_encode_list
 
-``json_decode_list``
+``json_encode_list``
 --------------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: 2018.3.0
+    Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
+    when it was added. ``json_decode_list`` will be supported until the Neon
+    release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
 
-JSON decodes as unicode, Jinja needs bytes.
+
+Recursively encodes all string elements of the list to bytes.
 
 Example:
 
 .. code-block:: jinja
 
-  {{ [1, 2, 3] | json_decode_list }}
+  {{ [1, 2, 3] | json_encode_list }}
 
 Returns:
 
@@ -898,26 +907,55 @@ Returns:
 
 
 .. jinja_ref:: json_decode_dict
+.. jinja_ref:: json_encode_dict
 
-``json_decode_dict``
+``json_encode_dict``
 --------------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: 2018.3.0
+    Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
+    when it was added. ``json_decode_dict`` will be supported until the Neon
+    release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
 
-JSON decodes as unicode, Jinja needs bytes.
+Recursively encodes all string items in the dictionary to bytes.
 
 Example:
 
+Assuming that ``pillar['foo']`` contains ``{u'a': u'\u0414'}``, and your locale
+is ``en_US.UTF-8``:
+
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | json_decode_dict }}
+  {{ pillar['foo'] | json_encode_dict }}
 
 Returns:
 
 .. code-block:: python
 
-  {'a': 'b'}
+  {'a': '\xd0\x94'}
 
+
+.. jinja_ref:: tojson
+
+``tojson``
+----------
+
+.. versionadded:: 2018.3.3,Fluorine
+
+Dumps a data structure to JSON.
+
+This filter was added to provide this functionality to hosts which have a
+Jinja release older than version 2.9 installed. If Jinja 2.9 or newer is
+installed, then the upstream version of the filter will be used. See the
+`upstream docs`__ for more information.
+
+.. __: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
 .. jinja_ref:: random_hash
 
@@ -925,9 +963,10 @@ Returns:
 ---------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
-    what the filter does.
+    what the filter does. ``rand_str`` will be supported until the Neon
+    release.
 
 Generates a random number between 1 and the number passed to the filter, and
 then hashes it. The default hash type is the one specified by the minion's
@@ -1104,7 +1143,7 @@ Returns:
     'body': '{
       "userId": 1,
       "id": 1,
-      "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+      "title": "sunt aut facere repellat provident occaecati excepturi option reprehenderit",
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }
@@ -1346,11 +1385,11 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
 
@@ -1366,7 +1405,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ 'www.google.com' | dns_check }}
+  {{ 'www.google.com' | dns_check(port=443) }}
 
 Returns:
 
@@ -1612,6 +1651,54 @@ Returns:
 Test supports additional optional arguments: ``ignorecase``, ``multiline``
 
 
+Escape filters
+--------------
+
+.. jinja_ref:: regex_escape
+
+``regex_escape``
+----------------
+
+.. versionadded:: 2017.7.0
+
+Allows escaping of strings so they can be interpreted literally by another function.
+
+Example:
+
+.. code-block:: jinja
+
+  regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
+
+Set Theory Filters
+------------------
+
+.. jinja_ref:: unique
+
+``unique``
+----------
+
+.. versionadded:: 2017.7.0
+
+Performs set math using Jinja filters.
+
+Example:
+
+.. code-block:: jinja
+
+  unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  unique = ['foo', 'bar']
+
 Jinja in Files
 ==============
 
@@ -1739,7 +1826,7 @@ Logs
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- do salt.log.error('testing jinja logging') -%}
 

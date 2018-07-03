@@ -5,7 +5,7 @@ generated using the libvirt key runner
 
 :depends: certtool
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.
@@ -17,6 +17,7 @@ import subprocess
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -52,9 +53,11 @@ def ext_pillar(minion_id,
             continue
         fn_ = os.path.join(key_dir, key)
         with salt.utils.files.fopen(fn_, 'r') as fp_:
-            ret['libvirt.{0}'.format(key)] = fp_.read()
+            ret['libvirt.{0}'.format(key)] = \
+                salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(cacert, 'r') as fp_:
-        ret['libvirt.cacert.pem'] = fp_.read()
+        ret['libvirt.cacert.pem'] = \
+            salt.utils.stringutils.to_unicode(fp_.read())
     return ret
 
 
@@ -98,11 +101,13 @@ def gen_hyper_keys(minion_id,
     clientinfo = os.path.join(sub_dir, 'client.info')
     if not os.path.isfile(srvinfo):
         with salt.utils.files.fopen(srvinfo, 'w+') as fp_:
-            infodat = ('organization = salted\ncn = {0}\ntls_www_server'
-                       '\nencryption_key\nsigning_key'
-                       '\ndigitalSignature\nexpiration_days = {1}'
-                       ).format(
-                               __grains__['fqdn'], expiration_days)
+            infodat = salt.utils.stringutils.to_str(
+                'organization = salted\ncn = {0}\ntls_www_server'
+                '\nencryption_key\nsigning_key'
+                '\ndigitalSignature\nexpiration_days = {1}'.format(
+                   __grains__['fqdn'], expiration_days
+                )
+            )
             fp_.write(infodat)
     if not os.path.isfile(priv):
         subprocess.call(
@@ -116,16 +121,18 @@ def gen_hyper_keys(minion_id,
         subprocess.call(cmd, shell=True)
     if not os.path.isfile(clientinfo):
         with salt.utils.files.fopen(clientinfo, 'w+') as fp_:
-            infodat = ('country = {0}\nstate = {1}\nlocality = '
-                       '{2}\norganization = {3}\ncn = {4}\n'
-                       'tls_www_client\nencryption_key\nsigning_key\n'
-                       'digitalSignature'
-                       ).format(
-                               country,
-                               state,
-                               locality,
-                               organization,
-                               __grains__['fqdn'])
+            infodat = salt.utils.stringutils.to_str(
+                'country = {0}\nstate = {1}\nlocality = {2}\n'
+                'organization = {3}\ncn = {4}\n'
+                'tls_www_client\nencryption_key\nsigning_key\n'
+                'digitalSignature'.format(
+                    country,
+                    state,
+                    locality,
+                    organization,
+                    __grains__['fqdn']
+                )
+            )
             fp_.write(infodat)
     if not os.path.isfile(cpriv):
         subprocess.call(

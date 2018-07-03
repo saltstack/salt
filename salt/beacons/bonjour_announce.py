@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Beacon to announce via Bonjour (zeroconf)
+Beacon to announce via Bonjour (zeroconf)
 '''
 
 # Import Python libs
@@ -9,6 +9,9 @@ import atexit
 import logging
 import select
 import time
+
+import salt.utils.stringutils
+from salt.ext import six
 from salt.ext.six.moves import map
 
 # Import 3rd Party libs
@@ -45,7 +48,7 @@ def _close_sd_ref():
 
 def _register_callback(sdRef, flags, errorCode, name, regtype, domain):  # pylint: disable=unused-argument
     if errorCode != pybonjour.kDNSServiceErr_NoError:
-        log.error('Bonjour registration failed with error code {0}'.format(errorCode))
+        log.error('Bonjour registration failed with error code %s', errorCode)
 
 
 def validate(config):
@@ -95,42 +98,37 @@ def beacon(config):
     (do not poll) on the beacon configuration.
 
     The following are required configuration settings:
-        'servicetype': The service type to announce.
-        'port': The port of the service to announce.
-        'txt': The TXT record of the service being announced as a dict.
-               Grains can be used to define TXT values using the syntax:
-                   grains.<grain_name>
-               or:
-                   grains.<grain_name>[i]
-               where i is an integer representing the index of the grain to
-               use. If the grain is not a list, the index is ignored.
+
+    - ``servicetype`` - The service type to announce
+    - ``port`` - The port of the service to announce
+    - ``txt`` - The TXT record of the service being announced as a dict. Grains
+      can be used to define TXT values using one of following two formats:
+
+      - ``grains.<grain_name>``
+      - ``grains.<grain_name>[i]`` where i is an integer representing the
+        index of the grain to use. If the grain is not a list, the index is
+        ignored.
 
     The following are optional configuration settings:
-        'servicename': Set the name of the service. Will use the hostname from
-                       __grains__['host'] if not set.
-        'reset_on_change': If true and there is a change in TXT records
-                           detected, it will stop announcing the service and
-                           then restart announcing the service. This
-                           interruption in service announcement may be
-                           desirable if the client relies on changes in the
-                           browse records to update its cache of the TXT
-                           records.
-                           Defaults to False.
-        'reset_wait': The number of seconds to wait after announcement stops
-                      announcing and before it restarts announcing in the
-                      case where there is a change in TXT records detected
-                      and 'reset_on_change' is True.
-                      Defaults to 0.
-        'copy_grains': If set to True, it will copy the grains passed into
-                       the beacon when it backs them up to check for changes
-                       on the next iteration. Normally, instead of copy, it
-                       would use straight value assignment. This will allow
-                       detection of changes to grains where the grains are
-                       modified in-place instead of completely replaced.
-                       In-place grains changes are not currently done in the
-                       main Salt code but may be done due to a custom
-                       plug-in.
-                       Defaults to False.
+
+    - ``servicename`` - Set the name of the service. Will use the hostname from
+      the minion's ``host`` grain if this value is not set.
+    - ``reset_on_change`` - If ``True`` and there is a change in TXT records
+      detected, it will stop announcing the service and then restart announcing
+      the service. This interruption in service announcement may be desirable
+      if the client relies on changes in the browse records to update its cache
+      of TXT records. Defaults to ``False``.
+    - ``reset_wait`` - The number of seconds to wait after announcement stops
+      announcing and before it restarts announcing in the case where there is a
+      change in TXT records detected and ``reset_on_change`` is ``True``.
+      Defaults to ``0``.
+    - ``copy_grains`` - If ``True``, Salt will copy the grains passed into the
+      beacon when it backs them up to check for changes on the next iteration.
+      Normally, instead of copy, it would use straight value assignment. This
+      will allow detection of changes to grains where the grains are modified
+      in-place instead of completely replaced.  In-place grains changes are not
+      currently done in the main Salt code but may be done due to a custom
+      plug-in. Defaults to ``False``.
 
     Example Config
 
@@ -172,6 +170,7 @@ def beacon(config):
             changes['ipv6'] = __grains__.get('ipv6', [])
 
     for item in _config['txt']:
+        changes_key = 'txt.' + salt.utils.stringutils.to_unicode(item)
         if _config['txt'][item].startswith('grains.'):
             grain = _config['txt'][item][7:]
             grain_index = None
@@ -188,12 +187,12 @@ def beacon(config):
                     grain_value = ','.join(grain_value)
             txt[item] = _enforce_txt_record_maxlen(item, grain_value)
             if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
-                changes[str('txt.' + item)] = txt[item]
+                changes[changes_key] = txt[item]
         else:
             txt[item] = _enforce_txt_record_maxlen(item, _config['txt'][item])
 
         if not LAST_GRAINS:
-            changes[str('txt.' + item)] = txt[item]
+            changes[changes_key] = txt[item]
 
     if changes:
         txt_record = pybonjour.TXTRecord(items=txt)
@@ -231,7 +230,7 @@ def beacon(config):
             if SD_REF in ready[0]:
                 pybonjour.DNSServiceProcessResult(SD_REF)
         else:
-            txt_record_raw = str(txt_record).encode('utf-8')
+            txt_record_raw = six.text_type(txt_record).encode('utf-8')
             pybonjour.DNSServiceUpdateRecord(
                 SD_REF,
                 RecordRef=None,

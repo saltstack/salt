@@ -5,7 +5,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pwd
 import grp
@@ -59,12 +59,18 @@ class AuthTest(ShellCase):
     def setUp(self):
         for user in (self.userA, self.userB):
             try:
+                if salt.utils.platform.is_darwin() and user not in str(self.run_call('user.list_users')):
+                    # workaround for https://github.com/saltstack/salt-jenkins/issues/504
+                    raise KeyError
                 pwd.getpwnam(user)
             except KeyError:
                 self.run_call('user.add {0} createhome=False'.format(user))
 
         # only put userB into the group for the group auth test
         try:
+            if salt.utils.platform.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
+                # workaround for https://github.com/saltstack/salt-jenkins/issues/504
+                raise KeyError
             grp.getgrnam(self.group)
         except KeyError:
             self.run_call('group.add {0}'.format(self.group))
@@ -115,7 +121,7 @@ class AuthTest(ShellCase):
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
         self.assertTrue(
-            'Failed to authenticate' in ''.join(resp)
+            'Authentication error occurred.' in ''.join(resp)
         )
 
     def test_pam_auth_valid_group(self):

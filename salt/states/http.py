@@ -8,9 +8,9 @@ Perform an HTTP query and statefully return the result
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import re
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import re
 import time
 
 __monitor__ = [
@@ -24,7 +24,8 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
     '''
     Perform an HTTP query and statefully return the result
 
-    .. versionadded:: 2015.5.0
+    Passes through all the parameters described in the
+    :py:func:`utils.http.query function <salt.utils.http.query>`:
 
     name
         The name of the query.
@@ -132,8 +133,18 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
     Like query but, repeat and wait until match/match_type or status is fulfilled. State returns result from last
     query state in case of success or if no successful query was made within wait_for timeout.
 
+    name
+        The name of the query.
+
+    wait_for
+        Total time to wait for requests that succeed.
+
     request_interval
         Optional interval to delay requests by N seconds to reduce the number of requests sent.
+
+    .. note::
+
+        All other arguments are passed to the http.query state.
     '''
     starttime = time.time()
 
@@ -141,7 +152,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         caught_exception = None
         ret = None
         try:
-            ret = query(name, wait_for=wait_for, **kwargs)
+            ret = query(name, **kwargs)
             if ret['result']:
                 return ret
         except Exception as exc:
@@ -155,5 +166,5 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         else:
             # Space requests out by delaying for an interval
             if 'request_interval' in kwargs:
-                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                log.debug('delaying query for %s seconds.', kwargs['request_interval'])
                 time.sleep(kwargs['request_interval'])

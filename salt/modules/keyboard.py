@@ -3,9 +3,9 @@
 Module for managing keyboards on supported POSIX-like systems using
 systemd, or such as Redhat, Debian and Gentoo.
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

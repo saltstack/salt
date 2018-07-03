@@ -4,11 +4,10 @@ A simple beacon to watch journald for specific entries
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import salt libs
 import salt.utils.data
-import salt.utils.locales
 import salt.ext.six
 from salt.ext.six.moves import map
 
@@ -93,7 +92,7 @@ def beacon(config):
             n_flag = 0
             for key in _config['services'][name]:
                 if isinstance(key, salt.ext.six.string_types):
-                    key = salt.utils.locales.sdecode(key)
+                    key = salt.utils.data.decode(key)
                 if key in cur:
                     if _config['services'][name][key] == cur[key]:
                         n_flag += 1

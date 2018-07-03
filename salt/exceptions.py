@@ -2,7 +2,7 @@
 '''
 This module is a central location for all salt exceptions
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -31,16 +31,36 @@ def get_error_message(error):
     '''
     Get human readable message from Python Exception
     '''
-    return error.args[0] if error.args else u''
+    return error.args[0] if error.args else ''
 
 
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
-    def __init__(self, message=u''):
-        super(SaltException, self).__init__(message)
-        self.strerror = message
+    def __init__(self, message=''):
+        # Avoid circular import
+        import salt.utils.stringutils
+        if not isinstance(message, six.string_types):
+            message = six.text_type(message)
+        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
+            super(SaltException, self).__init__(
+                salt.utils.stringutils.to_str(message)
+            )
+            self.message = self.strerror = message
+        elif isinstance(message, str):
+            super(SaltException, self).__init__(message)
+            self.message = self.strerror = \
+                salt.utils.stringutils.to_unicode(message)
+        else:
+            # Some non-string input was passed. Run the parent dunder init with
+            # a str version, and convert the passed value to unicode for the
+            # message/strerror attributes.
+            super(SaltException, self).__init__(str(message))  # future lint: blacklisted-function
+            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code
+
+    def __unicode__(self):
+        return self.strerror
 
     def pack(self):
         '''
@@ -48,8 +68,7 @@ class SaltException(Exception):
         transport via msgpack
         '''
         if six.PY3:
-            # The message should be a str type, not a unicode
-            return {u'message': str(self), u'args': self.args}
+            return {'message': six.text_type(self), 'args': self.args}
         return dict(message=self.__unicode__(), args=self.args)
 
 
@@ -100,16 +119,30 @@ class CommandExecutionError(SaltException):
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
     '''
-    def __init__(self, message=u'', info=None):
-        self.error = exc_str_prefix = message
+    def __init__(self, message='', info=None):
+        # Avoid circular import
+        import salt.utils.stringutils
+        try:
+            exc_str_prefix = salt.utils.stringutils.to_unicode(message)
+        except TypeError:
+            # Exception class instance passed. The SaltException __init__ will
+            # gracefully handle non-string types passed to it, but since this
+            # class needs to do some extra stuff with the exception "message"
+            # before handing it off to the parent class' __init__, we'll need
+            # to extract the message from the exception instance here
+            try:
+                exc_str_prefix = six.text_type(message)
+            except UnicodeDecodeError:
+                exc_str_prefix = salt.utils.stringutils.to_unicode(str(message))  # future lint: disable=blacklisted-function
+        self.error = exc_str_prefix
         self.info = info
         if self.info:
             if exc_str_prefix:
-                if exc_str_prefix[-1] not in u'.?!':
-                    exc_str_prefix += u'.'
-                exc_str_prefix += u' '
+                if exc_str_prefix[-1] not in '.?!':
+                    exc_str_prefix += '.'
+                exc_str_prefix += ' '
 
-            exc_str_prefix += u'Additional info follows:\n\n'
+            exc_str_prefix += 'Additional info follows:\n\n'
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
             exc_str = exc_str_prefix + _nested_output(self.info)
@@ -120,7 +153,7 @@ class CommandExecutionError(SaltException):
             # this information would be redundant).
             if isinstance(self.info, dict):
                 info_without_changes = copy.deepcopy(self.info)
-                info_without_changes.pop(u'changes', None)
+                info_without_changes.pop('changes', None)
                 if info_without_changes:
                     self.strerror_without_changes = \
                         exc_str_prefix + _nested_output(info_without_changes)
@@ -134,6 +167,9 @@ class CommandExecutionError(SaltException):
         else:
             self.strerror_without_changes = exc_str = self.error
 
+        # We call the parent __init__ last instead of first because we need the
+        # logic above to derive the message string to use for the exception
+        # message.
         super(CommandExecutionError, self).__init__(exc_str)
 
 
@@ -165,13 +201,13 @@ class FileLockError(SaltException):
     '''
     Used when an error occurs obtaining a file lock
     '''
-    def __init__(self, msg, time_start=None, *args, **kwargs):
-        super(FileLockError, self).__init__(msg, *args, **kwargs)
+    def __init__(self, message, time_start=None, *args, **kwargs):
+        super(FileLockError, self).__init__(message, *args, **kwargs)
         if time_start is None:
             log.warning(
-                u'time_start should be provided when raising a FileLockError. '
-                u'Defaulting to current time as a fallback, but this may '
-                u'result in an inaccurate timeout.'
+                'time_start should be provided when raising a FileLockError. '
+                'Defaulting to current time as a fallback, but this may '
+                'result in an inaccurate timeout.'
             )
             self.time_start = time.time()
         else:
@@ -188,10 +224,9 @@ class GitLockError(SaltException):
     this exception class can be caught in a try/except without being caught as
     an OSError.
     '''
-    def __init__(self, errno, strerror, *args, **kwargs):
-        super(GitLockError, self).__init__(strerror, *args, **kwargs)
+    def __init__(self, errno, message, *args, **kwargs):
+        super(GitLockError, self).__init__(message, *args, **kwargs)
         self.errno = errno
-        self.strerror = strerror
 
 
 class GitRemoteError(SaltException):
@@ -224,28 +259,40 @@ class SaltRenderError(SaltException):
     def __init__(self,
                  message,
                  line_num=None,
-                 buf=u'',
-                 marker=u'    <======================',
+                 buf='',
+                 marker='    <======================',
                  trace=None):
+        # Avoid circular import
+        import salt.utils.stringutils
         self.error = message
-        exc_str = copy.deepcopy(message)
+        try:
+            exc_str = salt.utils.stringutils.to_unicode(message)
+        except TypeError:
+            # Exception class instance passed. The SaltException __init__ will
+            # gracefully handle non-string types passed to it, but since this
+            # class needs to do some extra stuff with the exception "message"
+            # before handing it off to the parent class' __init__, we'll need
+            # to extract the message from the exception instance here
+            try:
+                exc_str = six.text_type(message)
+            except UnicodeDecodeError:
+                exc_str = salt.utils.stringutils.to_unicode(str(message))  # future lint: disable=blacklisted-function
         self.line_num = line_num
         self.buffer = buf
-        self.context = u''
+        self.context = ''
         if trace:
-            exc_str += u'\n{0}\n'.format(trace)
+            exc_str += '\n{0}\n'.format(trace)
         if self.line_num and self.buffer:
             # Avoid circular import
-            import salt.utils.stringutils
             import salt.utils.templates
-            self.context = salt.utils.templates.get_context(
+            self.context = salt.utils.stringutils.get_context(
                 self.buffer,
                 self.line_num,
                 marker=marker
             )
-            exc_str += '; line {0}\n\n{1}'.format(  # future lint: disable=non-unicode-string
+            exc_str += '; line {0}\n\n{1}'.format(
                 self.line_num,
-                salt.utils.stringutils.to_str(self.context),
+                salt.utils.stringutils.to_unicode(self.context),
             )
         super(SaltRenderError, self).__init__(exc_str)
 
@@ -256,8 +303,8 @@ class SaltClientTimeout(SaltException):
 
     Takes the ``jid`` as a parameter
     '''
-    def __init__(self, msg, jid=None, *args, **kwargs):
-        super(SaltClientTimeout, self).__init__(msg, *args, **kwargs)
+    def __init__(self, message, jid=None, *args, **kwargs):
+        super(SaltClientTimeout, self).__init__(message, *args, **kwargs)
         self.jid = jid
 
 
@@ -349,7 +396,7 @@ class SaltCloudSystemExit(SaltCloudException):
     This exception is raised when the execution should be stopped.
     '''
     def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
-        SaltCloudException.__init__(self, message)
+        super(SaltCloudSystemExit, self).__init__(message)
         self.message = message
         self.exit_code = exit_code
 
@@ -506,4 +553,10 @@ class VMwareVmRegisterError(VMwareSaltError):
 class VMwareVmCreationError(VMwareSaltError):
     '''
     Used when a configuration parameter is incorrect
+    '''
+
+
+class MissingSmb(SaltException):
+    '''
+    Raised when no smb library is found.
     '''

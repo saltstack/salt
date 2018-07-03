@@ -4,26 +4,28 @@ Manage Grafana v4.0 orgs
 
 .. versionadded:: 2017.7.0
 
-Token auth setup
+:configuration: This state requires a configuration profile to be configured
+    in the minion config, minion pillar, or master config. The module will use
+    the 'grafana' key by default, if defined.
 
-.. code-block:: yaml
+    Example configuration using basic authentication:
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_token: qwertyuiop
-      grafana_url: 'https://url.com'
+    .. code-block:: yaml
 
-Basic auth setup
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_user: admin
+          grafana_password: admin
+          grafana_timeout: 3
 
-.. code-block:: yaml
+    Example configuration using token based authentication:
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_org: grafana
-      grafana_password: qwertyuiop
-      grafana_url: 'https://url.com'
+    .. code-block:: yaml
+
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_token: token
+          grafana_timeout: 3
 
 .. code-block:: yaml
 
@@ -40,7 +42,7 @@ Basic auth setup
         - state: ""
         - country: ""
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.dictupdate as dictupdate
 from salt.utils.dictdiffer import deep_diff
@@ -75,9 +77,12 @@ def present(name,
 
     users
         Optional - Dict of user/role associated with the org. Example:
-        users:
-          foo: Viewer
-          bar: Editor
+
+        .. code-block:: yaml
+
+            users:
+              foo: Viewer
+              bar: Editor
 
     theme
         Optional - Selected theme for the org.
@@ -185,7 +190,7 @@ def present(name,
         if ret['changes']:
             ret['comment'] = 'Org {0} updated'.format(name)
         else:
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Org {0} already up-to-date'.format(name)
 
     return ret

@@ -92,7 +92,7 @@ data in pillar. Here's an example pillar structure:
 And to go with it, here's an example state that pulls the data from the
 pillar stated above:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set details = pillar.get('proxy:chassis', {}) %}
     standup-step1:
@@ -155,7 +155,7 @@ pillar stated above:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 
@@ -179,15 +179,16 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     Set parameters for iDRAC in a blade.
 
     :param idrac_password: Password to use to connect to the iDRACs directly
-    (idrac_ipmi and idrac_dnsname must be set directly on the iDRAC.  They
-    can't be set through the CMC.  If this password is present, use it
-    instead of the CMC password)
+        (idrac_ipmi and idrac_dnsname must be set directly on the iDRAC.  They
+        can't be set through the CMC.  If this password is present, use it
+        instead of the CMC password)
     :param idrac_ipmi: Enable/Disable IPMI over LAN
     :param idrac_ip: Set IP address for iDRAC
     :param idrac_netmask: Set netmask for iDRAC
     :param idrac_gateway: Set gateway for iDRAC
-    :param idrac_dhcp: Turn on DHCP for iDRAC (True turns on, False does nothing
-      becaause setting a static IP will disable DHCP).
+    :param idrac_dhcp: Turn on DHCP for iDRAC (True turns on, False does
+        nothing becaause setting a static IP will disable DHCP).
+
     :return: A standard Salt changes dictionary
 
     NOTE: If any of the IP address settings is configured, all of ip, netmask,
@@ -235,7 +236,7 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
             idrac_dhcp = 1
         else:
             idrac_dhcp = 0
-        if str(module_network['Network']['DHCP Enabled']) == '0' and idrac_dhcp == 1:
+        if six.text_type(module_network['Network']['DHCP Enabled']) == '0' and idrac_dhcp == 1:
             ch = {'Old': module_network['Network']['DHCP Enabled'],
                   'New': idrac_dhcp}
             ret['changes']['DRAC DHCP'] = ch
@@ -396,7 +397,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
     inventory = __salt__[chassis_cmd]('inventory')
 
     if idrac_launch:
-        idrac_launch = str(idrac_launch)
+        idrac_launch = six.text_type(idrac_launch)
 
     current_name = __salt__[chassis_cmd]('get_chassis_name')
     if chassis_name != current_name:
@@ -723,7 +724,7 @@ def firmware_update(hosts=None, directory=''):
                 'host': {
                     'comment': 'FAILED to update firmware for {0}'.format(host),
                     'success': False,
-                    'reason': str(err),
+                    'reason': six.text_type(err),
                 }
             })
     ret['result'] = success

@@ -3,7 +3,7 @@
 Set grains describing the minion process.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -57,7 +57,10 @@ def _groupname():
     Grain for the minion groupname
     '''
     if grp:
-        groupname = grp.getgrgid(os.getgid()).gr_name
+        try:
+            groupname = grp.getgrgid(os.getgid()).gr_name
+        except KeyError:
+            groupname = ''
     else:
         groupname = ''
 

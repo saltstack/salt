@@ -50,7 +50,7 @@ For removal:
          - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -410,18 +410,18 @@ def uptodate(name,
 
         # Update the system using the state defaults
         update_system:
-          wua.up_to_date
+          wua.uptodate
 
         # Update the drivers
         update_drivers:
-          wua.up_to_date:
+          wua.uptodate:
             - software: False
             - drivers: True
             - skip_reboot: False
 
         # Apply all critical updates
         update_critical:
-          wua.up_to_date:
+          wua.uptodate:
             - severities:
               - Critical
     '''

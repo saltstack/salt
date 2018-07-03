@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Daniel Mizyrycki (mzdaniel@glidelink.net)`
+    :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
 
     tests.integration.cli.grains
@@ -13,7 +13,7 @@
         localhost
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs

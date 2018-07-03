@@ -3,16 +3,14 @@
 1&1 Cloud Server Module
 =======================
 
-=======
-The 1&1 SaltStack cloud module allows a 1&1 server to
-be automatically deployed and bootstrapped with Salt.
+The 1&1 SaltStack cloud module allows a 1&1 server to be automatically deployed
+and bootstrapped with Salt. It also has functions to create block storages and
+ssh keys.
 
 :depends: 1and1 >= 1.2.0
 
-The module requires the 1&1 api_token to be provided.
-The server should also be assigned a public LAN, a private LAN,
-or both along with SSH key pairs.
-...
+The module requires the 1&1 api_token to be provided.  The server should also
+be assigned a public LAN, a private LAN, or both along with SSH key pairs.
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/oneandone.conf``:
@@ -77,10 +75,24 @@ Set ``deploy`` to False if Salt should not be installed on the node.
 
     my-oneandone-profile:
       deploy: False
+
+Create an SSH key
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_ssh_key my-oneandone-config name='SaltTest' description='SaltTestDescription'
+
+Create a block storage
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2'
+    description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
+
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
@@ -99,11 +111,12 @@ import salt.utils.files
 
 # Import salt.cloud libs
 import salt.utils.cloud
+import salt.utils.stringutils
 from salt.ext import six
 
 try:
     from oneandone.client import (
-        OneAndOneService, Server, Hdd
+        OneAndOneService, Server, Hdd, BlockStorage, SshKey
     )
     HAS_ONEANDONE = True
 except ImportError:
@@ -224,6 +237,90 @@ def avail_locations(conn=None, call=None):
         datacenters.append({datacenter['country_code']: datacenter})
 
     return {'Locations': datacenters}
+
+
+def create_block_storage(kwargs=None, call=None):
+    '''
+    Create a block storage
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    conn = get_conn()
+
+    # Assemble the composite block storage object.
+    block_storage = _get_block_storage(kwargs)
+
+    data = conn.create_block_storage(block_storage=block_storage)
+
+    return {'BlockStorage': data}
+
+
+def _get_block_storage(kwargs):
+    '''
+    Construct a block storage instance from passed arguments
+    '''
+    if kwargs is None:
+        kwargs = {}
+
+    block_storage_name = kwargs.get('name', None)
+    block_storage_size = kwargs.get('size', None)
+    block_storage_description = kwargs.get('description', None)
+    datacenter_id = kwargs.get('datacenter_id', None)
+    server_id = kwargs.get('server_id', None)
+
+    block_storage = BlockStorage(
+        name=block_storage_name,
+        size=block_storage_size)
+
+    if block_storage_description:
+        block_storage.description = block_storage_description
+
+    if datacenter_id:
+        block_storage.datacenter_id = datacenter_id
+
+    if server_id:
+        block_storage.server_id = server_id
+
+    return block_storage
+
+
+def _get_ssh_key(kwargs):
+    '''
+    Construct an SshKey instance from passed arguments
+    '''
+    ssh_key_name = kwargs.get('name', None)
+    ssh_key_description = kwargs.get('description', None)
+    public_key = kwargs.get('public_key', None)
+
+    return SshKey(
+        name=ssh_key_name,
+        description=ssh_key_description,
+        public_key=public_key
+    )
+
+
+def create_ssh_key(kwargs=None, call=None):
+    '''
+    Create an ssh key
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    conn = get_conn()
+
+    # Assemble the composite SshKey object.
+    ssh_key = _get_ssh_key(kwargs)
+
+    data = conn.create_ssh_key(ssh_key=ssh_key)
+
+    return {'SshKey': data}
 
 
 def avail_images(conn=None, call=None):
@@ -459,6 +556,11 @@ def _get_server(vm_):
         search_global=False
     )
 
+    public_key = config.get_cloud_config_value(
+        'public_key_ids', vm_, __opts__, default=True,
+        search_global=False
+    )
+
     # Contruct server object
     return Server(
         name=vm_['name'],
@@ -476,7 +578,8 @@ def _get_server(vm_):
         monitoring_policy_id=monitoring_policy_id,
         datacenter_id=datacenter_id,
         rsa_key=ssh_key,
-        private_network_id=private_network_id
+        private_network_id=private_network_id,
+        public_key=public_key
     )
 
 
@@ -545,12 +648,10 @@ def create(vm_):
                              data['id'])
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Error creating {0} on 1and1\n\n'
+            'Error creating %s on 1and1\n\n'
             'The following exception was thrown by the 1and1 library '
-            'when trying to run the initial deployment: \n{1}'.format(
-                vm_['name'], exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'when trying to run the initial deployment: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -567,17 +668,14 @@ def create(vm_):
             if not data:
                 return False
             log.debug(
-                'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
-                    vm_['name'],
-                    pprint.pformat(data['name']),
-                    data['status']['state']
-                )
+                'Loaded node data for %s:\nname: %s\nstate: %s',
+                vm_['name'],
+                pprint.pformat(data['name']),
+                data['status']['state']
             )
         except Exception as err:
             log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
+                'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -609,15 +707,11 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc.message))
+            raise SaltCloudSystemExit(six.text_type(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM {0}'.format(vm_))
-    log.debug(
-        '{0} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM %s', vm_)
+    log.debug('%s VM creation details:\n%s', vm_, pprint.pformat(data))
 
     __utils__['cloud.fire_event'](
         'event',
@@ -806,7 +900,7 @@ def load_public_key(vm_):
             )
 
         with salt.utils.files.fopen(public_key_filename, 'r') as public_key:
-            key = public_key.read().replace('\n', '')
+            key = salt.utils.stringutils.to_unicode(public_key.read().replace('\n', ''))
 
             return key
 

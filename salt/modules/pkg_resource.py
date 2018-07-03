@@ -4,7 +4,7 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import logging
@@ -12,12 +12,12 @@ import os
 import pprint
 
 # Import third party libs
-import yaml
 from salt.ext import six
 
 # Import salt libs
 import salt.utils.data
 import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def _repack_pkgs(pkgs, normalize=True):
         _normalize_name = lambda pkgname: pkgname
     return dict(
         [
-            (_normalize_name(str(x)), str(y) if y is not None else y)
+            (_normalize_name(six.text_type(x)), six.text_type(y) if y is not None else y)
             for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
@@ -72,14 +72,14 @@ def pack_sources(sources, normalize=True):
 
     if isinstance(sources, six.string_types):
         try:
-            sources = yaml.safe_load(sources)
-        except yaml.parser.ParserError as err:
+            sources = salt.utils.yaml.safe_load(sources)
+        except salt.utils.yaml.parser.ParserError as err:
             log.error(err)
             return {}
     ret = {}
     for source in sources:
         if (not isinstance(source, dict)) or len(source) != 1:
-            log.error('Invalid input: {0}'.format(pprint.pformat(sources)))
+            log.error('Invalid input: %s', pprint.pformat(sources))
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
@@ -311,8 +311,7 @@ def format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = set(['epoch', 'version', 'release', 'arch',
-                              'install_date', 'install_date_time_t'])
+        requested_attr = {'epoch', 'version', 'release', 'arch', 'install_date', 'install_date_time_t'}
 
         if attr != 'all':
             requested_attr &= set(attr + ['version'])

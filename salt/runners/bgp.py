@@ -53,26 +53,26 @@ Configuration
 
         By default, the following extra fields are returned (displayed):
 
-        - ``connection_stats``: connection stats, as descibed below
+        - ``connection_stats``: connection stats, as described below
         - ``import_policy``: the name of the import policy
         - ``export_policy``: the name of the export policy
 
         Special fields:
 
         - ``vrf``: return the name of the VRF.
-        - ``connection_stats``: returning an output of the form
-        ``<State> <Active>/<Received>/<Accepted>/<Damped>``, e.g.
-        ``Established 398/399/399/0`` similar to the usual output
-        from network devices.
+        - ``connection_stats``: returning an output of the form ``<State>
+          <Active>/<Received>/<Accepted>/<Damped>``, e.g.  ``Established
+          398/399/399/0`` similar to the usual output from network devices.
         - ``interface_description``: matches the neighbor details with the
-        corresponding interface and returns its description. This will reuse
-        functionality from the :mod:`net runner <salt.runners.net.interfaces>`,
-        so the user needs to enable the mines as specified in the documentation.
+          corresponding interface and returns its description. This will reuse
+          functionality from the :mod:`net runner
+          <salt.runners.net.interfaces>`, so the user needs to enable the mines
+          as specified in the documentation.
         - ``interface_name``: matches the neighbor details with the
-        corresponding interface and returns the name.
-        Similar to ``interface_description``, this will reuse
-        functionality from the :mod:`net runner <salt.runners.net.interfaces>`,
-        so the user needs to enable the mines as specified in the documentation.
+          corresponding interface and returns the name.  Similar to
+          ``interface_description``, this will reuse functionality from the
+          :mod:`net runner <salt.runners.net.interfaces>`, so the user needs to
+          enable the mines as specified in the documentation.
 
     display: ``True``
         Display on the screen or return structured object? Default: ``True`` (return on the CLI).
@@ -97,9 +97,7 @@ Configuration
               - flap_count
             outputter: yaml
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import third party libs
 try:
@@ -237,7 +235,7 @@ def neighbors(*asns, **kwargs):
 
     Arguments:
 
-    *asns
+    asns
         A list of AS numbers to search for.
         The runner will return only the neighbors of these AS numbers.
 
@@ -335,7 +333,7 @@ def neighbors(*asns, **kwargs):
         title_parts = []
         if asns:
             title_parts.append('BGP Neighbors for {asns}'.format(
-                asns=', '.join([str(asn) for asn in asns])
+                asns=', '.join([six.text_type(asn) for asn in asns])
             ))
         if neighbor_ip:
             title_parts.append('Selecting neighbors having the remote IP address: {ipaddr}'.format(ipaddr=neighbor_ip))

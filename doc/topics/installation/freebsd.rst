@@ -5,49 +5,32 @@ FreeBSD
 Installation
 ============
 
-Salt is available in binary package form from both the FreeBSD pkgng repository
-or directly from SaltStack. The instructions below outline installation via
-both methods:
+Salt is available in the FreeBSD ports tree at `sysutils/py-salt
+<https://www.freshports.org/sysutils/py-salt/>`_.
 
-FreeBSD repo
-============
 
-The FreeBSD pkgng repository is preconfigured on systems 10.x and above. No
-configuration is needed to pull from these repositories.
+FreeBSD binary repo
+===================
 
-.. code-block:: shell
+.. code-block:: bash
 
     pkg install py27-salt
 
-These packages are usually available within a few days of upstream release.
+FreeBSD ports
+=============
 
-.. _freebsd-upstream:
+By default salt is packaged using python 2.7, but if you build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
 
-SaltStack repo
-==============
+.. code-block:: text
 
-SaltStack also hosts internal binary builds of the Salt package, available from
-https://repo.saltstack.com/freebsd/. To make use of this repository, add the
-following file to your system:
+    echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
 
-**/usr/local/etc/pkg/repos/saltstack.conf:**
+Then build the port and install:
 
-.. code-block:: json
+.. code-block:: bash
 
-    saltstack: {
-      url: "https://repo.saltstack.com/freebsd/${ABI}/",
-      enabled: yes
-    }
-
-You should now be able to install Salt from this new repository:
-
-.. code-block:: shell
-
-    pkg install py27-salt
-
-These packages are usually available earlier than upstream FreeBSD. Also
-available are release candidates and development releases. Use these pre-release
-packages with caution.
+    cd /usr/ports/sysutils/py-salt
+    make install
 
 Post-installation tasks
 =======================
@@ -56,7 +39,7 @@ Post-installation tasks
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
@@ -64,7 +47,7 @@ Copy the sample configuration file:
 
 Activate the Salt Master in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_master_enable="YES"
 
@@ -72,7 +55,7 @@ Activate the Salt Master in ``/etc/rc.conf``:
 
 Start the Salt Master as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_master start
 
@@ -80,7 +63,7 @@ Start the Salt Master as follows:
 
 Copy the sample configuration file:
 
-.. code-block:: shell
+.. code-block:: bash
 
    cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
@@ -88,7 +71,7 @@ Copy the sample configuration file:
 
 Activate the Salt Minion in ``/etc/rc.conf``:
 
-.. code-block:: shell
+.. code-block:: bash
 
    sysrc salt_minion_enable="YES"
 
@@ -96,7 +79,7 @@ Activate the Salt Minion in ``/etc/rc.conf``:
 
 Start the Salt Minion as follows:
 
-.. code-block:: shell
+.. code-block:: bash
 
    service salt_minion start
 

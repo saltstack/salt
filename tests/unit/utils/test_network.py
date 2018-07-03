@@ -1,15 +1,25 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import logging
 import socket
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf
 from tests.support.unit import TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import (
+    MagicMock,
+    mock_open,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON,
+)
 
 # Import salt libs
 import salt.utils.network as network
+
+log = logging.getLogger(__name__)
 
 LINUX = '''\
 eth0      Link encap:Ethernet  HWaddr e0:3f:49:85:6a:af
@@ -96,6 +106,11 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 '''
 
+IPV4_SUBNETS = {True: ('10.10.0.0/24',),
+                False: ('10.10.0.0', '10.10.0.0/33', 'FOO', 9, '0.9.800.1000/24')}
+IPV6_SUBNETS = {True: ('::1/128',),
+                False: ('::1', '::1/129', 'FOO', 9, 'aj01::feac/64')}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
@@ -139,6 +154,20 @@ class NetworkTestCase(TestCase):
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
 
+    def test__generate_minion_id_with_unicode_in_etc_hosts(self):
+        '''
+        Test that unicode in /etc/hosts doesn't raise an error when
+        _generate_minion_id() helper is called to gather the hosts.
+        '''
+        content = textwrap.dedent('''\
+        # 以下为主机名解析
+        ## ccc
+        127.0.0.1       localhost thisismyhostname     # 本机
+        ''')
+        fopen_mock = mock_open(read_data={'/etc/hosts': content})
+        with patch('salt.utils.files.fopen', fopen_mock):
+            assert 'thisismyhostname' in network._generate_minion_id()
+
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
         self.assertFalse(network.is_ip('0.9.800.1000'))
@@ -160,6 +189,31 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
 
+    def test_is_subnet(self):
+        for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
+            for item in subnet_data[True]:
+                log.debug('Testing that %s is a valid subnet', item)
+                self.assertTrue(network.is_subnet(item))
+            for item in subnet_data[False]:
+                log.debug('Testing that %s is not a valid subnet', item)
+                self.assertFalse(network.is_subnet(item))
+
+    def test_is_ipv4_subnet(self):
+        for item in IPV4_SUBNETS[True]:
+            log.debug('Testing that %s is a valid subnet', item)
+            self.assertTrue(network.is_ipv4_subnet(item))
+        for item in IPV4_SUBNETS[False]:
+            log.debug('Testing that %s is not a valid subnet', item)
+            self.assertFalse(network.is_ipv4_subnet(item))
+
+    def test_is_ipv6_subnet(self):
+        for item in IPV6_SUBNETS[True]:
+            log.debug('Testing that %s is a valid subnet', item)
+            self.assertTrue(network.is_ipv6_subnet(item))
+        for item in IPV6_SUBNETS[False]:
+            log.debug('Testing that %s is not a valid subnet', item)
+            self.assertFalse(network.is_ipv6_subnet(item))
+
     def test_cidr_to_ipv4_netmask(self):
         self.assertEqual(network.cidr_to_ipv4_netmask(24), '255.255.255.0')
         self.assertEqual(network.cidr_to_ipv4_netmask(21), '255.255.248.0')
@@ -176,6 +230,10 @@ class NetworkTestCase(TestCase):
     def test_hex2ip(self):
         self.assertEqual(network.hex2ip('0x4A7D2B63'), '74.125.43.99')
         self.assertEqual(network.hex2ip('0x4A7D2B63', invert=True), '99.43.125.74')
+        self.assertEqual(network.hex2ip('00000000000000000000FFFF7F000001'), '127.0.0.1')
+        self.assertEqual(network.hex2ip('0000000000000000FFFF00000100007F', invert=True), '127.0.0.1')
+        self.assertEqual(network.hex2ip('20010DB8000000000000000000000000'), '2001:db8::')
+        self.assertEqual(network.hex2ip('B80D0120000000000000000000000000', invert=True), '2001:db8::')
 
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
@@ -287,8 +345,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='hostname')), \
                 patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8'])):
             self.assertEqual(network._generate_minion_id(),
                              ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
@@ -303,8 +360,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='127')), \
                 patch('socket.getfqdn', MagicMock(return_value='127.domainname.blank')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8'])):
             self.assertEqual(network._generate_minion_id(),
                              ['127.domainname.blank', '127', '1.2.3.4', '5.6.7.8'])
@@ -319,8 +375,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='127890')), \
                 patch('socket.getfqdn', MagicMock(return_value='127890.domainname.blank')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8'])):
             self.assertEqual(network._generate_minion_id(),
                              ['127890.domainname.blank', '127890', '1.2.3.4', '5.6.7.8'])
@@ -335,8 +390,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='hostname')), \
                 patch('socket.getfqdn', MagicMock(return_value='hostname')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
             self.assertEqual(network._generate_minion_id(), ['hostname', '1.2.3.4'])
 
@@ -351,8 +405,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='hostname')), \
                 patch('socket.getfqdn', MagicMock(return_value='')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
             self.assertEqual(network.generate_minion_id(), 'very.long.and.complex.domain.name')
 
@@ -366,8 +419,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='pick.me')), \
                 patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
             self.assertEqual(network.generate_minion_id(), 'hostname.domainname.blank')
 
@@ -381,8 +433,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
                 patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4'])):
             self.assertEqual(network.generate_minion_id(), '1.2.3.4')
 
@@ -396,8 +447,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
                 patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
             self.assertEqual(network.generate_minion_id(), 'localhost')
 
@@ -411,8 +461,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
                 patch('socket.getfqdn', MagicMock(return_value='pick.me')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
             self.assertEqual(network.generate_minion_id(), 'pick.me')
 
@@ -426,8 +475,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
                 patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'pick.me', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
             self.assertEqual(network.generate_minion_id(), 'pick.me')
 
@@ -441,8 +489,7 @@ class NetworkTestCase(TestCase):
                 patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
                 patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
                 patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
-                patch('salt.utils.files.fopen', MagicMock(return_value=False)), \
-                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4'])):
             self.assertEqual(network.generate_minion_id(), '1.2.3.4')
 

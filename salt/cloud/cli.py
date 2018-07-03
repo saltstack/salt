@@ -12,8 +12,7 @@ Primary interfaces for the salt-cloud system
 # the VM data will be in opts['profiles']
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
@@ -77,7 +76,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], salt_master_user)
         except (IOError, OSError) as err:
-            log.error('Error while verifying the environment: {0}'.format(err))
+            log.error('Error while verifying the environment: %s', err)
             sys.exit(err.errno)
 
         # Setup log file logging
@@ -131,9 +130,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     self.handle_exception(msg, exc)
 
             elif self.config.get('map', None):
-                log.info(
-                    'Applying map from \'{0}\'.'.format(self.config['map'])
-                )
+                log.info('Applying map from \'%s\'.', self.config['map'])
                 try:
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
@@ -189,7 +186,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                           'instances.'.format(map_file, names)
                     self.handle_exception(msg, SaltCloudSystemExit)
 
-                log.info('Applying map from \'{0}\'.'.format(map_file))
+                log.info('Applying map from \'%s\'.', map_file)
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
@@ -220,9 +217,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
         elif self.options.action and (self.config.get('names', None) or
                                       self.config.get('map', None)):
             if self.config.get('map', None):
-                log.info(
-                    'Applying map from \'{0}\'.'.format(self.config['map'])
-                )
+                log.info('Applying map from \'%s\'.', self.config['map'])
                 try:
                     names = mapper.get_vmnames_by_action(self.options.action)
                 except SaltCloudException as exc:
@@ -304,9 +299,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 ret = {}
                 run_map = True
 
-                log.info(
-                    'Applying map from \'{0}\'.'.format(self.config['map'])
-                )
+                log.info('Applying map from \'%s\'.', self.config['map'])
                 dmap = mapper.map_data()
 
                 msg = ''
@@ -423,21 +416,19 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     msg = 'Error: {0}'.format(msg)
                 self.exit(
                     exc.exit_code,
-                    '{0}\n'.format(
-                        msg.format(str(exc).rstrip())
-                    )
+                    msg.format(exc).rstrip() + '\n'
                 )
             # It's not a system exit but it's an error we can
             # handle
-            self.error(
-                msg.format(str(exc))
-            )
+            self.error(msg.format(exc))
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
+        # pylint: disable=str-format-in-logging
         log.error(
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
             exc_info_on_loglevel=logging.DEBUG
         )
+        # pylint: enable=str-format-in-logging
         self.exit(salt.defaults.exitcodes.EX_GENERIC)

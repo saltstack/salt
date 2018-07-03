@@ -5,16 +5,19 @@ The networking module for NI Linux Real-Time distro
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
+import os
 
 # Import salt libs
-import salt.utils.validate.net
 import salt.exceptions
+import salt.utils.files
+import salt.utils.validate.net
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import configparser
 try:
     import pyconnman
     HAS_PYCONNMAN = True
@@ -25,6 +28,11 @@ try:
     HAS_DBUS = True
 except ImportError:
     HAS_DBUS = False
+try:
+    import pyiface
+    HAS_PYIFACE = True
+except ImportError:
+    HAS_PYIFACE = False
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +40,10 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'ip'
 
 SERVICE_PATH = '/net/connman/service/'
+INTERFACES_CONFIG = '/var/lib/connman/interfaces.config'
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
+IFF_LOOPBACK = 0x8
+IFF_RUNNING = 0x40
 
 
 def __virtual__():
@@ -43,13 +54,15 @@ def __virtual__():
         return False, 'The python package pyconnman is not installed'
     if not HAS_DBUS:
         return False, 'The python DBus package is not installed'
+    if not HAS_PYIFACE:
+        return False, 'The python pyiface package is not installed'
     if __grains__['os_family'] == 'NILinuxRT':
         try:
             state = _get_state
             if state == 'offline':
                 return False, 'Connmand is not running'
         except Exception as exc:
-            return False, str(exc)
+            return False, six.text_type(exc)
         return __virtualname__
     return False, 'The nilrt_ip module could not be loaded: unsupported OS family'
 
@@ -82,7 +95,7 @@ def _get_services():
     serviceList = []
     services = pyconnman.ConnManager().get_services()
     for path, params in services:
-        serviceList.append(str(path[len(SERVICE_PATH):]))
+        serviceList.append(six.text_type(path[len(SERVICE_PATH):]))
     return serviceList
 
 
@@ -147,16 +160,18 @@ def _get_service_info(service):
     '''
     service_info = pyconnman.ConnService(_add_path(service))
     data = {
-        'name': service,
+        'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
-        'connectionid': str(service_info.get_property('Ethernet')['Interface']),
-        'HWAddress': str(service_info.get_property('Ethernet')['Address'])
+        'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
+        'hwaddr': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
     if state == 'ready' or state == 'online':
         data['up'] = True
-        data['ipv4'] = {}
+        data['ipv4'] = {
+            'gateway': '0.0.0.0'
+        }
         ipv4 = 'IPv4'
         if service_info.get_property('IPv4')['Method'] == 'manual':
             ipv4 += '.Configuration'
@@ -168,23 +183,23 @@ def _get_service_info(service):
                     info = 'requestmode'
                     if value == 'dhcp':
                         value = 'dhcp_linklocal'
-                    elif value == 'manual':
+                    elif value in ('manual', 'fixed'):
                         value = 'static'
-                data['ipv4'][info.lower()] = str(value)
+                data['ipv4'][info.lower()] = six.text_type(value)
             except Exception as exc:
-                log.warning('Unable to get IPv4 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv4 %s for service %s\n', info, service)
 
         ipv6Info = service_info.get_property('IPv6')
         for info in ['Address', 'Prefix', 'Gateway']:
             try:
                 value = ipv6Info[info]
-                data['ipv6'][info.lower()] = [str(value)]
+                data['ipv6'][info.lower()] = [six.text_type(value)]
             except Exception as exc:
-                log.warning('Unable to get IPv6 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv6 %s for service %s\n', info, service)
 
         nameservers = []
         for x in service_info.get_property('Nameservers'):
-            nameservers.append(str(x))
+            nameservers.append(six.text_type(x))
         data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
@@ -205,15 +220,61 @@ def _dict_to_string(dictionary):
     for key, val in sorted(dictionary.items()):
         if isinstance(val, dict):
             for line in _dict_to_string(val):
-                ret += str(key) + '-' + line + '\n'
+                ret += six.text_type(key) + '-' + line + '\n'
         elif isinstance(val, list):
             stringList = ''
             for item in val:
-                stringList += str(item) + ' '
-            ret += str(key) + ': ' + stringList +'\n'
+                stringList += six.text_type(item) + ' '
+            ret += six.text_type(key) + ': ' + stringList +'\n'
         else:
-            ret += str(key) + ': ' + str(val) +'\n'
+            ret += six.text_type(key) + ': ' + six.text_type(val) +'\n'
     return ret.splitlines()
+
+
+def _get_static_info(interface):
+    '''
+    Return information about an interface from config file.
+
+    :param interface: interface label
+    '''
+    parser = configparser.ConfigParser()
+    if os.path.exists(INTERFACES_CONFIG):
+        try:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, 'r') as config_file:
+                parser.read_file(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    data = {
+        'connectionid': interface.name,
+        'label': interface.name,
+        'hwaddr': interface.hwaddr[:-1],
+        'up': False,
+        'ipv4': {
+            'supportedrequestmodes': ['static', 'dhcp_linklocal'],
+            'requestmode': 'static'
+        },
+        'wireless': False
+    }
+    hwaddr_section_number = ''.join(data['hwaddr'].split(':'))
+    if parser.has_section('interface_{0}'.format(hwaddr_section_number)):
+        ipv4_information = parser.get('interface_{0}'.format(hwaddr_section_number), 'IPv4').split('/')
+        data['ipv4']['address'] = ipv4_information[0]
+        data['ipv4']['dns'] = parser.get('interface_{0}'.format(hwaddr_section_number), 'Nameservers').split(',')
+        data['ipv4']['netmask'] = ipv4_information[1]
+        data['ipv4']['gateway'] = ipv4_information[2]
+    return data
+
+
+def _get_info(interface):
+    '''
+    Return information about an interface even if it's not associated with a service.
+
+    :param interface: interface label
+    '''
+    service = _interface_to_service(interface.name)
+    if service is not None:
+        return _get_service_info(service)
+    return _get_static_info(interface)
 
 
 def get_interfaces_details():
@@ -229,10 +290,11 @@ def get_interfaces_details():
 
         salt '*' ip.get_interfaces_details
     '''
-    services = []
-    for service in _get_services():
-        services.append(_get_service_info(service))
-    interfaceList = {'interfaces': services}
+    interfaces = []
+    for interface in pyiface.getIfaces():
+        if interface.flags & IFF_LOOPBACK == 0:
+            interfaces.append(_get_info(interface))
+    interfaceList = {'interfaces': interfaces}
 
     return interfaceList
 
@@ -356,6 +418,48 @@ def set_dhcp_linklocal_all(interface):
     return True
 
 
+def _configure_static_interface(interface, **settings):
+    '''
+    Configure an interface that is not detected as a service by Connman (i.e. link is down)
+
+    :param interface: interface label
+    :param settings:
+            - ip
+            - netmask
+            - gateway
+            - dns
+            - name
+    :return: True if settings were applied successfully.
+    :rtype: bool
+    '''
+    interface = pyiface.Interface(name=interface)
+    parser = configparser.ConfigParser()
+    if os.path.exists(INTERFACES_CONFIG):
+        try:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, 'r') as config_file:
+                parser.read_file(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    hwaddr = interface.hwaddr[:-1]
+    hwaddr_section_number = ''.join(hwaddr.split(':'))
+    if not parser.has_section('interface_{0}'.format(hwaddr_section_number)):
+        parser.add_section('interface_{0}'.format(hwaddr_section_number))
+    ip_address = settings.get('ip', '0.0.0.0')
+    netmask = settings.get('netmask', '0.0.0.0')
+    gateway = settings.get('gateway', '0.0.0.0')
+    dns_servers = settings.get('dns', '')
+    name = settings.get('name', 'ethernet_cable_{0}'.format(hwaddr_section_number))
+    parser.set('interface_{0}'.format(hwaddr_section_number), 'IPv4', '{0}/{1}/{2}'.
+               format(ip_address, netmask, gateway))
+    parser.set('interface_{0}'.format(hwaddr_section_number), 'Nameservers', dns_servers)
+    parser.set('interface_{0}'.format(hwaddr_section_number), 'Name', name)
+    parser.set('interface_{0}'.format(hwaddr_section_number), 'MAC', hwaddr)
+    parser.set('interface_{0}'.format(hwaddr_section_number), 'Type', 'ethernet')
+    with salt.utils.files.fopen(INTERFACES_CONFIG, 'w') as config_file:
+        parser.write(config_file)
+    return True
+
+
 def set_static_all(interface, address, netmask, gateway, nameservers):
     '''
     Configure specified adapter to use ipv4 manual settings
@@ -388,6 +492,9 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
             nameservers = nameservers.split(' ')
     service = _interface_to_service(interface)
     if not service:
+        if interface in pyiface.getIfaces():
+            return _configure_static_interface(interface, **{'ip': address, 'dns': ','.join(nameservers),
+                                                             'netmask': netmask, 'gateway': gateway})
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     service = pyconnman.ConnService(_add_path(service))
     ipv4 = service.get_property('IPv4.Configuration')
@@ -426,7 +533,9 @@ def build_interface(iface, iface_type, enable, **settings):
     Build an interface script for a network interface.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.build_interface eth0 eth <settings>
     '''
     if iface_type != 'eth':
@@ -455,7 +564,9 @@ def build_network_settings(**settings):
     Build the global network script.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.build_network_settings <settings>
     '''
     changes = []
@@ -481,7 +592,9 @@ def get_network_settings():
     Return the contents of the global network script.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.get_network_settings
     '''
     settings = []
@@ -497,7 +610,9 @@ def apply_network_settings(**settings):
     Apply global network configuration.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' ip.apply_network_settings
     '''
     if 'require_reboot' not in settings:

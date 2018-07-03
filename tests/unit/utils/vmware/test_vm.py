@@ -6,7 +6,7 @@ Tests for virtual machine related functions in salt.utils.vmware
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt testing libraries
@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ConvertToKbTestCase(TestCase):
-    '''Tests for converting units'''
+    '''
+    Tests for converting units
+    '''
 
     def setUp(self):
         pass
@@ -54,7 +56,9 @@ class ConvertToKbTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class CreateVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.create_vm'''
+    '''
+    Tests for salt.utils.vmware.create_vm
+    '''
 
     def setUp(self):
         self.vm_name = 'fake_vm'
@@ -68,13 +72,13 @@ class CreateVirtualMachineTestCase(TestCase):
     def test_create_vm_pool_task_call(self):
         vmware.create_vm(self.vm_name, self.mock_config_spec,
                          self.mock_folder_object, self.mock_resourcepool_object)
-        self.mock_vm_create_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_create_task)
 
     def test_create_vm_host_task_call(self):
         vmware.create_vm(self.vm_name, self.mock_config_spec,
                          self.mock_folder_object, self.mock_resourcepool_object,
                          host_object=self.mock_host_object)
-        self.mock_vm_create_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_create_task)
 
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -118,7 +122,9 @@ class CreateVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class RegisterVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.register_vm'''
+    '''
+    Tests for salt.utils.vmware.register_vm
+    '''
 
     def setUp(self):
         self.vm_name = 'fake_vm'
@@ -133,13 +139,13 @@ class RegisterVirtualMachineTestCase(TestCase):
     def test_register_vm_pool_task_call(self):
         vmware.register_vm(self.datacenter, self.vm_name, self.mock_vmx_path,
                            self.mock_resourcepool_object)
-        self.mock_vm_register_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_register_task)
 
     def test_register_vm_host_task_call(self):
         vmware.register_vm(self.datacenter, self.vm_name, self.mock_vmx_path,
                            self.mock_resourcepool_object,
                            host_object=self.mock_host_object)
-        self.mock_vm_register_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_register_task)
 
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -182,7 +188,9 @@ class RegisterVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class UpdateVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.update_vm'''
+    '''
+    Tests for salt.utils.vmware.update_vm
+    '''
 
     def setUp(self):
         self.mock_task = MagicMock()
@@ -192,7 +200,7 @@ class UpdateVirtualMachineTestCase(TestCase):
 
     def test_update_vm_task_call(self):
         vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.mock_vm_update_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_update_task)
 
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -225,7 +233,9 @@ class UpdateVirtualMachineTestCase(TestCase):
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
 class DeleteVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.delete_vm'''
+    '''
+    Tests for salt.utils.vmware.delete_vm
+    '''
 
     def setUp(self):
         self.mock_task = MagicMock()
@@ -234,7 +244,7 @@ class DeleteVirtualMachineTestCase(TestCase):
 
     def test_destroy_vm_task_call(self):
         vmware.delete_vm(self.mock_vm_ref)
-        self.mock_vm_destroy_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_destroy_task)
 
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -266,7 +276,9 @@ class DeleteVirtualMachineTestCase(TestCase):
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 class UnregisterVirtualMachineTestCase(TestCase):
-    '''Tests for salt.utils.vmware.unregister_vm'''
+    '''
+    Tests for salt.utils.vmware.unregister_vm
+    '''
 
     def setUp(self):
         self.mock_vm_unregister = MagicMock()
@@ -274,7 +286,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
 
     def test_unregister_vm_task_call(self):
         vmware.unregister_vm(self.mock_vm_ref)
-        self.mock_vm_unregister.assert_called_once()
+        self.assert_called_once(self.mock_vm_unregister)
 
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()

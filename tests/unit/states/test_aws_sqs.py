@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -47,7 +47,7 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(aws_sqs.__opts__, {'test': True}):
                 self.assertDictEqual(aws_sqs.exists(name, region), ret)
 
-            comt = u'{0} exists in {1}'.format(name, region)
+            comt = '{0} exists in {1}'.format(name, region)
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(aws_sqs.exists(name, region), ret)
 
@@ -72,6 +72,6 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(aws_sqs.__opts__, {'test': True}):
                 self.assertDictEqual(aws_sqs.absent(name, region), ret)
 
-            comt = u'{0} does not exist in {1}'.format(name, region)
+            comt = '{0} does not exist in {1}'.format(name, region)
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(aws_sqs.absent(name, region), ret)

@@ -5,12 +5,12 @@ like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
 '''
-from __future__ import absolute_import
 
-# Import system libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
-# Import salt libs
+# Import Salt libs
 import salt.utils.http
 
 
@@ -18,7 +18,10 @@ def query(url, **kwargs):
     '''
     Query a resource, and decode the return data
 
-    .. versionadded:: 2015.5.0
+    Passes through all the parameters described in the
+    :py:func:`utils.http.query function <salt.utils.http.query>`:
+
+    .. autofunction:: salt.utils.http.query
 
     CLI Example:
 

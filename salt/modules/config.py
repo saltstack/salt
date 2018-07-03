@@ -4,7 +4,7 @@ Return config information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import re
 import os
@@ -76,8 +76,8 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': _HOSTS_FILE,
             'aliases.file': '/etc/aliases',
-            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
-            'virt.tunnel': False,
+            'virt': {'tunnel': False,
+                     'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
             }
 
 
@@ -214,7 +214,8 @@ def merge(value,
     return ret
 
 
-def get(key, default='', delimiter=':', merge=None):
+def get(key, default='', delimiter=':', merge=None, omit_opts=False,
+        omit_pillar=False, omit_master=False, omit_grains=False):
     '''
     .. versionadded: 0.14.0
 
@@ -354,35 +355,48 @@ def get(key, default='', delimiter=':', merge=None):
         salt '*' config.get lxc.container_profile:centos merge=recurse
     '''
     if merge is None:
+        if not omit_opts:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __opts__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
+
+        if not omit_grains:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __grains__,
+                key,
+                '_|-',
+                delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
+
+        if not omit_pillar:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
+
+        if not omit_master:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__.get('master', {}),
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
+
         ret = salt.utils.data.traverse_dict_and_list(
-            __opts__,
+            DEFAULTS,
             key,
             '_|-',
             delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
-
-        ret = salt.utils.data.traverse_dict_and_list(
-            __grains__,
-            key,
-            '_|-',
-            delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
-
-        ret = salt.utils.data.traverse_dict_and_list(
-            __pillar__,
-            key,
-            '_|-',
-            delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
-
-        ret = salt.utils.data.traverse_dict_and_list(
-            __pillar__.get('master', {}),
-            key,
-            '_|-',
-            delimiter=delimiter)
+        log.debug("key: %s, ret: %s", key, ret)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
     else:
@@ -393,7 +407,8 @@ def get(key, default='', delimiter=':', merge=None):
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
 
-        data = copy.copy(__pillar__.get('master', {}))
+        data = copy.copy(DEFAULTS)
+        data = salt.utils.dictupdate.merge(data, __pillar__.get('master', {}), strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
