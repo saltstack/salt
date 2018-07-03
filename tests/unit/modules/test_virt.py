@@ -1581,7 +1581,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_pool_xml()
         '''
-        xml_data = virt._gen_pool_xml('pool', 'logical', 'base')
+        xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base')
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'pool')
         self.assertEqual(root.attrib['type'], 'logical')
@@ -1591,12 +1591,119 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_pool_xml() with a source device
         '''
-        xml_data = virt._gen_pool_xml('pool', 'logical', 'base', 'sda')
+        xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base', source_devices=[{'path': '/dev/sda'}])
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'pool')
         self.assertEqual(root.attrib['type'], 'logical')
         self.assertEqual(root.find('target/path').text, '/dev/base')
         self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')
+
+    def test_pool_with_scsi(self):
+        '''
+        Test virt._gen_pool_xml() with a SCSI source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'scsi',
+                                      '/dev/disk/by-path',
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_adapter={
+                                          'type': 'scsi_host',
+                                          'parent_address': {
+                                              'unique_id': 5,
+                                              'address': {
+                                                  'domain': '0x0000',
+                                                  'bus': '0x00',
+                                                  'slot': '0x1f',
+                                                  'function': '0x2'
+                                              }
+                                          }
+                                      },
+                                      source_name='srcname')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'scsi')
+        self.assertEqual(root.find('target/path').text, '/dev/disk/by-path')
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name'), None)
+        self.assertEqual(root.find('source/adapter').attrib['type'], 'scsi_host')
+        self.assertEqual(root.find('source/adapter/parentaddr').attrib['unique_id'], '5')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['domain'], '0x0000')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['bus'], '0x00')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['slot'], '0x1f')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['function'], '0x2')
+
+    def test_pool_with_rbd(self):
+        '''
+        Test virt._gen_pool_xml() with an RBD source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'rbd',
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_hosts=['1.2.3.4', 'my.ceph.monitor:69'],
+                                      source_auth={
+                                          'type': 'ceph',
+                                          'username': 'admin',
+                                          'secret': {
+                                              'type': 'uuid',
+                                              'value': 'someuuid'
+                                          }
+                                      },
+                                      source_name='srcname',
+                                      source_adapter={'type': 'scsi_host', 'name': 'host0'},
+                                      source_dir='/some/dir',
+                                      source_format='fmt')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'rbd')
+        self.assertEqual(root.find('target'), None)
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name').text, 'srcname')
+        self.assertEqual(root.find('source/adapter'), None)
+        self.assertEqual(root.find('source/dir'), None)
+        self.assertEqual(root.find('source/format'), None)
+        self.assertEqual(root.findall('source/host')[0].attrib['name'], '1.2.3.4')
+        self.assertTrue('port' not in root.findall('source/host')[0].attrib)
+        self.assertEqual(root.findall('source/host')[1].attrib['name'], 'my.ceph.monitor')
+        self.assertEqual(root.findall('source/host')[1].attrib['port'], '69')
+        self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
+        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
+        self.assertEqual(root.find('source/auth/secret').attrib['type'], 'uuid')
+        self.assertEqual(root.find('source/auth/secret').attrib['uuid'], 'someuuid')
+
+    def test_pool_with_netfs(self):
+        '''
+        Test virt._gen_pool_xml() with a netfs source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'netfs',
+                                      target='/path/to/target',
+                                      permissions={
+                                        'mode': '0770',
+                                        'owner': 1000,
+                                        'group': 100,
+                                        'label': 'seclabel'
+                                      },
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_hosts=['nfs.host'],
+                                      source_name='srcname',
+                                      source_adapter={'type': 'scsi_host', 'name': 'host0'},
+                                      source_dir='/some/dir',
+                                      source_format='nfs')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'netfs')
+        self.assertEqual(root.find('target/path').text, '/path/to/target')
+        self.assertEqual(root.find('target/permissions/mode').text, '0770')
+        self.assertEqual(root.find('target/permissions/owner').text, '1000')
+        self.assertEqual(root.find('target/permissions/group').text, '100')
+        self.assertEqual(root.find('target/permissions/label').text, 'seclabel')
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name'), None)
+        self.assertEqual(root.find('source/adapter'), None)
+        self.assertEqual(root.find('source/dir').attrib['path'], '/some/dir')
+        self.assertEqual(root.find('source/format').attrib['type'], 'nfs')
+        self.assertEqual(root.find('source/host').attrib['name'], 'nfs.host')
+        self.assertEqual(root.find('source/auth'), None)
 
     def test_list_pools(self):
         '''

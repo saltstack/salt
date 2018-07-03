@@ -694,16 +694,32 @@ def _gen_net_xml(name,
 
 def _gen_pool_xml(name,
                   ptype,
-                  target,
-                  source=None):
+                  target=None,
+                  permissions=None,
+                  source_devices=None,
+                  source_dir=None,
+                  source_adapter=None,
+                  source_hosts=None,
+                  source_auth=None,
+                  source_name=None,
+                  source_format=None):
     '''
     Generate the XML string to define a libvirt storage pool
     '''
+    hosts = [host.split(':') for host in source_hosts or []]
     context = {
         'name': name,
         'ptype': ptype,
-        'target': target,
-        'source': source,
+        'target': {'path': target, 'permissions': permissions},
+        'source': {
+            'devices': source_devices or [],
+            'dir': source_dir,
+            'adapter': source_adapter,
+            'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
+            'auth': source_auth,
+            'name': source_name,
+            'format': source_format
+        }
     }
     fn_ = 'libvirt_pool.jinja'
     try:
@@ -4146,85 +4162,166 @@ def network_set_autostart(name, state='on', **kwargs):
         conn.close()
 
 
-def pool_define_build(name, **kwargs):
+def pool_define(name,
+                ptype,
+                target=None,
+                permissions=None,
+                source_devices=None,
+                source_dir=None,
+                source_adapter=None,
+                source_hosts=None,
+                source_auth=None,
+                source_name=None,
+                source_format=None,
+                transient=False,
+                start=True,  # pylint: disable=redefined-outer-name
+                **kwargs):
     '''
     Create libvirt pool.
 
     :param name: Pool name
-    :param ptype: Pool type
-    :param target: Pool path target
-    :param source: Pool dev source
-    :param autostart: Pool autostart (default True)
+    :param ptype:
+        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
+        possible values.
+    :param target: Pool full path target
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source_devices:
+        List of source devices for pools backed by physical devices. (Default: ``None``)
+
+        Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
+        keys. The path is the qualified name for iSCSI devices.
+
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for more informations on the use of ``part_separator``
+    :param source_dir:
+        Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
+        (Default: ``None``)
+    :param source_adapter:
+        SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
+        ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
+        and ``parent_address`` keys.
+
+        The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
+        The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
+        ``slot`` and ``function`` properties.
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for the meaning and possible values of these properties.
+    :param source_hosts:
+        List of source for pools backed by storage from remote servers. Each item is the hostname
+        optionally followed by the port separated by a colon. (Default: ``None``)
+    :param source_auth:
+        Source authentication details. (Default: ``None``)
+
+        The value is a dictionary with ``type``, ``username`` and ``secret`` keys. The type
+        can be one of ``ceph`` for Ceph RBD or ``chap`` for iSCSI sources.
+
+        The ``secret`` value links to a libvirt secret object. It is a dictionary with
+        ``type`` and ``value`` keys. The type value can be either ``uuid`` or ``usage``.
+
+        Examples:
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'ceph',
+                'username': 'admin',
+                'secret': {
+                    'type': 'uuid',
+                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                }
+            }
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'chap',
+                'username': 'myname',
+                'secret': {
+                    'type': 'usage',
+                    'uuid': 'mycluster_myname'
+                }
+            }
+
+    :param source_name:
+        Identifier of name-based sources.
+    :param source_format:
+        String representing the source format. The possible values are depending on the
+        source type. See `libvirt documentation <https://libvirt.org/storage.html>`_ for
+        the possible values.
     :param start: Pool start (default True)
+    :param transient:
+        When ``True``, the pool will be automatically undefined after being stopped.
+        Note that a transient pool will force ``start`` to ``True``. (Default: ``False``)
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    CLI Example:
+    .. _pool-define-permissions:
+
+    .. rubric:: Permissions definition
+
+    The permissions are described by a dictionary containing the following keys:
+
+    mode
+        The octal representation of the permissions. (Default: `0711`)
+
+    owner
+        the numeric user ID of the owner. (Default: from the parent folder)
+
+    group
+        the numeric ID of the group. (Default: from the parent folder)
+
+    label
+        the SELinux label. (Default: `None`)
+
+
+    .. rubric:: CLI Example:
+
+    Local folder pool:
 
     .. code-block:: bash
 
-        salt '*' virt.pool_define base logical base
+        salt '*' virt.pool_define somepool dir target=/srv/mypool \
+                                  permissions="{'mode': '0744' 'ower': 107, 'group': 107 }"
+
+    CIFS backed pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_define myshare netfs source_format=cifs \
+                                  source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
 
     .. versionadded:: Fluorine
     '''
-    exist = False
-    update = False
     conn = __get_conn(**kwargs)
-    ptype = kwargs.pop('ptype', None)
-    target = kwargs.pop('target', None)
-    source = kwargs.pop('source', None)
-    autostart = kwargs.pop('autostart', True)
-    starting = kwargs.pop('start', True)
     pool_xml = _gen_pool_xml(
         name,
         ptype,
         target,
-        source,
+        permissions=permissions,
+        source_devices=source_devices,
+        source_dir=source_dir,
+        source_adapter=source_adapter,
+        source_hosts=source_hosts,
+        source_auth=source_auth,
+        source_name=source_name,
+        source_format=source_format
     )
     try:
-        conn.storagePoolDefineXML(pool_xml)
-    except libvirtError as err:
-        log.warning(err)
-        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
-            exist = True
+        if transient:
+            pool = conn.storagePoolCreateXML(pool_xml)
         else:
-            conn.close()
-            raise err  # a real error we should report upwards
-    try:
-        pool = conn.storagePoolLookupByName(name)
+            pool = conn.storagePoolDefineXML(pool_xml)
+            if start:
+                pool.create()
     except libvirtError as err:
-        log.warning(err)
-        conn.close()
         raise err  # a real error we should report upwards
-
-    if pool is None:
+    finally:
         conn.close()
-        return False
 
-    if (starting is True or autostart is True) and pool.isActive() != 1:
-        if exist is True:
-            update = True
-            pool.create()
-        else:
-            pool.create(libvirt.VIR_STORAGE_POOL_CREATE_WITH_BUILD)
-
-    if autostart is True and pool.autostart() != 1:
-        if exist is True:
-            update = True
-        pool.setAutostart(int(autostart))
-    elif autostart is False and pool.autostart() == 1:
-        if exist is True:
-            update = True
-        pool.setAutostart(int(autostart))
-
-    conn.close()
-
-    if exist is True:
-        if update is True:
-            return (True, 'Pool exist', 'Pool update')
-        return (True, 'Pool exist')
-
+    # libvirt function will raise a libvirtError in case of failure
     return True
 
 
