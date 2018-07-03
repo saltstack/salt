@@ -3863,4 +3863,4 @@ class SProxyMinion(SMinion):
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']
-        self.ready = True       
+        self.ready = True

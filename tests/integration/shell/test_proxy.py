@@ -10,11 +10,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import Salt Libs
-import salt.utils.json as json
-
 # Import salt tests libs
-from tests.support.case import ShellCase
 import tests.integration.utils
 from tests.integration.utils import testprogram
 

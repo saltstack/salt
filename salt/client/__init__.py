@@ -2048,7 +2048,7 @@ class ProxyCaller(object):
         }
         data.update(kwargs)
         executors = getattr(self.sminion, 'module_executors', []) or \
-                    opts.get('module_executors', ['direct_call'])
+                    self.opts.get('module_executors', ['direct_call'])
         if isinstance(executors, six.string_types):
             executors = [executors]
         for name in executors:
