@@ -1175,7 +1175,12 @@ class Single(object):
         '''
         Prepare the command string
         '''
-        sudo = 'sudo' if self.target['sudo'] else ''
+        if self.target['sudo']:
+            sudo = 'sudo'
+            # set the sudo promtp parameter with the unique prompt if the password is set
+            sudo += ' -p \"{0}\"'.format(shell.SUDO_PROMPT) if self.target['passwd'] else ''
+        else:
+            sudo = ''
         sudo_user = self.target['sudo_user']
         if '_caller_cachedir' in self.opts:
             cachedir = self.opts['_caller_cachedir']

@@ -26,6 +26,11 @@ SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r'Enter passphrase for key', re.M)
 
+# sudo prompt is used to recognize sudo prompting for a password and should therefore be
+# fairly recognizable and unique
+SUDO_PROMPT = '[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23]passwd:'
+SUDO_PROMPT_RE = re.compile(r'{0}'.format(SUDO_PROMPT), re.M)
+
 # Keep these in sync with ./__init__.py
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 RSTR_RE = re.compile(r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)')
@@ -427,6 +432,12 @@ class Shell(object):
                                       'auto accept run salt-ssh with the -i '
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
+                elif buff and SUDO_PROMPT_RE.search(buff):
+                    if not self.passwd:
+                        return '', 'Sudo password is required but not provided', 254
+                    else:
+                        term.sendline(self.passwd)
+                        continue
                 elif buff and buff.endswith('_||ext_mods||_'):
                     mods_raw = salt.utils.json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
