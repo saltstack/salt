@@ -3,44 +3,44 @@
 Salt exit codes.
 
 Salt allocates free range in POSIX classification from 200 to 220.
-See `sysexits.h` for more information.
+Here are also redefined all os.EX_* exit codes since they are Unix only,
+while needed on non-Unix platforms as well. See `sysexits.h` for more information.
 
 NOTE: Original Windows exit codes at this range are overwritten.
 '''
 
-# Too many situations use "exit 1" - try not to use it when something
-# else is more appropriate.
-EX_GENERIC = 1
+EX_GENERIC = 1  # Catchall for general errors (division by zero etc)
+                # NOTE: for uncaught exceptions, please use EX_SOFTWARE error.
 
-# Salt SSH "Thin" deployment failures
-EX_THIN_PYTHON_INVALID = 10
-EX_THIN_DEPLOY = 11
-EX_THIN_CHECKSUM = 12
-EX_MOD_DEPLOY = 13
-EX_SCP_NOT_FOUND = 14
+# Carbon copy of the os.EX_* exit codes from Unix-only.
+# More info: https://docs.python.org/3/library/os.html
+EX_OK = 0            # No error occurred
+EX_USAGE = 64        # The command was used incorrectly, such as when the wrong number of arguments are given.
+EX_DATAERR = 65      # The input data was incorrect.
+EX_NOINPUT = 66      # An input file did not exist or was not readable.
+EX_NOUSER = 67       # Specified user did not exist.
+EX_NOHOST = 68       # Specified host did not exist.
+EX_UNAVAILABLE = 69  # Required service is unavailable.
+EX_SOFTWARE = 70     # Internal software error was detected.
+EX_OSERR = 71        # Operating system error was detected, such as the inability to fork or create a pipe.
+EX_OSFILE = 72       # Some system file did not exist, could not be opened, or had some other kind of error.
+EX_CANTCREAT = 73    # User specified output file could not be created.
+EX_IOERR = 74        # Error occurred while doing I/O on some file.
+EX_TEMPFAIL = 75     # Temporary failure occurred. This indicates something that may not really be an error,
+                     # such as a network connection that couldn’t be made during a retryable operation.
+EX_PROTOCOL = 76     # Protocol exchange was illegal, invalid, or not understood.
+EX_NOPERM = 77       # Insufficient permissions to perform the operation (but not intended for file system problems).
+EX_CONFIG = 78       # Configuration error occurred.
+EX_NOTFOUND = 79     # Means something like “an entry was not found”.
 
-# One of a collection failed
-EX_AGGREGATE = 20
+# The Salt specific exit codes are defined within the range 200~220:
 
-# The os.EX_* exit codes are Unix only so in the interest of cross-platform
-# compatiblility define them explicitly here.
-#
-# These constants are documented here:
-# https://docs.python.org/2/library/os.html#os.EX_OK
+EX_THIN_PYTHON_INVALID = 200  # SaltSSH python interpreter invalid
+EX_THIN_DEPLOY = 201          # SaltSSH thin archive deploy failure
+EX_THIN_CHECKSUM = 202        # SaltSSH thin archive checksum do not match
+EX_MOD_DEPLOY = 203           # SaltSSH thin archive module deployment failure
+EX_SCP_NOT_FOUND = 204        # SaltSSH 'scp' command was not found
+EX_AGGREGATE = 205            # SaltSSH One of a collection failed
 
-EX_OK = 0                 # successful termination
-EX_USAGE = 64             # command line usage error
-EX_NOUSER = 67            # addressee unknown
-EX_UNAVAILABLE = 69       # service unavailable
-EX_SOFTWARE = 70          # internal software error
-EX_CANTCREAT = 73         # can't create (user) output file
-EX_TEMPFAIL = 75          # temp failure; user is invited to retry
-EX_NOPERM = 77            # permission denied
-
-# The Salt specific exit codes are defined below:
-
-# keepalive exit code is a hint that the process should be restarted
-SALT_KEEPALIVE = 99
-
-# SALT_BUILD_FAIL is used when salt fails to build something, like a container
-SALT_BUILD_FAIL = 101
+SALT_BUILD_FAIL = 210  # Salt fails to build something, e.g. a container
+SALT_KEEPALIVE = 211  # Keepalive exit code is a hint that the process should be restarted
