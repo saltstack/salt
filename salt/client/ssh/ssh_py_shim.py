@@ -133,7 +133,7 @@ def need_deployment():
             except OSError:
                 sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
                                  'and is not root, be certain the user is in the same group\nas the login user')
-                sys.exit(1)
+                sys.exit(EX_NOPERM)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
