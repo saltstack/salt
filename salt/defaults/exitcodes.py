@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Classification of Salt exit codes.  These are intended to augment
-universal exit codes (found in Python's `os` module with the `EX_`
-prefix or in `sysexits.h`).
+Salt exit codes.
+
+Salt allocates free range in POSIX classification from 200 to 220.
+See `sysexits.h` for more information.
+
+NOTE: Original Windows exit codes at this range are overwritten.
 '''
 
 # Too many situations use "exit 1" - try not to use it when something
