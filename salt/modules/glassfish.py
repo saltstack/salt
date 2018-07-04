@@ -90,20 +90,20 @@ def _api_response(response):
     Check response status code + success_code returned by glassfish
     '''
     if response.status_code == 404:
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
         raise CommandExecutionError('Element doesn\'t exists')
     if response.status_code == 401:
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
         raise CommandExecutionError('Bad username or password')
     elif response.status_code == 200 or response.status_code == 500:
         try:
             data = salt.utils.json.loads(response.content)
             if data['exit_code'] != 'SUCCESS':
-                __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+                __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
                 raise CommandExecutionError(data['message'])
             return data
         except ValueError:
-            __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+            __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
             raise CommandExecutionError('The server returned no data')
     else:
         response.raise_for_status()
@@ -244,7 +244,7 @@ def _update_element(name, element_type, data, server=None):
     if update_data:
         update_data.update(data)
     else:
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
         raise CommandExecutionError('Cannot update {0}'.format(name))
 
     # Finally, update the element

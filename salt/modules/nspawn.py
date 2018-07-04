@@ -115,7 +115,7 @@ def _make_container_root(name):
     '''
     path = _root(name)
     if os.path.exists(path):
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
         raise CommandExecutionError(
             'Container {0} already exists'.format(name)
         )
@@ -132,7 +132,7 @@ def _make_container_root(name):
 
 def _build_failed(dst, name):
     try:
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = salt.defaults.exitcodes.EX_BUILD_FAIL
         shutil.rmtree(dst)
     except OSError as exc:
         if exc.errno != errno.ENOENT:
