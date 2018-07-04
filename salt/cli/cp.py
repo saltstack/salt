@@ -130,7 +130,7 @@ class SaltCP(object):
                     fn_ + ' is a directory, only files are supported '
                     'in non-chunked mode. Use "--chunked" command '
                     'line argument.')
-                sys.exit(1)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         return files
 
     def run(self):

@@ -33,6 +33,7 @@ import salt.utils.files
 import salt.utils.fsutils
 import salt.utils.path
 import salt.utils.stringutils
+import salt.defaults.exitcodes
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -496,21 +497,21 @@ def main(dbfile, pidfile, mode):
 if __name__ == '__main__':
     if len(sys.argv) != 4:
         print("This module is not intended to use directly!", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     pidfile, dbfile, mode = sys.argv[1:]
     if is_alive(pidfile):
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # Double-fork stuff
     try:
         if os.fork() > 0:
             salt.utils.crypt.reinit_crypto()
-            sys.exit(0)
+            sys.exit(salt.defaults.exitcodes.EX_OK)
         else:
             salt.utils.crypt.reinit_crypto()
     except OSError as ex:
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     os.setsid()
     os.umask(0o000)  # pylint: disable=blacklisted-function
@@ -521,9 +522,9 @@ if __name__ == '__main__':
             salt.utils.crypt.reinit_crypto()
             with salt.utils.files.fopen(os.path.join(pidfile, EnvLoader.PID_FILE), 'w') as fp_:
                 fp_.write('{0}\n'.format(pid))
-            sys.exit(0)
+            sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as ex:
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     salt.utils.crypt.reinit_crypto()
     main(dbfile, pidfile, mode)

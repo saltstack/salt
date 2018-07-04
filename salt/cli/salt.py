@@ -142,7 +142,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     kwargs['token'] = tok.get('token', '')
             if not res:
                 sys.stderr.write('ERROR: Authentication failed\n')
-                sys.exit(2)
+                sys.exit(salt.defaults.exitcodes.EX_NOPERM)
             kwargs.update(res)
             kwargs['eauth'] = self.options.eauth
 
@@ -251,7 +251,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     eauth['token'] = tok.get('token', '')
             if not res:
                 sys.stderr.write('ERROR: Authentication failed\n')
-                sys.exit(2)
+                sys.exit(salt.defaults.exitcodes.EX_NOPERM)
             eauth.update(res)
             eauth['eauth'] = self.options.eauth
 
@@ -263,7 +263,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
             except SaltClientError:
-                sys.exit(2)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
             ret = {}
 
@@ -277,8 +277,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
             except SaltClientError:
-                # We will print errors to the console further down the stack
-                sys.exit(1)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             # Printing the output is already taken care of in run() itself
             retcode = 0
             for res in batch.run():
@@ -377,7 +376,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                                        _retcode=retcode)
         if not ret:
             sys.stderr.write('ERROR: No return received\n')
-            sys.exit(2)
+            sys.exit(salt.defaults.exitcodes.EX_NOINPUT)
 
     def _format_ret(self, full_ret):
         '''

@@ -762,7 +762,7 @@ class Master(SMaster):
         # kill any remaining processes
         self.process_manager.kill_children()
         time.sleep(1)
-        sys.exit(0)
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):

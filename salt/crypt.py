@@ -357,7 +357,7 @@ class MasterKeys(dict):
                         'The signature-file may be either named differently '
                         'or has to be created with \'salt-key --gen-signature\''
                     )
-                    sys.exit(1)
+                    sys.exit(salt.defaults.exitcodes.EX_NOTFOUND)
 
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
@@ -611,7 +611,7 @@ class AsyncAuth(object):
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
-                    sys.exit(2)
+                    sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 if acceptance_wait_time:
                     log.info(
                         'Waiting %s seconds before retry.', acceptance_wait_time
@@ -1207,7 +1207,7 @@ class SAuth(AsyncAuth):
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
-                    sys.exit(2)
+                    sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 if acceptance_wait_time:
                     log.info('Waiting %s seconds before retry.', acceptance_wait_time)
                     time.sleep(acceptance_wait_time)

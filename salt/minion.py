@@ -1147,7 +1147,7 @@ class Minion(MinionBase):
         # kill any remaining processes
         self.process_manager.kill_children()
         time.sleep(1)
-        sys.exit(0)
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def sync_connect_master(self, timeout=None, failed=False):
         '''
