@@ -47,6 +47,7 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -315,7 +316,10 @@ def version(*names, **kwargs):
 
     # Return a string if only one package name passed
     if len(names) == 1:
-        return list(ret.values())[0]
+        try:
+            return next(six.itervalues(ret))
+        except StopIteration:
+            return ''
 
     return ret
 
@@ -371,7 +375,10 @@ def latest_version(*names, **kwargs):
 
     # Return a string if only one package name passed
     if len(names) == 1:
-        return list(ret.values())[0]
+        try:
+            return next(six.itervalues(ret))
+        except StopIteration:
+            return ''
 
     return ret
 
