@@ -13,6 +13,7 @@ import salt.utils.stringutils
 import salt.log
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
+import salt.defaults.exitcodes
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -212,7 +213,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # which is why we set the retcode here.
             if retcodes.count(0) < len(retcodes):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+                sys.exit(salt.defaults.exitcodes.EX_CLI_ERR)  # TODO: differentiate between with EX_CLI_FAIL
 
         except (AuthenticationError,
                 AuthorizationError,
