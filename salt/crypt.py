@@ -22,6 +22,7 @@ import binascii
 import weakref
 import getpass
 import tornado.gen
+import salt.defaults.exitcodes
 
 # Import third party libs
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
@@ -1110,7 +1111,7 @@ class AsyncAuth(object):
             finger,
             salt.utils.crypt.pem_finger(master_key, sum_type=self.opts['hash_type'])
         )
-        sys.exit(42)
+        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
 
 
 # TODO: remove, we should just return a sync wrapper of AsyncAuth
@@ -1311,7 +1312,7 @@ class SAuth(AsyncAuth):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n%s', salt.version.__version__, m_pub_fn
             )
-            sys.exit(42)
+            sys.exit(salt.defaults.exitcodes.EX_NOPERM)
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:

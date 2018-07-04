@@ -26,6 +26,7 @@ import salt.utils.parsers
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
+import salt.defaults.exitcodes
 
 # Import 3rd party libs
 from salt.ext import six
@@ -80,7 +81,7 @@ class SaltCP(object):
             if exc.errno == errno.ENOENT:
                 # Path does not exist
                 sys.stderr.write('{0} does not exist\n'.format(path))
-                sys.exit(42)
+                sys.exit(salt.defaults.exitcodes.EX_IOERR)
             elif exc.errno in (errno.EINVAL, errno.ENOTDIR):
                 # Path is a file (EINVAL on Windows, ENOTDIR otherwise)
                 files[path] = self._mode(path)
@@ -110,7 +111,7 @@ class SaltCP(object):
         if not os.path.isfile(fn_):
             err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
-            sys.exit(42)
+            sys.exit(salt.defaults.exitcodes.EX_IOERR)
         with salt.utils.files.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}
