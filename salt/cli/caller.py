@@ -148,9 +148,7 @@ class BaseCaller(object):
                     out=out,
                     opts=self.opts,
                     _retcode=ret.get('retcode', 0))
-            # _retcode will be available in the kwargs of the outputter function
-            if self.opts.get('retcode_passthrough', False):
-                sys.exit(ret['retcode'])
+            sys.exit(ret['retcode'])
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -377,9 +375,7 @@ class RAETCaller(BaseCaller):
                     out=ret.get('out', 'nested'),
                     opts=self.opts,
                     _retcode=ret.get('retcode', 0))
-            # _retcode will be available in the kwargs of the outputter function
-            if self.opts.get('retcode_passthrough', False):
-                sys.exit(ret['retcode'])
+            sys.exit(ret['retcode'])
 
         except SaltInvocationError as err:
             raise SystemExit(err)

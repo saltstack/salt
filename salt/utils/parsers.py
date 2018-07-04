@@ -2659,13 +2659,6 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             help='Set this directory to search for additional states.'
         )
         self.add_option(
-            '--retcode-passthrough',
-            default=False,
-            action='store_true',
-            help=('Exit with the salt call retcode and not the salt binary '
-                  'retcode.')
-        )
-        self.add_option(
             '--metadata',
             default=False,
             dest='print_metadata',
