@@ -151,7 +151,7 @@ def minion_process():
         delay = randint(1, delay)
         log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
-        sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+        sys.exit(salt.defaults.exitcodes.EX_KEEPALIVE)
 
 
 def salt_minion():
@@ -218,7 +218,7 @@ def salt_minion():
         signal.signal(signal.SIGINT, prev_sigint_handler)
         signal.signal(signal.SIGTERM, prev_sigterm_handler)
 
-        if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
+        if not process.exitcode == salt.defaults.exitcodes.EX_KEEPALIVE:
             sys.exit(process.exitcode)
         # ontop of the random_reauth_delay already preformed
         # delay extra to reduce flooding and free resources
@@ -271,7 +271,7 @@ def proxy_minion_process(queue):
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
         # status is superfluous since the process will be restarted
-        status = salt.defaults.exitcodes.SALT_KEEPALIVE
+        status = salt.defaults.exitcodes.EX_KEEPALIVE
     except SystemExit as exc:
         restart = False
         status = exc.code

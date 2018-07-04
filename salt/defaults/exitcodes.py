@@ -43,7 +43,7 @@ EX_SCP_NOT_FOUND = 204        # SaltSSH 'scp' command was not found
 EX_AGGREGATE = 205            # SaltSSH One of a collection failed
 
 EX_BUILD_FAIL = 210  # Salt fails to build something, e.g. a container
-SALT_KEEPALIVE = 211   # Keepalive exit code is a hint that the process should be restarted
+EX_KEEPALIVE = 211   # Keepalive exit code is a hint that the process should be restarted
 
 EX_CLI_ERR = 212    # State contains at least one failed process
 EX_CLI_FAIL = 213   # State contains at least one crashed process

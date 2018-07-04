@@ -2633,7 +2633,7 @@ class Minion(MinionBase):
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
                             # regular sys.exit raises an exception -- which isn't sufficient in a thread
-                            os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+                            os._exit(salt.defaults.exitcodes.EX_KEEPALIVE)
 
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
