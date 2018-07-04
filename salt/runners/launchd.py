@@ -56,7 +56,7 @@ def write_launchd_plist(program):
         )
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
-        return plist_sample_text.format(
+    return plist_sample_text.format(
             program=program,
             python=sys.executable,
             script=os.path.join(os.path.dirname(sys.executable), program)
