@@ -39,8 +39,8 @@ EX_THIN_PYTHON_INVALID = 200  # SaltSSH python interpreter invalid
 EX_THIN_DEPLOY = 201          # SaltSSH thin archive deploy failure
 EX_THIN_CHECKSUM = 202        # SaltSSH thin archive checksum do not match
 EX_MOD_DEPLOY = 203           # SaltSSH thin archive module deployment failure
-EX_SCP_NOT_FOUND = 204        # SaltSSH 'scp' command was not found
-EX_AGGREGATE = 205            # SaltSSH One of a collection failed
+EX_SCP_NOT_FOUND = 127        # SaltSSH 'scp' command was not found (as a standard shell error code)
+EX_AGGREGATE = 204            # SaltSSH One of a collection failed
 
 EX_BUILD_FAIL = 210  # Salt fails to build something, e.g. a container
 EX_KEEPALIVE = 211   # Keepalive exit code is a hint that the process should be restarted
