@@ -310,7 +310,7 @@ def version(*names, **kwargs):
         ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
 
     # Append package names which are not installed/found
-    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret.keys(), False), names))
+    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret), False), names))
     ret.update(zip(unmatched, [ '' ] * len(unmatched)))
 
     # Return a string if only one package name passed
@@ -357,7 +357,7 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 1:
         # Convert back our result in a dict if only one name is passed
-        installed = { list(ret.keys())[0] if len(ret) > 0 else names[0]: installed }
+        installed = { list(ret)[0] if len(ret) > 0 else names[0]: installed }
 
     for name in ret:
         if not name in installed:
@@ -366,7 +366,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Append package names which are not found
-    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret.keys(), False), names))
+    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret, False), names))
     ret.update(zip(unmatched, [ '' ] * len(unmatched)))
 
     # Return a string if only one package name passed
