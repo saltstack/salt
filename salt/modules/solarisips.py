@@ -332,7 +332,7 @@ def latest_version(*names, **kwargs):
     Please use pkg.latest_version as pkg.available_version is being deprecated.
 
     .. versionchanged:: Fluorine
-        Argument changed from 'name' to '*names' tu support multiple packages.
+        Support for multiple package names added.
 
     CLI Example:
 
