@@ -710,7 +710,7 @@ class SSH(object):
                     hostname = self.__parsed_rosters[roster_file][host_id]['host']
                     ret[roster_file][host_id] = hostname
             salt.output.display_output(ret, 'nested', self.opts)
-            sys.exit()
+            sys.exit(salt.defaults.exitcodes.EX_OK)
 
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
