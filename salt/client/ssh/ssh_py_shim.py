@@ -22,12 +22,13 @@ THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
 # Keep these in sync with salt/defaults/exitcodes.py
-EX_THIN_PYTHON_INVALID = 10
-EX_THIN_DEPLOY = 11
-EX_THIN_CHECKSUM = 12
-EX_MOD_DEPLOY = 13
-EX_SCP_NOT_FOUND = 14
+EX_THIN_PYTHON_INVALID = 200
+EX_THIN_DEPLOY = 201
+EX_THIN_CHECKSUM = 202
+EX_MOD_DEPLOY = 203
+EX_SCP_NOT_FOUND = 127
 EX_CANTCREAT = 73
+EX_NOPERM = 77
 
 
 class OptionsContainer(object):
