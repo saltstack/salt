@@ -178,7 +178,7 @@ class BaseCaller(object):
                 sys.stderr.write(' Possible reasons: {0}\n'.format(self.minion.function_errors[mod_name]))
             else:
                 sys.stderr.write('\n')
-            sys.exit(-1)
+            sys.exit(salt.defaults.exitcodes.EX_NOTFOUND)
         metadata = self.opts.get('metadata')
         if metadata is not None:
             metadata = salt.utils.args.yamlify_arg(metadata)
