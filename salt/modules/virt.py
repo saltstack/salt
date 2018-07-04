@@ -88,8 +88,6 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
-import xml.dom
-from xml.dom import minidom
 import jinja2
 import jinja2.exceptions
 try:
@@ -111,7 +109,6 @@ import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
-from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -342,11 +339,7 @@ def _get_uuid(dom):
 
         salt '*' virt.get_uuid <domain>
     '''
-    uuid = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('uuid'):
-        uuid = node.firstChild.nodeValue
-    return uuid
+    return ElementTree.fromstring(get_xml(dom)).find('uuid').text
 
 
 def _get_on_poweroff(dom):
@@ -359,11 +352,8 @@ def _get_on_poweroff(dom):
 
         salt '*' virt.get_on_restart <domain>
     '''
-    on_poweroff = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_poweroff'):
-        on_poweroff = node.firstChild.nodeValue
-    return on_poweroff
+    node = ElementTree.fromstring(get_xml(dom)).find('on_poweroff')
+    return node.text if node is not None else ''
 
 
 def _get_on_reboot(dom):
@@ -376,11 +366,8 @@ def _get_on_reboot(dom):
 
         salt '*' virt.get_on_reboot <domain>
     '''
-    on_restart = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_reboot'):
-        on_restart = node.firstChild.nodeValue
-    return on_restart
+    node = ElementTree.fromstring(get_xml(dom)).find('on_reboot')
+    return node.text if node is not None else ''
 
 
 def _get_on_crash(dom):
@@ -393,11 +380,8 @@ def _get_on_crash(dom):
 
         salt '*' virt.get_on_crash <domain>
     '''
-    on_crash = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_crash'):
-        on_crash = node.firstChild.nodeValue
-    return on_crash
+    node = ElementTree.fromstring(get_xml(dom)).find('on_crash')
+    return node.text if node is not None else ''
 
 
 def _get_nics(dom):
@@ -405,36 +389,34 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     '''
     nics = {}
-    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            nic = {}
-            nic['type'] = i_node.getAttribute('type')
-            for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == 'mac':
-                    nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == 'model':
-                    nic['model'] = v_node.getAttribute('type')
-                if v_node.tagName == 'target':
-                    nic['target'] = v_node.getAttribute('dev')
-                # driver, source, and match can all have optional attributes
-                if re.match('(driver|source|address)', v_node.tagName):
-                    temp = {}
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic[six.text_type(v_node.tagName)] = temp
-                # virtualport needs to be handled separately, to pick up the
-                # type attribute of the virtualport itself
-                if v_node.tagName == 'virtualport':
-                    temp = {}
-                    temp['type'] = v_node.getAttribute('type')
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic['virtualport'] = temp
-            if 'mac' not in nic:
-                continue
-            nics[nic['mac']] = nic
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for iface_node in doc.findall('devices/interface'):
+        nic = {}
+        nic['type'] = iface_node.get('type')
+        for v_node in iface_node:
+            if v_node.tag == 'mac':
+                nic['mac'] = v_node.get('address')
+            if v_node.tag == 'model':
+                nic['model'] = v_node.get('type')
+            if v_node.tag == 'target':
+                nic['target'] = v_node.get('dev')
+            # driver, source, and match can all have optional attributes
+            if re.match('(driver|source|address)', v_node.tag):
+                temp = {}
+                for key, value in six.iteritems(v_node.attrib):
+                    temp[key] = value
+                nic[v_node.tag] = temp
+            # virtualport needs to be handled separately, to pick up the
+            # type attribute of the virtualport itself
+            if v_node.tag == 'virtualport':
+                temp = {}
+                temp['type'] = v_node.get('type')
+                for key, value in six.iteritems(v_node.attrib):
+                    temp[key] = value
+                nic['virtualport'] = temp
+        if 'mac' not in nic:
+            continue
+        nics[nic['mac']] = nic
     return nics
 
 
@@ -447,14 +429,10 @@ def _get_graphics(dom):
            'listen': 'None',
            'port': 'None',
            'type': 'None'}
-    desc = dom.XMLDesc(0)
-    ssock = _StringIO(desc)
-    doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName('domain'):
-        g_nodes = node.getElementsByTagName('graphics')
-        for g_node in g_nodes:
-            for key, value in g_node.attributes.items():
-                out[key] = value
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for g_node in doc.findall('devices/graphics'):
+        for key, value in six.iteritems(g_node.attrib):
+            out[key] = value
     return out
 
 
@@ -463,37 +441,29 @@ def _get_disks(dom):
     Get domain disks from a libvirt domain object.
     '''
     disks = {}
-    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-    for elem in doc.getElementsByTagName('disk'):
-        sources = elem.getElementsByTagName('source')
-        targets = elem.getElementsByTagName('target')
-        if sources:
-            source = sources[0]
-        else:
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for elem in doc.findall('devices/disk'):
+        source = elem.find('source')
+        if source is None:
             continue
-        if targets:
-            target = targets[0]
-        else:
+        target = elem.find('target')
+        if target is None:
             continue
-        if target.hasAttribute('dev'):
-            qemu_target = ''
-            if source.hasAttribute('file'):
-                qemu_target = source.getAttribute('file')
-            elif source.hasAttribute('dev'):
-                qemu_target = source.getAttribute('dev')
-            elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'):  # For rbd network
+        if 'dev' in target.attrib:
+            qemu_target = source.get('file', '')
+            if not qemu_target:
+                qemu_target = source.get('dev', '')
+            if not qemu_target and 'protocol' in source.attrib and 'name' in source.attrib:  # for rbd network
                 qemu_target = '{0}:{1}'.format(
-                        source.getAttribute('protocol'),
-                        source.getAttribute('name'))
+                        source.get('protocol'),
+                        source.get('name'))
             if not qemu_target:
                 continue
 
-            disk = {'file': qemu_target,
-                    'type': elem.getAttribute('device')}
+            disk = {'file': qemu_target, 'type': elem.get('device')}
 
-            driver = _get_xml_first_element_by_tag_name(elem, 'driver')
-            if driver and driver.getAttribute('type') == 'qcow2':
+            driver = elem.find('driver')
+            if driver is not None and driver.get('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
                                 ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
@@ -505,7 +475,7 @@ def _get_disks(dom):
                 except TypeError:
                     disk.update({'file': 'Does not exist'})
 
-            disks[target.getAttribute('dev')] = disk
+            disks[target.get('dev')] = disk
     return disks
 
 
@@ -1769,14 +1739,8 @@ def get_macs(vm_, **kwargs):
 
         salt '*' virt.get_macs <domain>
     '''
-    macs = []
-    doc = minidom.parse(_StringIO(get_xml(vm_, **kwargs)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            for v_node in i_node.getElementsByTagName('mac'):
-                macs.append(v_node.getAttribute('address'))
-    return macs
+    doc = ElementTree.fromstring(get_xml(vm_, **kwargs))
+    return [node.get('address') for node in doc.findall('devices/interface/mac')]
 
 
 def get_graphics(vm_, **kwargs):
@@ -3128,13 +3092,8 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         Extract the disk devices names from the domain XML definition
         '''
-        doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-        disks = []
-        for elem in doc.getElementsByTagName('disk'):
-            targets = elem.getElementsByTagName('target')
-            target = targets[0]
-            disks.append(target.getAttribute('dev'))
-        return disks
+        doc = ElementTree.fromstring(get_xml(dom, **kwargs))
+        return [target.get('dev') for target in doc.findall('devices/disk/target')]
 
     def _info(dom):
         '''
@@ -3396,48 +3355,14 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     return ret
 
 
-def _capabilities(conn):
-    '''
-    Return connection capabilities as XML.
-    '''
-    caps = conn.getCapabilities()
-    caps = minidom.parseString(caps)
-
-    return caps
-
-
-def _get_xml_first_element_by_tag_name(node, name):  # pylint: disable=invalid-name
-    '''
-    Convenience function getting the first result of getElementsByTagName() or None.
-    '''
-    nodes = node.getElementsByTagName(name)
-    return nodes[0] if nodes else None
-
-
-def _get_xml_element_text(node):
-    '''
-    Get the text value of an XML element.
-    '''
-    return "".join([child.data for child in node.childNodes if child.nodeType == xml.dom.Node.TEXT_NODE])
-
-
-def _get_xml_child_text(node, name, default):
-    '''
-    Get the text value of the child named name of XML element node
-    '''
-    result = "".join([_get_xml_element_text(child) for child in node.childNodes
-                      if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == name])
-    return result if result else default
-
-
 def _caps_add_machine(machines, node):
     '''
     Parse the <machine> element of the host capabilities and add it
     to the machines list.
     '''
-    maxcpus = node.getAttribute('maxCpus')
-    canonical = node.getAttribute('canonical')
-    name = _get_xml_element_text(node)
+    maxcpus = node.get('maxCpus')
+    canonical = node.get('canonical')
+    name = node.text
 
     alternate_name = ""
     if canonical:
@@ -3458,45 +3383,42 @@ def _parse_caps_guest(guest):
     '''
     Parse the <guest> element of the connection capabilities XML
     '''
-    arch_node = _get_xml_first_element_by_tag_name(guest, 'arch')
+    arch_node = guest.find('arch')
     result = {
-        'os_type': _get_xml_element_text(guest.getElementsByTagName('os_type')[0]),
+        'os_type': guest.find('os_type').text,
         'arch': {
-            'name': arch_node.getAttribute('name'),
+            'name': arch_node.get('name'),
             'machines': {},
             'domains': {}
         },
     }
 
-    for child in arch_node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
-        if child.tagName == 'wordsize':
-            result['arch']['wordsize'] = int(_get_xml_element_text(child))
-        elif child.tagName == 'emulator':
-            result['arch']['emulator'] = _get_xml_element_text(child)
-        elif child.tagName == 'machine':
+    for child in arch_node:
+        if child.tag == 'wordsize':
+            result['arch']['wordsize'] = int(child.text)
+        elif child.tag == 'emulator':
+            result['arch']['emulator'] = child.text
+        elif child.tag == 'machine':
             _caps_add_machine(result['arch']['machines'], child)
-        elif child.tagName == 'domain':
-            domain_type = child.getAttribute('type')
+        elif child.tag == 'domain':
+            domain_type = child.get('type')
             domain = {
                 'emulator': None,
                 'machines': {}
             }
-            emulator_node = _get_xml_first_element_by_tag_name(child, 'emulator')
-            if emulator_node:
-                domain['emulator'] = _get_xml_element_text(emulator_node)
-            for machine in child.getElementsByTagName('machine'):
+            emulator_node = child.find('emulator')
+            if emulator_node is not None:
+                domain['emulator'] = emulator_node.text
+            for machine in child.findall('machine'):
                 _caps_add_machine(domain['machines'], machine)
             result['arch']['domains'][domain_type] = domain
 
     # Note that some features have no default and toggle attributes.
     # This may not be a perfect match, but represent them as enabled by default
     # without possibility to toggle them.
-    features_node = _get_xml_first_element_by_tag_name(guest, 'features')
-    result['features'] = {child.tagName: {'toggle': True if child.getAttribute('toggle') == 'yes' else False,
-                                          'default': True if child.getAttribute('default') == 'no' else True}
-                          for child in features_node.childNodes if child.nodeType == xml.dom.Node.ELEMENT_NODE}
+    result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
+                                      'default': True if child.get('default') == 'no' else True}
+                          for child in guest.find('features')}
 
     return result
 
@@ -3506,40 +3428,39 @@ def _parse_caps_cell(cell):
     Parse the <cell> nodes of the connection capabilities XML output.
     '''
     result = {
-        'id': int(cell.getAttribute('id'))
+        'id': int(cell.get('id'))
     }
 
-    mem_node = _get_xml_first_element_by_tag_name(cell, 'memory')
-    if mem_node:
-        unit = mem_node.getAttribute('unit') if mem_node.hasAttribute('unit') else 'KiB'
-        memory = _get_xml_element_text(mem_node)
+    mem_node = cell.find('memory')
+    if mem_node is not None:
+        unit = mem_node.get('unit', 'KiB')
+        memory = mem_node.text
         result['memory'] = "{} {}".format(memory, unit)
 
-    pages = [{'size': "{} {}".format(page.getAttribute('size'),
-                                     page.getAttribute('unit') if page.getAttribute('unit') else 'KiB'),
-              'available': int(_get_xml_element_text(page))}
-             for page in cell.getElementsByTagName('pages')]
+    pages = [{'size': "{} {}".format(page.get('size'), page.get('unit', 'KiB')),
+              'available': int(page.text)}
+             for page in cell.findall('pages')]
     if pages:
         result['pages'] = pages
 
-    distances = {int(distance.getAttribute('id')): int(distance.getAttribute('value'))
-                 for distance in cell.getElementsByTagName('sibling')}
+    distances = {int(distance.get('id')): int(distance.get('value'))
+                 for distance in cell.findall('distances/sibling')}
     if distances:
         result['distances'] = distances
 
     cpus = []
-    for cpu_node in cell.getElementsByTagName('cpu'):
+    for cpu_node in cell.findall('cpus/cpu'):
         cpu = {
-            'id': int(cpu_node.getAttribute('id'))
+            'id': int(cpu_node.get('id'))
         }
-        socket_id = cpu_node.getAttribute('socket_id')
+        socket_id = cpu_node.get('socket_id')
         if socket_id:
             cpu['socket_id'] = int(socket_id)
 
-        core_id = cpu_node.getAttribute('core_id')
+        core_id = cpu_node.get('core_id')
         if core_id:
             cpu['core_id'] = int(core_id)
-        siblings = cpu_node.getAttribute('siblings')
+        siblings = cpu_node.get('siblings')
         if siblings:
             cpu['siblings'] = siblings
         cpus.append(cpu)
@@ -3554,23 +3475,23 @@ def _parse_caps_bank(bank):
     Parse the <bank> element of the connection capabilities XML.
     '''
     result = {
-        'id': int(bank.getAttribute('id')),
-        'level': int(bank.getAttribute('level')),
-        'type': bank.getAttribute('type'),
-        'size': "{} {}".format(bank.getAttribute('size'), bank.getAttribute('unit')),
-        'cpus': bank.getAttribute('cpus')
+        'id': int(bank.get('id')),
+        'level': int(bank.get('level')),
+        'type': bank.get('type'),
+        'size': "{} {}".format(bank.get('size'), bank.get('unit')),
+        'cpus': bank.get('cpus')
     }
 
     controls = []
-    for control in bank.getElementsByTagName('control'):
-        unit = control.getAttribute('unit')
+    for control in bank.findall('control'):
+        unit = control.get('unit')
         result_control = {
-            'granularity': "{} {}".format(control.getAttribute('granularity'), unit),
-            'type': control.getAttribute('type'),
-            'maxAllocs': int(control.getAttribute('maxAllocs'))
+            'granularity': "{} {}".format(control.get('granularity'), unit),
+            'type': control.get('type'),
+            'maxAllocs': int(control.get('maxAllocs'))
         }
 
-        minimum = control.getAttribute('min')
+        minimum = control.get('min')
         if minimum:
             result_control['min'] = "{} {}".format(minimum, unit)
         controls.append(result_control)
@@ -3585,62 +3506,58 @@ def _parse_caps_host(host):
     Parse the <host> element of the connection capabilities XML.
     '''
     result = {}
-    for child in host.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
+    for child in host:
 
-        if child.tagName == 'uuid':
-            result['uuid'] = _get_xml_element_text(child)
+        if child.tag == 'uuid':
+            result['uuid'] = child.text
 
-        elif child.tagName == 'cpu':
+        elif child.tag == 'cpu':
             cpu = {
-                'arch': _get_xml_child_text(child, 'arch', None),
-                'model': _get_xml_child_text(child, 'model', None),
-                'vendor': _get_xml_child_text(child, 'vendor', None),
-                'features': [feature.getAttribute('name') for feature in child.getElementsByTagName('feature')],
-                'pages': [{'size': '{} {}'.format(page.getAttribute('size'),
-                                                  page.getAttribute('unit') if page.hasAttribute('unit') else 'KiB')}
-                          for page in child.getElementsByTagName('pages')]
+                'arch': child.find('arch').text if child.find('arch') is not None else None,
+                'model': child.find('model').text if child.find('model') is not None else None,
+                'vendor': child.find('vendor').text if child.find('vendor') is not None else None,
+                'features': [feature.get('name') for feature in child.findall('feature')],
+                'pages': [{'size': '{} {}'.format(page.get('size'), page.get('unit', 'KiB'))}
+                          for page in child.findall('pages')]
             }
             # Parse the cpu tag
-            microcode = _get_xml_first_element_by_tag_name(child, 'microcode')
-            if microcode:
-                cpu['microcode'] = microcode.getAttribute('version')
+            microcode = child.find('microcode')
+            if microcode is not None:
+                cpu['microcode'] = microcode.get('version')
 
-            topology = _get_xml_first_element_by_tag_name(child, 'topology')
-            if topology:
-                cpu['sockets'] = int(topology.getAttribute('sockets'))
-                cpu['cores'] = int(topology.getAttribute('cores'))
-                cpu['threads'] = int(topology.getAttribute('threads'))
+            topology = child.find('topology')
+            if topology is not None:
+                cpu['sockets'] = int(topology.get('sockets'))
+                cpu['cores'] = int(topology.get('cores'))
+                cpu['threads'] = int(topology.get('threads'))
             result['cpu'] = cpu
 
-        elif child.tagName == "power_management":
-            result['power_management'] = [node.tagName for node in child.childNodes
-                                          if node.nodeType == xml.dom.Node.ELEMENT_NODE]
+        elif child.tag == "power_management":
+            result['power_management'] = [node.tag for node in child]
 
-        elif child.tagName == "migration_features":
+        elif child.tag == "migration_features":
             result['migration'] = {
-                'live': bool(child.getElementsByTagName('live')),
-                'transports': [_get_xml_element_text(node) for node in child.getElementsByTagName('uri_transport')]
+                'live': child.find('live') is not None,
+                'transports': [node.text for node in child.findall('uri_transports/uri_transport')]
             }
 
-        elif child.tagName == "topology":
+        elif child.tag == "topology":
             result['topology'] = {
-                'cells': [_parse_caps_cell(cell) for cell in child.getElementsByTagName('cell')]
+                'cells': [_parse_caps_cell(cell) for cell in child.findall('cells/cell')]
             }
 
-        elif child.tagName == 'cache':
+        elif child.tag == 'cache':
             result['cache'] = {
-                'banks': [_parse_caps_bank(bank) for bank in child.getElementsByTagName('bank')]
+                'banks': [_parse_caps_bank(bank) for bank in child.findall('bank')]
             }
 
     result['security'] = [{
-            'model': _get_xml_child_text(secmodel, 'model', None),
-            'doi': _get_xml_child_text(secmodel, 'doi', None),
-            'baselabels': [{'type': label.getAttribute('type'), 'label': _get_xml_element_text(label)}
-                           for label in secmodel.getElementsByTagName('baselabel')]
+            'model': secmodel.find('model').text if secmodel.find('model') is not None else None,
+            'doi': secmodel.find('doi').text if secmodel.find('doi') is not None else None,
+            'baselabels': [{'type': label.get('type'), 'label': label.text}
+                           for label in secmodel.findall('baselabel')]
         }
-        for secmodel in host.getElementsByTagName('secmodel')]
+        for secmodel in host.findall('secmodel')]
 
     return result
 
@@ -3662,12 +3579,12 @@ def capabilities(**kwargs):
         salt '*' virt.capabilities
     '''
     conn = __get_conn(**kwargs)
-    caps = _capabilities(conn)
+    caps = ElementTree.fromstring(conn.getCapabilities())
     conn.close()
 
     return {
-        'host': _parse_caps_host(caps.getElementsByTagName('host')[0]),
-        'guests': [_parse_caps_guest(guest) for guest in caps.getElementsByTagName('guest')]
+        'host': _parse_caps_host(caps.find('host')),
+        'guests': [_parse_caps_guest(guest) for guest in caps.findall('guest')]
     }
 
 
@@ -3675,8 +3592,7 @@ def _parse_caps_enum(node):
     '''
     Return a tuple containing the name of the enum and the possible values
     '''
-    return (node.getAttribute('name') or None,
-            [_get_xml_element_text(value) for value in node.getElementsByTagName('value')])
+    return (node.get('name'), [value.text for value in node.findall('value')])
 
 
 def _parse_caps_cpu(node):
@@ -3684,37 +3600,36 @@ def _parse_caps_cpu(node):
     Parse the <cpu> element of the domain capabilities
     '''
     result = {}
-    for mode in node.getElementsByTagName('mode'):
-        if not mode.getAttribute('supported') == 'yes':
+    for mode in node.findall('mode'):
+        if not mode.get('supported') == 'yes':
             continue
 
-        name = mode.getAttribute('name')
+        name = mode.get('name')
         if name == 'host-passthrough':
             result[name] = True
 
         elif name == 'host-model':
             host_model = {}
-            model_node = _get_xml_first_element_by_tag_name(mode, 'model')
-            if model_node:
+            model_node = mode.find('model')
+            if model_node is not None:
                 model = {
-                    'name': _get_xml_element_text(model_node)
+                    'name': model_node.text
                 }
 
-                vendor_id = model_node.getAttribute('vendor_id')
+                vendor_id = model_node.get('vendor_id')
                 if vendor_id:
                     model['vendor_id'] = vendor_id
 
-                fallback = model_node.getAttribute('fallback')
+                fallback = model_node.get('fallback')
                 if fallback:
                     model['fallback'] = fallback
                 host_model['model'] = model
 
-            vendor = _get_xml_child_text(mode, 'vendor', None)
+            vendor = mode.find('vendor').text if mode.find('vendor') is not None else None
             if vendor:
                 host_model['vendor'] = vendor
 
-            features = {feature.getAttribute('name'): feature.getAttribute('policy')
-                        for feature in mode.getElementsByTagName('feature')}
+            features = {feature.get('name'): feature.get('policy') for feature in mode.findall('feature')}
             if features:
                 host_model['features'] = features
 
@@ -3722,8 +3637,7 @@ def _parse_caps_cpu(node):
 
         elif name == 'custom':
             custom_model = {}
-            models = {_get_xml_element_text(model): model.getAttribute('usable')
-                      for model in mode.getElementsByTagName('model')}
+            models = {model.text: model.get('usable') for model in mode.findall('model')}
             if models:
                 custom_model['models'] = models
             result[name] = custom_model
@@ -3736,11 +3650,10 @@ def _parse_caps_devices_features(node):
     Parse the devices or features list of the domain capatilities
     '''
     result = {}
-    for child in node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE or not child.getAttribute('supported') == 'yes':
-            continue
-        enums = [_parse_caps_enum(node) for node in child.getElementsByTagName('enum')]
-        result[child.tagName] = {item[0]: item[1] for item in enums if item[0]}
+    for child in node:
+        if child.get('supported') == 'yes':
+            enums = [_parse_caps_enum(node) for node in child.findall('enum')]
+            result[child.tag] = {item[0]: item[1] for item in enums if item[0]}
     return result
 
 
@@ -3748,11 +3661,10 @@ def _parse_caps_loader(node):
     '''
     Parse the <loader> element of the domain capabilities.
     '''
-    enums = [_parse_caps_enum(enum) for enum in node.getElementsByTagName('enum')]
+    enums = [_parse_caps_enum(enum) for enum in node.findall('enum')]
     result = {item[0]: item[1] for item in enums if item[0]}
 
-    values = [_get_xml_element_text(child) for child in node.childNodes
-              if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == 'value']
+    values = [child.text for child in node.findall('value')]
 
     if values:
         result['values'] = values
@@ -3788,49 +3700,41 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
 
     '''
     conn = __get_conn(**kwargs)
-    caps = conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
-    caps = minidom.parseString(caps)
+    caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
     conn.close()
 
-    root_node = caps.getElementsByTagName('domainCapabilities')[0]
-
     result = {
-        'emulator': _get_xml_child_text(root_node, 'path', None),
-        'domain': _get_xml_child_text(root_node, 'domain', None),
-        'machine': _get_xml_child_text(root_node, 'machine', None),
-        'arch': _get_xml_child_text(root_node, 'arch', None)
+        'emulator': caps.find('path').text if caps.find('path') is not None else None,
+        'domain': caps.find('domain').text if caps.find('domain') is not None else None,
+        'machine': caps.find('machine').text if caps.find('machine') is not None else None,
+        'arch': caps.find('arch').text if caps.find('arch') is not None else None
     }
 
-    for child in root_node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
+    for child in caps:
+        if child.tag == 'vcpu' and child.get('max'):
+            result['max_vcpus'] = int(child.get('max'))
 
-        if child.tagName == 'vcpu' and child.getAttribute('max'):
-            result['max_vcpus'] = int(child.getAttribute('max'))
+        elif child.tag == 'iothreads':
+            result['iothreads'] = child.get('supported') == 'yes'
 
-        elif child.tagName == 'iothreads':
-            iothreads = child.getAttribute('supported') == 'yes'
-            if iothreads is not None:
-                result['iothreads'] = iothreads
-
-        elif child.tagName == 'os':
+        elif child.tag == 'os':
             result['os'] = {}
-            loader_node = _get_xml_first_element_by_tag_name(child, 'loader')
-            if loader_node and loader_node.getAttribute('supported') == 'yes':
+            loader_node = child.find('loader')
+            if loader_node is not None and loader_node.get('supported') == 'yes':
                 loader = _parse_caps_loader(loader_node)
                 result['os']['loader'] = loader
 
-        elif child.tagName == 'cpu':
+        elif child.tag == 'cpu':
             cpu = _parse_caps_cpu(child)
             if cpu:
                 result['cpu'] = cpu
 
-        elif child.tagName == 'devices':
+        elif child.tag == 'devices':
             devices = _parse_caps_devices_features(child)
             if devices:
                 result['devices'] = devices
 
-        elif child.tagName == 'features':
+        elif child.tag == 'features':
             features = _parse_caps_devices_features(child)
             if features:
                 result['features'] = features
@@ -3865,11 +3769,9 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
 
     '''
     conn = __get_conn(**kwargs)
-    caps = _capabilities(conn)
-
-    cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
-
-    log.debug('Host CPU model definition: %s', cpu.toxml())
+    caps = ElementTree.fromstring(conn.getCapabilities())
+    cpu = caps.find('host/cpu')
+    log.debug('Host CPU model definition: %s', ElementTree.tostring(cpu))
 
     flags = 0
     if migratable:
@@ -3884,21 +3786,19 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = conn.baselineCPU([cpu.toxml()], flags)
-    cpu = minidom.parseString(cpu).getElementsByTagName('cpu')
-    cpu = cpu[0]
+    cpu = ElementTree.fromstring(conn.baselineCPU([ElementTree.tostring(cpu)], flags))
     conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
         # Find the models in cpu_map.xml and iterate over them for as long as entries have submodels
         with salt.utils.files.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
-            cpu_map = minidom.parse(cpu_map)
+            cpu_map = ElementTree.parse(cpu_map)
 
-        cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue
+        cpu_model = cpu.find('model').text
         while cpu_model:
-            cpu_map_models = cpu_map.getElementsByTagName('model')
-            cpu_specs = [el for el in cpu_map_models if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
+            cpu_map_models = cpu_map.findall('arch/model')
+            cpu_specs = [el for el in cpu_map_models if el.get('name') == cpu_model and bool(len(el))]
 
             if not cpu_specs:
                 raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
@@ -3907,20 +3807,21 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
 
             cpu_specs = cpu_specs[0]
 
-            cpu_model = cpu_specs.getElementsByTagName('model')
-            if not cpu_model:
+            # libvirt's cpu map used to nest model elements, to point the parent model.
+            # keep this code for compatibility with old libvirt versions
+            model_node = cpu_specs.find('model')
+            if model_node is None:
                 cpu_model = None
             else:
-                cpu_model = cpu_model[0].getAttribute('name')
+                cpu_model = model_node.get('name')
 
-            for feature in cpu_specs.getElementsByTagName('feature'):
-                cpu.appendChild(feature)
+            cpu.extend([feature for feature in cpu_specs.findall('feature')])
 
     if out == 'salt':
         return {
-            'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
-            'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
-            'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
+            'model': cpu.find('model').text,
+            'vendor': cpu.find('vendor').text,
+            'features': [feature.get('name') for feature in cpu.findall('feature')]
         }
     return cpu.toxml()
 
@@ -4372,9 +4273,8 @@ def pool_info(name, **kwargs):
         infos = pool.info()
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
-        desc = minidom.parseString(pool.XMLDesc())
-        pool_node = _get_xml_first_element_by_tag_name(desc, 'pool')
-        path_node = _get_xml_first_element_by_tag_name(desc, 'path')
+        desc = ElementTree.fromstring(pool.XMLDesc())
+        path_node = desc.find('target/path')
         result = {
             'uuid': pool.UUIDString(),
             'state': state,
@@ -4383,8 +4283,8 @@ def pool_info(name, **kwargs):
             'free': infos[3],
             'autostart': pool.autostart(),
             'persistent': pool.isPersistent(),
-            'target_path': _get_xml_element_text(path_node) if path_node else None,
-            'type': pool_node.getAttribute('type')
+            'target_path': path_node.text if path_node is not None else None,
+            'type': desc.get('type')
         }
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
