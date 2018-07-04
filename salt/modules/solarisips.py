@@ -39,6 +39,7 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
+import itertools
 
 
 # Import salt libs
@@ -48,6 +49,8 @@ import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -312,7 +315,7 @@ def version(*names, **kwargs):
 
     # Append package names which are not installed/found
     unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret), False), names))
-    ret.update(zip(unmatched, [ '' ] * len(unmatched)))
+    ret.update(zip(unmatched, itertools.cycle(('',))))
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -371,7 +374,7 @@ def latest_version(*names, **kwargs):
 
     # Append package names which are not found
     unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret, False), names))
-    ret.update(zip(unmatched, [ '' ] * len(unmatched)))
+    ret.update(zip(unmatched, itertools.cycle(('',))))
 
     # Return a string if only one package name passed
     if len(names) == 1:
