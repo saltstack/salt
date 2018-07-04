@@ -395,7 +395,7 @@ def hmset(key, **fieldsvals):
     database = fieldsvals.pop('db', None)
     password = fieldsvals.pop('password', None)
     server = _connect(host, port, database, password)
-    return server.hmset(key, **fieldsvals)
+    return server.hmset(key, fieldsvals)
 
 
 def hset(key, field, value, host=None, port=None, db=None, password=None):
