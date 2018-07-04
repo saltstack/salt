@@ -1760,6 +1760,46 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'type': 'dir',
             'target_path': '/srv/vms'}, pool)
 
+    def test_pool_info_notarget(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mock = MagicMock()
+        pool_mock.UUIDString.return_value = 'some-uuid'
+        pool_mock.info.return_value = [0, 0, 0, 0]
+        pool_mock.autostart.return_value = True
+        pool_mock.isPersistent.return_value = True
+        pool_mock.XMLDesc.return_value = '''<pool type='rbd'>
+  <name>ceph</name>
+  <uuid>some-uuid</uuid>
+  <capacity unit='bytes'>0</capacity>
+  <allocation unit='bytes'>0</allocation>
+  <available unit='bytes'>0</available>
+  <source>
+    <host name='localhost' port='6789'/>
+    <host name='localhost' port='6790'/>
+    <name>rbd</name>
+    <auth type='ceph' username='admin'>
+      <secret uuid='2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'/>
+    </auth>
+  </source>
+</pool>'''
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        # pylint: enable=no-member
+
+        pool = virt.pool_info('ceph')
+        self.assertEqual({
+            'uuid': 'some-uuid',
+            'state': 'inactive',
+            'capacity': 0,
+            'allocation': 0,
+            'free': 0,
+            'autostart': True,
+            'persistent': True,
+            'type': 'rbd',
+            'target_path': None}, pool)
+
     def test_pool_info_notfound(self):
         '''
         Test virt.pool_info() when the pool can't be found
