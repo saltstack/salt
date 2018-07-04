@@ -182,9 +182,7 @@ do
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
-EOF'''.format(
-            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-            ).split('\n')])
+EOF'''.format(EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID).split('\n')])
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
