@@ -216,8 +216,11 @@ class SlackClient(object):
         try:
             groups_gen = itertools.chain(self._groups_from_pillar(groups_pillar_name).items(), use_groups.items())
         except AttributeError:
-            log.warn('Failed to get groups from %s: %s', groups_pillar_name, self._groups_from_pillar(groups_pillar_name))
-            log.warn('or from config: %s', use_groups)
+            log.warning('Failed to get groups from %s: %s or from config: %s',
+                groups_pillar_name,
+                self._groups_from_pillar(groups_pillar_name),
+                use_groups
+            )
             groups_gen = []
         for name, config in groups_gen:
             log.info('Trying to get %s and %s to be useful', name, config)
@@ -231,7 +234,7 @@ class SlackClient(object):
                 ret_groups[name]['default_target'].update(config.get('default_target', {}))
                 ret_groups[name]['targets'].update(config.get('targets', {}))
             except (IndexError, AttributeError):
-                log.warn("Couldn't use group %s. Check that targets is a dict and not a list", name)
+                log.warning("Couldn't use group %s. Check that targets is a dictionary and not a list", name)
 
         log.debug('Got the groups: %s', ret_groups)
         return ret_groups
@@ -683,11 +686,11 @@ class SlackClient(object):
                 # 10 times without taking a break.
                 log.trace('Got a message from the generator: %s', msg.keys())
                 if count > 10:
-                    log.warn('Breaking in getting messages because count is exceeded')
+                    log.warning('Breaking in getting messages because count is exceeded')
                     break
                 if len(msg) == 0:
                     count += 1
-                    log.warn('len(msg) is zero')
+                    log.warning('Skipping an empty message.')
                     continue  # This one is a dud, get the next message
                 if msg.get('done'):
                     log.trace('msg is done')
