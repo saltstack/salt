@@ -1,0 +1,23 @@
+# coding=utf-8
+'''
+All text work utilities (formatting messages, layout etc).
+'''
+
+import textwrap
+
+
+def cli_info(data, title='Info'):
+    '''
+    Prints an info on CLI with the title.
+    Useful for infos, general errors etc.
+
+    :param data:
+    :param title:
+    :return:
+    '''
+
+    wrapper = textwrap.TextWrapper()
+    wrapper.initial_indent = ' ' * 4
+    wrapper.subsequent_indent = wrapper.initial_indent
+
+    return '{title}:\n{text}'.format(title=title, text=wrapper.fill(data))
