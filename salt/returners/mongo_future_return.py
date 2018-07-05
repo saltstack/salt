@@ -174,8 +174,9 @@ def _get_conn(ret):
     # a bunch of these sections that need to be supported
     if uri and PYMONGO_VERSION > _LooseVersion('2.3'):
         if uri and host:
-            warnlog = 'Specified both URI and host. URI {0} will be taken'.format(uri)
-            log.warn(warnlog)
+            raise salt.exceptions.SaltConfigurationError(
+                    "Mongo returner expects either uri or host configuration. Both were provided")
+
 
         pymongo.uri_parser.parse_uri(uri)
         conn = pymongo.MongoClient(uri)
@@ -184,6 +185,9 @@ def _get_conn(ret):
         if PYMONGO_VERSION > _LooseVersion('2.3'):
             conn = pymongo.MongoClient(host, port)
         else:
+            if uri:
+                raise salt.exceptions.SaltConfigurationError(
+                    "pymongo <= 2.3 does not support uri format")
             conn = pymongo.Connection(host, port)
 
         mdb = conn[db_]
