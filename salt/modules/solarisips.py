@@ -314,7 +314,7 @@ def version(*names, **kwargs):
         ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
 
     # Append package names which are not installed/found
-    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret), False), names))
+    unmatched = list(filter(lambda name: not reduce(lambda x, y : x or name in y, ret, False), names))
     ret.update(zip(unmatched, itertools.cycle(('',))))
 
     # Return a string if only one package name passed
