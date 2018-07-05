@@ -49,7 +49,7 @@ log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
-_DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
+_DFLT_LOG_FMT_CONSOLE = '[JID %(jid)s] [%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )

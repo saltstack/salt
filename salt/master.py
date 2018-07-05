@@ -8,6 +8,7 @@ involves preparing the three listeners and the workers needed by the master.
 from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import copy
 import ctypes
+import functools
 import os
 import re
 import sys
@@ -89,6 +90,9 @@ try:
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
+
+from tornado.stack_context import StackContext, run_with_stack_context
+from salt.utils.ctx import RequestContext
 
 
 log = logging.getLogger(__name__)
@@ -1107,6 +1111,15 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             start = time.time()
             self.stats[cmd]['runs'] += 1
         ret = self.aes_funcs.run_func(data['cmd'], data)
+
+        def run_func(data):
+            return self.aes_funcs.run_func(data['cmd'], data)
+
+        #current_request = RequestContext.current
+        #ret = run_with_stack_context(StackContext(RequestContext(current_request)), run_func(data))
+        with StackContext(functools.partial(RequestContext, data)):
+            ret = run_func(data)
+
         if self.opts['master_stats']:
             self._post_stats(start, cmd)
         return ret
@@ -1977,6 +1990,7 @@ class ClearFuncs(object):
         # Authorized. Do the job!
         try:
             jid = salt.utils.jid.gen_jid(self.opts)
+            RequestContext.current['jid'] = jid
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),

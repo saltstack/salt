@@ -305,6 +305,15 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
     def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ
              exc_info_on_loglevel=None):
         # If both exc_info and exc_info_on_loglevel are both passed, let's fail
+        if extra is None:
+            extra = {}
+
+        from salt.utils.ctx import RequestContext
+        current_jid = RequestContext.current.get('jid', None)
+
+        if current_jid is not None:
+            extra['jid'] = current_jid
+
         if exc_info and exc_info_on_loglevel:
             raise RuntimeError(
                 'Only one of \'exc_info\' and \'exc_info_on_loglevel\' is '
@@ -523,7 +532,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     # Set the default console formatter config
     if not log_format:
-        log_format = '[%(levelname)-8s] %(message)s'
+        log_format = '[JID %(jid)s] [%(levelname)-8s] %(message)s'
     if not date_format:
         date_format = '%H:%M:%S'
 
