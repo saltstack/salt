@@ -31,6 +31,8 @@ import salt.utils.versions
 import salt.transport
 import salt.log.setup
 import salt.output
+import salt.utils.text
+
 from salt.ext import six
 
 # Import 3rd-party libs
@@ -375,6 +377,8 @@ class SyncClientMixin(object):
                     data['return'] = func(*args, **kwargs)
                 except TypeError as exc:
                     data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
+                except Exception as exc:
+                    data['return'] = salt.utils.text.cli_info(str(exc), 'General error occurred')
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:
