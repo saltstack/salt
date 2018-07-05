@@ -176,8 +176,6 @@ def _get_conn(ret):
         if uri and host:
             raise salt.exceptions.SaltConfigurationError(
                     "Mongo returner expects either uri or host configuration. Both were provided")
-
-
         pymongo.uri_parser.parse_uri(uri)
         conn = pymongo.MongoClient(uri)
         mdb = conn.get_database()
