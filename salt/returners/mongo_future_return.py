@@ -7,8 +7,8 @@ Required python modules: pymongo
 
 This returner will send data from the minions to a MongoDB server. MongoDB
 server can be configured by using host, port, db, user and password settings
-or by URI (for pymongo > 2.3). To configure the settings for your MongoDB
-server, add the following lines to the minion config files:
+or by connection string URI (for pymongo > 2.3). To configure the settings
+for your MongoDB server, add the following lines to the minion config files:
 
 .. code-block:: yaml
 
@@ -23,6 +23,23 @@ Or single URI:
 .. code-block:: yaml
 
    mongo.uri: URI
+
+where uri is in the format:
+
+.. code-block:: text
+
+    mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+Example:
+
+.. code-block:: text
+
+    mongodb://db1.example.net:27017/mydatabase
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
+
+More information on URI format can be found in
+https://docs.mongodb.com/manual/reference/connection-string/
 
 You can also ask for indexes creation on the most common used fields, which
 should greatly improve performance. Indexes are not created by default.
