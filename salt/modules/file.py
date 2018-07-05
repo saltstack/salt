@@ -4722,6 +4722,11 @@ def check_managed_changes(
             defaults,
             skip_verify,
             **kwargs)
+
+        # Ensure that user-provided hash string is lowercase
+        if source_sum and ('hsum' in source_sum):
+            source_sum['hsum'] = source_sum['hsum'].lower()
+
         if comments:
             __clean_tmp(sfn)
             return False, comments
