@@ -1523,17 +1523,12 @@ def installed(
         # _find_install_targets() found no targets or encountered an error
 
         # check that the hold function is available
-        if 'pkg.hold' in __salt__:
-            if 'hold' in kwargs:
+        if 'pkg.hold' in __salt__ and 'hold' in kwargs:
                 try:
-                    if kwargs['hold']:
-                        hold_ret = __salt__['pkg.hold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
-                    else:
-                        hold_ret = __salt__['pkg.unhold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
+                    action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
+                    hold_ret = __salt__[action](
+                        name=name, pkgs=pkgs, sources=sources
+                    )
                 except (CommandExecutionError, SaltInvocationError) as exc:
                     return {'name': name,
                             'changes': {},
