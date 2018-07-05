@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2018.3.2
+.. versionadded:: Fluorine
 
 Management of Dell DRAC
 
@@ -11,7 +11,7 @@ Ensure the property is set
   .. code-block:: yaml
 
   test:
-    dracr.property:
+    dracr.property_present:
        - properties:
            System.ServerOS.HostName: "Pretty-server"
            System.ServerOS.OSName: "Ubuntu 16.04"
@@ -21,7 +21,7 @@ Ensure the property is set
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.exceptions
 
@@ -36,7 +36,7 @@ def __virtual__():
     return False
 
 
-def property(properties, admin_username='root', admin_password='calvin', host=None, **kwargs):
+def property_present(properties, admin_username='root', admin_password='calvin', host=None, **kwargs):
     '''
     properties = {}
     '''
