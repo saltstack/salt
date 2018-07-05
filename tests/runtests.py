@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 import time
+import warnings
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -517,20 +518,26 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 is_admin = True
             else:
                 is_admin = salt.utils.win_functions.is_admin(current_user)
+            if self.options.coverage and any((
+                        self.options.name,
+                        not is_admin,
+                        not self.options.run_destructive)) \
+                    and self._check_enabled_suites(include_unit=True):
+                warnings.warn("Test suite not running with elevated priviledges")
         else:
             is_admin = os.geteuid() == 0
 
-        if self.options.coverage and any((
-                    self.options.name,
-                    not is_admin,
-                    not self.options.run_destructive)) \
-                and self._check_enabled_suites(include_unit=True):
-            self.error(
-                'No sense in generating the tests coverage report when '
-                'not running the full test suite, including the '
-                'destructive tests, as \'root\'. It would only produce '
-                'incorrect results.'
-            )
+            if self.options.coverage and any((
+                        self.options.name,
+                        not is_admin,
+                        not self.options.run_destructive)) \
+                    and self._check_enabled_suites(include_unit=True):
+                self.error(
+                    'No sense in generating the tests coverage report when '
+                    'not running the full test suite, including the '
+                    'destructive tests, as \'root\'. It would only produce '
+                    'incorrect results.'
+                )
 
         # When no tests are specifically enumerated on the command line, setup
         # a default run: +unit -cloud_provider
@@ -736,6 +743,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         with TestDaemon(self):
             if self.options.name:
                 for name in self.options.name:
+                    name = name.strip()
+                    if not name:
+                        continue
                     if os.path.isfile(name):
                         if not name.endswith('.py'):
                             continue

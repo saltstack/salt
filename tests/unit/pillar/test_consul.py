@@ -38,7 +38,7 @@ SIMPLE_DICT = {'key1': {'key2': 'val1'}}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not consul_pillar.HAS_CONSUL, 'python-consul module not installed')
+@skipIf(not consul_pillar.consul, 'python-consul module not installed')
 class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.pillar.consul_pillar

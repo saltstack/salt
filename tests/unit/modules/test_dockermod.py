@@ -46,11 +46,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
+            whitelist=['args', 'docker', 'json', 'state', 'thin']
         )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 
@@ -169,6 +166,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
+                                 'config.get': MagicMock(return_value=True),
                                  'cp.cache_file': MagicMock(return_value=False)}):
                     with patch.dict(docker_mod.__utils__,
                                     {'docker.get_client_args': client_args_mock}):
@@ -176,6 +174,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                             command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
+
+    def test_update_mine(self):
+        '''
+        Test the docker.update_mine config option
+        '''
+        def config_get_disabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': False}[val]
+
+        def config_get_enabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': True}[val]
+
+        mine_mock = Mock()
+        dunder_salt = {
+            'config.get': MagicMock(side_effect=config_get_disabled),
+            'mine.send': mine_mock,
+        }
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            docker_mod.stop('foo', timeout=1)
+            mine_mock.assert_not_called()
+
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            dunder_salt['config.get'].side_effect = config_get_enabled
+            docker_mod.stop('foo', timeout=1)
+            self.assert_called_once(mine_mock)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -1053,3 +1089,104 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
             ]
         )
+
+    def test_port(self):
+        '''
+        Test docker.port function. Note that this test case does not test what
+        happens when a specific container name is passed and that container
+        does not exist. When that happens, the Docker API will just raise a 404
+        error. Since we're using as side_effect to mock
+        docker.inspect_container, it would be meaningless to code raising an
+        exception into it and then test that we raised that exception.
+        '''
+        ports = {
+            'foo': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'bar': {
+                '4444/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32767'}
+                ],
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'baz': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+        }
+        list_mock = MagicMock(return_value=['bar', 'baz', 'foo'])
+        inspect_mock = MagicMock(
+            side_effect=lambda x: {'NetworkSettings': {'Ports': ports.get(x)}}
+        )
+        with patch.object(docker_mod, 'list_containers', list_mock), \
+                patch.object(docker_mod, 'inspect_container', inspect_mock):
+
+            # Test with specific container name
+            ret = docker_mod.port('foo')
+            self.assertEqual(ret, ports['foo'])
+
+            # Test with specific container name and filtering on port
+            ret = docker_mod.port('foo', private_port='5555/tcp')
+            self.assertEqual(ret, {'5555/tcp': ports['foo']['5555/tcp']})
+
+            # Test using pattern expression
+            ret = docker_mod.port('ba*')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba?')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba[rz]')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+
+            # Test using pattern expression and port filtering
+            ret = docker_mod.port('ba*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba?', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba[rz]', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('*')
+            self.assertEqual(ret, ports)
+            ret = docker_mod.port('*', private_port='5555/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'5555/tcp': ports['foo']['5555/tcp']},
+                 'bar': {'5555/tcp': ports['bar']['5555/tcp']},
+                 'baz': {'5555/tcp': ports['baz']['5555/tcp']}}
+            )
+            ret = docker_mod.port('*', private_port=6666)
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {'6666/udp': ports['baz']['6666/udp']}}
+            )
+            ret = docker_mod.port('*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {}}
+            )

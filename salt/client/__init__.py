@@ -228,7 +228,7 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
+    def gather_job_info(self, jid, tgt, tgt_type, listen=True, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -240,6 +240,7 @@ class LocalClient(object):
                                 arg=[jid],
                                 tgt_type=tgt_type,
                                 timeout=timeout,
+                                listen=listen,
                                 **kwargs
                                )
 
@@ -449,6 +450,7 @@ class LocalClient(object):
             sub=3,
             cli=False,
             progress=False,
+            full_return=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -488,6 +490,7 @@ class LocalClient(object):
                 ret=ret,
                 kwarg=kwarg,
                 progress=progress,
+                full_return=full_return,
                 **kwargs)
 
     def cmd_batch(
@@ -519,7 +522,15 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
+        # We need to re-import salt.utils.args here
+        # even though it has already been imported.
+        # when cmd_batch is called via the NetAPI
+        # the module is unavailable.
+        import salt.utils.args
+
+        # Late import - not used anywhere else in this file
         import salt.cli.batch
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {'tgt': tgt,
                 'fun': fun,
@@ -1048,7 +1059,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
-        missing = []
+        missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
@@ -1088,7 +1099,7 @@ class LocalClient(object):
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     if 'missing' in raw.get('data', {}):
-                        missing.extend(raw['data']['missing'])
+                        missing.update(raw['data']['missing'])
                     continue
                 if 'return' not in raw['data']:
                     continue
@@ -1230,6 +1241,12 @@ class LocalClient(object):
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
 
+        # Filter out any minions marked as missing for which we received
+        # returns (prevents false events sent due to higher-level masters not
+        # knowing about lower-level minions).
+        missing -= found
+
+        # Report on missing minions
         if missing:
             for minion in missing:
                 yield {minion: {'failed': True}}

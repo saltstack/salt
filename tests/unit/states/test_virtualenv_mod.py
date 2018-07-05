@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
@@ -75,7 +75,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(virtualenv_mod.__opts__, {"test": False}):
                     ret.update({'comment': "The 'use_wheel' option is"
-                                " only supported in pip 1.4 and newer."
+                                " only supported in pip between 1.4 and 9.0.3."
                                 " The version of pip detected was 1.1.",
                                 'result': False})
                     self.assertDictEqual(virtualenv_mod.managed('salt',

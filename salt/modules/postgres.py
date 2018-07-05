@@ -199,7 +199,9 @@ def _run_initdb(name,
         password=None,
         encoding='UTF8',
         locale=None,
-        runas=None):
+        runas=None,
+        waldir=None,
+        checksums=False):
     '''
     Helper function to call initdb
     '''
@@ -226,6 +228,15 @@ def _run_initdb(name,
 
     if locale is not None:
         cmd.append('--locale={0}'.format(locale))
+
+    # intentionally use short option, as the long option name has been
+    # renamed from "xlogdir" to "waldir" in PostgreSQL 10
+    if waldir is not None:
+        cmd.append('-X')
+        cmd.append(waldir)
+
+    if checksums:
+        cmd.append('--data-checksums')
 
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
@@ -995,7 +1006,6 @@ def _role_cmd_args(name,
                    connlimit=None,
                    inherit=None,
                    createdb=None,
-                   createuser=None,
                    createroles=None,
                    superuser=None,
                    groups=None,
@@ -1003,8 +1013,6 @@ def _role_cmd_args(name,
                    rolepassword=None,
                    valid_until=None,
                    db_role=None):
-    if createuser is not None and superuser is None:
-        superuser = createuser
     if inherit is None:
         if typ_ in ['user', 'group']:
             inherit = True
@@ -1088,7 +1096,6 @@ def _role_create(name,
                  password=None,
                  createdb=None,
                  createroles=None,
-                 createuser=None,
                  encrypted=None,
                  superuser=None,
                  login=None,
@@ -1121,7 +1128,6 @@ def _role_create(name,
         inherit=inherit,
         createdb=createdb,
         createroles=createroles,
-        createuser=createuser,
         superuser=superuser,
         groups=groups,
         replication=replication,
@@ -1143,7 +1149,6 @@ def user_create(username,
                 maintenance_db=None,
                 password=None,
                 createdb=None,
-                createuser=None,
                 createroles=None,
                 inherit=None,
                 login=None,
@@ -1174,7 +1179,6 @@ def user_create(username,
                         maintenance_db=maintenance_db,
                         password=password,
                         createdb=createdb,
-                        createuser=createuser,
                         createroles=createroles,
                         inherit=inherit,
                         login=login,
@@ -1195,7 +1199,6 @@ def _role_update(name,
                  maintenance_db=None,
                  password=None,
                  createdb=None,
-                 createuser=None,
                  typ_='role',
                  createroles=None,
                  inherit=None,
@@ -1235,7 +1238,6 @@ def _role_update(name,
         connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
-        createuser=createuser,
         createroles=createroles,
         superuser=superuser,
         groups=groups,
@@ -1259,7 +1261,6 @@ def user_update(username,
                 maintenance_db=None,
                 password=None,
                 createdb=None,
-                createuser=None,
                 createroles=None,
                 encrypted=None,
                 superuser=None,
@@ -1293,7 +1294,6 @@ def user_update(username,
                         login=login,
                         connlimit=connlimit,
                         createdb=createdb,
-                        createuser=createuser,
                         createroles=createroles,
                         encrypted=encrypted,
                         superuser=superuser,
@@ -1475,11 +1475,12 @@ def is_available_extension(name,
 
 
 def _pg_is_older_ext_ver(a, b):
-    '''Return true if version a is lesser than b
-    TODO: be more intelligent to test versions
-
     '''
-    return a < b
+    Compare versions of extensions using salt.utils.versions.LooseVersion.
+
+    Returns ``True`` if version a is lesser than b.
+    '''
+    return _LooseVersion(a) < _LooseVersion(b)
 
 
 def is_installed_extension(name,
@@ -1740,7 +1741,6 @@ def group_create(groupname,
                  maintenance_db=None,
                  password=None,
                  createdb=None,
-                 createuser=None,
                  createroles=None,
                  encrypted=None,
                  login=None,
@@ -1771,7 +1771,6 @@ def group_create(groupname,
                         password=password,
                         createdb=createdb,
                         createroles=createroles,
-                        createuser=createuser,
                         encrypted=encrypted,
                         login=login,
                         inherit=inherit,
@@ -1790,7 +1789,6 @@ def group_update(groupname,
                  password=None,
                  createdb=None,
                  createroles=None,
-                 createuser=None,
                  encrypted=None,
                  inherit=None,
                  login=None,
@@ -1819,7 +1817,6 @@ def group_update(groupname,
                         createdb=createdb,
                         typ_='group',
                         createroles=createroles,
-                        createuser=createuser,
                         encrypted=encrypted,
                         login=login,
                         inherit=inherit,
@@ -3094,6 +3091,8 @@ def datadir_init(name,
         password=None,
         encoding='UTF8',
         locale=None,
+        waldir=None,
+        checksums=False,
         runas=None):
     '''
     .. versionadded:: 2016.3.0
@@ -3124,8 +3123,22 @@ def datadir_init(name,
     locale
         The default locale for new databases
 
+    waldir
+        The transaction log (WAL) directory (default is to keep WAL
+        inside the data directory)
+
+        .. versionadded:: Fluorine
+
+    checksums
+        If True, the cluster will be created with data page checksums.
+
+        .. note::  Data page checksums are supported since PostgreSQL 9.3.
+
+        .. versionadded:: Fluorine
+
     runas
         The system user the operation should be performed on behalf of
+
     '''
     if datadir_exists(name):
         log.info('%s already exists', name)

@@ -106,8 +106,20 @@ def dict_search_and_replace(d, old, new, expanded):
     for (k, v) in six.iteritems(d):
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
+
+        if isinstance(v, list):
+            x = 0
+            for i in v:
+                if isinstance(i, dict):
+                    dict_search_and_replace(v[x], old, new, expanded)
+                if isinstance(i, six.string_types):
+                    if i == old:
+                        v[x] = new
+                x = x + 1
+
         if v == old:
             d[k] = new
+
     return d
 
 
@@ -124,6 +136,35 @@ def find_value_to_expand(x, v):
     return a
 
 
+# Look for regexes and expand them
+def find_and_process_re(_str, v, k, b, expanded):
+    vre = re.finditer(r'(^|.)\$\{.*?\}', _str)
+    if vre:
+        for re_v in vre:
+            re_str = str(re_v.group())
+            if re_str.startswith('\\'):
+                v_new = _str.replace(re_str, re_str.lstrip('\\'))
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                expanded.append(k)
+            elif not re_str.startswith('$'):
+                v_expanded = find_value_to_expand(b, re_str[1:])
+                v_new = _str.replace(re_str[1:], v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                expanded.append(k)
+            else:
+                v_expanded = find_value_to_expand(b, re_str)
+                if isinstance(v, six.string_types):
+                    v_new = v.replace(re_str, v_expanded)
+                else:
+                    v_new = _str.replace(re_str, v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                v = v_new
+                expanded.append(k)
+    return b
+
+
 # Return a dict that contains expanded variables if found
 def expand_variables(a, b, expanded, path=None):
     if path is None:
@@ -134,23 +175,15 @@ def expand_variables(a, b, expanded, path=None):
         if isinstance(v, dict):
             expand_variables(v, b, expanded, path + [six.text_type(k)])
         else:
-            if isinstance(v, str):
-                vre = re.search(r'(^|.)\$\{.*?\}', v)
-                if vre:
-                    re_v = vre.group(0)
-                    if re_v.startswith('\\'):
-                        v_new = v.replace(re_v, re_v.lstrip('\\'))
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    elif not re_v.startswith('$'):
-                        v_expanded = find_value_to_expand(b, re_v[1:])
-                        v_new = v.replace(re_v[1:], v_expanded)
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    else:
-                        v_expanded = find_value_to_expand(b, re_v)
-                        b = dict_search_and_replace(b, v, v_expanded, expanded)
-                        expanded.append(k)
+            if isinstance(v, list):
+                for i in v:
+                    if isinstance(i, dict):
+                        expand_variables(i, b, expanded, path + [str(k)])
+                    if isinstance(i, six.string_types):
+                        b = find_and_process_re(i, v, k, b, expanded)
+
+            if isinstance(v, six.string_types):
+                b = find_and_process_re(v, v, k, b, expanded)
     return b
 
 
@@ -171,8 +204,14 @@ def expand_classes_in_order(minion_dict,
             # Fix corner case where class is loaded but doesn't contain anything
             if expanded_classes[klass] is None:
                 expanded_classes[klass] = {}
+
+            # Merge newly found pillars into existing ones
+            new_pillars = expanded_classes[klass].get('pillars', {})
+            if new_pillars:
+                dict_merge(salt_data['__pillar__'], new_pillars)
+
             # Now replace class element in classes_to_expand by expansion
-            if 'classes' in expanded_classes[klass]:
+            if expanded_classes[klass].get('classes'):
                 l_id = classes_to_expand.index(klass)
                 classes_to_expand[l_id:l_id] = expanded_classes[klass]['classes']
                 expand_classes_in_order(minion_dict,
@@ -237,6 +276,9 @@ def expanded_dict_from_minion(minion_id, salt_data):
     else:
         log.warning('%s: Node definition not found', minion_id)
         node_dict[minion_id] = {}
+
+    # Merge newly found pillars into existing ones
+    dict_merge(salt_data['__pillar__'], node_dict[minion_id].get('pillars', {}))
 
     # Get 2 ordered lists:
     # expanded_classes: A list of all the dicts

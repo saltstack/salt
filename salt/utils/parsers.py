@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.parsers
@@ -977,9 +977,17 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     # Log error only when running salt-master as a root user.
                     # Otherwise this can be ignored, since salt-master is able to
                     # overwrite the PIDfile on the next start.
-                    if not os.getuid():
-                        logger.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
-                        logger.debug(six.text_type(err))
+                    err_msg = ('PIDfile could not be deleted: %s',
+                               six.text_type(self.config['pidfile']))
+                    if salt.utils.platform.is_windows():
+                        user = salt.utils.win_functions.get_current_user()
+                        if salt.utils.win_functions.is_admin(user):
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
+                    else:
+                        if not os.getuid():
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
@@ -1088,7 +1096,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, take a comma or space delimited list of '
+                  'servers, take a comma or whitespace delimited list of '
                   'servers.')
         )
         group.add_option(
@@ -3024,6 +3032,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Ssh private key file.'
         )
         auth_group.add_option(
+            '--priv-passwd',
+            dest='ssh_priv_passwd',
+            default='',
+            help='Passphrase for ssh private key file.'
+        )
+        auth_group.add_option(
             '-i',
             '--ignore-host-keys',
             dest='ignore_host_keys',
@@ -3087,11 +3101,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Run command via sudo.'
         )
         auth_group.add_option(
-            '--skip-roster',
-            dest='ssh_skip_roster',
+            '--update-roster',
+            dest='ssh_update_roster',
             default=False,
             action='store_true',
-            help='If hostname is not found in the roster, do not store the information'
+            help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)

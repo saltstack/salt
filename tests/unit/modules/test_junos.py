@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
+    :codeauthor: Rajvi Dhimar <rajvidhimar95@gmail.com>
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -20,6 +20,8 @@ try:
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
     from jnpr.junos.device import Device
+    from jnpr.junos.device import Device
+    import jxmlease  # pylint: disable=unused-import
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -28,7 +30,7 @@ except ImportError:
 import salt.modules.junos as junos
 
 
-@skipIf(not HAS_JUNOS, 'Install junos-eznc to be able to run this test.')
+@skipIf(not HAS_JUNOS, 'The junos-eznc and jxmlease modules are required')
 class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def setup_loader_modules(self):
@@ -383,7 +385,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = True
             self.assertEqual(junos.commit(), ret)
 
-    def test_commit_raise_commit_check_exeception(self):
+    def test_commit_raise_commit_check_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check:
             mock_commit_check.side_effect = self.raise_exception
             ret = dict()
@@ -501,7 +503,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     'confirm': 2, '__pub_fun': 'junos.rollback',
                     '__pub_jid': '20170221184518526067', '__pub_tgt': 'mac_min',
                     '__pub_tgt_type': 'glob', '__pub_ret': ''}
-            junos.rollback(2, **args)
+            junos.rollback(id=2, **args)
             mock_rollback.assert_called_with(2)
             mock_commit.assert_called_with(confirm=2)
 
@@ -646,7 +648,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_diff_with_arg(self):
         with patch('jnpr.junos.utils.config.Config.diff') as mock_diff:
-            junos.diff(2)
+            junos.diff(id=2)
             mock_diff.assert_called_with(rb_id=2)
 
     def test_diff_exception(self):
@@ -702,7 +704,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_cli_with_format_as_empty_string(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
-            junos.cli('show version', '')
+            junos.cli('show version', format='')
             mock_cli.assert_called_with('show version', 'text', warning=False)
 
     def test_cli(self):
@@ -1471,29 +1473,26 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_execute.return_value = etree.XML(
                 '<rpc-reply>text rpc reply</rpc-reply>')
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
-                junos.rpc('get-chassis-inventory', '/path/to/file', 'text')
-                handle = m()
-                handle.write.assert_called_with('text rpc reply')
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
+                junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
+                writes = m_open.write_calls()
+                assert writes == ['text rpc reply'], writes
 
     def test_rpc_write_file_format_json(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
                 patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file', format='json')
-                handle = m()
-                handle.write.assert_called_with('json rpc reply')
+                writes = m_open.write_calls()
+                assert writes == ['json rpc reply'], writes
 
     def test_rpc_write_file(self):
         with patch('salt.modules.junos.jxmlease.parse') as mock_parse, \
                 patch('salt.modules.junos.etree.tostring') as mock_tostring, \
                 patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_tostring.return_value = 'xml rpc reply'
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file')
-                handle = m()
-                handle.write.assert_called_with('xml rpc reply')
+                writes = m_open.write_calls()
+                assert writes == ['xml rpc reply'], writes

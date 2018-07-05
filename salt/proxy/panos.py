@@ -5,7 +5,7 @@ Proxy Minion interface module for managing Palo Alto firewall devices
 
 .. versionadded:: 2018.3.0
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -212,6 +212,7 @@ import logging
 from salt._compat import ElementTree as ET
 import salt.exceptions
 import salt.utils.xmlutil as xml
+from salt.ext import six
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['panos']
@@ -319,6 +320,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'dev_pass':
             # Pass credentials without the target declaration
@@ -330,6 +332,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'pan_key':
             # Pass the api key with the target declaration
@@ -342,6 +345,7 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
         elif DETAILS['method'] == 'pan_pass':
             # Pass credentials with the target declaration
@@ -355,12 +359,31 @@ def call(payload=None):
                                         decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
     except KeyError as err:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
 
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
+
+    if six.text_type(r['status']) not in ['200', '201', '204']:
+        if six.text_type(r['status']) == '400':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request due to a client error.")
+        elif six.text_type(r['status']) == '401':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request because it lacks valid authentication "
+                "credentials for the target resource.")
+        elif six.text_type(r['status']) == '403':
+            raise salt.exceptions.CommandExecutionError(
+                "The server refused to authorize the request.")
+        elif six.text_type(r['status']) == '404':
+            raise salt.exceptions.CommandExecutionError(
+                "The requested resource could not be found.")
+        else:
+            raise salt.exceptions.CommandExecutionError(
+                "Did not receive a valid response from host.")
 
     xmldata = ET.fromstring(r['text'])
 

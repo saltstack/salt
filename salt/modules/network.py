@@ -1140,7 +1140,7 @@ def convert_cidr(cidr):
     ret = {'network': None,
            'netmask': None}
     cidr = calc_net(cidr)
-    network_info = salt.ext.ipaddress.ip_network(cidr)
+    network_info = ipaddress.ip_network(cidr)
     ret['network'] = six.text_type(network_info.network_address)
     ret['netmask'] = six.text_type(network_info.netmask)
     return ret
@@ -1354,6 +1354,12 @@ def mod_hostname(hostname):
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
+        if __grains__['lsb_distrib_id'] == 'nilrt':
+            str_hostname = salt.utils.stringutils.to_str(hostname)
+            nirtcfg_cmd = '/usr/local/natinst/bin/nirtcfg'
+            nirtcfg_cmd += ' --set section=SystemSettings,token=\'Host_Name\',value=\'{0}\''.format(str_hostname)
+            if __salt__['cmd.run_all'](nirtcfg_cmd)['retcode'] != 0:
+                raise CommandExecutionError('Couldn\'t set hostname to: {0}\n'.format(str_hostname))
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))

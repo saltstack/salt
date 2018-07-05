@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
@@ -49,7 +50,6 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
@@ -261,11 +261,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
@@ -596,7 +606,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -1856,6 +1866,9 @@ class State(object):
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
+        if '__env__' in low:
+            inject_globals['__env__'] = six.text_type(low['__env__'])
+
         if self.inject_globals:
             inject_globals.update(self.inject_globals)
 
@@ -1889,11 +1902,6 @@ class State(object):
                     # allow setting the OS environ also make use of the "env"
                     # keyword argument, which is not a string
                     inject_globals['__env__'] = six.text_type(cdata['kwargs']['env'])
-                elif '__env__' in low:
-                    # The user is passing an alternative environment using
-                    # __env__ which is also not the appropriate choice, still,
-                    # handle it
-                    inject_globals['__env__'] = six.text_type(low['__env__'])
 
             if '__env__' not in inject_globals:
                 # Let's use the default environment
@@ -2050,8 +2058,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
@@ -2138,7 +2147,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.0001)
+            time.sleep(0.01)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2334,7 +2343,7 @@ class State(object):
             while True:
                 if self.reconcile_procs(run_dict):
                     break
-                time.sleep(0.0001)
+                time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
@@ -2942,7 +2951,7 @@ class BaseHighState(object):
         mopts = self.client.master_opts()
         if not isinstance(mopts, dict):
             # An error happened on the master
-            opts['renderer'] = 'yaml_jinja'
+            opts['renderer'] = 'jinja|yaml'
             opts['failhard'] = False
             opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
@@ -3012,7 +3021,6 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
-            self.opts['environment'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
@@ -3443,43 +3451,45 @@ class BaseHighState(object):
                     'Specified SLS {0} on local filesystem cannot '
                     'be found.'.format(sls)
                 )
+        state = None
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master or through a configured '
                 'fileserver'.format(sls, saltenv)
             )
-        state = None
-        try:
-            state = compile_template(fn_,
-                                     self.state.rend,
-                                     self.state.opts['renderer'],
-                                     self.state.opts['renderer_blacklist'],
-                                     self.state.opts['renderer_whitelist'],
-                                     saltenv,
-                                     sls,
-                                     rendered_sls=mods
-                                     )
-        except SaltRenderError as exc:
-            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
-                saltenv, sls, exc
-            )
-            log.critical(msg)
-            errors.append(msg)
-        except Exception as exc:
-            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
-                sls, exc
-            )
-            log.critical(
-                msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        try:
-            mods.add('{0}:{1}'.format(saltenv, sls))
-        except AttributeError:
-            pass
+        else:
+            try:
+                state = compile_template(fn_,
+                                         self.state.rend,
+                                         self.state.opts['renderer'],
+                                         self.state.opts['renderer_blacklist'],
+                                         self.state.opts['renderer_whitelist'],
+                                         saltenv,
+                                         sls,
+                                         rendered_sls=mods
+                                         )
+            except SaltRenderError as exc:
+                msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
+                    saltenv, sls, exc
+                )
+                log.critical(msg)
+                errors.append(msg)
+            except Exception as exc:
+                msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                    sls, exc
+                )
+                log.critical(
+                    msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
+            try:
+                mods.add('{0}:{1}'.format(saltenv, sls))
+            except AttributeError:
+                pass
+
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -3902,7 +3912,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)

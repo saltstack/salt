@@ -614,7 +614,7 @@ class AssignLicenseTestCase(TestCase):
                                          'fake_license_name',
                                          entity_name='fake_entity_name')
         self.mock_update_assigned_license.assert_called_once_with(
-            self.mock_ent_id, self.mock_lic_key)
+            self.mock_ent_id, self.mock_lic_key, 'fake_license_name')
 
     def test_update_assigned_licenses_call_with_entity(self):
         salt.utils.vmware.assign_license(self.mock_si,
@@ -623,7 +623,7 @@ class AssignLicenseTestCase(TestCase):
                                          self.mock_entity_ref,
                                          'fake_entity_name')
         self.mock_update_assigned_license.assert_called_once_with(
-            self.mock_moid, self.mock_lic_key)
+            self.mock_moid, self.mock_lic_key, 'fake_license_name')
 
     def test_update_assigned_licenses_raises_no_permission(self):
         exc = vim.fault.NoPermission()

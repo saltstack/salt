@@ -3,7 +3,18 @@
 '''
 An engine that listens for libvirt events and resends them to the salt event bus.
 
-Example configuration:
+The minimal configuration is the following and will listen to all events on the
+local hypervisor and send them with a tag starting with ``salt/engines/libvirt_events``:
+
+.. code-block:: yaml
+
+    engines:
+        - libvirt_events
+
+Note that the automatically-picked libvirt connection will depend on the value
+of ``uri_default`` in ``/etc/libvirt/libvirt.conf``. To force using another
+connection like the local LXC libvirt driver, set the ``uri`` property as in the
+following example configuration.
 
 .. code-block:: yaml
 
@@ -15,9 +26,6 @@ Example configuration:
                 - domain/lifecycle
                 - domain/reboot
                 - pool
-
-The default URI is ``qemu:///system`` and the default tag prefix is
-``salt/engines/libvirt_events``.
 
 Filters is a list of event types to relay to the event bus. Items in this list
 can be either one of the main types (``domain``, ``network``, ``pool``,
@@ -305,10 +313,9 @@ def _domain_event_graphics_cb(conn, domain, phase, local, remote, auth, subject,
         '''
         transform address structure into event data piece
         '''
-        data = {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr.family),
-                'node': addr.node}
-        if addr.service is not None:
-            data['service'] = addr.service
+        data = {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr['family']),
+                'node': addr['node'],
+                'service': addr['service']}
         return addr
 
     _salt_send_domain_event(opaque, conn, domain, opaque['event'], {
@@ -316,10 +323,7 @@ def _domain_event_graphics_cb(conn, domain, phase, local, remote, auth, subject,
         'local': get_address(local),
         'remote': get_address(remote),
         'authScheme': auth,
-        'subject': {
-            'type': subject.type,
-            'name': subject.name
-        }
+        'subject': [{'type': item[0], 'name': item[1]} for item in subject]
     })
 
 
@@ -654,14 +658,14 @@ def _append_callback_id(ids, obj, callback_id):
     ids[obj].append(callback_id)
 
 
-def start(uri='qemu:///system',
+def start(uri=None,
           tag_prefix='salt/engines/libvirt_events',
           filters=None):
     '''
     Listen to libvirt events and forward them to salt.
 
     :param uri: libvirt URI to listen on.
-                Defaults to 'qemu:///system'
+                Defaults to None to pick the first available local hypervisor
     :param tag_prefix: the begining of the salt event tag to use.
                        Defaults to 'salt/engines/libvirt_events'
     :param filters: the list of event of listen on. Defaults to 'all'
@@ -671,8 +675,8 @@ def start(uri='qemu:///system',
     try:
         libvirt.virEventRegisterDefaultImpl()
 
-        log.debug('Opening libvirt uri: %s', uri)
         cnx = libvirt.openReadOnly(uri)
+        log.debug('Opened libvirt uri: %s', cnx.getURI())
 
         callback_ids = {}
         all_filters = "all" in filters
@@ -690,6 +694,7 @@ def start(uri='qemu:///system',
         exit_loop = False
         while not exit_loop:
             exit_loop = libvirt.virEventRunDefaultImpl() < 0
+            log.debug('=== in the loop exit_loop %s ===', exit_loop)
 
     except Exception as err:  # pylint: disable=broad-except
         log.exception(err)

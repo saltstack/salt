@@ -33,7 +33,6 @@ import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yamlencoding
-import salt.utils.locales
 import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -205,7 +204,8 @@ def _get_jinja_error_slug(tb_data):
         return [
             x
             for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
+                                         'template',
+                                         '<module>')
         ][-1]
     except IndexError:
         pass
@@ -357,8 +357,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    tojson_filter = jinja_env.filters.get('tojson')
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    if tojson_filter is not None:
+        # Use the existing tojson filter, if present (jinja2 >= 2.9)
+        jinja_env.filters['tojson'] = tojson_filter
     jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
@@ -380,7 +384,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 "Failed to decode using default encoding (%s), trying system encoding",
                 SLS_ENCODING,
             )
-            decoded_context[key] = salt.utils.locales.sdecode(value)
+            decoded_context[key] = salt.utils.data.decode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)

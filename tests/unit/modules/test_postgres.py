@@ -249,7 +249,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     maintenance_db='maint_db',
                     password='foo',
                     createdb=False,
-                    createuser=False,
                     encrypted=False,
                     superuser=False,
                     replication=False,
@@ -299,7 +298,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     maintenance_db='maint_db',
                     password='foo',
                     createdb=False,
-                    createuser=False,
                     encrypted=False,
                     replication=False,
                     rolepassword='test_role_pass',
@@ -331,7 +329,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     login=True,
                     createdb=False,
                     createroles=False,
-                    createuser=False,
                     encrypted=False,
                     superuser=False,
                     replication=False,
@@ -466,7 +463,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=False,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -505,7 +501,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -540,7 +535,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=False,
                     inherit=True,
                     login=True,
@@ -576,7 +570,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     password='test_pass',
                     createdb=False,
                     createroles=True,
-                    createuser=False,
                     encrypted=True,
                     inherit=True,
                     login=True,
@@ -1486,3 +1479,21 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             name = '/var/lib/pgsql/data'
             ret = postgres.datadir_exists(name)
             self.assertTrue(ret)
+
+    def test_pg_is_older_ext_ver(self):
+        '''
+        Test Checks if postgres extension version string is older
+        '''
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '9.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '8.6'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('8.5.2', '8.5.3'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5', '8.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.6'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5.0', '9.5.1'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.5.1'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5.1', '9.5'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('9.5b', '9.5a'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('10a', '10b'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('1.2.3.4', '1.2.3.5'))
+        self.assertTrue(postgres._pg_is_older_ext_ver('10dev', '10next'))
+        self.assertFalse(postgres._pg_is_older_ext_ver('10next', '10dev'))

@@ -960,7 +960,7 @@ class Pillar(object):
                         )
                     )
                     log.error(
-                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        'Exception caught loading ext_pillar \'%s\':\n%s',
                         key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
@@ -1006,6 +1006,13 @@ class Pillar(object):
             mopts['file_roots'] = self.actual_file_roots
             mopts['saltversion'] = __version__
             pillar['master'] = mopts
+        if 'pillar' in self.opts and self.opts.get('ssh_merge_pillar', False):
+            pillar = merge(
+                self.opts['pillar'],
+                pillar,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
         if errors:
             for error in errors:
                 log.critical('Pillar render error: %s', error)

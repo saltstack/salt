@@ -5,7 +5,6 @@ Custom YAML loading in Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import re
 import warnings
 
 import yaml  # pylint: disable=blacklisted-import
@@ -14,6 +13,8 @@ from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
+    yaml.SafeLoader = yaml.CSafeLoader
+    yaml.SafeDumper = yaml.CSafeDumper
 except Exception:
     pass
 
@@ -116,11 +117,6 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
-        elif node.tag == 'tag:yaml.org,2002:str':
-            # If any string comes in as a quoted unicode literal, eval it into
-            # the proper unicode string type.
-            if re.match(r'^u([\'"]).+\1$', node.value, flags=re.IGNORECASE):
-                node.value = eval(node.value, {}, {})  # pylint: disable=W0123
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
 
     def construct_yaml_str(self, node):

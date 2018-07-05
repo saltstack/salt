@@ -35,7 +35,7 @@ Return data to a cassandra server
 
     Use the following cassandra database schema:
 
-    .. code-block:: sql
+    .. code-block:: text
 
         CREATE KEYSPACE IF NOT EXISTS salt
             WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     runtests_helpers.py
@@ -91,6 +91,7 @@ def get_invalid_docs():
         'vsphere.wraps',
     )
     allow_failure_glob = (
+        'runtests_decorators.*',
         'runtests_helpers.*',
         'vsphere.*',
     )

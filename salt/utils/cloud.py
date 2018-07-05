@@ -10,6 +10,7 @@ import os
 import stat
 import codecs
 import shutil
+import uuid
 import hashlib
 import socket
 import tempfile
@@ -27,10 +28,21 @@ import uuid
 
 try:
     import salt.utils.smb
-
     HAS_SMB = True
 except ImportError:
     HAS_SMB = False
+
+try:
+    from pypsexec.client import Client as PsExecClient
+    from pypsexec.scmr import Service as ScmrService
+    from pypsexec.exceptions import SCMRException
+    from smbprotocol.tree import TreeConnect
+    from smbprotocol.exceptions import SMBResponseException
+    logging.getLogger('smbprotocol').setLevel(logging.WARNING)
+    logging.getLogger('pypsexec').setLevel(logging.WARNING)
+    HAS_PSEXEC = True
+except ImportError:
+    HAS_PSEXEC = False
 
 try:
     import winrm
@@ -51,6 +63,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -122,6 +135,71 @@ def __render_script(path, vm_=None, opts=None, minion=''):
         # Specified renderer was not found
         with salt.utils.files.fopen(path, 'r') as fp_:
             return six.text_type(fp_.read())
+
+
+def __ssh_gateway_config_dict(gateway):
+    '''
+    Return a dictionary with gateway options. The result is used
+    to provide arguments to __ssh_gateway_arguments method.
+    '''
+    extended_kwargs = {}
+    if gateway:
+        extended_kwargs['ssh_gateway'] = gateway['ssh_gateway']
+        extended_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+        extended_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+        extended_kwargs['ssh_gateway_command'] = gateway['ssh_gateway_command']
+    return extended_kwargs
+
+
+def __ssh_gateway_arguments(kwargs):
+    '''
+    Return ProxyCommand configuration string for ssh/scp command.
+
+    All gateway options should not include quotes (' or "). To support
+    future user configuration, please make sure to update the dictionary
+    from __ssh_gateway_config_dict and get_ssh_gateway_config (ec2.py)
+    '''
+    extended_arguments = ""
+
+    ssh_gateway = kwargs.get('ssh_gateway', '')
+    ssh_gateway_port = 22
+    if ':' in ssh_gateway:
+        ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+    ssh_gateway_command = kwargs.get('ssh_gateway_command', 'nc -q0 %h %p')
+
+    if ssh_gateway:
+        ssh_gateway_port = kwargs.get('ssh_gateway_port', ssh_gateway_port)
+        ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key']) if 'ssh_gateway_key' in kwargs else ''
+        ssh_gateway_user = kwargs.get('ssh_gateway_user', 'root')
+
+        # Setup ProxyCommand
+        extended_arguments = '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, i.e., non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port,
+                ssh_gateway_command
+            )
+
+    log.info(
+        'Using SSH gateway %s@%s:%s %s',
+        ssh_gateway_user, ssh_gateway, ssh_gateway_port, ssh_gateway_command
+    )
+
+    return extended_arguments
+
+
+def has_winexe():
+    '''
+    True when winexe is found on the system
+    '''
+    return salt.utils.path.which('winexe')
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
@@ -644,7 +722,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     '''
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
-    installations, it might be port 445 (for winexe). It may also be an
+    installations, it might be port 445 (for psexec). It may also be an
     alternate port for SSH, depending on the base image.
     '''
     start = time.time()
@@ -779,15 +857,85 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-def wait_for_winexesvc(host, port, username, password, timeout=900):
+class Client(object):
     '''
-    Wait until winexe connection can be established.
+    Wrap pypsexec.client.Client to fix some stability issues:
+
+      - Set the service name from a keyword arg, this allows multiple service
+        instances to be created in a single process.
+      - Keep trying service and file deletes since they may not succeed on the
+        first try. Raises an exception if they do not succeed after a timeout
+        period.
     '''
-    start = time.time()
-    log.debug(
-        'Attempting winexe connection to host %s on port %s',
-        host, port
-    )
+
+    def __init__(self, server, username=None, password=None, port=445,
+                 encrypt=True, service_name=None):
+        self.service_name = service_name
+        self._exe_file = "{0}.exe".format(self.service_name)
+        self._client = PsExecClient(server, username, password, port, encrypt)
+        self._service = ScmrService(self.service_name, self._client.session)
+
+    def connect(self):
+        return self._client.connect()
+
+    def disconnect(self):
+        return self._client.disconnect()
+
+    def create_service(self):
+        return self._client.create_service()
+
+    def run_executabe(self, *args, **kwargs):
+        return self._client.run_executable(*args, **kwargs)
+
+    def remove_service(self, wait_timeout=10, sleep_wait=1):
+        '''
+        Removes the PAExec service and executable that was created as part of
+        the create_service function. This does not remove any older executables
+        or services from previous runs, use cleanup() instead for that purpose.
+        '''
+
+        # Stops/remove the PAExec service and removes the executable
+        log.debug("Deleting PAExec service at the end of the process")
+        wait_start = time.time()
+        while True:
+            try:
+                self._service.delete()
+            except SCMRException as exc:
+                log.debug("Exception encountered while deleting service %s", repr(exc))
+                if time.time() - wait_start > wait_timeout:
+                    raise exc
+                time.sleep(sleep_wait)
+                continue
+            break
+
+        # delete the PAExec executable
+        smb_tree = TreeConnect(
+            self._client.session,
+            r"\\{0}\ADMIN$".format(self._client.connection.server_name)
+        )
+        log.info("Connecting to SMB Tree %s", smb_tree.share_name)
+        smb_tree.connect()
+
+        wait_start = time.time()
+        while True:
+            try:
+                log.info("Creating open to PAExec file with delete on close flags")
+                self._client._delete_file(smb_tree, self._exe_file)
+            except SMBResponseException as exc:
+                log.debug("Exception deleting file %s %s", self._exe_file, repr(exc))
+                if time.time() - wait_start > wait_timeout:
+                    raise exc
+                time.sleep(sleep_wait)
+                continue
+            break
+        log.info("Disconnecting from SMB Tree %s", smb_tree.share_name)
+        smb_tree.disconnect()
+
+
+def run_winexe_command(cmd, args, host, username, password, port=445):
+    '''
+    Run a command remotly via the winexe executable
+    '''
     creds = "-U '{0}%{1}' //{2}".format(
         username,
         password,
@@ -797,15 +945,47 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
         username,
         host
     )
+    cmd = 'winexe {0} {1} {2}'.format(creds, cmd, args)
+    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args)
+    return win_cmd(cmd, logging_command=logging_cmd)
 
+
+def run_psexec_command(cmd, args, host, username, password, port=445):
+    '''
+    Run a command remotly using the psexec protocol
+    '''
+    if has_winexe() and not HAS_PSEXEC:
+        ret_code = run_winexe_command(cmd, args, host, username, password, port)
+        return None, None, ret_code
+    service_name = 'PS-Exec-{0}'.format(uuid.uuid4())
+    stdout, stderr, ret_code = '', '', None
+    client = Client(host, username, password, port=port, encrypt=False, service_name=service_name)
+    client.connect()
+    try:
+        client.create_service()
+        stdout, stderr, ret_code = client.run_executable(cmd, args)
+    finally:
+        client.remove_service()
+        client.disconnect()
+    return stdout, stderr, ret_code
+
+
+def wait_for_winexe(host, port, username, password, timeout=900):
+    '''
+    Wait until winexe connection can be established.
+    '''
+    start = time.time()
+    log.debug(
+        'Attempting winexe connection to host %s on port %s',
+        host, port
+    )
     try_count = 0
     while True:
         try_count += 1
         try:
             # Shell out to winexe to check %TEMP%
-            ret_code = win_cmd(
-                'winexe {0} "sc query winexesvc"'.format(creds),
-                logging_command=logging_creds
+            ret_code = run_winexe_command(
+                "sc", "query winexesvc", host, username, password, port
             )
             if ret_code == 0:
                 log.debug('winexe connected...')
@@ -815,11 +995,39 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             log.debug('Caught exception in wait_for_winexesvc: %s', exc)
 
         if time.time() - start > timeout:
-            log.error('winexe connection timed out: %s', timeout)
+            return False
+        time.sleep(1)
+
+
+def wait_for_psexecsvc(host, port, username, password, timeout=900):
+    '''
+    Wait until psexec connection can be established.
+    '''
+    if has_winexe() and not HAS_PSEXEC:
+        return wait_for_winexe(host, port, username, password, timeout)
+    start = time.time()
+    try_count = 0
+    while True:
+        try_count += 1
+        ret_code = 1
+        try:
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c hostname', host, username, password, port=port
+            )
+        except Exception as exc:
+            log.exception("Unable to execute command")
+        if ret_code == 0:
+            log.debug('psexec connected...')
+            return True
+        if time.time() - start > timeout:
             return False
         log.debug(
-            'Retrying winexe connection to host %s on port %s (try %s)',
-            host, port, try_count
+            'Retrying psexec connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host,
+                port,
+                try_count
+            )
         )
         time.sleep(1)
 
@@ -835,7 +1043,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     )
     transport = 'ssl'
     if not use_ssl:
-        transport = 'plaintext'
+        transport = 'ntlm'
     trycount = 0
     while True:
         trycount += 1
@@ -868,7 +1076,7 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
         time.sleep(1)
 
 
-def validate_windows_cred(host,
+def validate_windows_cred_winexe(host,
                           username='Administrator',
                           password=None,
                           retries=10,
@@ -885,12 +1093,30 @@ def validate_windows_cred(host,
         username,
         host
     )
-
     for i in range(retries):
         ret_code = win_cmd(
             cmd,
             logging_command=logging_cmd
         )
+    return ret_code == 0
+
+
+def validate_windows_cred(host,
+                          username='Administrator',
+                          password=None,
+                          retries=10,
+                          retry_delay=1):
+    '''
+    Check if the windows credentials are valid
+    '''
+    for i in xrange(retries):
+        ret_code = 1
+        try:
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c hostname', host, username, password, port=445
+            )
+        except Exception as exc:
+            log.exception("Exceoption while executing psexec")
         if ret_code == 0:
             break
         time.sleep(retry_delay)
@@ -917,10 +1143,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'known_hosts_file': known_hosts_file,
                       'ssh_timeout': ssh_timeout,
                       'hard_timeout': hard_timeout}
-            if gateway:
-                kwargs['ssh_gateway'] = gateway['ssh_gateway']
-                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
-                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+            kwargs.update(__ssh_gateway_config_dict(gateway))
 
             if key_filename:
                 if not os.path.isfile(key_filename):
@@ -999,6 +1222,13 @@ def deploy_windows(host,
         log.error('WinRM requested but module winrm could not be imported')
         return False
 
+    if not use_winrm and has_winexe() and not HAS_PSEXEC:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Support for winexe has been depricated and will be remove in '
+            'Sodium, please install pypsexec instead.'
+        )
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying %s at %s (Windows)', host, starttime)
     log.trace('HAS_WINRM: %s, use_winrm: %s', HAS_WINRM, use_winrm)
@@ -1019,7 +1249,7 @@ def deploy_windows(host,
         if winrm_session is not None:
             service_available = True
     else:
-        service_available = wait_for_winexesvc(host=host, port=port,
+        service_available = wait_for_psexecsvc(host=host, port=port,
                                                username=username, password=password,
                                                timeout=port_timeout * 60)
 
@@ -1027,27 +1257,13 @@ def deploy_windows(host,
         log.debug('SMB port %s on %s is available', port, host)
         log.debug('Logging into %s:%s as %s', host, port, username)
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-
         smb_conn = salt.utils.smb.get_conn(host, username, password)
         if smb_conn is False:
-            log.error('Please install impacket to enable SMB functionality')
+            log.error('Please install smbprotocol to enable SMB functionality')
             return False
-
-        creds = "-U '{0}%{1}' //{2}".format(
-            username,
-            password,
-            host
-        )
-        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
-            username,
-            host
-        )
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
         salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
-        #  minion_pub, minion_pem
-        kwargs = {'hostname': host,
-                  'creds': creds}
 
         if minion_pub:
             salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
@@ -1059,8 +1275,12 @@ def deploy_windows(host,
             # Read master-sign.pub file
             log.debug("Copying master_sign.pub file from %s to minion", master_sign_pub_file)
             try:
-                with salt.utils.files.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
-                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+                salt.utils.smb.put_file(
+                    master_sign_pub_file,
+                    'salt\\conf\\pki\\minion\\master_sign.pub',
+                    'C$',
+                    conn=smb_conn,
+                )
             except Exception as e:
                 log.debug("Exception copying master_sign.pub file %s to minion", master_sign_pub_file)
 
@@ -1071,30 +1291,26 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        with salt.utils.files.fopen(win_installer, 'rb') as inst_fh:
-            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
+        salt.utils.smb.put_file(
+            win_installer,
+            'salttemp\\{0}'.format(installer),
+            'C$',
+            conn=smb_conn,
+        )
 
         if use_winrm:
             winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
                                                                              '/minion-name={0}'.format(name)]
             )
         else:
-            # Shell out to winexe to execute win_installer
-            #  We don't actually need to set the master and the minion here since
-            #  the minion config file will be set next via impacket
-            cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                creds,
-                installer,
-                master,
-                name
+            cmd = 'c:\\salttemp\\{0}'.format(installer)
+            args = "/S /master={0} /minion-name={1}".format(master, name)
+            stdout, stderr, ret_code = run_psexec_command(
+                cmd, args, host, username, password
             )
-            logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                logging_creds,
-                installer,
-                master,
-                name
-            )
-            win_cmd(cmd, logging_command=logging_cmd)
+
+            if ret_code != 0:
+                raise Exception("Fail installer %d", ret_code)
 
         # Copy over minion_conf
         if minion_conf:
@@ -1133,29 +1349,28 @@ def deploy_windows(host,
             if use_winrm:
                 winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
             else:
-                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-                smb_conn.deleteDirectory('C$', 'salttemp')
-        # Shell out to winexe to ensure salt-minion service started
+                salt.utils.smb.delete_file('salttemp\\{0}'.format(installer), 'C$', conn=smb_conn)
+                salt.utils.smb.delete_directory('salttemp', 'C$', conn=smb_conn)
+        # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
             time.sleep(5)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
-            stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                creds
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c sc stop salt-minion', host, username, password
             )
-            logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                logging_creds
-            )
-            win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+            if ret_code != 0:
+                return False
 
             time.sleep(5)
 
-            start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
-            logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
-                logging_creds
+            log.debug('Run psexec: sc start salt-minion')
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c sc start salt-minion', host, username, password
             )
-            win_cmd(start_cmd, logging_command=logging_start_cmd)
+            if ret_code != 0:
+                return False
 
         # Fire deploy action
         fire_event(
@@ -1263,10 +1478,7 @@ def deploy_script(host,
                 'sudo_password': sudo_password,
                 'sftp': opts.get('use_sftp', False)
             }
-            if gateway:
-                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
-                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
-                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+            ssh_kwargs.update(__ssh_gateway_config_dict(gateway))
             if key_filename:
                 log.debug('Using %s as the key_filename', key_filename)
                 ssh_kwargs['key_filename'] = key_filename
@@ -1706,10 +1918,7 @@ def run_inline_script(host,
                 'sudo_password': sudo_password,
                 'sftp': opts.get('use_sftp', False)
             }
-            if gateway:
-                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
-                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
-                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+            ssh_kwargs.update(__ssh_gateway_config_dict(gateway))
             if key_filename:
                 log.debug('Using %s as the key_filename', key_filename)
                 ssh_kwargs['key_filename'] = key_filename
@@ -1897,35 +2106,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if 'port' in kwargs:
             ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-        if 'ssh_gateway' in kwargs:
-            ssh_gateway = kwargs['ssh_gateway']
-            ssh_gateway_port = 22
-            ssh_gateway_key = ''
-            ssh_gateway_user = 'root'
-            if ':' in ssh_gateway:
-                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-            if 'ssh_gateway_port' in kwargs:
-                ssh_gateway_port = kwargs['ssh_gateway_port']
-            if 'ssh_gateway_key' in kwargs:
-                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-            if 'ssh_gateway_user' in kwargs:
-                ssh_gateway_user = kwargs['ssh_gateway_user']
-
-            ssh_args.append(
-                # Setup ProxyCommand
-                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                    # Don't add new hosts to the host key database
-                    '-oStrictHostKeyChecking=no',
-                    # Set hosts key database path to /dev/null, i.e., non-existing
-                    '-oUserKnownHostsFile=/dev/null',
-                    # Don't re-use the SSH connection. Less failures.
-                    '-oControlPath=none',
-                    ssh_gateway_key,
-                    ssh_gateway_user,
-                    ssh_gateway,
-                    ssh_gateway_port
-                )
-            )
+        ssh_args.append(__ssh_gateway_arguments(kwargs))
 
         try:
             if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
@@ -2032,35 +2213,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if 'port' in kwargs:
             ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-        if 'ssh_gateway' in kwargs:
-            ssh_gateway = kwargs['ssh_gateway']
-            ssh_gateway_port = 22
-            ssh_gateway_key = ''
-            ssh_gateway_user = 'root'
-            if ':' in ssh_gateway:
-                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-            if 'ssh_gateway_port' in kwargs:
-                ssh_gateway_port = kwargs['ssh_gateway_port']
-            if 'ssh_gateway_key' in kwargs:
-                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-            if 'ssh_gateway_user' in kwargs:
-                ssh_gateway_user = kwargs['ssh_gateway_user']
-
-            ssh_args.append(
-                # Setup ProxyCommand
-                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                    # Don't add new hosts to the host key database
-                    '-oStrictHostKeyChecking=no',
-                    # Set hosts key database path to /dev/null, i.e., non-existing
-                    '-oUserKnownHostsFile=/dev/null',
-                    # Don't re-use the SSH connection. Less failures.
-                    '-oControlPath=none',
-                    ssh_gateway_key,
-                    ssh_gateway_user,
-                    ssh_gateway,
-                    ssh_gateway_port
-                )
-            )
+        ssh_args.append(__ssh_gateway_arguments(kwargs))
 
         try:
             if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
@@ -2194,39 +2347,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     if 'ssh_timeout' in kwargs:
         ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
-
-        ssh_args.extend([
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port
-            )
-        ])
-        log.info(
-            'Using SSH gateway %s@%s:%s',
-            ssh_gateway_user, ssh_gateway, ssh_gateway_port
-        )
+    ssh_args.extend([__ssh_gateway_arguments(kwargs)])
 
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
@@ -2733,9 +2854,9 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     salt.utils.versions.warn_until(
-        'Flourine',
+        'Fluorine',
         'This function is incomplete and non-functional '
-        'and will be removed in Salt Flourine.'
+        'and will be removed in Salt Fluorine.'
     )
     if base is None:
         base = opts['cachedir']

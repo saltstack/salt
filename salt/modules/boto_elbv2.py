@@ -54,7 +54,6 @@ import salt.utils.versions
 # Import third-party libs
 try:
     # pylint: disable=unused-import
-    import salt.utils.boto3
     import boto3
     import botocore
     # pylint: enable=unused-import

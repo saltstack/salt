@@ -6,6 +6,7 @@ Sphinx documentation for Salt
 import functools
 import sys
 import os
+import re
 import types
 import time
 
@@ -106,6 +107,7 @@ MOCK_MODULES = [
 
     'tornado',
     'tornado.concurrent',
+    'tornado.escape',
     'tornado.gen',
     'tornado.httpclient',
     'tornado.httpserver',
@@ -127,53 +129,56 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'ClusterShell',
     'ClusterShell.NodeSet',
-    'django',
-    'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
-    'nagios_json',
-    'psutil',
-    'pycassa',
-    'pymongo',
-    'rabbitmq_server',
-    'redis',
-    'requests',
-    'requests.exceptions',
-    'rpm',
-    'rpmUtils',
-    'rpmUtils.arch',
-    'yum',
     'OpenSSL',
-    'zfs',
-    'salt.ext.six.moves.winreg',
-    'win32security',
-    'ntsecuritycon',
-    'napalm',
+    'avahi',
+    'boto.regioninfo',
+    'concurrent',
+    'dbus',
+    'django',
+    'dns',
+    'dns.resolver',
     'dson',
+    'hjson',
     'jnpr',
-    'json',
-    'lxml',
-    'lxml.etree',
     'jnpr.junos',
     'jnpr.junos.utils',
     'jnpr.junos.utils.config',
     'jnpr.junos.utils.sw',
-    'dns',
-    'dns.resolver',
+    'json',
     'keyring',
+    'libvirt',
+    'lxml',
+    'lxml.etree',
+    'msgpack',
+    'nagios_json',
+    'napalm',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
     'netaddr.core.AddrFormatError',
+    'ntsecuritycon',
+    'psutil',
+    'pycassa',
+    'pyconnman',
+    'pyiface',
+    'pymongo',
     'pyroute2',
     'pyroute2.ipdb',
-    'avahi',
-    'dbus',
+    'rabbitmq_server',
+    'redis',
+    'rpm',
+    'rpmUtils',
+    'rpmUtils.arch',
+    'salt.ext.six.moves.winreg',
     'twisted',
     'twisted.internet',
     'twisted.internet.protocol',
     'twisted.internet.protocol.DatagramProtocol',
-    'msgpack',
+    'win32security',
+    'yum',
+    'zfs',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -210,6 +215,8 @@ sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 # Define a fake version attribute for the following libs.
 sys.modules['cherrypy'].config = mock_decorator_with_params
+sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -237,8 +244,7 @@ formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
-        'python2': ('http://docs.python.org/2', None),
-        'python3': ('http://docs.python.org/3', None)
+    'python': ('https://docs.python.org/3', None)
 }
 # <---- Intersphinx Settings -------------------------------------------------
 
@@ -250,8 +256,8 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2018.3.0'  # latest release
-previous_release = '2017.7.5'  # latest release from previous branch
+latest_release = '2018.3.2'  # latest release
+previous_release = '2017.7.7'  # latest release from previous branch
 previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
@@ -263,8 +269,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release  # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -316,6 +322,9 @@ modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
 
+# strip git rev as there won't necessarily be a release based on it
+stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
+
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
@@ -323,6 +332,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
+.. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
 .. |windownload| raw:: html
 
      <p>Python2 x86: <a
@@ -351,14 +361,13 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=release)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
-    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
+    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 

@@ -6,16 +6,15 @@ Generate the salt thin tarball from the installed python files
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os
-import sys
 import copy
-import shutil
-import tarfile
-import zipfile
-import tempfile
-import subprocess
-import salt.utils.stringutils
 import logging
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
 
 # Import third party libs
 import jinja2
@@ -77,6 +76,12 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.exceptions
 import salt.version
+
+if _six.PY2:
+    import concurrent
+else:
+    concurrent = None
+
 
 log = logging.getLogger(__name__)
 
@@ -259,7 +264,7 @@ def get_tops(extra_mods='', so_mods=''):
     :return:
     '''
     tops = []
-    for mod in [salt, jinja2, yaml, tornado, msgpack, certifi, singledispatch,
+    for mod in [salt, jinja2, yaml, tornado, msgpack, certifi, singledispatch, concurrent,
                 singledispatch_helpers, ssl_match_hostname, markupsafe, backports_abc]:
         if mod:
             log.debug('Adding module to the tops: "%s"', mod.__name__)
@@ -546,7 +551,7 @@ def thin_sum(cachedir, form='sha1'):
     thintar = gen_thin(cachedir)
     code_checksum_path = os.path.join(cachedir, 'thin', 'code-checksum')
     if os.path.isfile(code_checksum_path):
-        with salt.utils.fopen(code_checksum_path, 'r') as fh:
+        with salt.utils.files.fopen(code_checksum_path, 'r') as fh:
             code_checksum = "'{0}'".format(fh.read().strip())
     else:
         code_checksum = "'0'"
@@ -674,6 +679,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         'salt/__init__.py',
         'salt/utils',
         'salt/utils/__init__.py',
+        'salt/utils/atomicfile.py',
         'salt/utils/validate',
         'salt/utils/validate/__init__.py',
         'salt/utils/validate/path.py',
