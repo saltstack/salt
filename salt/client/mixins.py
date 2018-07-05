@@ -30,6 +30,7 @@ import salt.utils.user
 import salt.utils.versions
 import salt.transport
 import salt.log.setup
+import salt.output
 from salt.ext import six
 
 # Import 3rd-party libs
