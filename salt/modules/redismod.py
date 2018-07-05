@@ -395,7 +395,14 @@ def hmset(key, **fieldsvals):
     database = fieldsvals.pop('db', None)
     password = fieldsvals.pop('password', None)
     server = _connect(host, port, database, password)
-    return server.hmset(key, fieldsvals)
+    # orchestration passes several private key/var pairs in that we don't want
+    # to set in redis.
+    redispairs = {}
+    for field, value in fieldsvals.iteritems():
+        if not field.startswith('__'):
+            redispairs[field] = value
+
+    return server.hmset(key, redispairs)
 
 
 def hset(key, field, value, host=None, port=None, db=None, password=None):
