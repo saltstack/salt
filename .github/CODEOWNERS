@@ -15,6 +15,7 @@
 salt/**/*boto*                      @saltstack/team-boto
 
 # Team Core
+rfcs/*                              @saltstack/team-core
 salt/auth/*                         @saltstack/team-core
 salt/cache/*                        @saltstack/team-core
 salt/cli/*                          @saltstack/team-core

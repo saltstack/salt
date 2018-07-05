@@ -38,6 +38,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
@@ -715,24 +716,44 @@ def list_pkgs(versions_as_list=False, **kwargs):
     contextkey = 'pkg.list_pkgs'
 
     if contextkey not in __context__:
-
-        cmd = ['rpm', '-qa', '--queryformat', (
-            "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
-            "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
         ret = {}
-        for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-            name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-            install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
-            install_date_time_t = int(install_time)
+        cmd = ['rpm', '-qa', '--queryformat',
+               salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
+        output = __salt__['cmd.run'](cmd,
+                                     python_shell=False,
+                                     output_loglevel='trace')
+        for line in output.splitlines():
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+                line,
+                osarch=__grains__['osarch']
+            )
+            if pkginfo:
+                # see rpm version string rules available at https://goo.gl/UGKPNd
+                pkgver = pkginfo.version
+                epoch = ''
+                release = ''
+                if ':' in pkgver:
+                    epoch, pkgver = pkgver.split(":", 1)
+                if '-' in pkgver:
+                    pkgver, release = pkgver.split("-", 1)
+                all_attr = {
+                    'epoch': epoch,
+                    'version': pkgver,
+                    'release': release,
+                    'arch': pkginfo.arch,
+                    'install_date': pkginfo.install_date,
+                    'install_date_time_t': pkginfo.install_date_time_t
+                }
+                __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
-            all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
-                        'install_date': install_date, 'install_date_time_t': install_date_time_t}
-            __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
-
+        _ret = {}
         for pkgname in ret:
-            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+            # Filter out GPG public keys packages
+            if pkgname.startswith('gpg-pubkey'):
+                continue
+            _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
 
-        __context__[contextkey] = ret
+        __context__[contextkey] = _ret
 
     return __salt__['pkg_resource.format_pkg_list'](
         __context__[contextkey],
@@ -1351,14 +1372,6 @@ def install(name=None,
 
     _clean_cache()
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg_name in new:
-        pkg_data = new[pkg_name]
-        if isinstance(pkg_data, six.string_types):
-            new[pkg_name] = pkg_data.split(',')[-1]
-
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
@@ -2374,7 +2387,7 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                     if len(result) == 1:
                         name = result.keys()[0]
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '%s'.", pkg)
+                        log.warning("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
                     log.debug("Search failed with: %s", exc)
