@@ -1455,7 +1455,7 @@ class Minion(MinionBase):
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
-                log.warn("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+                log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
                 yield tornado.gen.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
