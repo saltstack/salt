@@ -20,4 +20,4 @@ def cli_info(data, title='Info'):
     wrapper.initial_indent = ' ' * 4
     wrapper.subsequent_indent = wrapper.initial_indent
 
-    return '{title}:\n{text}'.format(title=title, text=wrapper.fill(data))
+    return '{title}:\n\n{text}'.format(title=title, text=wrapper.fill(data))
