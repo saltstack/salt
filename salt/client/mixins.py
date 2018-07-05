@@ -376,7 +376,8 @@ class SyncClientMixin(object):
                 try:
                     data['return'] = func(*args, **kwargs)
                 except TypeError as exc:
-                    data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
+                    data['return'] = salt.utils.text.cli_info('Usage:\n{1}'.format(exc, func.__doc__),
+                                                              'Passed invalid arguments')
                 except Exception as exc:
                     data['return'] = salt.utils.text.cli_info(str(exc), 'General error occurred')
                 try:
