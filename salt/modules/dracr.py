@@ -149,8 +149,26 @@ def __execute_ret(
 
 def get_property(host=None, admin_username=None, admin_password=None, property=None):
     """
-    .. versionadded:: 2018.3.2
+    .. versionadded:: Fluorine
     Return specific property
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be get.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.get_property property=System.ServerOS.HostName
     """
     if property is None:
         raise SaltException("No property specified!")
@@ -167,8 +185,29 @@ def set_property(
     host=None, admin_username=None, admin_password=None, property=None, value=None
 ):
     """
-    .. versionadded:: 2018.3.2
+    .. versionadded:: Fluorine
     Set specific property
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be set.
+
+    value:
+        The value which should be set to property.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.set_property property=System.ServerOS.HostName value=Pretty-server
     """
     if property is None:
         raise SaltException("No property specified!")
@@ -187,8 +226,29 @@ def ensure_property_set(
     host=None, admin_username=None, admin_password=None, property=None, value=None
 ):
     """
-    .. versionadded:: 2018.3.2
-    Ensure that property is set
+    .. versionadded:: Fluorine
+    Ensure that property is set to specific value.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be set.
+
+    value:
+        The value which should be set to property.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.ensure_property_set property=System.ServerOS.HostName value=Pretty-server
     """
     ret = get_property(host, admin_username, admin_password, property)
     if ret["stdout"] == value:
