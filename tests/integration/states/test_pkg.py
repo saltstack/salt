@@ -737,11 +737,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                       '\'handle_missing_pkg_group\': Group \'handle_missing_pkg_group\' '
                                       'not found.')
 
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_system_grains
     def test_pkg_015_installed_held(self, grains=None):  # pylint: disable=unused-argument
         '''
-        Tests that a version number missing the release portion still resolves
-        as correctly installed. For example, version 2.0.2 instead of 2.0.2-1.el7
+        Tests that a package can be held even when the package is already installed.
         '''
         os_family = grains.get('os_family', '')
 
