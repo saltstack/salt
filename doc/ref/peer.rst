@@ -121,6 +121,11 @@ To open up access to all minions to all wheel:
       .*:
         - .*
 
+.. warning::
+
+    The above configuration allows all the minions to control the master,
+    including changing master configuration files.
+
 This configuration will allow minions with IDs ending in example.com access
 to the key wheel functions.
 

@@ -187,7 +187,6 @@ A ``publish.wheel`` module has been added, allowing access to the wheel
 functions on the master.
 
 The peer configuration can be found :ref:`here <peer-wheel>`.
->>>>>>> add docs
 
 
 "Virtual Package" Support Dropped for APT
