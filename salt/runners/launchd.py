@@ -9,6 +9,7 @@ import os
 import sys
 import salt.defaults.exitcodes
 
+
 def write_launchd_plist(program):
     '''
     Write a launchd plist for managing salt-master or salt-minion
