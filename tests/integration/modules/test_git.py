@@ -93,10 +93,10 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w') as fp_:
-                    fp_.write(salt.utils.stringutils.to_str(
-                        'This is a test file named {0}.'.format(filename)
-                    ))
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'wb') as fp_:
+                    fp_.write(
+                        'This is a test file named {0}.'.format(filename).encode('utf-8')
+                    )
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         # Initialize a new git repository
@@ -166,10 +166,10 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with salt.utils.files.fopen(path, 'w') as fp_:
-                fp_.write(salt.utils.stringutils.to_str(
-                    'This is a test file with relative path {0}.\n'.format(path)
-                ))
+            with salt.utils.files.fopen(path, 'wb') as fp_:
+                fp_.write(
+                    'This is a test file with relative path {0}.\n'.format(path).encode('utf-8')
+                )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
         if salt.utils.platform.is_windows():
