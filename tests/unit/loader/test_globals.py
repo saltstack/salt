@@ -8,6 +8,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import inspect
+import sys
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -38,10 +39,11 @@ class LoaderGlobalsTest(ModuleCase):
         for val in six.itervalues(mod_dict):
             # only find salty globals
             if val.__module__.startswith('salt.loaded'):
-                if hasattr(val, '__wrapped__'):
-                    global_vars.append(val.__wrapped__.__globals__)
-                elif hasattr(val, '__globals__'):
-                    global_vars.append(val.__globals__)
+                if hasattr(val, '__globals__'):
+                    if '__wrapped__' in val.__globals__:
+                        global_vars.append(sys.modules[val.__module__].__dict__)
+                    else:
+                        global_vars.append(val.__globals__)
 
         # if we couldn't find any, then we have no modules -- so something is broken
         self.assertNotEqual(global_vars, [], msg='No modules were loaded.')
