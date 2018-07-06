@@ -27,6 +27,7 @@ import salt.utils.kinds as kinds
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.defaults.exitcodes
 from salt.cli import daemons
 from salt.log import LOG_LEVELS
@@ -127,6 +128,10 @@ class BaseCaller(object):
         '''
         Execute the salt call logic
         '''
+        if self.opts.get('retcode_passthrough'):
+            salt.utils.versions.warn_until(
+                'Sodium', ('The option "--retcode-passthrough" is deprecated and is now always ON. '
+                           'It will be removed in version Sodium.'))
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
             pr = salt.utils.profile.activate_profile(profiling_enabled)
