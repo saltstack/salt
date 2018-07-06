@@ -1590,6 +1590,22 @@ def _get_line_indent(src, line, indent):
     return ''.join(idt) + line.strip()
 
 
+def _get_line_sep(src):
+    '''
+    Try to detect the line separator used in the src. Try `\r\n` first,
+    then try older osx style `\r`. Finally try `\n`. If none of these are found,
+    default to `os.linesep`
+    '''
+    if '\r\n' in src:
+        return '\r\n'
+    elif '\r' in src:
+        return '\r'
+    elif '\n' in src:
+        return '\n'
+    else:
+        return os.linesep
+
+
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
@@ -1696,53 +1712,64 @@ def line(path, content=None, match=None, mode=None, location=None,
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
         if not quiet:
-            raise CommandExecutionError('File "{0}" does not exists or is not a file.'.format(path))
+            raise CommandExecutionError('File "{0}" does not exists or is not '
+                                        'a file.'.format(path))
         return False  # No changes had happened
 
     mode = mode and mode.lower() or mode
     if mode not in ['insert', 'ensure', 'delete', 'replace']:
         if mode is None:
-            raise CommandExecutionError('Mode was not defined. How to process the file?')
+            raise CommandExecutionError('Mode was not defined. How to process '
+                                        'the file?')
         else:
             raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
 
-    # We've set the content to be empty in the function params but we want to make sure
-    # it gets passed when needed. Feature #37092
+    # We've set the content to be empty in the function params but we want to
+    # make sure it gets passed when needed. Feature #37092
     modeswithemptycontent = ['delete']
     if mode not in modeswithemptycontent and content is None:
-        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+        raise CommandExecutionError('Content can only be empty if mode is {0}'
+                                    ''.format(modeswithemptycontent))
     del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
         match = content
 
-    with salt.utils.fopen(path, mode='r') as fp_:
+    with salt.utils.fopen(path, mode='rb') as fp_:
         body = fp_.read()
+        body = salt.utils.to_str(body)
+
+    # Get the line endings the file is using
+    sep_char = _get_line_sep(body)
+
     body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
-        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'
+                    ''.format(mode, path))
         body = ''
     elif mode == 'delete':
-        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
+        body = sep_char.join([line for line in body.split(sep_char) if line.find(match) < 0])
     elif mode == 'replace':
-        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
+        body = sep_char.join([(_get_line_indent(file_line, content, indent)
                                 if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in body.split(os.linesep)])
+                                for file_line in body.split(sep_char)])
     elif mode == 'insert':
         if not location and not before and not after:
-            raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
+            raise CommandExecutionError('On insert must be defined either '
+                                        '"location" or "before/after" '
+                                        'conditions.')
 
         if not location:
             if before and after:
                 _assert_occurrence(body, before, 'before')
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
+                lines = body.split(sep_char)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
@@ -1750,12 +1777,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                         out.append(_line)
                     else:
                         out.append(_line)
-                body = os.linesep.join(out)
+                body = sep_char.join(out)
 
             if before and not after:
                 _assert_occurrence(body, before, 'before')
                 out = []
-                lines = body.split(os.linesep)
+                lines = body.split(sep_char)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1:
@@ -1763,12 +1790,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                         if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
-                body = os.linesep.join(out)
+                body = sep_char.join(out)
 
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
+                lines = body.split(sep_char)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     out.append(_line)
@@ -1777,13 +1804,13 @@ def line(path, content=None, match=None, mode=None, location=None,
                         # No dupes or append, if "after" is the last line
                         if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
                             out.append(cnd)
-                body = os.linesep.join(out)
+                body = sep_char.join(out)
 
         else:
             if location == 'start':
-                body = ''.join([content, body])
+                body = sep_char.join([content, body])
             elif location == 'end':
-                body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
+                body = sep_char.join([body, _get_line_indent(body[-1], content, indent) if body else content])
 
     elif mode == 'ensure':
         after = after and after.strip()
@@ -1795,7 +1822,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             a_idx = b_idx = -1
             idx = 0
-            body = body.split(os.linesep)
+            body = body.split(sep_char)
             for _line in body:
                 idx += 1
                 if _line.find(before) > -1 and b_idx < 0:
@@ -1810,12 +1837,13 @@ def line(path, content=None, match=None, mode=None, location=None,
                 if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
                     body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
             else:
-                raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
-            body = os.linesep.join(body)
+                raise CommandExecutionError('Found more than one line between '
+                                            'boundaries "before" and "after".')
+            body = sep_char.join(body)
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
-            body = body.split(os.linesep)
+            body = body.split(sep_char)
             out = []
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
@@ -1824,11 +1852,11 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
-            body = os.linesep.join(out)
+            body = sep_char.join(out)
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
-            body = body.split(os.linesep)
+            body = body.split(sep_char)
             skip = None
             out = []
             for idx in range(len(body)):
@@ -1840,12 +1868,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
                     out.append(_get_line_indent(body[idx], content, indent))
-            body = os.linesep.join(out)
+            body = sep_char.join(out)
 
         else:
-            raise CommandExecutionError("Wrong conditions? "
-                                        "Unable to ensure line without knowing "
-                                        "where to put it before and/or after.")
+            raise CommandExecutionError('Wrong conditions? '
+                                        'Unable to ensure line without knowing '
+                                        'where to put it before and/or after.')
 
     changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
 
@@ -1854,22 +1882,24 @@ def line(path, content=None, match=None, mode=None, location=None,
             temp_file = _mkstemp_copy(path=path, preserve_inode=True)
             shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
         except (OSError, IOError) as exc:
-            raise CommandExecutionError("Unable to create the backup file of {0}. Exception: {1}".format(path, exc))
+            raise CommandExecutionError('Unable to create the backup file of {0}. Exception: {1}'.format(path, exc))
 
     changes_diff = None
 
     if changed:
         if show_changes:
-            with salt.utils.fopen(path, 'r') as fp_:
-                path_content = fp_.read().splitlines(True)
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines(True)))
+            with salt.utils.fopen(path, 'rb') as fp_:
+                path_content = fp_.read()
+                path_content = salt.utils.to_str(path_content)
+            changes_diff = sep_char.join(
+                difflib.unified_diff(path_content.split(sep_char),
+                                     body.split(sep_char)))
         if __opts__['test'] is False:
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.fopen
-                mode = 'wb' if six.PY2 and salt.utils.is_windows() else 'w'
-                fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(body)
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_.write(salt.utils.to_bytes(body))
             finally:
                 if fh_:
                     fh_.close()

@@ -775,6 +775,324 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         empty_file.close()
         os.remove(empty_file.name)
 
+    def test_line_delete_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='delete',
+                         match='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_delete_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='delete',
+                         match='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_before_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test1.5',
+                         before='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest1.5\r\ntest2\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_before_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test1.5',
+                         before='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest1.5\ntest2\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_after_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test2.5',
+                         after='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest2\r\ntest2.5\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_after_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test2.5',
+                         after='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest2\ntest2.5\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_start_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test0.5',
+                         location='start')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test0.5\r\ntest1\r\ntest2\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_start_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test0.5',
+                         location='start')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test0.5\ntest1\ntest2\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_end_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test3.5',
+                         location='end')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest2\r\ntest3\r\ntest3.5', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_insert_end_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='insert',
+                         content='test3.5',
+                         location='end')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest2\ntest3\ntest3.5', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_replace_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='replace',
+                         content='test2 new',
+                         match='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest2 new\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_replace_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            changes = filemod.line(path=temp_file.name,
+                                   mode='replace',
+                                   content='test2 new',
+                                   match='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest2 new\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_ensure_before_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='ensure',
+                         content='test1.5',
+                         before='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest1.5\r\ntest2\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_ensure_before_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='ensure',
+                         content='test1.5',
+                         before='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest1.5\ntest2\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_ensure_after_win(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_win_',
+                                                mode='w+b')
+        temp_file.write(b'test1\r\ntest2\r\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='ensure',
+                         content='test2.5',
+                         after='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\r\ntest2\r\ntest2.5\r\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
+    def test_line_ensure_after_unix(self):
+        # Create test file
+        temp_file = tempfile.NamedTemporaryFile(delete=False,
+                                                prefix='linetmp_unix_',
+                                                mode='w+b')
+        temp_file.write(b'test1\ntest2\ntest3')
+        temp_file.close()
+        try:
+            filemod.line(path=temp_file.name,
+                         mode='ensure',
+                         content='test2.5',
+                         after='test2')
+            with salt.utils.fopen(temp_file.name, 'rb') as fp:
+                filecontent = fp.read()
+            self.assertEqual(b'test1\ntest2\ntest2.5\ntest3', filecontent)
+        finally:
+            # Close and remove the file
+            temp_file.close()
+            os.remove(temp_file.name)
+
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
