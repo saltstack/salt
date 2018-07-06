@@ -330,7 +330,13 @@ Nested pillar values can also be set via the command line:
 
 .. code-block:: bash
 
-   salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+    salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+
+Lists can be passed via command line pillar data as follows:
+
+.. code-block:: bash
+
+    salt '*' state.sls my_sls_file pillar='{"some_list": ["foo", "bar", "baz"]}'
 
 .. note::
 

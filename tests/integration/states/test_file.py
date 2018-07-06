@@ -656,6 +656,57 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(
                 'does not exist', ret['comment'])
 
+    def test_managed_source_hash_indifferent_case(self):
+        '''
+        Test passing a source_hash as an uppercase hash.
+
+        This is a regression test for Issue #38914 and Issue #48230 (test=true use).
+        '''
+        name = os.path.join(TMP, 'source_hash_indifferent_case')
+        state_name = 'file_|-/tmp/salt-tests-tmpdir/source_hash_indifferent_case_|' \
+                     '-/tmp/salt-tests-tmpdir/source_hash_indifferent_case_|-managed'
+        local_path = os.path.join(FILES, 'file', 'base', 'hello_world.txt')
+        actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
+        uppercase_hash = actual_hash.upper()
+
+        try:
+            # Lay down tmp file to test against
+            self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=actual_hash
+            )
+
+            # Test uppercase source_hash: should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+            # Test uppercase source_hash using test=true
+            # Should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash,
+                test=True
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+        finally:
+            # Clean Up File
+            if os.path.exists(name):
+                os.remove(name)
+
     def test_directory(self):
         '''
         file.directory
