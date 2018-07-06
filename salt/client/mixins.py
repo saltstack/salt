@@ -397,11 +397,15 @@ class SyncClientMixin(object):
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = six.text_type(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                    self.client,
-                    fun,
-                    traceback.format_exc(),
-                    )
+                exc_msg = six.text_type(ex)
+                if 'Exiting gracefully' in exc_msg:
+                    data['return'] = exc_msg
+                else:
+                    data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                        self.client,
+                        fun,
+                        traceback.format_exc(),
+                        )
             data['success'] = False
 
         if self.store_job:
