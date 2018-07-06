@@ -2213,6 +2213,7 @@ class ClearFuncs(object):
                 try:
                     returner_args = [clear_load['jid'], clear_load]
                     returner_kwargs = {}
+                    # only pass in `minions` if the save_load function accepts a minions keyword
                     if 'minions' in salt.utils.args.get_function_argspec(self.mminion.returners[fstring]).args:
                         returner_kwargs['minions'] = minions
                     self.mminion.returners[fstr](*returner_args, **returner_kwargs)
