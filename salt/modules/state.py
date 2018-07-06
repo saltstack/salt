@@ -602,8 +602,7 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def apply_(mods=None,
-          **kwargs):
+def apply_(mods=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -743,6 +742,22 @@ def apply_(mods=None,
         .. code-block:: bash
 
             salt '*' state.apply test localconfig=/path/to/minion.yml
+
+    sync_mods
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.apply test sync_mods=states,modules
+            salt '*' state.apply test sync_mods=all
+
+        .. note::
+            This option is ignored when no SLS files are specified, as a
+            :ref:`highstate <running-highstate>` automatically syncs all custom
+            module types.
+
+        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -1068,7 +1083,7 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, test=None, exclude=None, queue=False, **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -1160,6 +1175,17 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
         .. versionadded:: 2015.8.4
 
+    sync_mods
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.sls test sync_mods=states,modules
+            salt '*' state.sls test sync_mods=all
+
+        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1221,6 +1247,28 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     cfn = os.path.join(
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
+            )
+
+    if sync_mods is True:
+        sync_mods = ['all']
+    if sync_mods is not None:
+        sync_mods = salt.utils.args.split_input(sync_mods)
+    else:
+        sync_mods = []
+
+    if 'all' in sync_mods and sync_mods != ['all']:
+        # Prevent unnecessary extra syncing
+        sync_mods = ['all']
+
+    for module_type in sync_mods:
+        try:
+            __salt__['saltutil.sync_{0}'.format(module_type)](
+                saltenv=opts['saltenv']
+            )
+        except KeyError:
+            log.warning(
+                'Invalid custom module type \'%s\', ignoring',
+                module_type
             )
 
     try:

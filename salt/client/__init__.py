@@ -229,7 +229,7 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
+    def gather_job_info(self, jid, tgt, tgt_type, listen=True, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -241,6 +241,7 @@ class LocalClient(object):
                                 arg=[jid],
                                 tgt_type=tgt_type,
                                 timeout=timeout,
+                                listen=listen,
                                 **kwargs
                                )
 
