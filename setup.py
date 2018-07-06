@@ -366,7 +366,7 @@ class DownloadWindowsDlls(Command):
         import pip
         # pip has moved many things to `_internal` starting with pip 10
         if LooseVersion(pip.__version__) < LooseVersion('10.0'):
-            from pip.utils.logging import indent_log
+            from pip.utils.logging import indent_log  # pylint: disable=no-name-in-module
         else:
             from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()

@@ -210,7 +210,7 @@ import tornado
 TORNADO_50 = tornado.version_info >= (5,)
 
 if not TORNADO_50:
-    import zmq.eventloop.ioloop
+    import zmq.eventloop.ioloop   # pylint: disable=import-error
     # instantiate the zmq IOLoop (specialized poller)
     zmq.eventloop.ioloop.install()
 
