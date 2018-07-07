@@ -16,8 +16,7 @@ pipeline {
         stage('setup') {
             steps {
                 sh 'eval "$(pyenv init -)"; pyenv install 2.7.14 || echo "We already have this python."; pyenv local 2.7.14; pyenv shell 2.7.14'
-                sh 'eval "$(pyenv init -)"; pip install pylint SaltPyLint'
-                sh 'eval "$(pyenv init -)"; which pylint; pylint --version'
+                sh 'eval "$(pyenv init -)"; pip install tox'
             }
         }
         stage('linting') {
@@ -25,13 +24,13 @@ pipeline {
             parallel {
                 stage('salt linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; pylint --rcfile=.testing.pylintrc --disable=W1307,str-format-in-logging setup.py salt/ | tee pylint-report.xml'
+                        sh 'eval "$(pyenv init -)"; tox -e pylint-salt | tee pylint-report.xml'
                         archiveArtifacts artifacts: 'pylint-report.xml'
                     }
                 }
                 stage('test linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; pylint --rcfile=.testing.pylintrc --disable=W0232,E1002,W1307,str-format-in-logging tests/ | tee pylint-report-tests.xml'
+                        sh 'eval "$(pyenv init -)"; tox -e pylint-tests | tee pylint-report-tests.xml'
                         archiveArtifacts artifacts: 'pylint-report-tests.xml'
                     }
                 }
