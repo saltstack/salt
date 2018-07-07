@@ -130,10 +130,11 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
                 if age < (opts.get('fileserver_list_cache_time', 20) - 60*60*2):
-                    # Cache is from the future!
+                    # Cache is from the future! Warn and mark cache invalid.
                     # NOTE: We subtract an additional 2h from fileserver_list_cache_time
                     #       to avoid change between daylight saving time.
                     log.warning('The file list_cache was created in the future!')
+                    age = opts.get('fileserver_list_cache_time', 20) + 1
                 if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
