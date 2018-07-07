@@ -1,8 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
-An engine that reads messages from Slack and can act on them.
+An engine that reads messages from Slack and can act on them
 
-It has two major uses.
+:depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
+
+.. important::
+    This engine requires a bot user. To create a bot user, first go to the
+    Custom Integrations page in your Slack Workspace. Copy and paste the
+    following URL, and replace ``myworkspace`` with the proper value for your
+    workspace:
+
+    ``https://myworkspace.slack.com/apps/manage/custom-integrations``
+
+    Next, click on the ``Bots`` integration and request installation. Once
+    approved by an admin, you will be able to proceed with adding the bot user.
+    Once the bot user has been added, you can configure it by adding an avatar,
+    setting the display name, etc. You'll also at this time have access to your
+    API token, which will be needed to configure this engine.
+
+    Finally, add this bot user to a channel by switching to the channel and
+    using ``/invite @mybotuser``. Keep in mind that this engine will process
+    messages from each channel in which the bot is a member, so it is
+    recommended to narrowly define the commands which can be executed, and the
+    Slack users which are allowed to run commands.
+
 
 1. When the ``control`` parameter is set to ``True`` and a message is prefaced
    with the ``trigger`` (which defaults to ``!``) then the engine will
@@ -88,9 +109,6 @@ the saltmaster's minion pillar.
                 - garethgreenaway
               commands:
                 - *
-
-:depends: slackclient
-
 
 .. note:: groups_pillar_name
 
