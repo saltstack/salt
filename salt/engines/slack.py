@@ -74,9 +74,9 @@ the saltmaster's minion pillar.
           groups_pillar_name: 'slack_engine:groups_pillar'
           groups:
             default:
-              valid_users:
+              users:
                 - *
-              valid_commands:
+              commands:
                 - test.ping
               aliases:
                 list_jobs:
