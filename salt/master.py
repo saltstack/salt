@@ -91,7 +91,7 @@ try:
 except ImportError:
     HAS_HALITE = False
 
-from tornado.stack_context import StackContext, run_with_stack_context
+from tornado.stack_context import StackContext
 from salt.utils.ctx import RequestContext
 
 
@@ -1110,13 +1110,10 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if self.opts['master_stats']:
             start = time.time()
             self.stats[cmd]['runs'] += 1
-        ret = self.aes_funcs.run_func(data['cmd'], data)
 
         def run_func(data):
             return self.aes_funcs.run_func(data['cmd'], data)
 
-        #current_request = RequestContext.current
-        #ret = run_with_stack_context(StackContext(RequestContext(current_request)), run_func(data))
         with StackContext(functools.partial(RequestContext, data)):
             ret = run_func(data)
 
@@ -1990,7 +1987,6 @@ class ClearFuncs(object):
         # Authorized. Do the job!
         try:
             jid = salt.utils.jid.gen_jid(self.opts)
-            RequestContext.current['jid'] = jid
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),

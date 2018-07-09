@@ -28,6 +28,8 @@ import msgpack
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+from salt.utils.ctx import RequestContext
+
 log = logging.getLogger(__name__)
 
 # load is the published job
@@ -98,6 +100,9 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         jid = salt.utils.jid.gen_jid(__opts__)
     else:
         jid = passed_jid
+
+    log.debug('=== adding jid to RequestContext ===')
+    RequestContext.current['jid'] = jid
 
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
 

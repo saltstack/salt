@@ -48,6 +48,7 @@ from salt.log.handlers import (TemporaryLoggingHandler,
                                QueueHandler)
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
+from salt.utils.ctx import RequestContext
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -265,6 +266,9 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
                 if not formatter:
                     continue
 
+                if RequestContext.current.get('jid', None):
+                    formatter._fmt = '[JID %(jid)s] {0}'.format(formatter._fmt)
+
                 if not handler.lock:
                     handler.createLock()
                 handler.acquire()
@@ -308,10 +312,11 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         if extra is None:
             extra = {}
 
-        from salt.utils.ctx import RequestContext
         current_jid = RequestContext.current.get('jid', None)
 
         if current_jid is not None:
+            from pudb.remote import set_trace
+            set_trace(term_size=(150, 40))
             extra['jid'] = current_jid
 
         if exc_info and exc_info_on_loglevel:
@@ -532,7 +537,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     # Set the default console formatter config
     if not log_format:
-        log_format = '[JID %(jid)s] [%(levelname)-8s] %(message)s'
+        log_format = '[%(levelname)-8s] %(message)s'
     if not date_format:
         date_format = '%H:%M:%S'
 
