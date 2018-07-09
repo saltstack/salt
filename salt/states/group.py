@@ -72,6 +72,7 @@ def _changes(name,
             delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
 
     change = {}
+    ret = {}
     if gid:
         try:
             gid = int(gid)
@@ -80,7 +81,7 @@ def _changes(name,
         except (TypeError, ValueError):
             ret['result'] = False
             ret['comment'] = 'Invalid gid'
-            return ret 
+            return ret
 
     if members:
         # -- if new member list if different than the current
