@@ -83,6 +83,8 @@ def _checksum_file_path(path):
                 drive.rstrip(':'),
                 path.lstrip('/\\'),
             )
+        elif str(exc).startswith('Cannot mix UNC'):
+            relpath = salt.utils.path.join('unc', path)
         else:
             raise
     ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
