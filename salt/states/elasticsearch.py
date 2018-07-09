@@ -275,7 +275,7 @@ def index_template_present(name, definition, check_definition=False):
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
             if check_definition:
-                if type(definition) == str:
+                if isinstance(definition, str):
                     definition_parsed = salt.utils.json.loads(definition)
                 else:
                     definition_parsed = definition
@@ -283,7 +283,7 @@ def index_template_present(name, definition, check_definition=False):
                 # Prune empty keys (avoid false positive diff)
                 for key in ("mappings", "aliases", "settings"):
                     if current_template[key] == {}:
-                        del(current_template[key])
+                        del current_template[key]
                 diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
                 if len(diff) != 0:
                     if __opts__['test']:
