@@ -12,6 +12,7 @@ idna==2.5
 ioloop==0.1a0
 ipaddress==1.0.18
 Jinja2==2.9.6
+libnacl==1.6.1  # required by the nacl module
 lxml==3.7.3
 Mako==1.0.6
 MarkupSafe==1.0
@@ -23,6 +24,7 @@ pycrypto==2.6.1
 pycurl==7.43.0
 PyMySQL==0.7.11
 pyOpenSSL==17.5.0
+python-certifi-win32==1.2
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 pythonnet==2.3.0
