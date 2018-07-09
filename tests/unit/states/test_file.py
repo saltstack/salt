@@ -174,7 +174,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.group_to_gid': mock_empty,
                                              'user.info': mock_empty,
                                              'user.current': mock_user}):
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User {0} does not exist'.format(user))
                 ret = return_val({'comment': comt, 'name': name})
             else:
@@ -191,7 +191,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': True}):
                 with patch.object(os.path, 'exists', mock_f):
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         comt = ('User {0} does not exist'.format(user))
                         ret = return_val(
                             {
@@ -220,7 +220,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.object(os.path, 'exists', mock_f):
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             comt = 'User {0} does not exist'.format(user)
                             ret = return_val(
                                 {
@@ -250,7 +250,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
                         with patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
-                            if salt.utils.is_windows():
+                            if salt.utils.platform.is_windows():
                                 comt = ('Symlink {0} is present and owned by '
                                         '{1}'.format(name, user))
                             else:
@@ -1178,7 +1178,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to ensure that some text appears at the beginning of a file.
         '''
         name = '/etc/motd'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = 'c:\\etc\\motd'
         source = ['salt://motd/hr-messages.tmpl']
         sources = ['salt://motd/devops-messages.tmpl']
@@ -1212,7 +1212,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = ('The following files will be changed:\n/etc:'
                     ' directory - new\n')
             pchanges = {'/etc': {'directory': 'new'}}
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = 'The directory "c:\\etc" will be changed'
                 pchanges = {'c:\\etc': {'directory': 'new'}}
             ret.update({'comment': comt, 'name': name, 'pchanges': pchanges})

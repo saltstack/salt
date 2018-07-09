@@ -4546,13 +4546,13 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         if os.path.islink(name) and not follow_symlinks:
             pass
         else:
-            mode = salt.utils.normalize_mode(mode)
+            mode = salt.utils.files.normalize_mode(mode)
             if mode != perms['lmode']:
                 if __opts__['test'] is True:
                     ret['changes']['mode'] = mode
                 else:
                     set_mode(name, mode)
-                    if mode != salt.utils.normalize_mode(get_mode(name)):
+                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
                         ret['result'] = False
                         ret['comment'].append(
                             'Failed to change mode to {0}'.format(mode)
