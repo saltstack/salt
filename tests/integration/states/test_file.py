@@ -2493,12 +2493,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
 
         user = 'salt'
+        mode = '0644'
         self.run_function('user.add', [user])
-        ret = self.run_state('file.copy', name=dest, source=source, user=user, makedirs=True)
+        ret = self.run_state('file.copy', name=dest, source=source, user=user,
+                             makedirs=True, mode=mode)
         file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
         for check in file_checks:
-            ret = self.run_function('file.get_user', [check])
-            assert ret == user
+            user_check = self.run_function('file.get_user', [check])
+            mode_check = self.run_function('file.get_mode', [check])
+            assert user_check == user
+            assert salt.utils.normalize_mode(mode_check) == mode
 
     def test_contents_pillar_with_pillar_list(self):
         '''
