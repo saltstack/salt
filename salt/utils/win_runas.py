@@ -9,7 +9,11 @@ import os
 import logging
 
 # Import Third Party Libs
-import psutil
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 try:
     import win32api
@@ -34,8 +38,8 @@ def __virtual__():
     '''
     Only load if Win32 Libraries are installed
     '''
-    if not HAS_WIN32:
-        return False, 'This utility requires pywin32'
+    if not HAS_WIN32 or not HAS_PSUTIL:
+        return False, 'This utility requires pywin32 and psutil'
 
     return 'win_runas'
 
