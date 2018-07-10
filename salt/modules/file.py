@@ -4539,27 +4539,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    # Mode changes if needed
-    if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.files.normalize_mode(mode)
-            if mode != perms['lmode']:
-                if __opts__['test'] is True:
-                    ret['changes']['mode'] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change mode to {0}'.format(mode)
-                        )
-                    else:
-                        ret['changes']['mode'] = mode
-
     if isinstance(orig_comment, six.string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
