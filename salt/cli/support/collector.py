@@ -131,7 +131,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.setup_logfile_logger()
             salt.utils.verify.verify_log(self.config)
 
-        self.collector = SupportDataCollector('master')
+        self.collector = SupportDataCollector('master-info')
         self.collector.open()
         self.collect_master_data()
         self.collect_targets_data()
