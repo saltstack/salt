@@ -1,0 +1,19 @@
+grains.yml:
+  info: System grains
+  actions:
+    - grains.items:
+
+packages.yml:
+  info: Installed packages
+  actions:
+    - pkg.list_pkgs:
+
+repositories.yml:
+  info: Available repositories
+  actions:
+    - pkg.list_repos:
+
+upgrades.yml:
+  info: Possible upgrades
+  actions:
+    - pkg.list_upgrades:
