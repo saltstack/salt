@@ -1,56 +1,113 @@
 # coding=utf-8
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import sys
 import copy
 import yaml
 import json
 import logging
+import tarfile
+from io import BytesIO
 
 sys.modules['pkg_resources'] = None
 
+import salt.utils.stringutils
 import salt.utils.parsers
 import salt.utils.verify
+import salt.exceptions
 import salt.cli.caller
 import salt.cli.support
 
 log = logging.getLogger(__name__)
+
 
 class SupportDataCollector(object):
     '''
     Data collector. It behaves just like another outputter,
     except it grabs the data to the archive files.
     '''
-    def __init__(self, name, path=None, format='gzip'):
+    def __init__(self, name, path=None, format='bz2'):
         '''
         constructor of the data collector
         :param name:
         :param path:
         :param format:
         '''
-        self.__path = path
-        self.__name = name
+        if format not in ['bz2', 'gz']:
+            format = 'bz2'
+        _name = '{}.tar.{}'.format(name, format)
+        _full_name = os.path.join(path or '/tmp', _name)
+        if os.path.exists(_full_name):
+            raise salt.exceptions.SaltClientError(
+                'The archive {} already exists. Please remove it first!'.format(_full_name))
+        self.__name = _full_name
+        self.__format = format
+        self.__arch = None
+        self.__current_section = None
+        self.__current_section_name = None
 
     def open(self):
         '''
         Opens archive.
         :return:
         '''
+        if self.__arch is not None:
+            raise salt.exceptions.SaltException('Archive already opened.')
+        self.__arch = tarfile.TarFile.bz2open(self.__name, 'w')
 
     def close(self):
         '''
         Closes the archive.
         :return:
         '''
+        if self.__arch is None:
+            raise salt.exceptions.SaltException('Archive already closed')
+        self._flush_content()
+        self.__arch.close()
+        self.__arch = None
 
-    def add(self, name, data):
+    def _flush_content(self):
         '''
-        Adds a data set as a name.
+        Flush content to the archive
         :return:
         '''
-        print('-' * 80)
-        data = json.loads(json.dumps(data))
-        print(yaml.safe_dump(data.get('return', {}), default_flow_style=False, indent=4))
-        print('\n\n')
+        if self.__current_section is not None:
+            buff = BytesIO()
+            for action_return in self.__current_section:
+                for title, ret_data in action_return.items():
+                    buff.write(salt.utils.stringutils.to_bytes(title + '\n'))
+                    buff.write(salt.utils.stringutils.to_bytes(('-' * len(title)) + '\n\n'))
+                    buff.write(salt.utils.stringutils.to_bytes(ret_data))
+                    buff.write(salt.utils.stringutils.to_bytes('\n\n\n'))
+            buff.seek(0)
+            tar_info = tarfile.TarInfo(name=self.__current_section_name)
+            if not hasattr(buff, 'getbuffer'):  # Py2's BytesIO is older
+                buff.getbuffer = buff.getvalue
+            tar_info.size = len(buff.getbuffer())
+            self.__arch.addfile(tarinfo=tar_info, fileobj=buff)
+
+    def add(self, name):
+        '''
+        Start a new section.
+        :param name:
+        :return:
+        '''
+        if self.__current_section:
+            self._flush_content()
+        self.__current_section = []
+        self.__current_section_name = name
+
+    def write(self, title, data):
+        '''
+        Add a data to the current opened section.
+        :return:
+        '''
+        self.__current_section.append(
+            {
+                title: yaml.safe_dump(json.loads(json.dumps(data)).get('return', {}),
+                                      default_flow_style=False, indent=4)
+            }
+        )
 
 
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
