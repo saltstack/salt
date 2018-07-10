@@ -9,6 +9,29 @@ import copy
 import yaml
 import json
 
+DEFAULT_SCENARIO = '''
+grains.yml:
+  - info: System grains
+  - actions:
+    - grains.items:
+
+packages.yml:
+  - info: Installed packages
+  - actions:
+    - pkg.list_pkgs:
+
+repositories.yml:
+  - info: Available repositories
+  - actions:
+    - pkg.list_repos:
+
+upgrades.yml:
+  - info: Possible upgrades
+  - actions:
+    - pkg.list_upgrades:
+'''
+
+
 class SupportDataCollector(object):
     '''
     Data collector. It behaves just like another outputter,
