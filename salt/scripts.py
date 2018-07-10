@@ -525,9 +525,9 @@ def salt_support():
     :return:
     '''
 
-    import salt.cli.support
+    import salt.cli.support.collector
     if '' in sys.path:
         sys.path.remove('')
-    client = salt.cli.support.SaltSupport()
+    client = salt.cli.support.collector.SaltSupport()
     _install_signal_handlers(client)
     client.run()

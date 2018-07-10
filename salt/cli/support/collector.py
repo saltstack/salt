@@ -1,35 +1,16 @@
 # coding=utf-8
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
-sys.modules['pkg_resources'] = None
-import salt.utils.parsers
-import salt.utils.verify
-import salt.cli.caller
 import copy
 import yaml
 import json
 
-DEFAULT_SCENARIO = '''
-grains.yml:
-  - info: System grains
-  - actions:
-    - grains.items:
+sys.modules['pkg_resources'] = None
 
-packages.yml:
-  - info: Installed packages
-  - actions:
-    - pkg.list_pkgs:
-
-repositories.yml:
-  - info: Available repositories
-  - actions:
-    - pkg.list_repos:
-
-upgrades.yml:
-  - info: Possible upgrades
-  - actions:
-    - pkg.list_upgrades:
-'''
+import salt.utils.parsers
+import salt.utils.verify
+import salt.cli.caller
+import salt.cli.support
 
 
 class SupportDataCollector(object):
@@ -74,27 +55,67 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
     '''
     Class to run Salt Support subsystem.
     '''
-    def _local_call(self):
+    def _get_caller(self, conf):
+        if not getattr(self, '_caller', None):
+            self._caller = salt.cli.caller.Caller.factory(conf)
+        else:
+            self._caller.opts = conf
+
+        return self._caller
+
+    def _local_call(self, call_conf):
         '''
         Execute local call
         '''
         conf = copy.deepcopy(self.config)
 
         conf['file_client'] = 'local'
-        conf['fun'] = 'grains.items'
+        conf['fun'] = ''
         conf['arg'] = []
         conf['cache_jobs'] = False
         conf['print_metadata'] = False
+        conf.update(call_conf)
 
-        caller = salt.cli.caller.Caller.factory(conf)
+        return self._get_caller(conf).call()
 
-        return caller.call()
+    def _get_action(self, action_meta):
+        '''
+        Parse action and turn into a calling point.
+        :param action_meta:
+        :return:
+        '''
+        conf = {
+            'fun': action_meta.keys()[0],
+            'arg': [],
+        }
+        kwargs = {}
+        for arg in action_meta[conf['fun']] or []:
+            if isinstance(arg, dict):
+                kwargs = copy.deepcopy(arg)
+            else:
+                conf['arg'].append(arg or [])
+
+        return conf
 
     def collect_master_data(self):
         '''
         Collects master system data.
         :return:
         '''
+        scenario = salt.cli.support.get_scenario()
+        for name in scenario:
+            descr = scenario[name].get('info', 'Action for {}'.format(name))
+            actions = scenario[name].get('actions') or []
+            for action in actions:
+                print(descr)
+                self.collector.add(name, self._local_call(self._get_action(action)))
+
+        # for function, name, descr in [('grains.items', 'grains.yml', 'System grains'),
+        #                               ('pkg.list_pkgs', 'packages.yml', 'Installed packages'),
+        #                               ('pkg.list_repos', 'repos.yml', 'Available repositories'),
+        #                               ('pkg.list_upgrades', 'upgrades.yml', 'Possible upgrades')]:
+        #     print(descr)
+        #     self.collector.add(name, self._local_call(function))
 
     def collect_targets_data(self):
         '''
