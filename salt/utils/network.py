@@ -223,7 +223,7 @@ def ip_to_host(ip):
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
     except Exception as exc:
         log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
-        hostname = None
+        hostname = ip
     return hostname
 
 # pylint: enable=C0103
