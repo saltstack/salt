@@ -969,7 +969,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # minimum time required for return to complete. By default no waiting, if
         # we are a syndic then we must wait syndic_wait at a minimum
-        min_wait_time = Future().set_result(True)
+        min_wait_time = Future()
+        min_wait_time.set_result(True)
 
         # wait syndic a while to avoid missing published events
         if self.application.opts['order_masters']:

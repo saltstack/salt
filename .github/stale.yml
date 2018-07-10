@@ -1,8 +1,8 @@
 # Probot Stale configuration file
 
 # Number of days of inactivity before an issue becomes stale
-# 650 is approximately 1 year and 9 months
-daysUntilStale: 650
+# 640 is approximately 1 year and 9 months
+daysUntilStale: 640
 
 # Number of days of inactivity before a stale issue is closed
 daysUntilClose: 7

@@ -886,7 +886,7 @@ def create_network_interface(call=None, kwargs=None):
     try:
         poller.wait()
     except Exception as exc:
-        log.warn('Network interface creation could not be polled. '
+        log.warning('Network interface creation could not be polled. '
                  'It is likely that we are reusing an existing interface. (%s)', exc)
 
     count = 0
@@ -1751,7 +1751,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'server_encrypted': blob.properties.server_encrypted,
                              }
     except Exception as exc:
-        log.warn(six.text_type(exc))
+        log.warning(six.text_type(exc))
 
     return ret
 
