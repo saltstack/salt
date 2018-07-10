@@ -4,6 +4,7 @@ import sys
 import copy
 import yaml
 import json
+import logging
 
 sys.modules['pkg_resources'] = None
 
@@ -12,6 +13,7 @@ import salt.utils.verify
 import salt.cli.caller
 import salt.cli.support
 
+log = logging.getLogger(__name__)
 
 class SupportDataCollector(object):
     '''
