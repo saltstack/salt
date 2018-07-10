@@ -32,8 +32,8 @@ def admin_password_present(name, password=None, **kwargs):
         3. pillar 'zabbix.password' setting
 
     1) Tries to log in as Admin with password found in state password parameter or _connection_password
-       or pillar or default zabbix password in this precise order order, if any of them is present.
-    2) If one of above passwords found is successful it tries to update the most prioritized password.
+       or pillar or default zabbix password in this precise order, if any of them is present.
+    2) If one of above passwords matches, it tries to change the password to the most prioritized one.
     3) If not able to connect with any password then it fails.
 
     :param name: Just a name of state
@@ -44,14 +44,14 @@ def admin_password_present(name, password=None, **kwargs):
 
     .. code-block:: yaml
 
-    # password taken from pillar or _connection_password
-    zabbix-admin-password:
-        zabbix_user.admin_password_present
-
-    # directly set password
-    zabbix-admin-password:
-        zabbix_user.admin_password_present:
-            - password: SECRET_PASS
+        # password taken from pillar or _connection_password
+        zabbix-admin-password:
+            zabbix_user.admin_password_present
+    
+        # directly set password
+        zabbix-admin-password:
+            zabbix_user.admin_password_present:
+                - password: SECRET_PASS
     '''
     dry_run = __opts__['test']
     default_zabbix_user = 'Admin'
@@ -128,7 +128,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     :param alias: user alias
     :param passwd: user's password
     :param usrgrps: user groups to add the user to
-    :param medias: OPtional - user's medias to create
+    :param medias: Optional - user's medias to create
     :param password_reset: whether or not to reset password at update
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
