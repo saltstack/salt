@@ -1,19 +1,31 @@
-grains.yml:
-  info: System grains
-  actions:
-    - grains.items:
+sysinfo:
+  - grains.items:
+      info: System grains
 
-packages.yml:
-  info: Installed packages
-  actions:
-    - pkg.list_pkgs:
+packages:
+  - pkg.list_pkgs:
+      info: Installed packages
 
-repositories.yml:
-  info: Available repositories
-  actions:
-    - pkg.list_repos:
+repositories:
+  - pkg.list_repos:
+      info: Available repositories
 
-upgrades.yml:
-  info: Possible upgrades
-  actions:
-    - pkg.list_upgrades:
+upgrades:
+  - pkg.list_upgrades:
+      info: Possible upgrades
+
+general-health:
+  - ps.boot_time:
+      info: System Boot Time
+  - ps.swap_memory:
+      info: Swap Memory
+  - ps.cpu_times:
+      info: CPU times
+  - ps.disk_io_counters:
+      info: Disk IO counters
+  - ps.disk_partition_usage:
+      info: Disk partition usage
+  - ps.disk_partitions:
+      info: Disk partitions
+  - ps.top:
+      info: Top CPU consuming processes
