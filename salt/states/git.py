@@ -179,6 +179,18 @@ def _fail(ret, msg, comments=None):
     return ret
 
 
+def _already_cloned(ret, target, branch=None, comments=None):
+    ret['result'] = True
+    ret['comment'] = 'Repository already exists at {0}{1}'.format(
+        target,
+        ' and is checked out to branch \'{0}\''.format(branch) if branch else ''
+    )
+    if comments:
+        ret['comment'] += '\n\nChanges already made: '
+        ret['comment'] += _format_comments(comments)
+    return ret
+
+
 def _failed_fetch(ret, exc, comments=None):
     msg = (
         'Fetch failed. Set \'force_fetch\' to True to force the fetch if the '
@@ -2673,6 +2685,202 @@ def detached(name,
     ret['comment'] = msg
 
     return ret
+
+
+def cloned(name,
+           target=None,
+           branch=None,
+           user=None,
+           password=None,
+           identity=None,
+           https_user=None,
+           https_pass=None,
+           output_encoding=None):
+    '''
+    .. versionadded:: 2018.3.2,Fluorine
+
+    Ensure that a repository has been cloned to the specified target directory.
+    If not, clone that repository. No fetches will be performed once cloned.
+
+    name
+        Address of the remote repository
+
+    target
+        Name of the target directory where repository should be cloned
+
+    branch
+        Remote branch to check out. If unspecified, the default branch (i.e.
+        the one to the remote HEAD points) will be checked out.
+
+        .. note::
+            The local branch name will match the remote branch name. If the
+            branch name is changed, then that branch will be checked out
+            locally, but keep in mind that remote repository will not be
+            fetched. If your use case requires that you keep the clone up to
+            date with the remote repository, then consider using
+            :py:func:`git.latest <salt.states.git.latest>`.
+
+    user
+        User under which to run git commands. By default, commands are run by
+        the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    identity
+        Path to a private key to use for ssh URLs. Works the same way as in
+        :py:func:`git.latest <salt.states.git.latest>`, see that state's
+        documentation for more information.
+
+    https_user
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass
+        HTTP Basic Auth password for HTTPS (only) clones
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+    '''
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+
+    if target is None:
+        ret['comment'] = '\'target\' argument is required'
+        return ret
+    elif not isinstance(target, six.string_types):
+        target = six.text_type(target)
+
+    if not os.path.isabs(target):
+        ret['comment'] = '\'target\' path must be absolute'
+        return ret
+
+    if branch is not None:
+        if not isinstance(branch, six.string_types):
+            branch = six.text_type(branch)
+        if not branch:
+            ret['comment'] = 'Invalid \'branch\' argument'
+            return ret
+
+    if not os.path.exists(target):
+        need_clone = True
+    else:
+        try:
+            __salt__['git.status'](target,
+                                   user=user,
+                                   password=password,
+                                   output_encoding=output_encoding)
+        except Exception as exc:
+            ret['comment'] = six.text_type(exc)
+            return ret
+        else:
+            need_clone = False
+
+    comments = []
+
+    def _clone_changes(ret):
+        ret['changes']['new'] = name + ' => ' + target
+
+    def _branch_changes(ret, old, new):
+        ret['changes']['branch'] = {'old': old, 'new': new}
+
+    if need_clone:
+        if __opts__['test']:
+            _clone_changes(ret)
+            comment = '{0} would be cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+            return _neutral_test(ret, comment)
+        clone_opts = ['--branch', branch] if branch is not None else None
+        try:
+            __salt__['git.clone'](target,
+                                  name,
+                                  opts=clone_opts,
+                                  user=user,
+                                  password=password,
+                                  identity=identity,
+                                  https_user=https_user,
+                                  https_pass=https_pass,
+                                  output_encoding=output_encoding)
+        except CommandExecutionError as exc:
+            msg = 'Clone failed: {0}'.format(_strip_exc(exc))
+            return _fail(ret, msg, comments)
+
+        comments.append(
+            '{0} cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+        )
+        _clone_changes(ret)
+        ret['comment'] = _format_comments(comments)
+        ret['result'] = True
+        return ret
+    else:
+        if branch is None:
+            return _already_cloned(ret, target, branch, comments)
+        else:
+            current_branch = __salt__['git.current_branch'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            if current_branch == branch:
+                return _already_cloned(ret, target, branch, comments)
+            else:
+                if __opts__['test']:
+                    _branch_changes(ret, current_branch, branch)
+                    return _neutral_test(
+                        ret,
+                        'Branch would be changed to \'{0}\''.format(branch))
+                try:
+                    __salt__['git.rev_parse'](
+                        target,
+                        rev=branch,
+                        user=user,
+                        password=password,
+                        ignore_retcode=True,
+                        output_encoding=output_encoding)
+                except CommandExecutionError:
+                    # Local head does not exist, so we need to check out a new
+                    # branch at the remote rev
+                    checkout_rev = '/'.join(('origin', branch))
+                    checkout_opts = ['-b', branch]
+                else:
+                    # Local head exists, so we just need to check it out
+                    checkout_rev = branch
+                    checkout_opts = None
+
+                try:
+                    __salt__['git.checkout'](
+                        target,
+                        rev=checkout_rev,
+                        opts=checkout_opts,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                except CommandExecutionError as exc:
+                    msg = 'Failed to change branch to \'{0}\': {1}'.format(branch, exc)
+                    return _fail(ret, msg, comments)
+                else:
+                    comments.append('Branch changed to \'{0}\''.format(branch))
+                    _branch_changes(ret, current_branch, branch)
+                    ret['comment'] = _format_comments(comments)
+                    ret['result'] = True
+                    return ret
 
 
 def config_unset(name,

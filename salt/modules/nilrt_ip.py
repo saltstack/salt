@@ -11,9 +11,9 @@ import time
 import os
 
 # Import salt libs
-import salt.utils.validate.net
 import salt.exceptions
-
+import salt.utils.files
+import salt.utils.validate.net
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -240,7 +240,7 @@ def _get_static_info(interface):
     parser = configparser.ConfigParser()
     if os.path.exists(INTERFACES_CONFIG):
         try:
-            with salt.utils.fopen(INTERFACES_CONFIG, 'r') as config_file:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, 'r') as config_file:
                 parser.read_file(config_file)
         except configparser.MissingSectionHeaderError:
             pass
@@ -436,7 +436,7 @@ def _configure_static_interface(interface, **settings):
     parser = configparser.ConfigParser()
     if os.path.exists(INTERFACES_CONFIG):
         try:
-            with salt.utils.fopen(INTERFACES_CONFIG, 'r') as config_file:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, 'r') as config_file:
                 parser.read_file(config_file)
         except configparser.MissingSectionHeaderError:
             pass
@@ -455,7 +455,7 @@ def _configure_static_interface(interface, **settings):
     parser.set('interface_{0}'.format(hwaddr_section_number), 'Name', name)
     parser.set('interface_{0}'.format(hwaddr_section_number), 'MAC', hwaddr)
     parser.set('interface_{0}'.format(hwaddr_section_number), 'Type', 'ethernet')
-    with salt.utils.fopen(INTERFACES_CONFIG, 'w') as config_file:
+    with salt.utils.files.fopen(INTERFACES_CONFIG, 'w') as config_file:
         parser.write(config_file)
     return True
 

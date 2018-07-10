@@ -2441,7 +2441,7 @@ def wait_for_instance(
                 )
                 pprint.pprint(console)
                 time.sleep(5)
-            output = console['output_decoded']
+            output = salt.utils.stringutils.to_unicode(console['output_decoded'])
             comps = output.split('-----BEGIN SSH HOST KEY KEYS-----')
             if len(comps) < 2:
                 # Fail; there are no host keys

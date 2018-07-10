@@ -35,6 +35,7 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import hashlib
 import time
 import logging
 import re
@@ -198,6 +199,12 @@ def __virtual__():
     Confirm that a python mysql client is installed.
     '''
     return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
+
+
+def __mysql_hash_password(password):
+    _password = hashlib.sha1(password).digest()
+    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
+    return _password
 
 
 def __check_table(name, table, **connection_args):
@@ -1201,6 +1208,7 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' passwordless=True
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
+    server_version = version(**connection_args)
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1232,8 +1240,14 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
-        args['password'] = six.text_type(password)
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            # Hash the password before comparing
+            _password = __mysql_hash_password(password)
+            qry += ' AND ' + password_column + ' = %(password)s'
+        else:
+            _password = password
+            qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
+        args['password'] = six.text_type(_password)
     elif password_hash:
         qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
@@ -1331,6 +1345,7 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
+    server_version = version(**connection_args)
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1351,7 +1366,10 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        qry += ' IDENTIFIED BY PASSWORD %(password)s'
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            qry += ' IDENTIFIED BY %(password)s'
+        else:
+            qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if salt.utils.data.is_true(unix_socket):
@@ -1431,9 +1449,13 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
+    server_version = version(**connection_args)
     args = {}
     if password is not None:
-        password_sql = 'PASSWORD(%(password)s)'
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+            password_sql = '%(password)s'
+        else:
+            password_sql = 'PASSWORD(%(password)s)'
         args['password'] = password
     elif password_hash is not None:
         password_sql = '%(password)s'

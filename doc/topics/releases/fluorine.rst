@@ -4,6 +4,59 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+Non-Backward-Compatible Change to YAML Renderer
+===============================================
+
+In earlier releases, this was considered valid usage in Python 2, assuming that
+``data`` was a list or dictionary containing keys/values which are ``unicode``
+types:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data }}
+
+One common use case for this is when using one of Salt's :jinja_ref:`custom
+Jinja filters <custom-jinja-filters>` which return lists or dictionaries, such
+as the :jinja_ref:`ipv4` filter.
+
+In Python 2, Jinja will render the ``unicode`` string types within the
+list/dictionary with the "u" prefix (e.g. ``{u'foo': u'bar'}``). While not
+valid YAML, earlier releases would successfully load these values.
+
+As of this release, the above SLS would result in an error message. To allow
+for a data structure to be dumped directly into your SLS file, use the `tojson
+Jinja filter`_:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data|tojson }}
+
+.. note::
+    This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
+    added a ``tojson`` filter which will be used if this filter is not already
+    present, making it available on platforms like RHEL 7 and Ubuntu 14.04
+    which provide older versions of Jinja.
+
+.. important::
+    The :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list` filters
+    do not actually dump the results to JSON. Since ``tojson`` accomplishes
+    what those filters were designed to do, they are now deprecated and will be
+    removed in the Neon release. The ``tojson`` filter should be used in all
+    cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
+    would have been used.
+
+.. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+
 New Docker Proxy Minion
 =======================
 
@@ -21,7 +74,6 @@ module.
     proxy:
       proxytype: docker
       name: keen_proskuriakova
-
 
 Grains Dictionary Passed into Custom Grains
 ===========================================

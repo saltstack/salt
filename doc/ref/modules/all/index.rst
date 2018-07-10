@@ -373,6 +373,7 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule

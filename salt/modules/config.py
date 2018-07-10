@@ -42,7 +42,6 @@ __proxyenabled__ = ['*']
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': '',
