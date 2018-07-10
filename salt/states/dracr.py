@@ -23,6 +23,8 @@ Ensure the property is set
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import re
+
 import salt.exceptions
 
 
@@ -52,11 +54,16 @@ def property(
     }
 
     if host is None:
-        host = __salt__["cmd.run_all"](
-            'ipmitool lan print | tr -d " " | grep "IPAddress:" | cut -f 2 -d ":"',
-            python_shell=True,
-        )
-        host = host["stdout"]
+        output = __salt__["cmd.run_all"]("ipmitool lan print", python_shell=True)
+        stdout = output["stdout"]
+        reg = re.compile(r"\s*IP Address\s*:\s*(\d+.\d+.\d+.\d+)\s*")
+        for line in stdout:
+            result = reg.match(line)
+            if result is not None:
+                # we want group(1) as this is match in parentheses
+                host = result.group(1)
+                break
+
     if not host:
         ret["result"] = False
         ret["comment"] = "Unknown host!"
