@@ -90,14 +90,13 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             'fun': action_meta.keys()[0],
             'arg': [],
         }
-        kwargs = {}
-        for arg in action_meta[conf['fun']] or []:
-            if isinstance(arg, dict):
-                kwargs = copy.deepcopy(arg)
-            else:
-                conf['arg'].append(arg or [])
+        action_meta = action_meta[conf['fun']]
+        info = action_meta.get('info', 'Action for {}'.format(conf['fun']))
+        for arg in action_meta.get('args') or []:
+            if not isinstance(arg, dict):
+                conf['arg'].append(arg)
 
-        return conf
+        return info, conf
 
     def collect_master_data(self):
         '''
@@ -105,19 +104,13 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :return:
         '''
         scenario = salt.cli.support.get_scenario()
-        for name in scenario:
-            descr = scenario[name].get('info', 'Action for {}'.format(name))
-            actions = scenario[name].get('actions') or []
-            for action in actions:
-                print(descr)
-                self.collector.add(name, self._local_call(self._get_action(action)))
-
-        # for function, name, descr in [('grains.items', 'grains.yml', 'System grains'),
-        #                               ('pkg.list_pkgs', 'packages.yml', 'Installed packages'),
-        #                               ('pkg.list_repos', 'repos.yml', 'Available repositories'),
-        #                               ('pkg.list_upgrades', 'upgrades.yml', 'Possible upgrades')]:
-        #     print(descr)
-        #     self.collector.add(name, self._local_call(function))
+        for category_name in scenario:
+            print(category_name)
+            self.collector.add(category_name)
+            for action in scenario[category_name]:
+                info, conf = self._get_action(action)
+                print('  Collecting', info.lower())
+                self.collector.write(info, self._local_call(conf))
 
     def collect_targets_data(self):
         '''
