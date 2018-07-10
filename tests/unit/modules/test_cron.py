@@ -789,6 +789,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
                                                                runas=STUB_USER,
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
@@ -803,6 +804,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value=False)):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -u root -l",
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
@@ -818,6 +820,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
                                                                runas=STUB_USER,
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
@@ -833,6 +836,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
                                                                runas=STUB_USER,
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
@@ -848,6 +852,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
                                                                runas=STUB_USER,
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
@@ -863,6 +868,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
                                                                runas=STUB_USER,
+                                                               ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
 
