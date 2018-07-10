@@ -80,3 +80,10 @@ class NetBoxTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(
                 'token' and 'private_key_file' in mock.call_args[1]
             )
+
+    def test_token_present(self):
+        with patch('pynetbox.api', MagicMock()) as mock:
+            netbox.get('dcim', 'devices', name='test')
+            self.assertTrue(
+                'token' in mock.call_args[1]
+            )
