@@ -1902,6 +1902,26 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
             self.get_config_file_path('minion'))
 
 
+class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser, ConfigDirMixIn,
+                                                 MergeConfigMixIn, LogLevelMixIn, TimeoutMixIn)):
+    default_timeout = 5
+    description = 'Salt Support is a program to collect all support data: logs, system configuration etc.'
+    usage = '%prog [options] \'<target>\' <function> [arguments]'
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
+
+    def _mixin_setup(self):
+        self.add_option('-f', '--archive-format', default='gzip', dest='archive_format',
+                        help='Specify archive type ("gzip" or "zip"). Default "gzip".')
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path())
+
+
 class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              OptionParser,
                                              ConfigDirMixIn,
