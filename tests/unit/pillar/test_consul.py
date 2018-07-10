@@ -29,6 +29,7 @@ PILLAR_DATA = [
     {'Value': 'Test User', 'Key': 'test-shared/user/full_name'},
     {'Value': 'adm\nwww-data\nmlocate', 'Key': 'test-shared/user/groups'},
     {'Value': '"adm\nwww-data\nmlocate"', 'Key': 'test-shared/user/dontsplit'},
+    {'Value': 'yaml:\n  key: value\n', 'Key': 'test-shared/user/dontexpand'},
     {'Value': None, 'Key': 'test-shared/user/blankvalue'},
     {'Value': 'test', 'Key': 'test-shared/user/login'},
     {'Value': None, 'Key': 'test-shared/user/'}
@@ -65,11 +66,29 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                 assert sorted(pillar_data) == ['sites', 'user']
                 self.assertNotIn('blankvalue', pillar_data['user'])
 
+    def test_pillar_nest(self):
+        with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
+            with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
+                pillar_data = consul_pillar.ext_pillar(
+                    'testminion', {}, 'consul_config root=test-shared/ pillar_root=nested-key/'
+                )
+                consul_pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
+                assert sorted(pillar_data['nested-key']) == ['sites', 'user']
+                self.assertNotIn('blankvalue', pillar_data['nested-key']['user'])
+
     def test_value_parsing(self):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
                 assert isinstance(pillar_data['user']['dontsplit'], six.string_types)
+
+    def test_non_expansion(self):
+        with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
+            with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
+                pillar_data = consul_pillar.ext_pillar(
+                    'testminion', {}, 'consul_config root=test-shared/ expand_keys=false'
+                )
+                assert isinstance(pillar_data['user']['dontexpand'], six.string_types)
 
     def test_dict_merge(self):
         test_dict = {}

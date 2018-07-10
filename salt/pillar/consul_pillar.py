@@ -231,10 +231,22 @@ def ext_pillar(minion_id,
     }
 
     try:
-        pillar = fetch_tree(client, opts['root'], opts['expand_keys'])
+        pillar_tree = fetch_tree(client, opts['root'], opts['expand_keys'])
         if opts['pillar_root']:
             log.debug('Merging consul path %s/ into pillar at %s/', opts['root'], opts['pillar_root'])
-            pillar = nest_tree(pillar, opts['pillar_root'])
+
+            pillar = {}
+            branch = pillar
+            keys = opts['pillar_root'].rstrip('/').split('/')
+
+            for i, k in enumerate(keys):
+                if i == len(keys) - 1:
+                    branch[k] = pillar_tree
+                else:
+                    branch[k] = {}
+                    branch = branch[k]
+        else:
+            pillar = pillar_tree
     except KeyError:
         log.error('No such key in consul profile %s: %s', opts['profile'], opts['root'])
         pillar = {}
@@ -299,24 +311,6 @@ def pillar_format(ret, keys, value, expand_keys):
         pil = {k: pil}
 
     return dict_merge(ret, pil)
-
-
-def nest_tree(pillar, pillar_root):
-    '''
-    Returns a pillar nested in a subkey
-    '''
-    ret = {}
-    branch = ret
-    keys = pillar_root.split('/')
-
-    for i, k in enumerate(keys):
-        if i == len(keys) - 1:
-            branch[k] = pillar
-        else:
-            branch[k] = {}
-            branch = branch[k]
-
-    return ret
 
 
 def get_conn(opts, profile):
