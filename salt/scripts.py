@@ -530,4 +530,7 @@ def salt_support():
         sys.path.remove('')
     client = salt.cli.support.collector.SaltSupport()
     _install_signal_handlers(client)
-    client.run()
+    try:
+        client.run()
+    except Exception as ex:
+        print('Error:', ex)
