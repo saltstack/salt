@@ -15,6 +15,7 @@ import salt.utils.stringutils
 import salt.utils.parsers
 import salt.utils.verify
 import salt.exceptions
+import salt.defaults.exitcodes
 import salt.cli.caller
 import salt.cli.support
 import salt.cli.support.console
@@ -183,11 +184,24 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.setup_logfile_logger()
             salt.utils.verify.verify_log(self.config)
 
-        self.out = salt.cli.support.console.IndentOutput()
-        self.collector = SupportDataCollector('master-info')
-        self.collector.open()
-        self.collect_master_data()
-        self.collect_targets_data()
-        self.collector.close()
+        self.out = salt.cli.support.console.MessagesOutput()
+        try:
+            self.collector = SupportDataCollector('master-info')
+        except Exception as ex:
+            self.out.error(ex)
+            exit_code = salt.defaults.exitcodes.EX_GENERIC
+        else:
+            try:
+                self.collector.open()
+                self.collect_master_data()
+                self.collect_targets_data()
+                self.collector.close()
 
-        archive_path = self.collector.archive_path
+                archive_path = self.collector.archive_path
+                self.out.highlight('\nSupport data has been written to "{}" file.\n', archive_path, _main='YELLOW')
+                exit_code = salt.defaults.exitcodes.EX_OK
+            except Exception as ex:
+                self.out.error(ex)
+                exit_code = salt.defaults.exitcodes.EX_SOFTWARE
+
+        sys.exit(exit_code)
