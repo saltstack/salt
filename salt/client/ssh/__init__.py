@@ -1175,10 +1175,8 @@ class Single(object):
         '''
         Prepare the command string
         '''
-        if self.target['sudo']:
-            sudo = 'sudo'
-            # set the sudo promtp parameter with the unique prompt if the password is set
-            sudo += ' -p \"{0}\"'.format(shell.SUDO_PROMPT) if self.target['passwd'] else ''
+        if self.target.get('sudo'):
+            sudo = 'sudo -p \"{0}\"'.format(shell.SUDO_PROMPT) if self.target.get('passwd') else 'sudo'
         else:
             sudo = ''
         sudo_user = self.target['sudo_user']
