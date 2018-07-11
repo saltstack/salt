@@ -36,3 +36,49 @@ class IndentOutput(object):
             self.__device.write(str(chunk))
         self.__device.write(os.linesep)
         self.__device.flush()
+
+
+class MessagesOutput(IndentOutput):
+    '''
+    Messages output to the CLI.
+    '''
+
+    def error(self, message):
+        '''
+        Print an error to the screen.
+
+        :param message:
+        :return:
+        '''
+        for chunk in [self.__colors['LIGHT_RED'], 'Error:', self.__colors['RED'], message, self.__colors['ENDC']]:
+            self.__device.write(str(chunk))
+        self.__device.write(os.linesep)
+        self.__device.flush()
+
+    def highlight(self, message, *values, **colors):
+        '''
+        Highlighter works the way that message parameter is a template,
+        the "values" is a list of arguments going one after another as values there.
+        And so the "colors" should designate either highlight color or alternate for each.
+
+        Example:
+
+           highlight('Hello {}, there! It is {}.', 'user', 'daytime', _main='GREEN', _highlight='RED')
+           highlight('Hello {}, there! It is {}.', 'user', 'daytime', _main='GREEN', _highlight='RED', 'daytime'='YELLOW')
+
+        First example will highlight all the values in the template with the red color.
+        Second example will highlight the second value with the yellow color.
+
+        Usage:
+
+            colors:
+              _main: Sets the main color (or default is used)
+              _highlight: Sets the alternative color for everything
+              'any phrase' that is the same in the "values" can override color.
+
+        :param message:
+        :param formatted:
+        :param colors:
+        :return:
+        '''
+
