@@ -242,6 +242,18 @@ def meminfo():
 
 
 def vmstats():
+    '''
+    Return information about the virtual memory on the machine
+
+    Returns:
+        dict: A dictionary of virtual memory stats
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * status.vmstats
+    '''
     # Setup the SPI Structure
     spi = SYSTEM_PERFORMANCE_INFORMATION()
     retlen = c_ulong()
@@ -260,6 +272,18 @@ def vmstats():
 
 
 def loadavg():
+    '''
+    Returns counter information related to the load of the machine
+
+    Returns:
+        dict: A dictionary of counters
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * status.loadavg
+    '''
     # Counter List (obj, instance, counter)
     counter_list = [
         ('Memory', None, 'Available Bytes'),

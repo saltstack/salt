@@ -1,25 +1,87 @@
 # -*- coding: utf-8 -*-
-# Copyright issue?
+'''
+Salt Util for getting system information with the Performance Data Helper (pdh).
+Counter information is gathered from current activity or log files.
+
+Usage:
+
+.. code-block:: python
+
+    import salt.utils.win_pdh
+
+    # Get a list of Counter objects
+    salt.utils.win_pdh.list_objects()
+
+    # Get a list of ``Processor`` instances
+    salt.utils.win_pdh.list_instances('Processor')
+
+    # Get a list of ``Processor`` counters
+    salt.utils.win_pdh.list_counters('Processor')
+
+    # Get the value of a single counter
+    # \Processor(*)\% Processor Time
+    salt.utils.win_pdh.get_counter('Processor', '*', '% Processor Time')
+
+    # Get the values of multiple counters
+    counter_list = [('Processor', '*', '% Processor Time'),
+                    ('System', None, 'Context Switches/sec'),
+                    ('Memory', None, 'Pages/sec'),
+                    ('Server Work Queues', '*', 'Queue Length')]
+    salt.utils.win_pdh.get_counters(counter_list)
+
+    # Get all counters for the Processor object
+    salt.utils.win_pdh.get_all_counters('Processor')
+'''
 # https://www.cac.cornell.edu/wiki/index.php?title=Performance_Data_Helper_in_Python_with_win32pdh
 # https://docs.microsoft.com/en-us/windows/desktop/perfctrs/using-the-pdh-functions-to-consume-counter-data
+# Import python libs
 from __future__ import absolute_import, unicode_literals
 import logging
 import time
-import pywintypes
-import win32pdh
+
+# Import 3rd party libs
+try:
+    import pywintypes
+    import win32pdh
+    HAS_WINDOWS_MODULES = True
+except ImportError:
+    HAS_WINDOWS_MODULES = False
+
+# Import salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__file__)
 
+# Define the virtual name
+__virtualname__ = 'pdh'
+
+
+def __virtual__():
+    '''
+    Only works on Windows systems with the PyWin32
+    '''
+    if not salt.utils.platform.is_windows():
+        return False, 'salt.utils.win_pdh: Requires Windows'
+
+    if not HAS_WINDOWS_MODULES:
+        return False, 'salt.utils.win_pdh: Missing required modules'
+
+    return __virtualname__
+
 
 class Counter(object):
+    '''
+    Counter object
+    Has enumerations and functions for working with counters
+    '''
     # The dwType field from GetCounterInfo returns the following, or'ed.
     # These come from WinPerf.h
     PERF_SIZE_DWORD = 0x00000000
     PERF_SIZE_LARGE = 0x00000100
     PERF_SIZE_ZERO = 0x00000200  # for Zero Length fields
     PERF_SIZE_VARIABLE_LEN = 0x00000300
-    # length is in the CounterLength field of Counter Definition struct
+    # length is in the CounterLength field of the Counter Definition structure
 
     # select one of the following values to indicate the counter field usage
     PERF_TYPE_NUMBER = 0x00000000  # a number (not a counter)
@@ -95,7 +157,10 @@ class Counter(object):
                 The name of the counter
 
         Returns:
-            Counter: A Counter object with the path if valid, otherwise ``None``
+            Counter: A Counter object with the path if valid
+
+        Raises:
+            CommandExecutionError: If the path is invalid
         '''
         path = win32pdh.MakeCounterPath(
             (None, obj, instance, None, instance_index, counter), 0)
@@ -120,7 +185,6 @@ class Counter(object):
         Add the current path to the query
 
         Args:
-
             query (obj):
                 The handle to the query to add the counter
         '''
@@ -128,8 +192,11 @@ class Counter(object):
 
     def get_info(self):
         '''
-        GetCounterInfo sometimes crashes in the wrapper code. Fewer crashes if
-        this is called after sampling data.
+        Get information about the counter
+
+        .. note::
+            GetCounterInfo sometimes crashes in the wrapper code. Fewer crashes
+            if this is called after sampling data.
         '''
         if not self.info:
             ci = win32pdh.GetCounterInfo(self.handle, 0)
@@ -152,6 +219,12 @@ class Counter(object):
         return self.info
 
     def value(self):
+        '''
+        Return the counter value
+
+        Returns:
+            long: The counter value
+        '''
         (counter_type, value) = win32pdh.GetFormattedCounterValue(
             self.handle, win32pdh.PDH_FMT_DOUBLE)
         self.type = counter_type
@@ -159,7 +232,8 @@ class Counter(object):
 
     def type_string(self):
         '''
-        This string shows which bits are set in the dwType from PdhGetInfo.
+        Returns the names of the flags that are set in the Type field
+
         It can be used to format the counter.
         '''
         type = self.get_info()['type']
@@ -175,7 +249,77 @@ class Counter(object):
         return self.path
 
 
+def list_objects():
+    '''
+    Get a list of available counter objects on the system
+
+    Returns:
+        list: A list of counter objects
+    '''
+    return sorted(win32pdh.EnumObjects(None, None, -1, 0))
+
+
+def list_counters(obj):
+    '''
+    Get a list of counters available for the object
+
+    Args:
+        obj (str):
+            The name of the counter object. You can get a list of valid names
+            using the ``list_objects`` function
+
+    Returns:
+        list: A list of counters available to the passed object
+    '''
+    return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[0]
+
+
+def list_instances(obj):
+    '''
+    Get a list of instances available for the object
+
+    Args:
+        obj (str):
+            The name of the counter object. You can get a list of valid names
+            using the ``list_objects`` function
+
+    Returns:
+        list: A list of instances available to the passed object
+    '''
+    return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[1]
+
+
 def build_counter_list(counter_list):
+    '''
+    Create a list of Counter objects to be used in the pdh query
+
+    Args:
+        counter_list (list):
+            A list of tuples containing counter information. Each tuple should
+            contain the object, instance, and counter name. For example, to
+            get the ``% Processor Time`` counter for all Processors on the
+            system (``\Processor(*)\% Processor Time``) you would pass a tuple
+            like this:
+
+            ```
+            counter_list = [('Processor', '*', '% Processor Time')]
+            ```
+
+            If there is no ``instance`` for the counter, pass ``None``
+
+            Multiple counters can be passed like so:
+
+            ```
+            counter_list = [('Processor', '*', '% Processor Time'),
+                            ('System', None, 'Context Switches/sec')]
+            ```
+
+            .. note::
+                Invalid counters are ignored
+
+    Returns:
+        list: A list of Counter objects
+    '''
     counters = []
     index = 0
     for obj, instance, counter_name in counter_list:
@@ -184,24 +328,29 @@ def build_counter_list(counter_list):
             index += 1
             counters.append(counter)
         except CommandExecutionError as exc:
+            # Not a valid counter
             log.debug(exc.strerror)
             continue
     return counters
 
 
-def list_objects():
-    return sorted(win32pdh.EnumObjects(None, None, -1, 0))
-
-
-def list_counters(obj):
-    return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[0]
-
-
-def list_instances(obj):
-    return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[1]
-
-
 def get_all_counters(obj, instance_list=None):
+    '''
+    Get the values for all counters available to a Counter object
+
+    Args:
+
+        obj (str):
+            The name of the counter object. You can get a list of valid names
+            using the ``list_objects`` function
+
+        instance_list (list):
+            A list of instances to return. Use this to narrow down the counters
+            that are returned.
+
+            .. note::
+                ``_Total`` is returned as ``*``
+    '''
     counters, instances_avail = win32pdh.EnumObjectItems(None, None, obj, -1, 0)
 
     if instance_list is None:
@@ -222,6 +371,16 @@ def get_all_counters(obj, instance_list=None):
 
 
 def get_counters(counter_list):
+    '''
+    Get the values for the passes list of counters
+
+    Args:
+        counter_list (list):
+            A list of counters to lookup
+
+    Returns:
+        dict: A dictionary of counters and their values
+    '''
     if not isinstance(counter_list, list):
         raise CommandExecutionError('counter_list must be a list of tuples')
 
@@ -238,6 +397,8 @@ def get_counters(counter_list):
 
         # https://docs.microsoft.com/en-us/windows/desktop/perfctrs/collecting-performance-data
         win32pdh.CollectQueryData(query)
+        # The sleep here is required for counters that require more than 1
+        # reading
         time.sleep(1)
         win32pdh.CollectQueryData(query)
         ret = {}
@@ -260,6 +421,24 @@ def get_counters(counter_list):
 
 
 def get_counter(obj, instance, counter):
+    '''
+    Get the value of a single counter
+
+    Args:
+
+        obj (str):
+            The name of the counter object. You can get a list of valid names
+            using the ``list_objects`` function
+
+        instance (str):
+            The counter instance you wish to return. Get a list of instances
+            using the ``list_instances`` function
+
+            .. note::
+                ``_Total`` is returned as ``*``
+
+        counter (str):
+            The name of the counter. Get a list of counters using the
+            ``list_counters`` function
+    '''
     return get_counters([(obj, instance, counter)])
-
-
