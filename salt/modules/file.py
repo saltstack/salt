@@ -4672,7 +4672,7 @@ def manage_file(name,
     source
         file reference on the master
 
-    source_hash
+    source_sum
         sum hash for source
 
     user
