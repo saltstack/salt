@@ -2,8 +2,8 @@
 
 source 'https://rubygems.org'
 
-gem 'test-kitchen', :git => 'https://github.com/gtmanfred/test-kitchen.git'
-gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'test-kitchen', '~>1.21'
+gem 'kitchen-salt', '~>0.2'
 gem 'kitchen-sync'
 gem 'git'
 
@@ -20,7 +20,7 @@ group :windows do
   gem 'vagrant-wrapper'
   gem 'kitchen-vagrant'
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', :git => 'https://github.com/gtmanfred/winrm-fs.git'
+  gem 'winrm-fs', :git => 'https://github.com/WinRb/winrm-fs.git'
 end
 
 group :ec2 do

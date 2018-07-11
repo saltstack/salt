@@ -9,7 +9,6 @@ on a single system to test scale capabilities
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
-import pwd
 import time
 import signal
 import optparse
@@ -28,6 +27,7 @@ import salt
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import tests.support.helpers
 
 
 OSES = [
@@ -147,7 +147,7 @@ def parse():
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
-    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
+    parser.add_option('-u', '--user', default=tests.support.helpers.this_user())
 
     options, _args = parser.parse_args()
 

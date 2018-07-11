@@ -37,9 +37,9 @@ config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
-.. code-block:: yaml
+.. code-block:: text
 
     Ensure bucket exists:
         boto_s3_bucket.present:

@@ -306,7 +306,7 @@ option on the Salt master.
 .. conf_minion:: publish_port
 
 ``publish_port``
----------------
+----------------
 
 Default: ``4505``
 
@@ -432,7 +432,7 @@ ids.
 
 Default: ``True``
 
-Caches the minion id to a file when the minion's :minion_conf:`id` is not
+Caches the minion id to a file when the minion's :conf_minion:`id` is not
 statically defined in the minion config. This setting prevents potential
 problems when automatic minion id resolution changes, which can cause the
 minion to lose connection with the master. To turn off minion id caching,
@@ -822,7 +822,7 @@ is appropriate if you expect occasional downtime from the master(s).
 
     master_tries: 1
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_tries
 
 ``auth_tries``
 --------------
@@ -1090,8 +1090,7 @@ Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
 ``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+what you are doing!
 
 .. code-block:: yaml
 
@@ -1162,6 +1161,40 @@ The password used for HTTP proxy access.
 .. code-block:: yaml
 
     proxy_password: obolus
+
+Docker Configuration
+====================
+
+.. conf_minion:: docker.update_mine
+
+``docker.update_mine``
+----------------------
+
+.. versionadded:: 2017.7.8,2018.3.3
+.. versionchanged:: Fluorine
+    The default value is now ``False``
+
+Default: ``True``
+
+If enabled, when containers are added, removed, stopped, started, etc., the
+:ref:`mine <salt-mine>` will be updated with the results of :py:func:`docker.ps
+verbose=True all=True host=True <salt.modules.dockermod.ps>`. This mine data is
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`. Set this
+option to ``False`` to keep Salt from updating the mine with this information.
+
+.. note::
+    This option can also be set in Grains or Pillar data, with Grains
+    overriding Pillar and the minion config file overriding Grains.
+
+.. note::
+    Disabling this will of course keep :py:func:`mine.get_docker
+    <salt.modules.mine.get_docker>` from returning any information for a given
+    minion.
+
+.. code-block:: yaml
+
+    docker.update_mine: False
+
 
 Minion Module Management
 ========================
@@ -1370,7 +1403,7 @@ below.
 Default: ``-1``
 
 Specify a max size (in bytes) for modules on import. This feature is currently
-only supported on *nix operating systems and requires psutil.
+only supported on \*NIX operating systems and requires psutil.
 
 .. code-block:: yaml
 
@@ -2330,6 +2363,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_minion:: reactor_worker_hwm
@@ -2352,7 +2386,7 @@ Thread Settings
 .. conf_minion:: multiprocessing
 
 ``multiprocessing``
--------
+-------------------
 
 Default: ``True``
 

@@ -26,7 +26,9 @@ and download but not install standard updates.
 You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
 features/states of updates available for configuring:
+
 .. code-block:: text
+
     'UI' - User interaction required, skipped by default
     'downloaded' - Already downloaded, included by default
     'present' - Present on computer, included by default

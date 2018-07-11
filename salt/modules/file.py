@@ -1921,8 +1921,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
@@ -4262,26 +4262,6 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
-    # Mode changes if needed
-    if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.normalize_mode(mode)
-            if mode != perms['lmode']:
-                if __opts__['test'] is True:
-                    ret['changes']['mode'] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.normalize_mode(get_mode(name)):
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change mode to {0}'.format(mode)
-                        )
-                    else:
-                        ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if isinstance(user, int):
@@ -4357,6 +4337,27 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                                       .format(group))
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
+
+    # Mode changes if needed
+    if mode is not None:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            mode = salt.utils.normalize_mode(mode)
+            if mode != perms['lmode']:
+                if __opts__['test'] is True:
+                    ret['changes']['mode'] = mode
+                else:
+                    set_mode(name, mode)
+                    if mode != salt.utils.normalize_mode(get_mode(name)):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change mode to {0}'.format(mode)
+                        )
+                    else:
+                        ret['changes']['mode'] = mode
 
     if isinstance(orig_comment, six.string_types):
         if orig_comment:
@@ -4484,6 +4485,11 @@ def check_managed_changes(
             defaults,
             skip_verify,
             **kwargs)
+
+        # Ensure that user-provided hash string is lowercase
+        if source_sum and ('hsum' in source_sum):
+            source_sum['hsum'] = source_sum['hsum'].lower()
+
         if comments:
             __clean_tmp(sfn)
             return False, comments

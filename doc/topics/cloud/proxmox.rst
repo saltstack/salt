@@ -149,10 +149,10 @@ with their default settings listed.
 
     # The name of the image, from ``salt-cloud --list-images proxmox``
     image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
-    
+
     # Whether or not to verify the SSL cert on the Proxmox host
     verify_ssl: False
-    
+
     # Network interfaces, netX
     net0: name=eth0,bridge=vmbr0,ip=dhcp
 
@@ -172,7 +172,7 @@ QEMU profile file (for a new VM):
 
     # Technology used to create the VM ('qemu', 'openvz'(on Proxmox <4.x) or 'lxc'(on Proxmox 4.x+))
     technology: qemu
- 
+
     # Proxmox node name
     host: node_name
 
@@ -187,7 +187,7 @@ QEMU profile file (for a new VM):
 
     # OS Type enum (other / wxp / w2k / w2k3 / w2k8 / wvista / win7 / win8 / l24 / l26 / solaris)
     ostype: win7
-    
+
     # Hard disk location
     sata0: <location>:<size>, format=<qcow2/vmdk/raw>, size=<size>GB #Example: local:120,format=qcow2,size=120GB
 
@@ -231,7 +231,7 @@ QEMU profile file (for a clone):
 
     # Technology used to create the VM ('qemu' or 'lxc')
     technology: qemu
- 
+
     # Proxmox node name
     host: node_name
 
@@ -244,5 +244,11 @@ QEMU profile file (for a clone):
 More information can be found on Proxmox API under the 'POST' method of /nodes/{node}/qemu/{vmid}/clone
 
 .. note::
-    The Proxmox API offers a lot more options and parameters, which are not yet supported by this salt-cloud 'overlay'. Feel free to add your contribution by forking the github repository and modifying  the following file: salt/salt/cloud/clouds/proxmox.py
-    An easy way to support more parameters for VM creation would be to add the names of the optional parameters in the 'create_nodes(vm_)' function, under the 'qemu' technology. But it requires you to dig into the code ...
+    The Proxmox API offers a lot more options and parameters, which are not yet
+    supported by this salt-cloud 'overlay'. Feel free to add your contribution
+    by forking the github repository and modifying  the following file:
+    ``salt/cloud/clouds/proxmox.py``
+
+    An easy way to support more parameters for VM creation would be to add the
+    names of the optional parameters in the 'create_nodes(vm\_)' function, under
+    the 'qemu' technology. But it requires you to dig into the code ...

@@ -104,6 +104,7 @@ master_sign.pub) must be copied from the master to the minions pki-directory.
 
     /etc/salt/pki/minion/master_sign.pub
 
+.. important::
     DO NOT COPY THE master_sign.pem FILE. IT MUST STAY ON THE MASTER AND
     ONLY THERE!
 
@@ -123,7 +124,7 @@ debug mode.
 
 Upon connecting to the master, the following lines should appear on the output:
 
-.. code-block:: bash
+.. code-block:: text
 
     [DEBUG   ] Attempting to authenticate with the Salt Master at 172.16.0.10
     [DEBUG   ] Loaded minion key: /etc/salt/pki/minion/minion.pem
@@ -136,7 +137,7 @@ Upon connecting to the master, the following lines should appear on the output:
 If the signature verification fails, something went wrong and it will look
 like this
 
-.. code-block:: bash
+.. code-block:: text
 
     [DEBUG   ] Attempting to authenticate with the Salt Master at 172.16.0.10
     [DEBUG   ] Loaded minion key: /etc/salt/pki/minion/minion.pem
