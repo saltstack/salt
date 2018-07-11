@@ -266,9 +266,6 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
                 if not formatter:
                     continue
 
-                if RequestContext.current.get('jid', None):
-                    formatter._fmt = '[JID %(jid)s] {0}'.format(formatter._fmt)
-
                 if not handler.lock:
                     handler.createLock()
                 handler.acquire()
@@ -315,8 +312,6 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         current_jid = RequestContext.current.get('jid', None)
 
         if current_jid is not None:
-            from pudb.remote import set_trace
-            set_trace(term_size=(150, 40))
             extra['jid'] = current_jid
 
         if exc_info and exc_info_on_loglevel:
@@ -349,6 +344,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
                    func=None, extra=None, sinfo=None):
         # Let's remove exc_info_on_loglevel from extra
         exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
+        jid = extra.pop('jid', '')
         if not extra:
             # If nothing else is in extra, make it None
             extra = None
@@ -407,6 +403,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             logrecord.exc_info_on_loglevel_formatted = None
 
         logrecord.exc_info_on_loglevel = exc_info_on_loglevel
+        logrecord.jid = jid
         return logrecord
 
     # pylint: enable=C0103
