@@ -18,9 +18,11 @@ class IndentOutput(object):
     def __init__(self, conf=None, device=sys.stdout):
         if conf is None:
             conf = {0: 'CYAN', 2: 'GREEN', 4: 'LIGHT_CYAN', 6: 'CYAN'}
-        self.__colors_conf = conf
-        self.__device = device
-        self.__colors = salt.utils.color.get_colors()
+        self._colors_conf = conf
+        self._device = device
+        self._colors = salt.utils.color.get_colors()
+        self._default_color = 'GREEN'
+        self._default_hl_color = 'LIGHT_GREEN'
 
     def put(self, message, indent=0):
         '''
@@ -30,12 +32,12 @@ class IndentOutput(object):
         :param indent:
         :return:
         '''
-        color = self.__colors_conf.get(indent + indent % 2, self.__colors_conf.get(0, 'LIGHT_GREEN'))
+        color = self._colors_conf.get(indent + indent % 2, self._colors_conf.get(0, self._default_color))
 
-        for chunk in [' ' * indent, self.__colors[color], message, self.__colors['ENDC']]:
-            self.__device.write(str(chunk))
-        self.__device.write(os.linesep)
-        self.__device.flush()
+        for chunk in [' ' * indent, self._colors[color], message, self._colors['ENDC']]:
+            self._device.write(str(chunk))
+        self._device.write(os.linesep)
+        self._device.flush()
 
 
 class MessagesOutput(IndentOutput):
@@ -50,10 +52,10 @@ class MessagesOutput(IndentOutput):
         :param message:
         :return:
         '''
-        for chunk in [self.__colors['LIGHT_RED'], 'Error:', self.__colors['RED'], message, self.__colors['ENDC']]:
-            self.__device.write(str(chunk))
-        self.__device.write(os.linesep)
-        self.__device.flush()
+        for chunk in [self._colors['RED'], 'Error:', ' ', self._colors['LIGHT_RED'], message, self._colors['ENDC']]:
+            self._device.write(str(chunk))
+        self._device.write(os.linesep)
+        self._device.flush()
 
     def highlight(self, message, *values, **colors):
         '''
@@ -82,3 +84,14 @@ class MessagesOutput(IndentOutput):
         :return:
         '''
 
+        m_color = colors.get('_main', self._default_color)
+        h_color = colors.get('_highlight', self._default_hl_color)
+
+        _values = []
+        for value in values:
+            _values.append('{p}{c}{r}'.format(p=self._colors[colors.get(value, h_color)],
+                                              c=value, r=self._colors[m_color]))
+        self._device.write('{s}{m}{e}'.format(s=self._colors[m_color],
+                                              m=message.format(*_values), e=self._colors['ENDC']))
+        self._device.write(os.linesep)
+        self._device.flush()
