@@ -29,3 +29,25 @@ general-health:
       info: Disk partitions
   - ps.top:
       info: Top CPU consuming processes
+
+network:
+  - network.get_hostname:
+      info: Hostname
+  - network.get_fqdn:
+      info: FQDN
+  - network.default_route:
+      info: Default route
+  - network.interfaces:
+      info: All the available interfaces
+  - network.subnets:
+      info: List of IPv4 subnets
+  - network.subnets6:
+      info: List of IPv6 subnets
+  - network.routes:
+      info: Network configured routes from routing tables
+  - network.netstat:
+      info: Information on open ports and states
+  - network.active_tcp:
+      info: All running TCP connections
+  - network.arp:
+      info: ARP table
