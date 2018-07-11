@@ -17,6 +17,8 @@ import salt.utils.verify
 import salt.exceptions
 import salt.cli.caller
 import salt.cli.support
+import salt.cli.support.console
+
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ class SupportDataCollector(object):
         if os.path.exists(_full_name):
             raise salt.exceptions.SaltClientError(
                 'The archive {} already exists. Please remove it first!'.format(_full_name))
-        self.__name = _full_name
+        self.archive_path = _full_name
         self.__format = format
         self.__arch = None
         self.__current_section = None
@@ -53,7 +55,7 @@ class SupportDataCollector(object):
         '''
         if self.__arch is not None:
             raise salt.exceptions.SaltException('Archive already opened.')
-        self.__arch = tarfile.TarFile.bz2open(self.__name, 'w')
+        self.__arch = tarfile.TarFile.bz2open(self.archive_path, 'w')
 
     def close(self):
         '''
@@ -162,11 +164,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         '''
         scenario = salt.cli.support.get_scenario()
         for category_name in scenario:
-            print(category_name)
+            self.out.put(category_name)
             self.collector.add(category_name)
             for action in scenario[category_name]:
                 info, conf = self._get_action(action)
-                print('  Collecting', info.lower())
+                self.out.put('Collecting {}'.format(info.lower()), indent=2)
                 self.collector.write(info, self._local_call(conf))
 
     def collect_targets_data(self):
@@ -181,8 +183,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.setup_logfile_logger()
             salt.utils.verify.verify_log(self.config)
 
+        self.out = salt.cli.support.console.IndentOutput()
         self.collector = SupportDataCollector('master-info')
         self.collector.open()
         self.collect_master_data()
         self.collect_targets_data()
         self.collector.close()
+
+        archive_path = self.collector.archive_path
