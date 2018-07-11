@@ -7,10 +7,10 @@ import yaml
 import os
 
 
-def get_scenario(scenario='default'):
-    scenario_path = os.path.join(os.path.dirname(__file__), 'scenarios', scenario + '.yml')
-    if os.path.exists(scenario_path):
-        data = yaml.load(open(scenario_path))
+def get_profile(scenario='default'):
+    profile_path = os.path.join(os.path.dirname(__file__), 'profiles', scenario + '.yml')
+    if os.path.exists(profile_path):
+        data = yaml.load(open(profile_path))
     else:
         data = {}
 
