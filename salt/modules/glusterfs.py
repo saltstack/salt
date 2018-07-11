@@ -26,15 +26,16 @@ def __virtual__():
     return (False, 'glusterfs server is not installed')
 
 
-def _get_minor_version():
-    # Set default version to 6 for tests
-    version = 6
+def _get_version():
+    # Set the default minor version to 6 for tests
+    version = [3, 6]
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
     for line in result:
         if line.startswith('glusterfs'):
-            version = int(line.split()[1].split('.')[1])
-    return version
+            version = line.split()[-1].split('.')
+            version = [int(i) for i in version]
+    return tuple(version)
 
 
 def _gluster_ok(xml_data):
@@ -67,7 +68,7 @@ def _gluster_xml(cmd):
     # We will pass the command string as stdin to allow for much longer
     # command strings. This is especially useful for creating large volumes
     # where the list of bricks exceeds 128 characters.
-    if _get_minor_version() < 6:
+    if _get_version() < (3, 6,):
         result = __salt__['cmd.run'](
             'script -q -c "gluster --xml --mode=script"', stdin="{0}\n\004".format(cmd)
         )
