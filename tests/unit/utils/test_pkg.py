@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 # Import Salt Libs
 import salt.utils.pkg
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
+
 
 class PkgUtilsTestCase(TestCase):
     '''

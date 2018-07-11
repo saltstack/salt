@@ -217,10 +217,8 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             ("", [], False)
         ]
         for version_string, installed_versions, expected_result in test_parameters:
-            msg = "version_string: %s, installed_versions: %s, expected_result: %s" % (
-                version_string, installed_versions, expected_result)
-            self.assertEqual(expected_result, pkg._fulfills_version_string(
-                installed_versions, version_string),  msg)
+            msg = "version_string: {}, installed_versions: {}, expected_result: {}".format(version_string, installed_versions, expected_result)
+            self.assertEqual(expected_result, pkg._fulfills_version_string(installed_versions, version_string), msg)
 
     def test_fulfills_version_spec(self):
         test_parameters = [
@@ -235,7 +233,5 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             ([], "==", "17.0.0", False),
         ]
         for installed_versions, operator, version, expected_result in test_parameters:
-            msg = "installed_versions: %s, operator: %s, version: %s, expected_result: %s" % (
-                installed_versions, operator, version, expected_result)
-            self.assertEqual(expected_result, pkg._fulfills_version_spec(
-                installed_versions, operator, version),  msg)
+            msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(installed_versions, operator, version, expected_result)
+            self.assertEqual(expected_result, pkg._fulfills_version_spec(installed_versions, operator, version), msg)
