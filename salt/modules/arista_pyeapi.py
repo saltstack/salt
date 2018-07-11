@@ -25,8 +25,8 @@ arguments, i.e., ``device_type``, ``host``, ``username``, ``password`` etc.
 Dependencies
 ------------
 
-The ``pyeapi`` Execution module requires Netmiko to be installed:
-``pip install pyeapi``.
+The ``pyeapi`` Execution module requires the Python Client for eAPI (pyeapi) to
+be installed: ``pip install pyeapi``.
 
 Usage
 -----
@@ -49,7 +49,7 @@ transport: ``https``
     connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
 host: ``localhost``
-    The IP addres or DNS host name of the connection device.
+    The IP address or DNS host name of the connection device.
 
 username: ``admin``
     The username to pass to the device to authenticate the eAPI connection.
@@ -95,14 +95,11 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-from salt.ext import six
 from salt.exceptions import CommandExecutionError
 try:
     from salt.utils.args import clean_kwargs
-    from salt.utils.files import mkstemp
 except ImportError:
     from salt.utils import clean_kwargs
-    from salt.utils import mkstemp
 
 # Import third party libs
 try:
@@ -145,7 +142,7 @@ PYEAPI_INIT_KWARGS = [
 
 def __virtual__():
     '''
-    Execution module available only if Netmiko is installed.
+    Execution module available only if pyeapi is installed.
     '''
     if not HAS_PYEAPI:
         return False, 'The pyeapi execution module requires pyeapi library to be installed: ``pip install pyeapi``'
@@ -161,21 +158,13 @@ def _prepare_connection(**kwargs):
     Prepare the connection with the remote network device, and clean up the key
     value pairs, removing the args used for the connection init.
     '''
-    init_args = {}
-    fun_kwargs = {}
     pyeapi_kwargs = __salt__['config.get']('pyeapi', {})
     pyeapi_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    for karg, warg in six.iteritems(pyeapi_kwargs):
-        if karg not in PYEAPI_INIT_KWARGS:
-            if warg is not None:
-                fun_kwargs[karg] = warg
-            continue
-        if warg is not None:
-            init_args[karg] = warg
-    if 'transport' not in init_args:
-        init_args['transport'] = 'https'
-    conn = pyeapi.client.connect(**init_args)
-    node = pyeapi.client.Node(conn, enablepwd=init_args.get('enablepwd'))
+    init_kwargs, fun_kwargs = __utils__['args.prepare_kwargs'](pyeapi_kwargs, PYEAPI_INIT_KWARGS)
+    if 'transport' not in init_kwargs:
+        init_kwargs['transport'] = 'https'
+    conn = pyeapi.client.connect(**init_kwargs)
+    node = pyeapi.client.Node(conn, enablepwd=init_kwargs.get('enablepwd'))
     return node, fun_kwargs
 
 # -----------------------------------------------------------------------------
@@ -229,22 +218,52 @@ def call(method, *args, **kwargs):
         Specifies the type of connection transport to use. Valid values for the
         connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     host: ``localhost``
         The IP address or DNS host name of the connection device.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     username: ``admin``
         The username to pass to the device to authenticate the eAPI connection.
 
+         .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     password
         The password to pass to the device to authenticate the eAPI connection.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     port
         The TCP port of the endpoint for the eAPI connection. If this keyword is
         not specified, the default value is automatically determined by the
         transport type (``80`` for ``http``, or ``443`` for ``https``).
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     enablepwd
         The enable mode password if required by the destination node.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     CLI Example:
 
@@ -268,27 +287,56 @@ def run_commands(*commands, **kwargs):
     transport.  This is a lower layer function that shouldn't normally
     need to be used, preferring instead to use ``config()`` or ``enable()``.
 
-
     transport: ``https``
         Specifies the type of connection transport to use. Valid values for the
         connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     host: ``localhost``
-        The IP addres or DNS host name of the connection device.
+        The IP address or DNS host name of the connection device.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     username: ``admin``
         The username to pass to the device to authenticate the eAPI connection.
 
+         .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     password
         The password to pass to the device to authenticate the eAPI connection.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     port
         The TCP port of the endpoint for the eAPI connection. If this keyword is
         not specified, the default value is automatically determined by the
         transport type (``80`` for ``http``, or ``443`` for ``https``).
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     enablepwd
         The enable mode password if required by the destination node.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     CLI Example:
 
@@ -300,7 +348,7 @@ def run_commands(*commands, **kwargs):
 
     Output example:
 
-    .. code-block:: yaml
+    .. code-block:: text
 
       veos1:
           |_
@@ -429,19 +477,52 @@ def config(commands=None,
         Specifies the type of connection transport to use. Valid values for the
         connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     host: ``localhost``
         The IP address or DNS host name of the connection device.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     username: ``admin``
         The username to pass to the device to authenticate the eAPI connection.
 
+         .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     password
         The password to pass to the device to authenticate the eAPI connection.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     port
         The TCP port of the endpoint for the eAPI connection. If this keyword is
         not specified, the default value is automatically determined by the
         transport type (``80`` for ``http``, or ``443`` for ``https``).
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
+    enablepwd
+        The enable mode password if required by the destination node.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     CLI Example:
 
@@ -502,22 +583,52 @@ def get_config(config='running-config',
         Specifies the type of connection transport to use. Valid values for the
         connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     host: ``localhost``
         The IP address or DNS host name of the connection device.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     username: ``admin``
         The username to pass to the device to authenticate the eAPI connection.
 
+         .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     password
         The password to pass to the device to authenticate the eAPI connection.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     port
         The TCP port of the endpoint for the eAPI connection. If this keyword is
         not specified, the default value is automatically determined by the
         transport type (``80`` for ``http``, or ``443`` for ``https``).
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     enablepwd
         The enable mode password if required by the destination node.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     CLI Example:
 
@@ -551,27 +662,57 @@ def section(regex, config='running-config', **kwargs):
         Specifies the type of connection transport to use. Valid values for the
         connection are ``socket``, ``http_local``, ``http``, and  ``https``.
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     host: ``localhost``
         The IP address or DNS host name of the connection device.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     username: ``admin``
         The username to pass to the device to authenticate the eAPI connection.
 
+         .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     password
         The password to pass to the device to authenticate the eAPI connection.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     port
         The TCP port of the endpoint for the eAPI connection. If this keyword is
         not specified, the default value is automatically determined by the
         transport type (``80`` for ``http``, or ``443`` for ``https``).
 
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
+
     enablepwd
         The enable mode password if required by the destination node.
+
+        .. note::
+
+            This argument does not need to be specified when running in a
+            :mod:`pyeapi <salt.proxy.arista_pyeapi>` Proxy Minion.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' 
+        salt '*'
     '''
     return call('section', regex, config=config, **kwargs)
