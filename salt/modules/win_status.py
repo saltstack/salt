@@ -11,6 +11,7 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+from ctypes import *
 import datetime
 import logging
 import subprocess
@@ -20,6 +21,7 @@ log = logging.getLogger(__name__)
 import salt.utils.event
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_pdh
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.functools import namespaced_function as _namespaced_function
 
@@ -52,6 +54,90 @@ __opts__ = {}
 __virtualname__ = 'status'
 
 
+# Taken from https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/ex/sysinfo/performance.htm
+class SYSTEM_PERFORMANCE_INFORMATION(Structure):
+    _fields_ = [('IdleProcessTime', c_int64),
+                ('IoReadTransferCount', c_int64),
+                ('IoWriteTransferCount', c_int64),
+                ('IoOtherTransferCount', c_int64),
+                ('IoReadOperationCount', c_ulong),
+                ('IoWriteOperationCount', c_ulong),
+                ('IoOtherOperationCount', c_ulong),
+                ('AvailablePages', c_ulong),
+                ('CommittedPages', c_ulong),
+                ('CommitLimit', c_ulong),
+                ('PeakCommitment', c_ulong),
+                ('PageFaultCount', c_ulong),
+                ('CopyOnWriteCount', c_ulong),
+                ('TransitionCount', c_ulong),
+                ('CacheTransitionCount', c_ulong),
+                ('DemandZeroCount', c_ulong),
+                ('PageReadCount', c_ulong),
+                ('PageReadIoCount', c_ulong),
+                ('CacheReadCount', c_ulong),  # Was c_ulong ** 2
+                ('CacheIoCount', c_ulong),
+                ('DirtyPagesWriteCount', c_ulong),
+                ('DirtyWriteIoCount', c_ulong),
+                ('MappedPagesWriteCount', c_ulong),
+                ('MappedWriteIoCount', c_ulong),
+                ('PagedPoolPages', c_ulong),
+                ('NonPagedPoolPages', c_ulong),
+                ('PagedPoolAllocs', c_ulong),
+                ('PagedPoolFrees', c_ulong),
+                ('NonPagedPoolAllocs', c_ulong),
+                ('NonPagedPoolFrees', c_ulong),
+                ('FreeSystemPtes', c_ulong),
+                ('ResidentSystemCodePage', c_ulong),
+                ('TotalSystemDriverPages', c_ulong),
+                ('TotalSystemCodePages', c_ulong),
+                ('NonPagedPoolLookasideHits', c_ulong),
+                ('PagedPoolLookasideHits', c_ulong),
+                ('AvailablePagedPoolPages', c_ulong),
+                ('ResidentSystemCachePage', c_ulong),
+                ('ResidentPagedPoolPage', c_ulong),
+                ('ResidentSystemDriverPage', c_ulong),
+                ('CcFastReadNoWait', c_ulong),
+                ('CcFastReadWait', c_ulong),
+                ('CcFastReadResourceMiss', c_ulong),
+                ('CcFastReadNotPossible', c_ulong),
+                ('CcFastMdlReadNoWait', c_ulong),
+                ('CcFastMdlReadWait', c_ulong),
+                ('CcFastMdlReadResourceMiss', c_ulong),
+                ('CcFastMdlReadNotPossible', c_ulong),
+                ('CcMapDataNoWait', c_ulong),
+                ('CcMapDataWait', c_ulong),
+                ('CcMapDataNoWaitMiss', c_ulong),
+                ('CcMapDataWaitMiss', c_ulong),
+                ('CcPinMappedDataCount', c_ulong),
+                ('CcPinReadNoWait', c_ulong),
+                ('CcPinReadWait', c_ulong),
+                ('CcPinReadNoWaitMiss', c_ulong),
+                ('CcPinReadWaitMiss', c_ulong),
+                ('CcCopyReadNoWait', c_ulong),
+                ('CcCopyReadWait', c_ulong),
+                ('CcCopyReadNoWaitMiss', c_ulong),
+                ('CcCopyReadWaitMiss', c_ulong),
+                ('CcMdlReadNoWait', c_ulong),
+                ('CcMdlReadWait', c_ulong),
+                ('CcMdlReadNoWaitMiss', c_ulong),
+                ('CcMdlReadWaitMiss', c_ulong),
+                ('CcReadAheadIos', c_ulong),
+                ('CcLazyWriteIos', c_ulong),
+                ('CcLazyWritePages', c_ulong),
+                ('CcDataFlushes', c_ulong),
+                ('CcDataPages', c_ulong),
+                ('ContextSwitches', c_ulong),
+                ('FirstLevelTbFills', c_ulong),
+                ('SecondLevelTbFills', c_ulong),
+                ('SystemCalls', c_ulong),
+                # Windows 8 and above
+                ('CcTotalDirtyPages', c_ulonglong),
+                ('CcDirtyPagesThreshold', c_ulonglong),
+                ('ResidentAvailablePages', c_longlong),
+                # Windows 10 and above
+                ('SharedCommittedPages', c_ulonglong)]
+
+
 def __virtual__():
     '''
     Only works on Windows systems with WMI and WinAPI
@@ -75,6 +161,122 @@ def __virtual__():
 __func_alias__ = {
     'time_': 'time'
 }
+
+
+def cpustats():
+    '''
+    Return information about the CPU.
+
+    Returns
+        dict: A dictionary containing information about the CPU stats
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * status.cpustats
+    '''
+    # Tries to gather information similar to that returned by a Linux machine
+    # Avoid using WMI as there's a lot of overhead
+
+    # Time related info
+    user, system, idle, interrupt, dpc = psutil.cpu_times()
+    cpu = {'user': user,
+           'system': system,
+           'idle': idle,
+           'irq': interrupt,
+           'dpc': dpc}
+    # Count related info
+    ctx_switches, interrupts, soft_interrupts, sys_calls = psutil.cpu_stats()
+    intr = {'irqs': {'irqs': [],
+                     'total': interrupts}}
+    soft_irq = {'softirqs': [],
+               'total': soft_interrupts}
+    return {'btime': psutil.boot_time(),
+            'cpu': cpu,
+            'ctxt': ctx_switches,
+            'intr': intr,
+            'processes': len(psutil.pids()),
+            'softirq': soft_irq,
+            'syscalls': sys_calls}
+
+
+def meminfo():
+    '''
+    Return information about physical and virtual memory on the system
+
+    Returns:
+        dict: A dictionary of information about memory on the system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * status.meminfo
+    '''
+    # Get physical memory
+    vm_total, vm_available, vm_percent, vm_used, vm_free = psutil.virtual_memory()
+    # Get swap memory
+    swp_total, swp_used, swp_free, swp_percent, _, _ = psutil.swap_memory()
+
+    def get_unit_value(memory):
+        symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+        prefix = {}
+        for i, s in enumerate(symbols):
+            prefix[s] = 1 << (i + 1) * 10
+        for s in reversed(symbols):
+            if memory >= prefix[s]:
+                value = float(memory) / prefix[s]
+                return {'unit': s,
+                        'value': value}
+        return {'unit': 'B',
+                'value': memory}
+
+    return {'VmallocTotal': get_unit_value(vm_total),
+            'VmallocUsed': get_unit_value(vm_used),
+            'VmallocFree': get_unit_value(vm_free),
+            'VmallocAvail': get_unit_value(vm_available),
+            'SwapTotal': get_unit_value(swp_total),
+            'SwapUsed': get_unit_value(swp_used),
+            'SwapFree': get_unit_value(swp_free)}
+
+
+def vmstats():
+    # Setup the SPI Structure
+    spi = SYSTEM_PERFORMANCE_INFORMATION()
+    retlen = c_ulong()
+
+    # 2 means to query System Performance Information and return it in a
+    # SYSTEM_PERFORMANCE_INFORMATION Structure
+    windll.ntdll.NtQuerySystemInformation(
+        2, byref(spi), sizeof(spi), byref(retlen))
+
+    # Return each defined field in a dict
+    ret = {}
+    for field in spi._fields_:
+        ret.update({field[0]: getattr(spi, field[0])})
+
+    return ret
+
+
+def loadavg():
+    # Counter List (obj, instance, counter)
+    counter_list = [
+        ('Memory', None, 'Available Bytes'),
+        ('Memory', None, 'Pages/sec'),
+        ('Paging File', '*', '% Usage'),
+        ('Processor', '*', '% Processor Time'),
+        ('Processor', '*', 'DPCs Queued/sec'),
+        ('Processor', '*', '% Privileged Time'),
+        ('Processor', '*', '% User Time'),
+        ('Processor', '*', '% DPC Time'),
+        ('Processor', '*', '% Interrupt Time'),
+        ('Server', None, 'Work Item Shortages'),
+        ('Server Work Queues', '*', 'Queue Length'),
+        ('System', None, 'Processor Queue Length'),
+        ('System', None, 'Context Switches/sec'),
+    ]
+    return salt.utils.win_pdh.get_counters(counter_list=counter_list)
 
 
 def cpuload():
