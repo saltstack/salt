@@ -6,7 +6,6 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mock import (
-    mock_open,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
@@ -24,6 +23,8 @@ import salt.roster.ansible as ansible
 
 EXPECTED = {
     'host1': {
+        'host': 'host1',
+        'passwd': 'test123',
         'minion_opts': {
             'escape_pods': 2,
             'halon_system_timeout': 30,
@@ -32,6 +33,8 @@ EXPECTED = {
         }
     },
     'host2': {
+        'host': 'host2',
+        'passwd': 'test123',
         'minion_opts': {
             'escape_pods': 2,
             'halon_system_timeout': 30,
@@ -40,6 +43,8 @@ EXPECTED = {
         }
     },
     'host3': {
+        'host': 'host3',
+        'passwd': 'test123',
         'minion_opts': {
             'escape_pods': 2,
             'halon_system_timeout': 30,
@@ -57,24 +62,39 @@ class AnsibleRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         cls.roster_dir = os.path.join(TESTS_DIR, 'unit/files/rosters/ansible/')
+        cls.opts = {'roster_defaults': {'passwd': 'test123'}}
+
+    @classmethod
+    def tearDownClass(cls):
+        delattr(cls, 'roster_dir')
+        delattr(cls, 'opts')
 
     def setup_loader_modules(self):
         opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         utils = salt.loader.utils(opts, whitelist=['json', 'stringutils'])
         runner = salt.loader.runner(opts, utils=utils, whitelist=['salt'])
-        return {ansible: {'__utils__': utils, '__opts__': {}, '__runner__': runner}}
+        return {
+            ansible: {
+                '__utils__': utils,
+                '__opts__': {},
+                '__runner__': runner
+            }
+        }
 
     def test_ini(self):
-        ansible.__opts__['roster_file'] = os.path.join(self.roster_dir, 'roster.ini')
-        ret = ansible.targets('*')
-        assert ret == EXPECTED
+        self.opts['roster_file'] = os.path.join(self.roster_dir, 'roster.ini')
+        with patch.dict(ansible.__opts__, self.opts):
+            ret = ansible.targets('*')
+            assert ret == EXPECTED
 
     def test_yml(self):
-        ansible.__opts__['roster_file'] = os.path.join(self.roster_dir, 'roster.yml')
-        ret = ansible.targets('*')
-        assert ret == EXPECTED
+        self.opts['roster_file'] = os.path.join(self.roster_dir, 'roster.yml')
+        with patch.dict(ansible.__opts__, self.opts):
+            ret = ansible.targets('*')
+            assert ret == EXPECTED
 
     def test_script(self):
-        ansible.__opts__['roster_file'] = os.path.join(self.roster_dir, 'roster.py')
-        ret = ansible.targets('*')
-        assert ret == EXPECTED
+        self.opts['roster_file'] = os.path.join(self.roster_dir, 'roster.py')
+        with patch.dict(ansible.__opts__, self.opts):
+            ret = ansible.targets('*')
+            assert ret == EXPECTED

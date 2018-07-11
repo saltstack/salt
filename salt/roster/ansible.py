@@ -89,8 +89,8 @@ Any of the [groups] or direct hostnames will return.  The 'all' is special, and 
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import fnmatch
-import logging
 
 # Import Salt libs
 import salt.utils.path
@@ -106,7 +106,6 @@ CONVERSION = {
 }
 
 __virtualname__ = 'ansible'
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -119,8 +118,6 @@ def targets(tgt, tgt_type='glob', **kwargs):
     Default: /etc/salt/roster
     '''
     inventory = __runner__['salt.cmd']('cmd.run', 'ansible-inventory -i {0} --list'.format(get_roster_file(__opts__)))
-    log.warning(get_roster_file(__opts__))
-    log.warning(inventory)
     __context__['inventory'] = __utils__['json.loads'](__utils__['stringutils.to_str'](inventory))
 
     if tgt_type == 'glob':
@@ -140,9 +137,11 @@ def _get_hosts_from_group(group):
 
 def _get_hostvars(host):
     hostvars = __context__['inventory']['_meta'].get('hostvars', {}).get(host, {})
-    ret = __opts__.get('roster_defaults', {})
+    ret = copy.deepcopy(__opts__.get('roster_defaults', {}))
     for value in CONVERSION:
         if value in hostvars:
             ret[CONVERSION[value]] = hostvars.pop(value)
     ret['minion_opts'] = hostvars
+    if 'host' not in ret:
+        ret['host'] = host
     return ret
