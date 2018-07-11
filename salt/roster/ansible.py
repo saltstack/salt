@@ -23,15 +23,15 @@ then salt-ssh can be used to hit any of them
 
 .. code-block:: bash
 
-    [~]# salt-ssh all test.ping
+    [~]# salt-ssh -N all test.ping
     salt.gtmanfred.com:
         True
     home:
         True
-    [~]# salt-ssh desktop test.ping
+    [~]# salt-ssh -N desktop test.ping
     home:
         True
-    [~]# salt-ssh computers test.ping
+    [~]# salt-ssh -N computers test.ping
     salt.gtmanfred.com:
         True
     home:
@@ -90,6 +90,7 @@ Any of the [groups] or direct hostnames will return.  The 'all' is special, and 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
+import logging
 
 # Import Salt libs
 import salt.utils.path
@@ -105,6 +106,7 @@ CONVERSION = {
 }
 
 __virtualname__ = 'ansible'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -117,6 +119,8 @@ def targets(tgt, tgt_type='glob', **kwargs):
     Default: /etc/salt/roster
     '''
     inventory = __runner__['salt.cmd']('cmd.run', 'ansible-inventory -i {0} --list'.format(get_roster_file(__opts__)))
+    log.warning(get_roster_file(__opts__))
+    log.warning(inventory)
     __context__['inventory'] = __utils__['json.loads'](__utils__['stringutils.to_str'](inventory))
 
     if tgt_type == 'glob':

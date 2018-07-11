@@ -847,7 +847,7 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None, context=None):
+def runner(opts, utils=None, context=None, whitelist=None):
     '''
     Directly call a function inside a loader directory
     '''
@@ -860,6 +860,7 @@ def runner(opts, utils=None, context=None):
         opts,
         tag='runners',
         pack={'__utils__': utils, '__context__': context},
+        whitelist=whitelist,
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack['__salt__'] = ret
