@@ -15,6 +15,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.ext import six
 import salt.states.pkg as pkg
+from salt.ext.six.moves import zip
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
