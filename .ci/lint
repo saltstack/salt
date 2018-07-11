@@ -44,7 +44,7 @@ pipeline {
                     parserName: 'PyLint',
                     pattern: 'pylint-report*.xml'
                 ]],
-                unstableTotalAll: '999',
+                failedTotalAll: '1',
                 usePreviousBuildAsReference: true
             ])
             cleanWs()
