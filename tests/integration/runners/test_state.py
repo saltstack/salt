@@ -14,7 +14,6 @@ import tempfile
 import time
 import textwrap
 import threading
-from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -33,6 +32,7 @@ import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -558,7 +558,7 @@ class OrchEventTest(ShellCase):
         })
 
         orch_sls = os.path.join(self.base_env, 'main.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 include:
                   - one
@@ -567,7 +567,7 @@ class OrchEventTest(ShellCase):
             '''))
 
         orch_sls = os.path.join(self.base_env, 'one.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 {%- set foo = salt['saltutil.runner']('pillar.show_pillar') %}
                 placeholder_one:
@@ -575,14 +575,14 @@ class OrchEventTest(ShellCase):
             '''))
 
         orch_sls = os.path.join(self.base_env, 'two.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 placeholder_two:
                   test.succeed_without_changes
             '''))
 
         orch_sls = os.path.join(self.base_env, 'three.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 placeholder_three:
                   test.succeed_without_changes
