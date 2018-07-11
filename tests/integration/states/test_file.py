@@ -2322,7 +2322,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])
             assert user_check == user
-            assert salt.utils.normalize_mode(mode_check) == mode
+            assert salt.utils.files.normalize_mode(mode_check) == mode
 
     def test_contents_pillar_with_pillar_list(self):
         '''
