@@ -105,10 +105,13 @@ class SupportDataCollector(object):
         Add a data to the current opened section.
         :return:
         '''
+        if not isinstance(data, dict):
+            data = {'raw-content': str(data)}
+
+        data = json.loads(json.dumps(data))
         self.__current_section.append(
             {
-                title: yaml.safe_dump(json.loads(json.dumps(data)).get('return', {}),
-                                      default_flow_style=False, indent=4)
+                title: yaml.safe_dump(data.get('return', data), default_flow_style=False, indent=4)
             }
         )
 
