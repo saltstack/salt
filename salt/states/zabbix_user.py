@@ -47,7 +47,7 @@ def admin_password_present(name, password=None, **kwargs):
         # password taken from pillar or _connection_password
         zabbix-admin-password:
             zabbix_user.admin_password_present
-         
+
         # directly set password
         zabbix-admin-password:
             zabbix_user.admin_password_present:
