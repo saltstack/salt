@@ -31,6 +31,56 @@ __func_alias__ = {
 }
 log = logging.getLogger(__name__)
 
+def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
+              kwargs, test=False):
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
+    # Create the tar containing the state pkg and relevant files.
+    trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
+            __context__['fileclient'],
+            chunks,
+            file_refs,
+            __pillar__,
+            st_kwargs['id_'])
+    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
+    cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
+            __opts__['thin_dir'],
+            test,
+            trans_tar_sum,
+            __opts__['hash_type'])
+    single = salt.client.ssh.Single(
+            __opts__,
+            cmd,
+            fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
+            **st_kwargs)
+    single.shell.send(
+            trans_tar,
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+    stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return stdout
+
 
 def _set_retcode(ret, highstate=None):
     '''
@@ -835,6 +885,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
         salt '*' state.sls_id my_state my_module,a_common_module
     '''
+    st_kwargs = __salt__.kwargs
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -847,13 +898,11 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if opts['environment'] is None:
         opts['environment'] = 'base'
 
-    try:
-        st_ = salt.state.HighState(opts,
-                                   proxy=__proxy__,
-                                   initial_pillar=_get_initial_pillar(opts))
-    except NameError:
-        st_ = salt.state.HighState(opts,
-                                   initial_pillar=_get_initial_pillar(opts))
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __context__['fileclient'])
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -864,10 +913,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
-    try:
-        high_, errors = st_.render_highstate({opts['environment']: split_mods})
-    finally:
-        st_.pop_active()
+    high_, errors = st_.render_highstate({opts['environment']: split_mods})
     errors += st_.state.verify_high(high_)
     # Apply requisites to high data
     high_, req_in_errors = st_.state.requisite_in(high_)
@@ -879,20 +925,26 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 1
         return errors
     chunks = st_.state.compile_high_data(high_)
-    ret = {}
-    for chunk in chunks:
-        if chunk.get('__id__', '') == id_:
-            ret.update(st_.state.call_chunk(chunk, {}, chunks))
+    chunk = [x for x in chunks if x.get('__id__', '') == id_]
 
-    _set_retcode(ret, highstate=highstate)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
-    if not ret:
+    if not chunk:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
             '\'{2}\''.format(id_, mods, opts['environment'])
         )
+
+    ret = _ssh_state(chunk,
+                     __opts__,
+                     __context__,
+                     __pillar__,
+                     __salt__,
+                     st_kwargs,
+                     kwargs,
+                     test=test)
+    _set_retcode(ret, highstate=highstate)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
