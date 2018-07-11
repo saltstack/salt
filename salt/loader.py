@@ -461,7 +461,7 @@ def fileserver(opts, backends):
                       pack={'__utils__': utils(opts)})
 
 
-def roster(opts, runner, whitelist=None):
+def roster(opts, runner=None, utils=None, whitelist=None):
     '''
     Returns the roster modules
     '''
@@ -470,7 +470,10 @@ def roster(opts, runner, whitelist=None):
         opts,
         tag='roster',
         whitelist=whitelist,
-        pack={'__runner__': runner},
+        pack={
+            '__runner__': runner,
+            '__utils__': utils,
+        },
     )
 
 
