@@ -5,7 +5,7 @@ Arista pyeapi
 
 .. versionadded:: Fluorine
 
-Proxy module for managing Arista switches via the eAPI using the 
+Proxy module for managing Arista switches via the eAPI using the
 `pyeapi <http://pyeapi.readthedocs.io/en/master/index.html>`_ library.
 
 :codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
