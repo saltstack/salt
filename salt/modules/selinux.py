@@ -165,10 +165,10 @@ def setenforce(mode):
             raise CommandExecutionError(msg.format(str(exc)))
 
     if 'RedHat' in __grains__['os_family']:
-      config = '/etc/sysconfig/selinux'
+        config = '/etc/sysconfig/selinux'
 
     elif 'Debian' in __grains__['os_family']:
-      config = '/etc/selinux/config'
+        config = '/etc/selinux/config'
     try:
         with salt.utils.fopen(config, 'r') as _cf:
             conf = _cf.read()
