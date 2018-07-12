@@ -141,7 +141,9 @@ class SupportDataCollector(object):
         :param path:
         :return:
         '''
-        self.__current_section.append({title: open(path)})
+        if not isinstance(path, file):
+            path = open(path)
+        self.__current_section.append({title: path})
 
 
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
