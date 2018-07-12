@@ -1184,7 +1184,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         cfg_content = '- /srv/custom'
 
         isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
-        for before_line in ['/srv/salt', '/srv/sa.*t', '/sr.*']:
+        for before_line in ['/srv/salt', '/srv/sa.*t']:
             with patch('os.path.isfile', isfile_mock), \
                     patch('os.stat', MagicMock(return_value=DummyStat())), \
                     patch('salt.utils.files.fopen',
