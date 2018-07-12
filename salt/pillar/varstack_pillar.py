@@ -21,27 +21,20 @@ varstack on how this file is evaluated.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-import logging
-
-HAS_VARSTACK = False
 try:
     import varstack
-    HAS_VARSTACK = True
 except ImportError:
-    pass
-
-# Set up logging
-log = logging.getLogger(__name__)
+    varstack = None
 
 # Define the module's virtual name
 __virtualname__ = 'varstack'
 
 
 def __virtual__():
-    if not HAS_VARSTACK:
-        return False
-    return __virtualname__
+    return (
+        varstack and __virtualname__ or False,
+        'The varstack module could not be loaded: varstack dependency is missing.'
+    )
 
 
 def ext_pillar(minion_id,  # pylint: disable=W0613
