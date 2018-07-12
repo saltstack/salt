@@ -31,7 +31,6 @@ pipeline {
                         sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
                     }
                 }}
-                archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
             }
             post {
                 always {
@@ -41,12 +40,14 @@ pipeline {
                             sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
                         }
                     }}
+                    archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
                 }
             }
         }
     }
     post {
         always {
+            junit 'artifacts/xml-unittests-output/*.xml'
             cleanWs()
         }
         success {
