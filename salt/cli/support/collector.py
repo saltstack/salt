@@ -79,10 +79,13 @@ class SupportDataCollector(object):
             buff = BytesIO()
             for action_return in self.__current_section:
                 for title, ret_data in action_return.items():
-                    buff.write(salt.utils.stringutils.to_bytes(title + '\n'))
-                    buff.write(salt.utils.stringutils.to_bytes(('-' * len(title)) + '\n\n'))
-                    buff.write(salt.utils.stringutils.to_bytes(ret_data))
-                    buff.write(salt.utils.stringutils.to_bytes('\n\n\n'))
+                    if isinstance(ret_data, file):
+                        buff.write(ret_data.read())
+                    else:
+                        buff.write(salt.utils.stringutils.to_bytes(title + '\n'))
+                        buff.write(salt.utils.stringutils.to_bytes(('-' * len(title)) + '\n\n'))
+                        buff.write(salt.utils.stringutils.to_bytes(ret_data))
+                        buff.write(salt.utils.stringutils.to_bytes('\n\n\n'))
             buff.seek(0)
             tar_info = tarfile.TarInfo(name=self.__current_section_name)
             if not hasattr(buff, 'getbuffer'):  # Py2's BytesIO is older
@@ -234,8 +237,12 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.collector.add(category_name)
             for action in scenario[category_name]:
                 info, conf = self._get_action(action)
-                self.out.put('Collecting {}'.format(info.lower()), indent=2)
-                self.collector.write(info, self._local_call(conf))
+                if not conf.get('salt.int.intfunc'):
+                    self.out.put('Collecting {}'.format(info.lower()), indent=2)
+                    self.collector.write(info, self._local_call(conf))
+                else:
+                    self.collector.discard_current()
+                    self._internal_function_call(conf)
 
     def collect_targets_data(self):
         '''

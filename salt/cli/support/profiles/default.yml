@@ -51,3 +51,18 @@ network:
       info: All running TCP connections
   - network.arp:
       info: ARP table
+
+system.log:
+  # This works on any file system object.
+  - filetree:
+      info: Add system log
+      args:
+        - /var/log/syslog
+        #- path: /var/log/syslog
+
+etc/postgres:
+  - filetree:
+      info: Pick entire /etc/postgresql
+      args:
+        - /etc/postgresql
+
