@@ -51,6 +51,7 @@ class SupportDataCollector(object):
         self.__current_section = None
         self.__current_section_name = None
         self.__default_root = time.strftime('%Y.%m.%d-%H.%M.%S-snapshot')
+        self.out = salt.cli.support.console.MessagesOutput()
 
     def open(self):
         '''
