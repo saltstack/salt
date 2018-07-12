@@ -33,6 +33,9 @@ log = logging.getLogger(__name__)
 
 def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
               kwargs, test=False):
+    '''
+    funciton to run a state with the given chunk via salt-ssh
+    '''
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
