@@ -8,6 +8,7 @@ import json
 import logging
 import tarfile
 import time
+import socket
 from io import BytesIO
 
 sys.modules['pkg_resources'] = None
@@ -267,7 +268,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
 
         self.out = salt.cli.support.console.MessagesOutput()
         try:
-            self.collector = SupportDataCollector('master-info')
+            self.collector = SupportDataCollector(socket.gethostname() + "-support")
         except Exception as ex:
             self.out.error(ex)
             exit_code = salt.defaults.exitcodes.EX_GENERIC
