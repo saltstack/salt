@@ -17,7 +17,7 @@ class IndentOutput(object):
     '''
     def __init__(self, conf=None, device=sys.stdout):
         if conf is None:
-            conf = {0: 'CYAN', 2: 'GREEN', 4: 'LIGHT_CYAN', 6: 'CYAN'}
+            conf = {0: 'CYAN', 2: 'GREEN', 4: 'LIGHT_BLUE', 6: 'BLUE'}
         self._colors_conf = conf
         self._device = device
         self._colors = salt.utils.color.get_colors()
