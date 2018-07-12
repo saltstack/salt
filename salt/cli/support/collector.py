@@ -97,6 +97,13 @@ class SupportDataCollector(object):
         '''
         if self.__current_section:
             self._flush_content()
+        self.discard_current(name)
+
+    def discard_current(self, name=None):
+        '''
+        Discard current section
+        :return:
+        '''
         self.__current_section = []
         self.__current_section_name = name
 
