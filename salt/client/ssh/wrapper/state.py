@@ -31,6 +31,7 @@ __func_alias__ = {
 }
 log = logging.getLogger(__name__)
 
+
 def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
               kwargs, test=False):
     '''
@@ -78,7 +79,7 @@ def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
     except Exception as e:
-        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
 
     # If for some reason the json load fails, return the stdout
