@@ -80,21 +80,25 @@ class SupportDataCollector(object):
         '''
         if self.__current_section is not None:
             buff = BytesIO()
+            buff._dirty = False
             for action_return in self.__current_section:
                 for title, ret_data in action_return.items():
                     if isinstance(ret_data, file):
-                        buff.write(ret_data.read())
+                        self.out.put(ret_data.name, indent=4)
+                        self.__arch.add(ret_data.name, arcname=ret_data.name)
                     else:
                         buff.write(salt.utils.stringutils.to_bytes(title + '\n'))
                         buff.write(salt.utils.stringutils.to_bytes(('-' * len(title)) + '\n\n'))
                         buff.write(salt.utils.stringutils.to_bytes(ret_data))
                         buff.write(salt.utils.stringutils.to_bytes('\n\n\n'))
-            buff.seek(0)
-            tar_info = tarfile.TarInfo(name=self.__current_section_name)
-            if not hasattr(buff, 'getbuffer'):  # Py2's BytesIO is older
-                buff.getbuffer = buff.getvalue
-            tar_info.size = len(buff.getbuffer())
-            self.__arch.addfile(tarinfo=tar_info, fileobj=buff)
+                        buff._dirty = True
+            if buff._dirty:
+                buff.seek(0)
+                tar_info = tarfile.TarInfo(name="{}/{}".format(self.__default_root, self.__current_section_name))
+                if not hasattr(buff, 'getbuffer'):  # Py2's BytesIO is older
+                    buff.getbuffer = buff.getvalue
+                tar_info.size = len(buff.getbuffer())
+                self.__arch.addfile(tarinfo=tar_info, fileobj=buff)
 
     def add(self, name):
         '''
