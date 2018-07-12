@@ -448,7 +448,26 @@ def present(name,
     # hash_password is True, then hash it.
     if password and hash_password:
         log.debug('Hashing a clear text password')
-        password = __salt__['shadow.gen_password'](password)
+        # in case a password is already set, it will contain a Salt
+        # which should be re-used to generate the new hash, other-
+        # wise the Salt will be generated randomly, causing the
+        # hash to change each time and thereby making the
+        # user.present state non-idempotent.
+        algorithms = {
+            '1':  'md5',
+            '2a': 'blowfish',
+            '5':  'sha256',
+            '6':  'sha512',
+        }
+        try:
+            _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
+            if algo == '1':
+                log.warning('Using MD5 for hashing passwords is considered insecure!')
+            log.debug('Re-using existing shadow salt for hashing password using {}'.format(algorithms.get(algo)))
+            password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
+        except ValueError:
+            log.info('No existing shadow salt found, defaulting to a randomly generated new one')
+            password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
         fullname = salt.utils.data.decode(fullname)

@@ -164,7 +164,7 @@ class NetworkTestCase(TestCase):
         ## ccc
         127.0.0.1       localhost thisismyhostname     # 本机
         ''')
-        fopen_mock = mock_open(read_data=content, match='/etc/hosts')
+        fopen_mock = mock_open(read_data={'/etc/hosts': content})
         with patch('salt.utils.files.fopen', fopen_mock):
             assert 'thisismyhostname' in network._generate_minion_id()
 

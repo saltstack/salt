@@ -91,14 +91,9 @@ def send_msg(recipient,
 
     .. code-block:: bash
 
-        smtp.send_msg 'admin@example.com' 'This is a salt module test' \
-            profile='my-smtp-account'
-        smtp.send_msg 'admin@example.com' 'This is a salt module test' \
-            username='myuser' password='verybadpass' sender="admin@example.com' \
-            server='smtp.domain.com'
-        smtp.send_msg 'admin@example.com' 'This is a salt module test' \
-            username='myuser' password='verybadpass' sender="admin@example.com' \
-            server='smtp.domain.com' attachments="['/var/log/messages']"
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' profile='my-smtp-account'
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com'
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com' attachments="['/var/log/messages']"
     '''
     if profile:
         creds = __salt__['config.option'](profile)

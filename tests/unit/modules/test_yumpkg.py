@@ -3,7 +3,6 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
-import sys
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -671,9 +670,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 for info in pkg_info_list:
                     self.assertTrue(info['arch'] in ('x86_64', 'i686'))
 
+    @skipIf(not yumpkg.HAS_YUM, 'Could not import yum')
     def test_yum_base_error(self):
-        if not yumpkg.HAS_YUM:
-            sys.modules['yum'] = Mock()
         with patch('yum.YumBase') as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
             with pytest.raises(CommandExecutionError):

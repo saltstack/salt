@@ -12,6 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.btmp as btmp
+from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -63,10 +64,11 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-        with patch('salt.utils.files.fopen', mock_open()) as m_open:
+        with patch('salt.utils.files.fopen', mock_open(b'')) as m_open:
             ret = btmp.beacon(config)
-            m_open.assert_called_with(btmp.BTMP, 'rb')
-            self.assertEqual(ret, [])
+            call_args = next(six.itervalues(m_open.filehandles))[0].call.args
+            assert call_args == (btmp.BTMP, 'rb'), call_args
+            assert ret == [], ret
 
     def test_invalid_users(self):
         config = [{'users': ['gareth']}]

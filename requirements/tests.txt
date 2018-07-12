@@ -22,6 +22,7 @@ psutil
 pyvmomi
 setproctitle
 cherrypy; sys.platform != 'win32' and sys.platform != 'darwin'
+ldap; sys.platform != 'win32' and sys.platform != 'darwin'
 pyinotify; sys.platform != 'win32' and sys.platform != 'darwin'
 PyMySQL; sys.platform != 'win32' and sys.platform != 'darwin'
 jsonschema
@@ -34,3 +35,5 @@ dnspython
 SaltTesting==2017.6.1
 junos-eznc
 jxmlease
+croniter
+kazoo

@@ -1473,29 +1473,26 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_execute.return_value = etree.XML(
                 '<rpc-reply>text rpc reply</rpc-reply>')
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
-                handle = m()
-                handle.write.assert_called_with('text rpc reply')
+                writes = m_open.write_calls()
+                assert writes == ['text rpc reply'], writes
 
     def test_rpc_write_file_format_json(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
                 patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file', format='json')
-                handle = m()
-                handle.write.assert_called_with('json rpc reply')
+                writes = m_open.write_calls()
+                assert writes == ['json rpc reply'], writes
 
     def test_rpc_write_file(self):
         with patch('salt.modules.junos.jxmlease.parse') as mock_parse, \
                 patch('salt.modules.junos.etree.tostring') as mock_tostring, \
                 patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_tostring.return_value = 'xml rpc reply'
-            m = mock_open()
-            with patch('salt.utils.files.fopen', m, create=True):
+            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file')
-                handle = m()
-                handle.write.assert_called_with('xml rpc reply')
+                writes = m_open.write_calls()
+                assert writes == ['xml rpc reply'], writes

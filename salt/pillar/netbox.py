@@ -82,7 +82,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
     # Check status code for API call
     if device_results.status_code != requests.codes.ok:
-        log.warn('API query failed for "%s", status code: %d',
+        log.warning('API query failed for "%s", status code: %d',
                  minion_id, device_results.status_code)
 
     # Assign results from API call to "netbox" key

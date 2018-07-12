@@ -280,6 +280,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops(self):
         '''
@@ -289,7 +290,7 @@ class SSHThinTestCase(TestCase):
         base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
                      '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
                      '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
-                     '/site-packages/markupsafe', '/site-packages/backports_abc']
+                     '/site-packages/markupsafe', '/site-packages/backports_abc', '/site-packages/concurrent']
 
         tops = thin.get_tops()
         assert len(tops) == len(base_tops)
@@ -306,6 +307,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops_extra_mods(self):
         '''
@@ -314,7 +316,7 @@ class SSHThinTestCase(TestCase):
         '''
         base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
                      '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
-                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
+                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh', '/site-packages/concurrent',
                      '/site-packages/markupsafe', '/site-packages/backports_abc', '/custom/foo', '/custom/bar.py']
         builtins = sys.version_info.major == 3 and 'builtins' or '__builtin__'
         with patch('{}.__import__'.format(builtins),
@@ -335,6 +337,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops_so_mods(self):
         '''
@@ -343,7 +346,7 @@ class SSHThinTestCase(TestCase):
         '''
         base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
                      '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
-                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
+                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh', '/site-packages/concurrent',
                      '/site-packages/markupsafe', '/site-packages/backports_abc', '/custom/foo.so', '/custom/bar.so']
         builtins = sys.version_info.major == 3 and 'builtins' or '__builtin__'
         with patch('{}.__import__'.format(builtins),

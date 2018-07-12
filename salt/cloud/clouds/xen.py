@@ -712,7 +712,7 @@ def _wait_for_ip(name, session):
             delta.seconds, name
         )
         if delta.seconds > 180:
-            log.warn('Timeout getting IP address')
+            log.warning('Timeout getting IP address')
             break
         time.sleep(5)
 
