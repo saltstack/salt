@@ -122,6 +122,16 @@ class SupportDataCollector(object):
             }
         )
 
+    def link(self, title, path):
+        '''
+        Add a static file on the file system.
+
+        :param title:
+        :param path:
+        :return:
+        '''
+        self.__current_section.append({title: open(path)})
+
 
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
     '''
