@@ -720,6 +720,34 @@ The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
 
+:py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
+---------------------------------------------------------------------------------------
+
+The ``password`` parameter has been changed to ``passwd`` to remove the
+name collusion with the influxdb client configuration (``client_kwargs``)
+allowing management of users when authentication is enabled on the influxdb
+instance
+
+Old behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - password: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
+New behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - passwd: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
 LDAP External Authentication
 ============================
 
