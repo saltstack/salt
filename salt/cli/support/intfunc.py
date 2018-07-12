@@ -1,0 +1,33 @@
+# coding=utf-8
+'''
+Internal functions.
+'''
+# Maybe this needs to be a modules in a future?
+
+from __future__ import absolute_import, print_function, unicode_literals
+import os
+from salt.cli.support.console import MessagesOutput
+
+out = MessagesOutput()
+
+
+def filetree(collector, path):
+    '''
+    Add all files in the tree. If the "path" is a file,
+    only that file will be added.
+
+    :param path: File or directory
+    :return:
+    '''
+    if os.path.isfile(path):
+        filename = os.path.basename(path)
+        if os.access(path, os.R_OK):
+            out.put('Add {}'.format(filename), indent=2)
+            collector.add(filename)
+            collector.link(title=path, path=path)
+        else:
+            out.error('Access denied to {}'.format(path))
+    else:
+        for fname in os.listdir(path):
+            fname = os.path.join(path, fname)
+            filetree(collector, fname)
