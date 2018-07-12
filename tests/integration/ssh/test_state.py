@@ -67,7 +67,6 @@ class SSHStateTest(SSHCase):
         self._check_dict_ret(ret=ret, val='__id__',
                              exp_ret='second_id', equal=False)
 
-
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
         self.assertTrue(check_file)
 
