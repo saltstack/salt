@@ -27,6 +27,7 @@ except ImportError:
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -144,7 +145,8 @@ def keys(name, basepath='/etc/pki', **kwargs):
     return ret
 
 
-def _virt_call(domain, function, section, comment, **kwargs):
+def _virt_call(domain, function, section, comment,
+               connection=None, username=None, password=None, **kwargs):
     '''
     Helper to call the virt functions. Wildcards supported.
 
@@ -160,7 +162,11 @@ def _virt_call(domain, function, section, comment, **kwargs):
     ignored_domains = list()
     for targeted_domain in targeted_domains:
         try:
-            response = __salt__['virt.{0}'.format(function)](targeted_domain, **kwargs)
+            response = __salt__['virt.{0}'.format(function)](targeted_domain,
+                                                             connection=connection,
+                                                             username=username,
+                                                             password=password,
+                                                             **kwargs)
             if isinstance(response, dict):
                 response = response['name']
             changed_domains.append({'domain': targeted_domain, function: response})
@@ -178,46 +184,155 @@ def _virt_call(domain, function, section, comment, **kwargs):
     return ret
 
 
-def stopped(name):
+def stopped(name, connection=None, username=None, password=None):
     '''
     Stops a VM by shutting it down nicely.
 
     .. versionadded:: 2016.3.0
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. code-block:: yaml
 
         domain_name:
           virt.stopped
     '''
 
-    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
+    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down",
+                      connection=connection, username=username, password=password)
 
 
-def powered_off(name):
+def powered_off(name, connection=None, username=None, password=None):
     '''
     Stops a VM by power off.
 
     .. versionadded:: 2016.3.0
 
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
     .. code-block:: yaml
 
         domain_name:
           virt.stopped
     '''
 
-    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off',
+                      connection=connection, username=username, password=password)
 
 
-def running(name, **kwargs):
+def running(name,
+            cpu=None,
+            mem=None,
+            image=None,
+            vm_type=None,
+            disk_profile=None,
+            disks=None,
+            nic_profile=None,
+            interfaces=None,
+            graphics=None,
+            seed=True,
+            install=True,
+            pub_key=None,
+            priv_key=None,
+            connection=None,
+            username=None,
+            password=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
     .. versionadded:: 2016.3.0
 
+    :param name: name of the virtual machine to run
+    :param cpu: number of CPUs for the virtual machine to create
+    :param mem: amount of memory in MiB for the new virtual machine
+    :param image: disk image to use for the first disk of the new VM
+
+        .. deprecated:: Fluorine
+    :param vm_type: force virtual machine type for the new VM. The default value is taken from
+        the host capabilities. This could be useful for example to use ``'qemu'`` type instead
+        of the ``'kvm'`` one.
+
+        .. versionadded:: Fluorine
+    :param disk_profile:
+        Name of the disk profile to use for the new virtual machine
+
+        .. versionadded:: Fluorine
+    :param disks:
+        List of disk to create for the new virtual machine.
+        See :ref:`init-disk-def` for more details on the items on this list.
+
+        .. versionadded:: Fluorine
+    :param nic_profile:
+        Name of the network interfaces profile to use for the new virtual machine
+
+        .. versionadded:: Fluorine
+    :param interfaces:
+        List of network interfaces to create for the new virtual machine.
+        See :ref:`init-nic-def` for more details on the items on this list.
+
+        .. versionadded:: Fluorine
+    :param graphics:
+        Graphics device to create for the new virtual machine.
+        See :ref:`init-graphics-def` for more details on this dictionary
+
+        .. versionadded:: Fluorine
+    :param saltenv:
+        Fileserver environment (Default: ``'base'``).
+        See :mod:`cp module for more details <salt.modules.cp>`
+
+        .. versionadded:: Fluorine
+    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
+                 (Default: ``True``)
+
+        .. versionadded:: Fluorine
+    :param install: install salt minion if absent (Default: ``True``)
+
+        .. versionadded:: Fluorine
+    :param pub_key: public key to seed with (Default: ``None``)
+
+        .. versionadded:: Fluorine
+    :param priv_key: public key to seed with (Default: ``None``)
+
+        .. versionadded:: Fluorine
+    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+
+        .. versionadded:: Fluorine
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+
+    .. rubric:: Example States
+
+    Make sure an already-defined virtual machine called ``domain_name`` is running:
+
     .. code-block:: yaml
 
         domain_name:
           virt.running
+
+    Do the same, but define the virtual machine if needed:
 
     .. code-block:: yaml
 
@@ -225,7 +340,27 @@ def running(name, **kwargs):
           virt.running:
             - cpu: 2
             - mem: 2048
-            - eth0_mac: 00:00:6a:53:00:e3
+            - disk_profile: prod
+            - disks:
+              - name: system
+                size: 8192
+                overlay_image: True
+                pool: default
+                image: /path/to/image.qcow2
+              - name: data
+                size: 16834
+            - nic_profile: prod
+            - interfaces:
+              - name: eth0
+                mac: 01:23:45:67:89:AB
+              - name: eth1
+                type: network
+                source: admin
+            - graphics:
+              - type: spice
+                listen:
+                  - type: address
+                    address: 192.168.0.125
 
     '''
 
@@ -234,11 +369,6 @@ def running(name, **kwargs):
            'result': True,
            'comment': '{0} is running'.format(name)
            }
-
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    cpu = kwargs.pop('cpu', False)
-    mem = kwargs.pop('mem', False)
-    image = kwargs.pop('image', False)
 
     try:
         try:
@@ -250,8 +380,29 @@ def running(name, **kwargs):
             else:
                 ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
-            kwargs = salt.utils.args.clean_kwargs(**kwargs)
-            __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
+            if image:
+                salt.utils.versions.warn_until(
+                    'Sodium',
+                    '\'image\' parameter has been deprecated. Rather use the \'disks\' parameter '
+                    'to override or define the image. \'image\' will be removed in {version}.'
+                )
+            __salt__['virt.init'](name,
+                                  cpu=cpu,
+                                  mem=mem,
+                                  image=image,
+                                  hypervisor=vm_type,
+                                  disk=disk_profile,
+                                  disks=disks,
+                                  nic=nic_profile,
+                                  interfaces=interfaces,
+                                  graphics=graphics,
+                                  seed=seed,
+                                  install=install,
+                                  pub_key=pub_key,
+                                  priv_key=priv_key,
+                                  connection=connection,
+                                  username=username,
+                                  password=password)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
@@ -262,11 +413,21 @@ def running(name, **kwargs):
     return ret
 
 
-def snapshot(name, suffix=None):
+def snapshot(name, suffix=None, connection=None, username=None, password=None):
     '''
     Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
     .. versionadded:: 2016.3.0
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -279,21 +440,32 @@ def snapshot(name, suffix=None):
             - suffix: periodic
     '''
 
-    return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
+    return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix,
+                      connection=connection, username=username, password=password)
 
 
 # Deprecated states
-def rebooted(name):
+def rebooted(name, connection=None, username=None, password=None):
     '''
     Reboots VMs
 
     .. versionadded:: 2016.3.0
 
     :param name:
-    :return:
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
     '''
 
-    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
+    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted",
+                      connection=connection, username=username, password=password)
 
 
 def unpowered(name):
@@ -396,9 +568,27 @@ def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-o
     return ret
 
 
-def network_define(name, bridge, forward, **kwargs):
+def network_running(name,
+                    bridge,
+                    forward,
+                    vport=None,
+                    tag=None,
+                    autostart=True,
+                    connection=None,
+                    username=None,
+                    password=None):
     '''
     Defines and starts a new network with specified arguments.
+
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: Fluorine
 
     .. code-block:: yaml
 
@@ -414,41 +604,74 @@ def network_define(name, bridge, forward, **kwargs):
             - vport: openvswitch
             - tag: 180
             - autostart: True
-            - start: True
 
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': True,
            'comment': ''
            }
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    vport = kwargs.pop('vport', None)
-    tag = kwargs.pop('tag', None)
-    autostart = kwargs.pop('autostart', True)
-    start = kwargs.pop('start', True)
-
     try:
-        result = __salt__['virt.net_define'](name, bridge, forward, vport, tag=tag, autostart=autostart, start=start)
-        if result:
-            ret['changes'][name] = 'Network {0} has been created'.format(name)
-            ret['result'] = True
+        info = __salt__['virt.network_info'](name, connection=connection, username=username, password=password)
+        if info:
+            if info['active']:
+                ret['comment'] = 'Network {0} exists and is running'.format(name)
+            else:
+                __salt__['virt.network_start'](name, connection=connection, username=username, password=password)
+                ret['changes'][name] = 'Network started'
+                ret['comment'] = 'Network {0} started'.format(name)
         else:
-            ret['comment'] = 'Network {0} created fail'.format(name)
+            __salt__['virt.network_define'](name,
+                                            bridge,
+                                            forward,
+                                            vport,
+                                            tag=tag,
+                                            autostart=autostart,
+                                            start=True,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+            ret['changes'][name] = 'Network defined and started'
+            ret['comment'] = 'Network {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
-        if err.get_error_code() == libvirt.VIR_ERR_NETWORK_EXIST or libvirt.VIR_ERR_OPERATION_FAILED:
-            ret['result'] = True
-            ret['comment'] = 'The network already exist'
-        else:
-            ret['comment'] = err.get_error_message()
+        ret['result'] = False
+        ret['comment'] = err.get_error_message()
 
     return ret
 
 
-def pool_define(name, **kwargs):
+def pool_running(name,
+                 ptype=None,
+                 target=None,
+                 permissions=None,
+                 source=None,
+                 transient=False,
+                 autostart=True,
+                 connection=None,
+                 username=None,
+                 password=None):
     '''
     Defines and starts a new pool with specified arguments.
+
+    .. versionadded:: Fluorine
+
+    :param ptype: libvirt pool type
+    :param target: full path to the target device or folder. (Default: ``None``)
+    :param permissions:
+        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source:
+        dictionary containing keys matching the ``source_*`` parameters in function
+        :func:`salt.modules.virt.pool_define`.
+    :param transient:
+        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+    :param autostart:
+        Whether to start the pool when booting the host. (Default: ``True``)
+    :param start:
+        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
 
     .. code-block:: yaml
 
@@ -459,44 +682,73 @@ def pool_define(name, **kwargs):
 
         pool_name:
           virt.pool_define:
-            - ptype: logical
-            - target: pool
-            - source: sda1
+            - ptype: netfs
+            - target: /mnt/cifs
+            - permissions:
+                - mode: 0770
+                - owner: 1000
+                - group: 100
+            - source:
+                - dir: samba_share
+                - hosts:
+                   one.example.com
+                   two.example.com
+                - format: cifs
             - autostart: True
-            - start: True
 
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': True,
            'comment': ''
            }
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    ptype = kwargs.pop('ptype', None)
-    target = kwargs.pop('target', None)
-    source = kwargs.pop('source', None)
-    autostart = kwargs.pop('autostart', True)
-    start = kwargs.pop('start', True)
-
     try:
-        result = __salt__['virt.pool_define_build'](name, ptype=ptype, target=target,
-                                                    source=source, autostart=autostart, start=start)
-        if result:
-            if 'Pool exist' in result:
-                if 'Pool update' in result:
-                    ret['changes'][name] = 'Pool {0} has been updated'.format(name)
-                else:
-                    ret['comment'] = 'Pool {0} already exist'.format(name)
+        info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        if info:
+            if info['state'] == 'running':
+                ret['comment'] = 'Pool {0} exists and is running'.format(name)
             else:
-                ret['changes'][name] = 'Pool {0} has been created'.format(name)
-            ret['result'] = True
+                __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
+                ret['changes'][name] = 'Pool started'
+                ret['comment'] = 'Pool {0} started'.format(name)
         else:
-            ret['comment'] = 'Pool {0} created fail'.format(name)
+            __salt__['virt.pool_define'](name,
+                                         ptype=ptype,
+                                         target=target,
+                                         permissions=permissions,
+                                         source_devices=(source or {}).get('devices', None),
+                                         source_dir=(source or {}).get('dir', None),
+                                         source_adapter=(source or {}).get('adapter', None),
+                                         source_hosts=(source or {}).get('hosts', None),
+                                         source_auth=(source or {}).get('auth', None),
+                                         source_name=(source or {}).get('name', None),
+                                         source_format=(source or {}).get('format', None),
+                                         transient=transient,
+                                         start=True,
+                                         connection=connection,
+                                         username=username,
+                                         password=password)
+            if autostart:
+                __salt__['virt.pool_set_autostart'](name,
+                                                    state='on' if autostart else 'off',
+                                                    connection=connection,
+                                                    username=username,
+                                                    password=password)
+
+            __salt__['virt.pool_build'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+
+            __salt__['virt.pool_start'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+            ret['changes'][name] = 'Pool defined and started'
+            ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
-        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
-            ret['result'] = True
-            ret['comment'] = 'The pool already exist'
         ret['comment'] = err.get_error_message()
+        ret['result'] = False
 
     return ret

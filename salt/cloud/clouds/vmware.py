@@ -2534,6 +2534,9 @@ def create(vm_):
     win_user_fullname = config.get_cloud_config_value(
         'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
     )
+    win_run_once = config.get_cloud_config_value(
+        'win_run_once', vm_, __opts__, search_global=False, default=None
+    )
 
     # Get service instance object
     si = _get_si()
@@ -2806,6 +2809,9 @@ def create(vm_):
                 identity.guiUnattended.password = vim.vm.customization.Password()
                 identity.guiUnattended.password.value = win_password
                 identity.guiUnattended.password.plainText = plain_text
+                if win_run_once:
+                    identity.guiRunOnce = vim.vm.customization.GuiRunOnce()
+                    identity.guiRunOnce.commandList = win_run_once
                 identity.userData = vim.vm.customization.UserData()
                 identity.userData.fullName = win_user_fullname
                 identity.userData.orgName = win_organization_name

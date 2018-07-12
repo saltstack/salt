@@ -595,11 +595,19 @@ class Master(SMaster):
                 pass
 
         if self.opts.get('git_pillar_verify_config', True):
-            git_pillars = [
-                x for x in self.opts.get('ext_pillar', [])
-                if 'git' in x
-                and not isinstance(x['git'], six.string_types)
-            ]
+            try:
+                git_pillars = [
+                    x for x in self.opts.get('ext_pillar', [])
+                    if 'git' in x
+                    and not isinstance(x['git'], six.string_types)
+                ]
+            except TypeError:
+                git_pillars = []
+                critical_errors.append(
+                    'Invalid ext_pillar configuration. It is likely that the '
+                    'external pillar type was not specified for one or more '
+                    'external pillars.'
+                )
             if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
