@@ -19,6 +19,7 @@ import salt.defaults.exitcodes
 import salt.cli.caller
 import salt.cli.support
 import salt.cli.support.console
+import salt.cli.support.intfunc
 
 
 log = logging.getLogger(__name__)
@@ -154,11 +155,30 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         conf['file_client'] = 'local'
         conf['fun'] = ''
         conf['arg'] = []
+        conf['kwargs'] = {}
         conf['cache_jobs'] = False
         conf['print_metadata'] = False
         conf.update(call_conf)
 
         return self._get_caller(conf).call()
+
+    def _internal_function_call(self, call_conf):
+        '''
+        Call internal function.
+
+        :param call_conf:
+        :return:
+        '''
+        def stub(*args, **kwargs):
+            message = 'Function {} is not available'.format(call_conf['fun'])
+            self.out.error(message)
+            log.debug('Attempt to run "{fun}" with {arg} arguments and {kwargs} parameters.'.format(**call_conf))
+            return message
+
+        return getattr(salt.cli.support.intfunc,
+                       call_conf['fun'], stub)(self.collector,
+                                               *call_conf['arg'],
+                                               **call_conf['kwargs'])
 
     def _get_action(self, action_meta):
         '''
@@ -169,12 +189,18 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         conf = {
             'fun': action_meta.keys()[0],
             'arg': [],
+            'kwargs': {},
         }
+        if not len(conf['fun'].split('.')) - 1:
+            conf['salt.int.intfunc'] = True
+
         action_meta = action_meta[conf['fun']]
         info = action_meta.get('info', 'Action for {}'.format(conf['fun']))
         for arg in action_meta.get('args') or []:
             if not isinstance(arg, dict):
                 conf['arg'].append(arg)
+            else:
+                conf['kwargs'].update(arg)
 
         return info, conf
 
