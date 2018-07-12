@@ -26,7 +26,7 @@ def filetree(collector, path):
             collector.add(filename)
             collector.link(title=path, path=path)
         else:
-            out.error('Access denied to {}'.format(path))
+            out.error('Access denied to {}'.format(path), ident=4)
     else:
         for fname in os.listdir(path):
             fname = os.path.join(path, fname)
