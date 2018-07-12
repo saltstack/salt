@@ -45,14 +45,15 @@ class MessagesOutput(IndentOutput):
     Messages output to the CLI.
     '''
 
-    def error(self, message):
+    def error(self, message, ident=0):
         '''
         Print an error to the screen.
 
         :param message:
         :return:
         '''
-        for chunk in [self._colors['RED'], 'Error:', ' ', self._colors['LIGHT_RED'], message, self._colors['ENDC']]:
+        for chunk in [self._colors['RED'], ' ' * ident, 'Error:', ' ',
+                      self._colors['LIGHT_RED'], message, self._colors['ENDC']]:
             self._device.write(str(chunk))
         self._device.write(os.linesep)
         self._device.flush()
