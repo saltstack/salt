@@ -2304,7 +2304,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(dest)
 
     @destructiveTest
-    @with_tempfile
+    @with_tempfile()
     def test_file_copy_make_dirs(self, source):
         '''
         ensure make_dirs creates correct user perms
