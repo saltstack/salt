@@ -294,6 +294,17 @@ def raw_mod(opts, name, functions, mod='modules'):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
+def matchers(opts):
+    '''
+    Return the master services plugins
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'matchers'),
+        opts,
+        tag='matchers'
+    )
+
+
 def engines(opts, functions, runners, utils, proxy=None):
     '''
     Return the master services plugins
