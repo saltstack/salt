@@ -24,7 +24,7 @@ pycrypto==2.6.1
 pycurl==7.43.0
 PyMySQL==0.7.11
 pyOpenSSL==17.5.0
-python-certifi-win32==1.2
+#python-certifi-win32==1.2
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 pythonnet==2.3.0

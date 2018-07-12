@@ -14,7 +14,6 @@ import tempfile
 import time
 import textwrap
 import threading
-from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -24,6 +23,7 @@ from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
+import salt.exceptions
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
@@ -33,6 +33,7 @@ import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +63,6 @@ class StateRunnerTest(ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        #ret_output = self.run_run_plus('state.orchestrate', 'orch.simple')['out']
         ret_output = self.run_run('state.orchestrate orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
@@ -212,8 +212,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: False']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -558,7 +558,7 @@ class OrchEventTest(ShellCase):
         })
 
         orch_sls = os.path.join(self.base_env, 'main.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 include:
                   - one
@@ -567,7 +567,7 @@ class OrchEventTest(ShellCase):
             '''))
 
         orch_sls = os.path.join(self.base_env, 'one.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 {%- set foo = salt['saltutil.runner']('pillar.show_pillar') %}
                 placeholder_one:
@@ -575,14 +575,14 @@ class OrchEventTest(ShellCase):
             '''))
 
         orch_sls = os.path.join(self.base_env, 'two.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 placeholder_two:
                   test.succeed_without_changes
             '''))
 
         orch_sls = os.path.join(self.base_env, 'three.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 placeholder_three:
                   test.succeed_without_changes
