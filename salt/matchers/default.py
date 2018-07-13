@@ -21,7 +21,7 @@ import salt.loader
 if six.PY3:
     import ipaddress
 else:
-    import salt.ext.ipaddress as ipaddres
+    import salt.ext.ipaddress as ipaddress
 
 HAS_RANGE = False
 try:
