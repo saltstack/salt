@@ -253,6 +253,15 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :return:
         '''
 
+    def _cleanup(self):
+        '''
+        Cleanup if crash/exception
+        :return:
+        '''
+        if os.path.exists(self.config['support_archive']):
+            self.out.warning('Terminated earlier, cleaning up')
+            os.unlink(self.config['support_archive'])
+
     def run(self):
         self.out = salt.cli.support.console.MessagesOutput()
         self.parse_args()
@@ -282,5 +291,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             except Exception as ex:
                 self.out.error(ex)
                 exit_code = salt.defaults.exitcodes.EX_SOFTWARE
+
+        if exit_code:
+            self._cleanup()
 
         sys.exit(exit_code)
