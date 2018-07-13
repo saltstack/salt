@@ -1930,6 +1930,8 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
                         help='Specify examined unit (default "master").')
         self.add_option('-U', '--show-units', default=False, action='store_true', dest='support_show_units',
                         help='Show available units')
+        self.add_option('-f', '--force', default=False, action='store_true', dest='support_archive_force_overwrite',
+                        help='Force overwrite existing archive, if exists')
 
     def find_existing_configs(self, default):
         '''

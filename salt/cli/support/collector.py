@@ -273,6 +273,26 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.warning('Terminated earlier, cleaning up')
             os.unlink(self.config['support_archive'])
 
+    def _check_existing_archive_(self):
+        '''
+        Check if archive exists or not. If exists and --force was not specified,
+        bail out. Otherwise remove it and move on.
+
+        :return:
+        '''
+        if os.path.exists(self.config['support_archive']):
+            if self.config['support_archive_force_overwrite']:
+                self.out.warning('Overwriting existing archive: {}'.format(self.config['support_archive']))
+                os.unlink(self.config['support_archive'])
+                ret = True
+            else:
+                self.out.warning('File {} already exists.'.format(self.config['support_archive']))
+                ret = False
+        else:
+            ret = True
+
+        return ret
+
     def run(self):
         exit_code = salt.defaults.exitcodes.EX_OK
         self.out = salt.cli.support.console.MessagesOutput()
@@ -305,9 +325,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                     self.out.highlight(msg_template, unit)
                 exit_code = salt.defaults.exitcodes.EX_OK
             else:
-                if os.path.exists(self.config['support_archive']):
-                    self.out.warning('File {} already exists.'.format(self.config['support_archive']))
-                else:
+                if self._check_existing_archive_():
                     try:
                         self.collector = SupportDataCollector(self.config['support_archive'])
                     except Exception as ex:
@@ -322,7 +340,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                             self.collector.close()
 
                             archive_path = self.collector.archive_path
-                            self.out.highlight('\nSupport data has been written to "{}" file.\n', archive_path, _main='YELLOW')
+                            self.out.highlight('\nSupport data has been written to "{}" file.\n',
+                                               archive_path, _main='YELLOW')
                         except Exception as ex:
                             self.out.error(ex)
                             exit_code = salt.defaults.exitcodes.EX_SOFTWARE
