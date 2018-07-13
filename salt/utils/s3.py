@@ -162,20 +162,23 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         elif method == 'GET' and local_file and not return_bin:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         else:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
-                                      verify=verify_ssl)
+                                      verify=verify_ssl,
+                                      timeout=300)
     finally:
         if fh is not None:
             fh.close()
