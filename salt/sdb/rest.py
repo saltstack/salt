@@ -121,8 +121,21 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
 
     extras = {}
     for item in profile[key]:
-        if item not in ('backend', 'url'):
+        if item not in ('backend', 'url', 'auth_url', 'auth_username', 'auth_password', 'auth_token_header_name',
+                        'auth_token_return_key'):
             extras[item] = profile[key][item]
+
+    if 'auth_url' in profile[key]:
+       result = http.query(
+           profile[key]['auth_url'],
+           profile[key].get('auth_method', 'GET'),
+           username=profile[key]['auth_username'],
+           password=profile[key]['auth_password'], decode=True)
+       token = result['dict']['data'].get(profile[key]['auth_token_return_key'])
+       if 'header_dict' in extras:
+           extras['header_dict'][profile[key]['auth_token_header_name']] = token
+       else:
+           extras['header_dict'] = { profile[key]['auth_token_header_name']: token }
 
     result = http.query(
         url,
