@@ -60,9 +60,3 @@ system.log:
         - /var/log/syslog
         #- path: /var/log/syslog
 
-etc/postgres:
-  - filetree:
-      info: Pick entire /etc/postgresql
-      args:
-        - /etc/postgresql
-
