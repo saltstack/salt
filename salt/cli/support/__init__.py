@@ -20,3 +20,17 @@ def get_profile(profile):
         raise salt.exceptions.SaltException('Profile "{}" is not found.'.format(profile))
 
     return data
+
+
+def get_profiles():
+    '''
+    Get available profiles.
+
+    :return:
+    '''
+    # TODO: get custom places!
+    profiles = []
+    for profile_name in os.listdir(os.path.join(os.path.dirname(__file__), 'profiles')):
+        profiles.append(profile_name.split('.')[0])
+
+    return sorted(profiles)
