@@ -8,7 +8,7 @@ import json
 import logging
 import tarfile
 import time
-import socket
+import exceptions
 from io import BytesIO
 
 sys.modules['pkg_resources'] = None
