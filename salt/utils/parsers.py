@@ -1917,6 +1917,8 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
     def _mixin_setup(self):
+        self.add_option('-P', '--show-profiles', default=False, action='store_true',
+                        dest='support_profile_list', help='Show available profiles')
         self.add_option('-p', '--profile', default='default', dest='support_profile',
                         help='Specify support profile')
         support_archive = '{t}/{h}-support.tar.bz2'.format(t=tempfile.gettempdir(),
