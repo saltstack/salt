@@ -60,6 +60,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def tearDown(self):
+        remove_dir = '/etc'
+        if salt.utils.is_windows():
+            remove_dir = 'c:\\etc'
+        try:
+            os.remove(remove_dir)
+        except OSError:
+            pass
+
     def test_serialize(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
@@ -1222,6 +1231,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that some text appears at the beginning of a file.
         '''
+        assert not os.path.exists('c:\\etc')
         name = '/etc/motd'
         if salt.utils.platform.is_windows():
             name = 'c:\\etc\\motd'
