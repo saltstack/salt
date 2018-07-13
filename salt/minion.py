@@ -3230,7 +3230,6 @@ class Matcher(object):
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
 
-
 class ProxyMinionManager(MinionManager):
     '''
     Create the multi-minion interface but for proxy minions
