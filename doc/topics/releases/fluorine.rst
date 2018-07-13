@@ -57,6 +57,29 @@ Jinja filter`_:
 
 .. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
+Ansible Playbook State and Execution Modules
+============================================
+
+Along with the including the :py:mod:`ansible modules
+<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+added in Fluorine with the :py:func:`playbooks function
+<salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
+playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
+on a targeted host to run ansible playbooks, or used in an
+orchestration state runner.
+
+.. code-block:: yaml
+
+    install nginx:
+      ansible.playbooks:
+        - name: install.yml
+        - git_repo: git://github.com/gtmanfred/playbook.git
+        - git_kwargs:
+            rev: master
+
+The playbooks modules also includes the ability to specify a git repo to clone
+and use, or a specific directory can to used when running the playbook.
+
 New Docker Proxy Minion
 =======================
 

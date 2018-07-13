@@ -24,6 +24,7 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
+    destructiveTest,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
@@ -143,6 +144,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         remove files created in previous tests
         '''
+        user = 'salt'
+        if user in str(self.run_function('user.list_users', [user])):
+            self.run_function('user.delete', [user])
+
         for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
             try:
                 os.remove(path)
@@ -2303,6 +2308,30 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_state('file.copy', name=dest, source=source, force=True)
         self.assertTrue(os.path.exists(dest))
         self.assertTrue(filecmp.cmp(source, dest))
+
+        os.remove(source)
+        os.remove(dest)
+
+    @destructiveTest
+    @with_tempfile()
+    def test_file_copy_make_dirs(self, source):
+        '''
+        ensure make_dirs creates correct user perms
+        '''
+        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
+        dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
+
+        user = 'salt'
+        mode = '0644'
+        self.run_function('user.add', [user])
+        ret = self.run_state('file.copy', name=dest, source=source, user=user,
+                             makedirs=True, mode=mode)
+        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        for check in file_checks:
+            user_check = self.run_function('file.get_user', [check])
+            mode_check = self.run_function('file.get_mode', [check])
+            assert user_check == user
+            assert salt.utils.files.normalize_mode(mode_check) == mode
 
     def test_contents_pillar_with_pillar_list(self):
         '''

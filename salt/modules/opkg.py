@@ -509,6 +509,15 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    remove_dependencies
+        Remove package and all dependencies
+
+        .. versionadded:: Fluorine
+
+    auto_remove_deps
+        Remove packages that were installed automatically to satisfy dependencies
+
+        .. versionadded:: Fluorine
 
     Returns a dict containing the changes.
 
@@ -519,6 +528,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+        salt '*' pkg.remove pkgs='["foo", "bar"]' remove_dependencies=True auto_remove_deps=True
     '''
     try:
         pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
@@ -530,6 +540,10 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     if not targets:
         return {}
     cmd = ['opkg', 'remove']
+    if kwargs.get('remove_dependencies', False):
+        cmd.append('--force-removal-of-dependent-packages')
+    if kwargs.get('auto_remove_deps', False):
+        cmd.append('--autoremove')
     cmd.extend(targets)
 
     out = __salt__['cmd.run_all'](
