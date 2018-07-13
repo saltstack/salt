@@ -29,7 +29,7 @@ def iter_installers(content):
         x = m.groups()[0]
         if not x.startswith(PREFIX):
             continue
-        if x.endswith('zip'):
+        if x.endswith(('zip', 'sha256')):
             continue
         if installer:
             if x != installer + '.md5':

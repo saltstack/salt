@@ -246,7 +246,7 @@ the new virtual machine on. Using ``salt://`` assumes that the CentOS virtual
 machine image is located in the root of the :ref:`file-server` on the master.
 When images are cloned (i.e. copied locatlly after retrieval from the file server)
 the destination directory on the hypervisor minion is determined by the ``virt:images``
-config option; by default this is ``/srv/salt/salt-images/``.
+config option; by default this is ``/srv/salt-images/``.
 
 When a VM is initialized using ``virt.init`` the image is copied to the hypervisor
 using ``cp.cache_file`` and will be mounted and seeded with a minion. Seeding includes

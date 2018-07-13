@@ -426,7 +426,7 @@ def _delete_directory_smbprotocol(path, share='C$', conn=None, host=None, userna
         conn = get_conn(host, username, password)
     if conn is False:
         return False
-    log.warn("PATH: %s %s", share, path)
+    log.debug("_delete_directory_smbprotocol - share: %s, path: %s", share, path)
     tree = conn.tree_connect(share)
 
     dir_open = Open(tree, path)

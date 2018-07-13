@@ -17,7 +17,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, PropertyMock
 from tests.support.paths import TMP
 from tests.unit.test_crypt import PRIVKEY_DATA
 
-
 PASS_DATA = (
     b'qOjCKDlBdcNEbJ/J8eRl7sH+bYIIm4cvHHY86gh2NEUnufFlFo0gGVTZR05Fj0cw3n/w7gR'
     b'urNXz5JoeSIHVuNI3YTwzL9yEAaC0kuy8EbOlO2yx8yPGdfml9BRwOV7A6b8UFo9co4H7fz'

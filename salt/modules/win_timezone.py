@@ -338,7 +338,7 @@ def list(unix_style=True):
     Return a list of Timezones that this module supports. These can be in either
     Unix or Windows format.
 
-    .. versionadded:: 2018.3.2
+    .. versionadded:: 2018.3.3
 
     Args:
         unix_style (bool):

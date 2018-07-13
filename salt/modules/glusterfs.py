@@ -29,10 +29,6 @@ def __virtual__():
     return (False, 'glusterfs server is not installed')
 
 
-def _get_minor_version():
-    return int(_get_version()[1])
-
-
 def _get_version():
     # Set the default minor version to 6 for tests
     version = [3, 6]
@@ -40,8 +36,9 @@ def _get_version():
     result = __salt__['cmd.run'](cmd).splitlines()
     for line in result:
         if line.startswith('glusterfs'):
-            version = line.split()[1].split('.')
-    return version
+            version = line.split()[-1].split('.')
+            version = [int(i) for i in version]
+    return tuple(version)
 
 
 def _gluster_ok(xml_data):
@@ -74,7 +71,7 @@ def _gluster_xml(cmd):
     # We will pass the command string as stdin to allow for much longer
     # command strings. This is especially useful for creating large volumes
     # where the list of bricks exceeds 128 characters.
-    if _get_minor_version() < 6:
+    if _get_version() < (3, 6,):
         result = __salt__['cmd.run'](
             'script -q -c "gluster --xml --mode=script"', stdin="{0}\n\004".format(cmd)
         )
@@ -751,11 +748,8 @@ def get_max_op_version():
 
         salt '*' glusterfs.get_max_op_version
     '''
-
-    minor_version = _get_minor_version()
-
-    if int(minor_version) < 10:
-        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(_get_version())))
+    if _get_version() < (3, 10,):
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(str(i) for i in _get_version())))
 
     cmd = 'volume get all cluster.max-op-version'
     root = _gluster_xml(cmd)

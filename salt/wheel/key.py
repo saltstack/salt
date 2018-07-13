@@ -142,7 +142,7 @@ def accept_dict(match, include_rejected=False, include_denied=False):
 
     .. code-block:: python
 
-        >>> wheel.cmd('accept_dict',
+        >>> wheel.cmd('key.accept_dict',
         {
             'minions_pre': [
                 'jerry',

@@ -45,28 +45,20 @@ managed by salt as if given from a top.sls file.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-import logging
-
 try:
-    HAS_VARSTACK = False
     import varstack
-    HAS_VARSTACK = True
 except ImportError:
-    pass
-
-# Set up logging
-log = logging.getLogger(__name__)
+    varstack = None
 
 # Define the module's virtual name
 __virtualname__ = 'varstack'
 
 
 def __virtual__():
-    if not HAS_VARSTACK:
-        log.error("Can't find varstack master_top")
-        return False
-    return __virtualname__
+    return (
+        varstack and __virtualname__ or False,
+        'The varstack module could not be loaded: varstack dependency is missing.'
+    )
 
 
 def top(**kwargs):

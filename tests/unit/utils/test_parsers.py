@@ -1036,30 +1036,44 @@ class DaemonMixInTestCase(TestCase):
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
     @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.getuid', MagicMock(return_value=0))
     @patch('salt.utils.parsers.logger', MagicMock())
     def test_pid_deleted_oserror_as_root(self):
         '''
         PIDfile deletion with exception, running as root.
         '''
-        self.daemon_mixin._mixin_before_exit()
-        assert salt.utils.parsers.os.unlink.call_count == 1
-        salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s',
-                                                          format(self.daemon_mixin.config['pidfile']))
-        salt.utils.parsers.logger.debug.assert_called()
+        if salt.utils.platform.is_windows():
+            patch_args = ('salt.utils.win_functions.is_admin',
+                          MagicMock(return_value=True))
+        else:
+            patch_args = ('os.getuid', MagicMock(return_value=0))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_called_with(
+                'PIDfile could not be deleted: %s',
+                format(self.daemon_mixin.config['pidfile'])
+            )
+            salt.utils.parsers.logger.debug.assert_called()
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
     @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.getuid', MagicMock(return_value=1000))
     @patch('salt.utils.parsers.logger', MagicMock())
     def test_pid_deleted_oserror_as_non_root(self):
         '''
         PIDfile deletion with exception, running as non-root.
         '''
-        self.daemon_mixin._mixin_before_exit()
-        assert salt.utils.parsers.os.unlink.call_count == 1
-        salt.utils.parsers.logger.info.assert_not_called()
-        salt.utils.parsers.logger.debug.assert_not_called()
+        if salt.utils.platform.is_windows():
+            patch_args = ('salt.utils.win_functions.is_admin',
+                          MagicMock(return_value=False))
+        else:
+            patch_args = ('os.getuid', MagicMock(return_value=1000))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_not_called()
+            salt.utils.parsers.logger.debug.assert_not_called()
 
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module

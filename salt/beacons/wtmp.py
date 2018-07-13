@@ -20,7 +20,7 @@ import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import map
 # pylint: enable=import-error
@@ -257,7 +257,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], salt.ext.six.string_types):
+                if isinstance(event[field], six.string_types):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip('\x00')

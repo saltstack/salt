@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Proxy Minion for Cisco NX OS Switches
 
 .. versionadded: 2016.11.0
@@ -32,8 +32,46 @@ password
     (REQUIRED) password to use to login with
 
 prompt_name
-    (REQUIRED) The name in the prompt on the switch.  By default, use your
-    devices hostname.
+    (REQUIRED, this or `prompt_regex` below, but not both)
+    The name in the prompt on the switch.  Recommended to use your
+    device's hostname.
+
+prompt_regex
+    (REQUIRED, this or `prompt_name` above, but not both)
+    A regular expression that matches the prompt on the switch
+    and any other possible prompt at which you need the proxy minion
+    to continue sending input.  This feature was specifically developed
+    for situations where the switch may ask for confirmation.  `prompt_name`
+    above would not match these, and so the session would timeout.
+
+    Example:
+
+    .. code-block:: yaml
+
+        dc01-switch-01#.*|\(y\/n\)\?.*
+
+    This should match
+
+    .. code-block:: shell
+
+        dc01-switch-01#
+
+    or
+
+    .. code-block:: shell
+
+        Flash complete.  Reboot this switch (y/n)? [n]
+
+
+    If neither `prompt_name` nor `prompt_regex` is specified the prompt will be
+    defaulted to
+
+    .. code-block:: shell
+
+        .+#$
+
+    which should match any number of characters followed by a `#` at the end
+    of the line.  This may be far too liberal for most installations.
 
 ssh_args
     Any extra args to use to connect to the switch.
@@ -93,13 +131,22 @@ def init(opts=None):
     if opts is None:
         opts = __opts__
     try:
+        this_prompt = None
+        if 'prompt_regex' in opts['proxy']:
+            this_prompt = opts['proxy']['prompt_regex']
+        elif 'prompt_name' in opts['proxy']:
+            this_prompt = '{0}.*#'.format(opts['proxy']['prompt_name'])
+        else:
+            log.warning('nxos proxy configuration does not specify a prompt match.')
+            this_prompt = '.+#$'
+
         DETAILS[_worker_name()] = SSHConnection(
             host=opts['proxy']['host'],
             username=opts['proxy']['username'],
             password=opts['proxy']['password'],
             key_accept=opts['proxy'].get('key_accept', False),
             ssh_args=opts['proxy'].get('ssh_args', ''),
-            prompt='{0}.*#'.format(opts['proxy']['prompt_name']))
+            prompt=this_prompt)
         out, err = DETAILS[_worker_name()].sendline('terminal length 0')
 
     except TerminalException as e:

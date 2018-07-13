@@ -213,7 +213,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     runas
         The user to run the build process as
 
-        .. versionadded:: 2018.3.2
+        .. versionadded:: 2018.3.3
 
 
     .. note::

@@ -32,20 +32,14 @@ class FibreChannelGrainsTestCase(TestCase):
         cmd_run_mock = MagicMock(return_value=wwns)
         with patch('salt.modules.cmdmod.powershell', cmd_run_mock):
             ret = fibre_channel._windows_wwns()
-        self.assertEqual(ret, wwns)
+        assert ret == wwns, ret
 
     def test_linux_fibre_channel_wwns_grains(self):
 
-        def multi_mock_open(*file_contents):
-            mock_files = [mock_open(read_data=content).return_value for content in file_contents]
-            mock_opener = mock_open()
-            mock_opener.side_effect = mock_files
-
-            return mock_opener
-
+        contents = ['0x500143802426baf4', '0x500143802426baf5']
         files = ['file1', 'file2']
-        with patch('glob.glob', MagicMock(return_value=files)):
-            with patch('salt.utils.files.fopen', multi_mock_open('0x500143802426baf4', '0x500143802426baf5')):
-                ret = fibre_channel._linux_wwns()
+        with patch('glob.glob', MagicMock(return_value=files)), \
+                patch('salt.utils.files.fopen', mock_open(read_data=contents)):
+            ret = fibre_channel._linux_wwns()
 
-        self.assertEqual(ret, ['500143802426baf4', '500143802426baf5'])
+        assert ret == ['500143802426baf4', '500143802426baf5'], ret

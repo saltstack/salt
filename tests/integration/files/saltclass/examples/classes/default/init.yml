@@ -1,6 +1,7 @@
 classes:
   - default.users
   - default.motd
+  - default.empty
 
 states:
   - openssh
