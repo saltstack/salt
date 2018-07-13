@@ -9,12 +9,28 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import fnmatch
-from salt.defaults import DEFAULT_TARGET_DELIM
+import logging
 from salt.ext import six
+
+from salt.defaults import DEFAULT_TARGET_DELIM
+
+import salt.utils.data
+import salt.utils.minions
+import salt.utils.network
+import salt.loader
 if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddres
+
+HAS_RANGE = False
+try:
+    import seco.range
+    HAS_RANGE = True
+except ImportError:
+    pass
+
+log = logging.getLogger(__name__)
 
 def confirm_top(self, match, data, nodegroups=None):
     '''
