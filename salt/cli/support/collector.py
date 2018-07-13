@@ -267,46 +267,57 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         Cleanup if crash/exception
         :return:
         '''
-        if os.path.exists(self.config['support_archive']):
+        if self.config.get('support_archive') and os.path.exists(self.config['support_archive']):
             self.out.warning('Terminated earlier, cleaning up')
             os.unlink(self.config['support_archive'])
 
     def run(self):
         self.out = salt.cli.support.console.MessagesOutput()
-        self.parse_args()
-        if self.config['log_level'] not in ('quiet', ):
-            self.setup_logfile_logger()
-            salt.utils.verify.verify_log(self.config)
-
-        if self.config['support_profile_list']:
-            self.out.put('List of available profiles:')
-            for idx, profile in enumerate(salt.cli.support.get_profiles()):
-                msg_template = '  {}. '.format(idx + 1) + '{}'
-                self.out.highlight(msg_template, profile)
-            exit_code = salt.defaults.exitcodes.EX_OK
+        try:
+            self.parse_args()
+        except (Exception, SystemExit) as ex:
+            self.out.error(ex)
+            exit_code = salt.defaults.exitcodes.EX_GENERIC
         else:
-            if os.path.exists(self.config['support_archive']):
-                self.out.error('File {} already exists.'.format(self.config['support_archive']))
-                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-            try:
-                self.collector = SupportDataCollector(self.config['support_archive'])
-            except Exception as ex:
-                self.out.error(ex)
-                exit_code = salt.defaults.exitcodes.EX_GENERIC
-            else:
-                try:
-                    self.collector.open()
-                    self.collect_master_data()
-                    self.collect_internal_data()
-                    self.collect_targets_data()
-                    self.collector.close()
+            if self.config['log_level'] not in ('quiet', ):
+                self.setup_logfile_logger()
+                salt.utils.verify.verify_log(self.config)
 
-                    archive_path = self.collector.archive_path
-                    self.out.highlight('\nSupport data has been written to "{}" file.\n', archive_path, _main='YELLOW')
+            if self.config['support_profile_list']:
+                self.out.put('List of available profiles:')
+                for idx, profile in enumerate(salt.cli.support.get_profiles()):
+                    msg_template = '  {}. '.format(idx + 1) + '{}'
+                    self.out.highlight(msg_template, profile)
                     exit_code = salt.defaults.exitcodes.EX_OK
+            elif self.config['support_show_units']:
+                self.out.put('List of available units:')
+                for idx, unit in enumerate(self.find_existing_configs(None)):
+                    msg_template = '  {}. '.format(idx + 1) + '{}'
+                    self.out.highlight(msg_template, unit)
+                exit_code = salt.defaults.exitcodes.EX_OK
+            else:
+                if os.path.exists(self.config['support_archive']):
+                    self.out.error('File {} already exists.'.format(self.config['support_archive']))
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                try:
+                    self.collector = SupportDataCollector(self.config['support_archive'])
                 except Exception as ex:
                     self.out.error(ex)
-                    exit_code = salt.defaults.exitcodes.EX_SOFTWARE
+                    exit_code = salt.defaults.exitcodes.EX_GENERIC
+                else:
+                    try:
+                        self.collector.open()
+                        self.collect_master_data()
+                        self.collect_internal_data()
+                        self.collect_targets_data()
+                        self.collector.close()
+
+                        archive_path = self.collector.archive_path
+                        self.out.highlight('\nSupport data has been written to "{}" file.\n', archive_path, _main='YELLOW')
+                        exit_code = salt.defaults.exitcodes.EX_OK
+                    except Exception as ex:
+                        self.out.error(ex)
+                        exit_code = salt.defaults.exitcodes.EX_SOFTWARE
 
         if exit_code:
             self._cleanup()
