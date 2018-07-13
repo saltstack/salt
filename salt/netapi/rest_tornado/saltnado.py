@@ -203,8 +203,6 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 # pylint: enable=import-error
-import salt.utils
-salt.utils.zeromq.install_zmq()
 
 # salt imports
 import salt.ext.six as six
@@ -212,8 +210,9 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
-import salt.utils.yaml
 import salt.utils.minions
+import salt.utils.yaml
+import salt.utils.zeromq
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -224,6 +223,7 @@ from salt.exceptions import (
     EauthAuthenticationError
 )
 
+salt.utils.zeromq.install_zmq()
 json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
