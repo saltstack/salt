@@ -463,13 +463,14 @@ the output in YAML for all functions except for when states were run.
 Enhancements to :py:mod:`wtmp <salt.beacons.wtmp>` Beacon
 =========================================================
 
-A new key, `action`, has been added to the events fired by this beacon, which
-will contain either the string `login` or `logout`. This will simplify reactors
-which use this beacon's data, as it will no longer be necessary to check the
-integer value of the `type` key to know whether the event is a login or logout.
+A new key, ``action``, has been added to the events fired by this beacon, which
+will contain either the string ``login`` or ``logout``. This will simplify
+reactors which use this beacon's data, as it will no longer be necessary to
+check the integer value of the ``type`` key to know whether the event is a
+login or logout.
 
-Additionally, in the event that your platform has a non-standard `utmp.h`, you
-can now configure which type numbers indicate a login and logout.
+Additionally, in the event that your platform has a non-standard ``utmp.h``,
+you can now configure which type numbers indicate a login and logout.
 
 See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
 information.
