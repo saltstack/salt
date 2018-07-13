@@ -31,13 +31,12 @@ def get_profile(profile):
     return data
 
 
-def get_profiles():
+def get_profiles(config):
     '''
     Get available profiles.
 
     :return:
     '''
-    # TODO: get custom places!
     profiles = []
     for profile_name in os.listdir(os.path.join(os.path.dirname(__file__), 'profiles')):
         profiles.append(profile_name.split('.')[0])
