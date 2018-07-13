@@ -39,9 +39,9 @@ class PkgUtilsTestCase(TestCase):
 
     def test_split_comparison(self):
         '''
-        Test passing a jid on the command line
+        Tests salt.utils.pkg.split_comparison
         '''
-        for test_parameter in PkgUtilsTestCase.test_parameters:
+        for test_parameter in self.test_parameters:
             oper, verstr = salt.utils.pkg.split_comparison(test_parameter[0])
             self.assertEqual(test_parameter[1], oper)
             self.assertEqual(test_parameter[2], verstr)
