@@ -10,14 +10,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import fnmatch
 import logging
-from salt.ext import six
+from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
-from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM  # pylint: disable=3rd-party-module-not-gated
 
-import salt.utils.data
-import salt.utils.minions
-import salt.utils.network
-import salt.loader
+import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.network  # pylint: disable=3rd-party-module-not-gated
+import salt.loader  # pylint: disable=3rd-party-module-not-gated
+
 if six.PY3:
     import ipaddress
 else:
@@ -31,6 +32,7 @@ except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
 
 def confirm_top(self, match, data, nodegroups=None):
     '''
@@ -55,6 +57,7 @@ def confirm_top(self, match, data, nodegroups=None):
         log.error('Attempting to match with unknown matcher: %s', matcher)
         return False
 
+
 def glob_match(self, tgt):
     '''
     Returns true if the passed glob matches the id
@@ -64,11 +67,13 @@ def glob_match(self, tgt):
 
     return fnmatch.fnmatch(self.opts['id'], tgt)
 
+
 def pcre_match(self, tgt):
     '''
     Returns true if the passed pcre regex matches
     '''
     return bool(re.match(tgt, self.opts['id']))
+
 
 def list_match(self, tgt):
     '''
@@ -77,6 +82,7 @@ def list_match(self, tgt):
     if isinstance(tgt, six.string_types):
         tgt = tgt.split(',')
     return bool(self.opts['id'] in tgt)
+
 
 def grain_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
@@ -91,6 +97,7 @@ def grain_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         self.opts['grains'], tgt, delimiter=delimiter
     )
 
+
 def grain_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Matches a grain based on regex
@@ -102,6 +109,7 @@ def grain_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         return False
     return salt.utils.data.subdict_match(
         self.opts['grains'], tgt, delimiter=delimiter, regex_match=True)
+
 
 def data_match(self, tgt):
     '''
@@ -132,6 +140,7 @@ def data_match(self, tgt):
         comps[1],
     ))
 
+
 def pillar_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Reads in the pillar glob match
@@ -144,6 +153,7 @@ def pillar_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
     return salt.utils.data.subdict_match(
         self.opts['pillar'], tgt, delimiter=delimiter
     )
+
 
 def pillar_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
@@ -158,6 +168,7 @@ def pillar_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         self.opts['pillar'], tgt, delimiter=delimiter, regex_match=True
     )
 
+
 def pillar_exact_match(self, tgt, delimiter=':'):
     '''
     Reads in the pillar match, no globbing, no PCRE
@@ -171,6 +182,7 @@ def pillar_exact_match(self, tgt, delimiter=':'):
                                     tgt,
                                     delimiter=delimiter,
                                     exact_match=True)
+
 
 def ipcidr_match(self, tgt):
     '''
@@ -199,6 +211,7 @@ def ipcidr_match(self, tgt):
 
     return match
 
+
 def range_match(self, tgt):
     '''
     Matches based on range cluster
@@ -211,6 +224,7 @@ def range_match(self, tgt):
             log.debug('Range exception in compound match: %s', exc)
             return False
     return False
+
 
 def compound_match(self, tgt):
     '''
@@ -302,6 +316,7 @@ def compound_match(self, tgt):
             'Invalid compound target: %s for results: %s', tgt, results)
         return False
     return False
+
 
 def nodegroup_match(self, tgt, nodegroups):
     '''
