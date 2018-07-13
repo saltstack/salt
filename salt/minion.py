@@ -27,10 +27,6 @@ from binascii import crc32
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 import salt.defaults.exitcodes
@@ -39,13 +35,6 @@ from salt.utils.ctx import RequestContext
 
 # pylint: enable=no-name-in-module,redefined-builtin
 import tornado
-
-HAS_RANGE = False
-try:
-    import seco.range
-    HAS_RANGE = True
-except ImportError:
-    pass
 
 HAS_PSUTIL = False
 try:
@@ -3524,7 +3513,6 @@ class Matcher(object):
                 salt.utils.minions.nodegroup_comp(tgt, nodegroups)
             )
         return False
-
 
 class ProxyMinionManager(MinionManager):
     '''
