@@ -51,7 +51,6 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
-
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 log = logging.getLogger(__name__)
