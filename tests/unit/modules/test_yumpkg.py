@@ -49,8 +49,6 @@ LIST_REPOS = {
         'name': 'CentOS-$releasever - Updates Sources'
     }
 }
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class YumTestCase(TestCase, LoaderModuleMockMixin):
     '''
