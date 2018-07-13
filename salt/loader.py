@@ -1260,7 +1260,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                     if f_noext in self.file_mapping:
                         curr_ext = self.file_mapping[f_noext][1]
-                        #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
                         if '' in (curr_ext, ext) and curr_ext != ext:
                             log.error(
                                 'Module/package collision: \'%s\' and \'%s\'',
