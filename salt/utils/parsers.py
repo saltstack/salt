@@ -1926,6 +1926,10 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
         self.add_option('-a', '--archive', default=support_archive, dest='support_archive',
                         help=('Specify name of the resulting support archive. '
                               'Default is "{f}".'.format(f=support_archive)))
+        self.add_option('-u', '--unit', default='', dest='support_unit',
+                        help='Specify examined unit (default "master").')
+        self.add_option('-U', '--show-units', default=False, action='store_true', dest='support_show_units',
+                        help='Show available units')
 
     def find_existing_configs(self, default):
         '''
