@@ -1927,6 +1927,21 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
                         help=('Specify name of the resulting support archive. '
                               'Default is "{f}".'.format(f=support_archive)))
 
+    def find_existing_configs(self, default):
+        '''
+        Find configuration files on the system.
+        :return:
+        '''
+        configs = []
+        for cfg in [default, self._config_filename_, 'minion', 'proxy', 'cloud', 'spm']:
+            if not cfg:
+                continue
+            config_path = self.get_config_file_path(cfg)
+            if os.path.exists(config_path):
+                configs.append(cfg)
+
+        if default and default not in configs:
+            raise SystemExit('Unknown configuration unit: {}'.format(default))
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
 
