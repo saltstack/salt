@@ -2,7 +2,7 @@
 '''
 This is the default set of matcher functions.
 
-NOTE: These functions are converted to methods on the Matcher module during master and minion startup.
+NOTE: These functions are converted to methods on the Matcher class during master and minion startup.
 This is why they all take `self` but are not defined inside a `class:` declaration.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
