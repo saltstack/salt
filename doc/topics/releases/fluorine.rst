@@ -57,6 +57,29 @@ Jinja filter`_:
 
 .. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
+Ansible Playbook State and Execution Modules
+============================================
+
+Along with the including the :py:mod:`ansible modules
+<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+added in Fluorine with the :py:func:`playbooks function
+<salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
+playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
+on a targeted host to run ansible playbooks, or used in an
+orchestration state runner.
+
+.. code-block:: yaml
+
+    install nginx:
+      ansible.playbooks:
+        - name: install.yml
+        - git_repo: git://github.com/gtmanfred/playbook.git
+        - git_kwargs:
+            rev: master
+
+The playbooks modules also includes the ability to specify a git repo to clone
+and use, or a specific directory can to used when running the playbook.
+
 New Docker Proxy Minion
 =======================
 
@@ -719,6 +742,34 @@ in the orchestration file.
 The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
+
+:py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
+---------------------------------------------------------------------------------------
+
+The ``password`` parameter has been changed to ``passwd`` to remove the
+name collusion with the influxdb client configuration (``client_kwargs``)
+allowing management of users when authentication is enabled on the influxdb
+instance
+
+Old behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - password: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
+New behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - passwd: exampleuserpassword
+      - user: admin
+      - password: adminpassword
 
 LDAP External Authentication
 ============================

@@ -203,3 +203,103 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open()):
                 self.assertEqual(apache.config('/ports.conf',
                                                [{'Listen': '22'}]), 'Listen 22')
+
+    # '_parse_config' function tests: 2
+
+    def test__parse_config_dict(self):
+        '''
+        Test parsing function which creates configs from dict like (legacy way):
+            - VirtualHost:
+              this: '*:80'
+              ServerName: website.com
+              ServerAlias:
+                - www
+                - dev
+              Directory:
+                  this: /var/www/vhosts/website.com
+                  Order: Deny,Allow
+                  Allow from:
+                    - 127.0.0.1
+                    - 192.168.100.0/24
+
+        '''
+        datain = {'this': '*:80',
+                  'ServerName': 'website.com',
+                  'ServerAlias': ['www', 'dev'],
+                  'Directory': {'this': '/var/www/vhosts/website.com',
+                                'Order': 'Deny,Allow',
+                                'Allow from': ['127.0.0.1', '192.168.100.0/24']}
+                  }
+        dataout = '<VirtualHost *:80>\n' \
+                  '<Directory /var/www/vhosts/website.com>\n' \
+                  'Order Deny,Allow\n' \
+                  'Allow from 127.0.0.1\n' \
+                  'Allow from 192.168.100.0/24\n\n' \
+                  '</Directory>\n\n' \
+                  'ServerName website.com\n' \
+                  'ServerAlias www\n' \
+                  'ServerAlias dev\n\n' \
+                  '</VirtualHost>\n'
+        # pylint: disable=protected-access
+        parse = apache._parse_config(datain, 'VirtualHost')
+        self.assertEqual(parse, dataout)
+
+    def test__parse_config_list(self):
+        '''
+        Test parsing function which creates configs from variable structure (list of dicts or
+        list of dicts of dicts/lists) like:
+            - VirtualHost:
+              - this: '*:80'
+              - ServerName: website.com
+              - ServerAlias:
+                - www
+                - dev
+              - Directory:
+                  this: /var/www/vhosts/website.com
+                  Order: Deny,Allow
+                  Allow from:
+                    - 127.0.0.1
+                    - 192.168.100.0/24
+              - Directory:
+                - this: /var/www/vhosts/website.com/private
+                - Order: Deny,Allow
+                - Allow from:
+                  - 127.0.0.1
+                  - 192.168.100.0/24
+                - If:
+                    this: some condition
+                    do: something
+        '''
+        datain = [{'this': '*:80'},
+                  {'ServerName': 'website.com'},
+                  {'ServerAlias': ['www', 'dev']},
+                  {'Directory': {'this': '/var/www/vhosts/website.com',
+                                 'Order': 'Deny,Allow',
+                                 'Allow from': ['127.0.0.1', '192.168.100.0/24']}},
+                  {'Directory': [{'this': '/var/www/vhosts/website.com/private'},
+                                 {'Order': 'Deny,Allow'},
+                                 {'Allow from': ['127.0.0.1', '192.168.100.0/24']},
+                                 {'If': {'this': 'some condition', 'do': 'something'}}
+                                 ]}
+                  ]
+        dataout = '<VirtualHost *:80>\n' \
+                  'ServerName website.com\n' \
+                  'ServerAlias www\n' \
+                  'ServerAlias dev\n\n' \
+                  '<Directory /var/www/vhosts/website.com>\n' \
+                  'Order Deny,Allow\n' \
+                  'Allow from 127.0.0.1\n' \
+                  'Allow from 192.168.100.0/24\n\n' \
+                  '</Directory>\n\n' \
+                  '<Directory /var/www/vhosts/website.com/private>\n' \
+                  'Order Deny,Allow\n' \
+                  'Allow from 127.0.0.1\n' \
+                  'Allow from 192.168.100.0/24\n\n' \
+                  '<If some condition>\n' \
+                  'do something\n' \
+                  '</If>\n\n' \
+                  '</Directory>\n\n' \
+                  '</VirtualHost>\n'
+        # pylint: disable=protected-access
+        parse = apache._parse_config(datain, 'VirtualHost')
+        self.assertEqual(parse, dataout)
