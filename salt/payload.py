@@ -19,6 +19,7 @@ import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils.odict import OrderedDict
 
 # Import third party libs
 from salt.ext import six
@@ -146,10 +147,10 @@ class Serial(object):
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
                 try:
-                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
+                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding, object_pairs_hook=OrderedDict)
                 except UnicodeDecodeError:
                     # msg contains binary data
-                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
+                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, object_pairs_hook=OrderedDict)
             else:
                 ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             if six.PY3 and encoding is None and not raw:

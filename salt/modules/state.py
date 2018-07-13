@@ -2148,7 +2148,7 @@ def pkg(pkg_path,
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.files.fopen(pillar_json, 'r') as fp_:
-            pillar_override = salt.utils.json.load(fp_)
+            pillar_override = salt.utils.json.load(fp_, object_pairs_hook=OrderedDict)
     else:
         pillar_override = None
 
