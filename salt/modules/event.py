@@ -86,6 +86,7 @@ def fire_master(data, tag, preload=None):
             channel = salt.transport.Channel.factory(__opts__, master_uri=master)
             try:
                 channel.send(load)
+                ret = True
             except Exception:
                 ret = False
         return ret
