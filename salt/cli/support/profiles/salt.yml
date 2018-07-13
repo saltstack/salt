@@ -1,0 +1,3 @@
+sysinfo:
+  - grains.items:
+      info: System grains
