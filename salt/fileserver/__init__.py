@@ -241,7 +241,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
-            if len(dirs) == 0 and len(files) == 0:
+            if not dirs and not files:
                 # only remove if empty directory is older than 60s
                 if time.time() - os.path.getctime(root) > 60:
                     os.rmdir(root)
