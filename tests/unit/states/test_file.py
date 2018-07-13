@@ -59,6 +59,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def tearDown(self):
+        remove_dir = '/tmp/etc'
+        if salt.utils.is_windows():
+            remove_dir = 'c:\\tmp\\etc'
+        try:
+            salt.utils.rm_rf(remove_dir)
+        except OSError:
+            pass
+
     def test_serialize(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
@@ -1177,9 +1186,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that some text appears at the beginning of a file.
         '''
-        name = '/etc/motd'
-        if salt.utils.platform.is_windows():
-            name = 'c:\\etc\\motd'
+        name = '/tmp/etc/motd'
+        if salt.utils.is_windows():
+            name = 'c:\\tmp\\etc\\motd'
+        assert not os.path.exists(os.path.split(name)[0])
         source = ['salt://motd/hr-messages.tmpl']
         sources = ['salt://motd/devops-messages.tmpl']
         text = ['Trust no one unless you have eaten much salt with him.']
@@ -1209,12 +1219,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                          'cp.get_template': mock_f,
                          'file.search': mock_f,
                          'file.prepend': mock_t}):
-            comt = ('The following files will be changed:\n/etc:'
+            comt = ('The following files will be changed:\n/tmp/etc:'
                     ' directory - new\n')
-            pchanges = {'/etc': {'directory': 'new'}}
-            if salt.utils.platform.is_windows():
-                comt = 'The directory "c:\\etc" will be changed'
-                pchanges = {'c:\\etc': {'directory': 'new'}}
+            pchanges = {'/tmp/etc': {'directory': 'new'}}
+            if salt.utils.is_windows():
+                comt = 'The directory "c:\\tmp\\etc" will be changed'
+                pchanges = {'c:\\tmp\\etc': {'directory': 'new'}}
             ret.update({'comment': comt, 'name': name, 'pchanges': pchanges})
             self.assertDictEqual(filestate.prepend(name, makedirs=True),
                                  ret)
