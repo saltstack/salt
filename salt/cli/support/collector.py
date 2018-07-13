@@ -267,7 +267,9 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         Cleanup if crash/exception
         :return:
         '''
-        if self.config.get('support_archive') and os.path.exists(self.config['support_archive']):
+        if (hasattr(self, 'config')
+            and self.config.get('support_archive')
+            and os.path.exists(self.config['support_archive'])):
             self.out.warning('Terminated earlier, cleaning up')
             os.unlink(self.config['support_archive'])
 
