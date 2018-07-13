@@ -363,7 +363,6 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
             self.assertDictEqual(zypper.latest_version('vim', 'fakepkg'), {'vim': '7.4.326-2.62', 'fakepkg': ''})
 
-
     def test_upgrade_success(self):
         '''
         Test system upgrade and dist-upgrade success.
