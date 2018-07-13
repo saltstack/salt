@@ -296,7 +296,7 @@ def raw_mod(opts, name, functions, mod='modules'):
 
 def matchers(opts):
     '''
-    Return the master services plugins
+    Return the matcher services plugins
     '''
     return LazyLoader(
         _module_dirs(opts, 'matchers'),
