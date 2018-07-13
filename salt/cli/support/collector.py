@@ -32,21 +32,14 @@ class SupportDataCollector(object):
     Data collector. It behaves just like another outputter,
     except it grabs the data to the archive files.
     '''
-    def __init__(self, name, path=None, format='bz2'):
+    def __init__(self, name):
         '''
         constructor of the data collector
         :param name:
         :param path:
         :param format:
         '''
-        if format not in ['bz2', 'gz']:
-            format = 'bz2'
-        _name = '{}.tar.{}'.format(name, format)
-        _full_name = os.path.join(path or '/tmp', _name)
-        if os.path.exists(_full_name):
-            raise salt.exceptions.SaltClientError(
-                'The archive {} already exists. Please remove it first!'.format(_full_name))
-        self.archive_path = _full_name
+        self.archive_path = name
         self.__format = format
         self.__arch = None
         self.__current_section = None
@@ -261,14 +254,17 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         '''
 
     def run(self):
+        self.out = salt.cli.support.console.MessagesOutput()
         self.parse_args()
         if self.config['log_level'] not in ('quiet', ):
             self.setup_logfile_logger()
             salt.utils.verify.verify_log(self.config)
 
-        self.out = salt.cli.support.console.MessagesOutput()
+        if os.path.exists(self.config['support_archive']):
+            self.out.error('File {} already exists.'.format(self.config['support_archive']))
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
-            self.collector = SupportDataCollector(socket.gethostname() + "-support")
+            self.collector = SupportDataCollector(self.config['support_archive'])
         except Exception as ex:
             self.out.error(ex)
             exit_code = salt.defaults.exitcodes.EX_GENERIC
