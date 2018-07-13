@@ -10,9 +10,9 @@ repositories:
   - pkg.list_repos:
       info: Available repositories
 
-#upgrades:
-#  - pkg.list_upgrades:
-#      info: Possible upgrades
+upgrades:
+  - pkg.list_upgrades:
+      info: Possible upgrades
 
 general-health:
   - ps.boot_time:
