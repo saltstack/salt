@@ -3197,7 +3197,7 @@ class Matcher(object):
     def __init__(self, opts, functions=None):
         self.opts = opts
         self.functions = functions
-        matcher_module = opts.get('matcher', 'default')
+        matcher_module = opts.get('matcher_module', 'default')
         matcher_methods = opts.get('matcher_methods',
                                    ['confirm_top', 'glob_match', 'pcre_match',
                                     'list_match',
@@ -3208,11 +3208,15 @@ class Matcher(object):
                                     'ipcidr_match', 'range_match',
                                     'compound_match',
                                     'nodegroup_match'])
+        Matcher._get_matchers_from_loader(opts, matcher_module, matcher_methods)
 
-        self.matcher_functions = salt.loader.matchers(opts)
+    @classmethod
+    def _get_matchers_from_loader(cls, opts, matcher_module, matcher_methods):
+        matcher_functions = salt.loader.matchers(opts)
         for meth in matcher_methods:
-            setattr(Matcher, meth, self.matcher_functions[
-                '{}.{}'.format(matcher_module, meth)])
+            if not getattr(cls, meth, False):
+                setattr(cls, meth, matcher_functions['{}.{}'.format(matcher_module, meth)])
+
 
 
 class ProxyMinionManager(MinionManager):
