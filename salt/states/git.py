@@ -3142,7 +3142,6 @@ def config_unset(name,
     ret['comment'] = 'Value(s) successfully unset'
     return ret
 
-
 def config_set(name,
                value=None,
                multivar=None,
@@ -3362,6 +3361,7 @@ def config_set(name,
         value_comment
     )
     return ret
+
 
 
 def mod_run_check(cmd_kwargs, onlyif, unless):
