@@ -34,7 +34,7 @@ class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'fun_args': [], 'jid': '20180713160901624786', 'return': True,
                'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': '02e10e971a30'}
         opts = {u'level': u'LOG_INFO', u'options': [],
-                u'facility': u'LOG_USER', 'tag': u'salt-minion'}
+                u'facility': u'LOG_USER', u'tag': u'salt-minion'}
 
         with patch('salt.returners.syslog_return._get_options',
                    MagicMock(return_value=opts)):
