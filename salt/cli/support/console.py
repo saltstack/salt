@@ -44,16 +44,39 @@ class MessagesOutput(IndentOutput):
     '''
     Messages output to the CLI.
     '''
+    def info(self, message, ident=0):
+        '''
+        Write an info message to the CLI.
+
+        :param message:
+        :param ident:
+        :return:
+        '''
+        self.__colored_output('Info', message, 'GREEN', 'LIGHT_GREEN', ident=ident)
+
+    def warning(self, message, ident=0):
+        '''
+        Write a warning message to the CLI.
+
+        :param message:
+        :param ident:
+        :return:
+        '''
+        self.__colored_output('Warning', message, 'YELLOW', 'LIGHT_YELLOW', ident=ident)
 
     def error(self, message, ident=0):
         '''
-        Print an error to the screen.
+        Write an error message to the CLI.
 
         :param message:
+        :param ident
         :return:
         '''
-        for chunk in [self._colors['RED'], ' ' * ident, 'Error:', ' ',
-                      self._colors['LIGHT_RED'], message, self._colors['ENDC']]:
+        self.__colored_output('Error', message, 'RED', 'LIGHT_RED', ident=ident)
+
+    def __colored_output(self, title, message, title_color, message_color, ident=0):
+        for chunk in [self._colors[title_color], ' ' * ident, '{}:'.format(title), ' ',
+                      self._colors[message_color], message, self._colors['ENDC']]:
             self._device.write(str(chunk))
         self._device.write(os.linesep)
         self._device.flush()
