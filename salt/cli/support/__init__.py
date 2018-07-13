@@ -9,6 +9,12 @@ import salt.exceptions
 
 
 def get_profile(profile):
+    '''
+    Get profile.
+
+    :param profile:
+    :return:
+    '''
     if os.path.basename(profile) == profile:
         profile = profile.split('.')[0]  # Trim extension if someone added it
         profile_path = os.path.join(os.path.dirname(__file__), 'profiles', profile + '.yml')
