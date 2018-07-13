@@ -20,6 +20,7 @@ import getpass
 import logging
 import optparse
 import traceback
+import tempfile
 from functools import partial
 
 
@@ -34,6 +35,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -1915,8 +1917,13 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
     def _mixin_setup(self):
-        self.add_option('-f', '--archive-format', default='gzip', dest='archive_format',
-                        help='Specify archive type ("gzip" or "zip"). Default "gzip".')
+        self.add_option('-p', '--profile', default='default', dest='support_profile',
+                        help='Specify support profile')
+        support_archive = '{t}/{h}-support.tar.bz2'.format(t=tempfile.gettempdir(),
+                                                           h=salt.utils.network.get_fqhostname())
+        self.add_option('-a', '--archive', default=support_archive, dest='support_archive',
+                        help=('Specify name of the resulting support archive. '
+                              'Default is "{f}".'.format(f=support_archive)))
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
