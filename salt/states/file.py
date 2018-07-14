@@ -6132,7 +6132,7 @@ def copy_(name,
     if not os.path.isdir(dname):
         if makedirs:
             try:
-                _makedirs(name=name)
+                _makedirs(name=name, user=user, group=group, dir_mode=mode)
             except CommandExecutionError as exc:
                 return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
         else:

@@ -175,8 +175,7 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
-import salt.output.highstate
-import salt.output.yaml_out
+import salt.output
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -243,9 +242,9 @@ class SlackClient(object):
             'default': {
                 'users': set(),
                 'commands': set(),
-                'aliases': dict(),
-                'default_target': dict(),
-                'targets': dict()
+                'aliases': {},
+                'default_target': {},
+                'targets': {}
             }
         }
 
@@ -271,7 +270,8 @@ class SlackClient(object):
         for name, config in groups_gen:
             log.info('Trying to get %s and %s to be useful', name, config)
             ret_groups.setdefault(name, {
-                'users': set(), 'commands': set(), 'aliases': dict(), 'default_target': dict(), 'targets': dict()
+                'users': set(), 'commands': set(), 'aliases': {},
+                'default_target': {}, 'targets': {}
             })
             try:
                 ret_groups[name]['users'].update(set(config.get('users', [])))
@@ -630,26 +630,20 @@ class SlackClient(object):
                 return checked
         return null_target
 
-
-# emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
-# obviously pass in
-
     def format_return_text(self, data, function, **kwargs):  # pylint: disable=unused-argument
         '''
         Print out YAML using the block mode
         '''
         try:
-            # Format results from state runs with highstate output
-            if function.startswith('state'):
-                salt.output.highstate.__opts__ = __opts__
-                # Disable colors
-                salt.output.highstate.__opts__.update({"color": False})
-                return salt.output.highstate.output(data)
-            # Format results from everything else with yaml output
-            else:
-                salt.output.yaml_out.__opts__ = __opts__
-                return salt.output.yaml_out.output(data)
-        # pylint: disable=broad-except
+            try:
+                outputter = data[next(iter(data))].get('out')
+            except (StopIteration, AttributeError):
+                outputter = None
+            return salt.output.string_format(
+                {x: y['return'] for x, y in six.iteritems(data)},
+                out=outputter,
+                opts=__opts__,
+            )
         except Exception as exc:
             import pprint
             log.exception(
@@ -679,22 +673,22 @@ class SlackClient(object):
 
     def get_jobs_from_runner(self, outstanding_jids):
         '''
-        Given a list of job_ids, return a dictionary of those job_ids that have completed and their results.
+        Given a list of job_ids, return a dictionary of those job_ids that have
+        completed and their results.
 
-        Query the salt event bus via the jobs runner.  jobs.list_job will show a job in progress,
-        jobs.lookup_jid will return a job that has completed.
+        Query the salt event bus via the jobs runner. jobs.list_job will show
+        a job in progress, jobs.lookup_jid will return a job that has
+        completed.
 
         returns a dictionary of job id: result
         '''
         # Can't use the runner because of https://github.com/saltstack/salt/issues/40671
         runner = salt.runner.RunnerClient(__opts__)
-        # log.debug("Getting job IDs %s will run via runner jobs.lookup_jid", outstanding_jids)
-        #mm = salt.minion.MasterMinion(__opts__)
         source = __opts__.get('ext_job_cache')
         if not source:
             source = __opts__.get('master_job_cache')
 
-        results = dict()
+        results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
             if self.master_minion.returners['{}.get_jid'.format(source)](jid):
@@ -702,12 +696,10 @@ class SlackClient(object):
                 jid_result = job_result.get('Result', {})
                 jid_function = job_result.get('Function', {})
                 # emulate lookup_jid's return, which is just minion:return
-                # pylint is tripping
-                # pylint: disable=missing-whitespace-after-comma
-                job_data = salt.utils.json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = {}
-                results[jid]['data'] = salt.utils.yaml.safe_load(job_data)
-                results[jid]['function'] = jid_function
+                results[jid] = {
+                    'data': salt.utils.json.loads(salt.utils.json.dumps(jid_result)),
+                    'function': jid_function
+                }
 
         return results
 
@@ -718,7 +710,7 @@ class SlackClient(object):
         the values of fire_all and command
         '''
 
-        outstanding = dict()  # set of job_id that we need to check for
+        outstanding = {}  # set of job_id that we need to check for
 
         while True:
             log.trace('Sleeping for interval of %s', interval)
