@@ -249,7 +249,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         Collects master system data.
         :return:
         '''
-        scenario = salt.cli.support.get_profile(self.config['support_profile'])
+        def call(func):
+            conf = {'fun': func}
+            return self._local_call(conf)
+
+        scenario = salt.cli.support.get_profile(self.config['support_profile'], call)
         for category_name in scenario:
             self.out.put(category_name)
             self.collector.add(category_name)
