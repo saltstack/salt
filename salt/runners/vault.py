@@ -73,7 +73,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         payload = {
                     'policies': _get_policies(minion_id, config),
                     'num_uses': 1,
-                    'metadata': audit_data
+                    'meta': audit_data
                   }
 
         if payload['policies'] == []:
