@@ -12,6 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
+    Mock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -30,7 +31,11 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {vault: {}}
+        return {
+            vault: {
+            '__opts__': {'vault': {'url': "http://127.0.0.1", "auth": {'token': 'test', 'method': 'token'}}}
+            }
+        }
 
     def setUp(self):
         self.grains = {
@@ -150,3 +155,44 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                     log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)
+
+
+    def _mock_json_response(self, data):
+        response = MagicMock()
+        response.json = MagicMock(return_value=data)
+        response.status_code = 200
+        return Mock(return_value=response)
+
+
+    # define matcher:
+    # @urlmatch(netloc=r'^vault$')
+    # def _vault_mock(url, request):
+    #     return '{"": ""}'
+    
+    def test_generate_token(self):
+        # open context to patch
+        with patch('salt.runners.vault._validate_signature', MagicMock(return_value=None)):
+            with patch('requests.post', self._mock_json_response({'auth': {'client_token': 'test'}})):
+                result = vault.generate_token('test-minion', 'signature')
+                log.debug('generate_token result: %s', result)
+                self.assertTrue(isinstance(result, dict))
+                self.assertFalse('error' in result)
+                
+
+
+    def test_get_vault_url(self):
+        self.assertEqual(vault._get_vault_url(
+            {"url": "http://127.0.0.1"}),
+            "http://127.0.0.1/v1/auth/token/create")
+        self.assertEqual(vault._get_vault_url(
+            {"url": "https://127.0.0.1/test"}),
+            "https://127.0.0.1/v1/auth/token/create")
+        self.assertEqual(vault._get_vault_url(
+            {"url": "http://127.0.0.1", "role_name": "therole"}),
+            "http://127.0.0.1/v1/auth/token/create/therole")
+        self.assertEqual(vault._get_vault_url(
+            {"url": "https://127.0.0.1/test", "role_name": "therole"}),
+            "https://127.0.0.1/v1/auth/token/create/therole")
+        self.assertEqual(vault._get_vault_url(
+            {"url": "https://127.0.0.1/test?s=test", "role_name": "therole&"}),
+            "https://127.0.0.1/v1/auth/token/create/therole%26")
