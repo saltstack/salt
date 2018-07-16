@@ -19,46 +19,19 @@ general-health:
       info: System Boot Time
   - ps.swap_memory:
       info: Swap Memory
+      output: txt
   - ps.cpu_times:
       info: CPU times
   - ps.disk_io_counters:
       info: Disk IO counters
   - ps.disk_partition_usage:
       info: Disk partition usage
+      output: table
   - ps.disk_partitions:
       info: Disk partitions
+      output: table
   - ps.top:
       info: Top CPU consuming processes
-
-network:
-  - network.get_hostname:
-      info: Hostname
-  - network.get_fqdn:
-      info: FQDN
-  - network.default_route:
-      info: Default route
-      output: table
-  - network.interfaces:
-      info: All the available interfaces
-      output: table
-  - network.subnets:
-      info: List of IPv4 subnets
-      output: table
-  - network.subnets6:
-      info: List of IPv6 subnets
-      output: table
-  - network.routes:
-      info: Network configured routes from routing tables
-      output: table
-  - network.netstat:
-      info: Information on open ports and states
-      output: table
-  - network.active_tcp:
-      info: All running TCP connections
-      output: table
-  - network.arp:
-      info: ARP table
-      output: table
 
 system.log:
   # This works on any file system object.
@@ -66,5 +39,4 @@ system.log:
       info: Add system log
       args:
         - /var/log/syslog
-        #- path: /var/log/syslog
 
