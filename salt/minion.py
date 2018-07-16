@@ -2096,6 +2096,13 @@ class Minion(MinionBase):
         log.debug('Refreshing beacons.')
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
 
+    def matchers_refresh(self):
+        '''
+        Refresh the matchers
+        '''
+        log.debug('Refreshing matchers.')
+        self.matcher = Matcher(self.opts, self.functions)
+
     # TODO: only allow one future in flight at a time?
     @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
@@ -2272,6 +2279,8 @@ class Minion(MinionBase):
             )
         elif tag.startswith('beacons_refresh'):
             self.beacons_refresh()
+        elif tag.startswith('matchers_refresh'):
+            self.matchers_refresh()
         elif tag.startswith('manage_schedule'):
             self.manage_schedule(tag, data)
         elif tag.startswith('manage_beacons'):
@@ -3186,25 +3195,49 @@ class Matcher(object):
     def __init__(self, opts, functions=None):
         self.opts = opts
         self.functions = functions
-        matcher_module = opts.get('matcher_module', 'default')
         matcher_methods = opts.get('matcher_methods',
-                                   ['confirm_top', 'glob_match', 'pcre_match',
-                                    'list_match',
-                                    'grain_match', 'grain_pcre_match',
-                                    'data_match',
-                                    'pillar_match', 'pillar_pcre_match',
-                                    'pillar_exact_match',
-                                    'ipcidr_match', 'range_match',
-                                    'compound_match',
-                                    'nodegroup_match'])
-        Matcher._get_matchers_from_loader(opts, matcher_module, matcher_methods)
+                                   ['glob.glob_match', 'pcre.pcre_match',
+                                    'listmatch.list_match',
+                                    'grains.grain_match', 'grains.grain_pcre_match',
+                                    'data.data_match',
+                                    'pillar.pillar_match', 'pillar.pillar_pcre_match',
+                                    'pillar.pillar_exact_match',
+                                    'ipcidr.ipcidr_match', 'rangematch.range_match',
+                                    'compound.compound_match',
+                                    'nodegroup.nodegroup_match'])
+        Matcher._get_matchers_from_loader(opts, matcher_methods)
 
     @classmethod
-    def _get_matchers_from_loader(cls, opts, matcher_module, matcher_methods):
+    def _get_matchers_from_loader(cls, opts, matcher_methods):
         matcher_functions = salt.loader.matchers(opts)
         for meth in matcher_methods:
-            if not getattr(cls, meth, False):
-                setattr(cls, meth, matcher_functions['{}.{}'.format(matcher_module, meth)])
+            function_name = meth.split('.')[1]
+            if not getattr(cls, function_name, False):
+                setattr(cls, function_name, matcher_functions[meth])
+
+
+    def confirm_top(self, match, data, nodegroups=None):
+        '''
+        Takes the data passed to a top file environment and determines if the
+        data matches this minion
+        '''
+        matcher = 'compound'
+        if not data:
+            log.error('Received bad data when setting the match from the top '
+                        'file')
+            return False
+        for item in data:
+            if isinstance(item, dict):
+                if 'match' in item:
+                    matcher = item['match']
+        if hasattr(self, matcher + '_match'):
+            funcname = '{0}_match'.format(matcher)
+            if matcher == 'nodegroup':
+                return getattr(self, funcname)(match, nodegroups)
+            return getattr(self, funcname)(match)
+        else:
+            log.error('Attempting to match with unknown matcher: %s', matcher)
+            return False
 
 
 class ProxyMinionManager(MinionManager):
