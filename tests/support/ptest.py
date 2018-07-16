@@ -6,7 +6,7 @@ Based on the API in Python's TextTestRunner.
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import tests support libs
