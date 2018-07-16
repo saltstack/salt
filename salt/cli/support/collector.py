@@ -14,6 +14,7 @@ if six.PY2:
     import exceptions
 else:
     import builtins as exceptions
+    from io import IOBase as file
 
 from io import BytesIO
 
@@ -220,7 +221,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :return:
         '''
         conf = {
-            'fun': action_meta.keys()[0],
+            'fun': list(action_meta.keys())[0],
             'arg': [],
             'kwargs': {},
         }
