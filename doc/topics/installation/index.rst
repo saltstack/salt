@@ -104,7 +104,7 @@ vary:
 
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
-  * `PyCrypto`_ - The Python cryptography toolkit
+  * `PyCryptodome`_ - low-level cryptographic primitives
 
 * RAET:
 
@@ -147,7 +147,7 @@ Optional Dependencies
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
 .. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
-.. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
+.. _`PyCryptodome`: http://www.pycryptodome.org/
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
@@ -188,4 +188,3 @@ SaltStack states and execution modules to build Salt and a specified set of
 dependencies, from which a platform specific repository can be built.
 
 https://github.com/saltstack/salt-pack
-

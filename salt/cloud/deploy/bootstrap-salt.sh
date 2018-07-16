@@ -3702,7 +3702,7 @@ install_centos_git_deps() {
 
     if [ "${_PY_EXE}" != "" ]; then
         # If "-x" is defined, install dependencies with pip based on the Python version given.
-        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq"
+        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycryptodomex PyYAML tornado<5.0 zmq"
 
         # install swig and openssl on cent6
         if [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
@@ -5528,7 +5528,7 @@ install_opensuse_git_deps() {
 
     __git_clone_and_checkout || return 1
 
-    __PACKAGES="libzmq5 python-Jinja2 python-m2crypto python-msgpack-python python-pycrypto python-pyzmq python-xml"
+    __PACKAGES="libzmq5 python-Jinja2 python-m2crypto python-msgpack-python python-pycryptodomex python-pyzmq python-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
         # We're on the develop branch, install whichever tornado is on the requirements file
@@ -5748,7 +5748,7 @@ install_suse_12_git_deps() {
 
     __PACKAGES=""
     # shellcheck disable=SC2089
-    __PACKAGES="${__PACKAGES} libzmq3 python-Jinja2 python-msgpack-python python-pycrypto"
+    __PACKAGES="${__PACKAGES} libzmq3 python-Jinja2 python-msgpack-python python-pycryptodomex"
     __PACKAGES="${__PACKAGES} python-pyzmq python-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
@@ -5855,7 +5855,7 @@ install_suse_11_git_deps() {
 
     __PACKAGES=""
     # shellcheck disable=SC2089
-    __PACKAGES="${__PACKAGES} libzmq4 python-Jinja2 python-msgpack-python python-pycrypto"
+    __PACKAGES="${__PACKAGES} libzmq4 python-Jinja2 python-msgpack-python python-pycryptodomex"
     __PACKAGES="${__PACKAGES} python-pyzmq python-xml python-zypp"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then

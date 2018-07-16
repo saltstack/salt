@@ -107,7 +107,7 @@ On Debian, Ubuntu or their derivatives run the following commands:
     apt-get install build-essential python-dev
     pip install -r requirements/zeromq.txt
 
-This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
+This will install the latest ``pycryptodomex`` and ``pyzmq`` (with bundled
 ``libzmq``) Python modules required for running integration tests suite.
 
 Once all requirements are installed, use ``runtests.py`` script to run all of
@@ -445,8 +445,8 @@ successfully. If a network connection is not detected, the test will not run.
 order for the test to be executed. Otherwise, the test is skipped.
 
 `@requires_system_grains` -- Loads and passes the grains on the system as an
-keyword argument to the test function with the name `grains`. 
-    
+keyword argument to the test function with the name `grains`.
+
 `@skip_if_binaries_missing(['list', 'of', 'binaries'])` -- If called from inside a test,
 the test will be skipped if the binaries are not all present on the system.
 

@@ -1,4 +1,4 @@
 -r base.txt
 
-pycrypto>=2.6.1
+pycryptodomex>=3.4.7
 pyzmq>=2.2.0

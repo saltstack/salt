@@ -61,7 +61,7 @@ On Debian, Ubuntu or their derivatives run the following commands:
     apt-get install build-essential python-dev
     pip install -r requirements/zeromq.txt
 
-This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
+This will install the latest ``pycryptodomex`` and ``pyzmq`` (with bundled
 ``libzmq``) Python modules required for running integration tests suite.
 
 
@@ -164,7 +164,7 @@ the test suite, allowing you to write tests to assert against expected or
 unexpected behaviors.
 
 A simple example of a test utilizing a typical master/minion execution module command
-is the test for the ``test_ping`` function in the 
+is the test for the ``test_ping`` function in the
 ``tests/integration/modules/test_test.py``
 file:
 
@@ -320,7 +320,7 @@ Args can be passed in to the ``run_function`` method as well:
         '''
         self.assertEqual(self.run_function('test.echo', ['text']), 'text')
 
-The next example is taken from the 
+The next example is taken from the
 ``tests/integration/modules/test_aliases.py`` file and
 demonstrates how to pass kwargs to the ``run_function`` call. Also note that this
 test uses another salt function to ensure the correct data is present (via the
