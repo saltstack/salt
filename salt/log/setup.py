@@ -100,7 +100,7 @@ LOG_COLORS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(six.iteritems(LOG_LEVELS), key=lambda x: x[1])
+    str(l[0]) for l in sorted(six.iteritems(LOG_LEVELS), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
