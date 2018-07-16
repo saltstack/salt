@@ -18,5 +18,6 @@ all-users:
       args:
         - {{uname}}
   - group.getent:
-      info: List of alla available groups
+      info: List of all available groups
+      output: table
   {%endfor%}
