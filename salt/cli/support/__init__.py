@@ -6,9 +6,20 @@ from __future__ import print_function, unicode_literals, absolute_import
 import yaml
 import os
 import salt.exceptions
+import jinja2
 
 
-def get_profile(profile):
+def _render_profile(path, caller):
+    '''
+    Render profile as Jinja2.
+    :param path:
+    :return:
+    '''
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(path)), trim_blocks=False)
+    return env.get_template(os.path.basename(path)).render(salt=caller).strip()
+
+
+def get_profile(profile, caller):
     '''
     Get profile.
 
@@ -24,7 +35,10 @@ def get_profile(profile):
         else:
             profile_path = profile
         if os.path.exists(profile_path):
-            data.update(yaml.load(open(profile_path)))
+            try:
+                data.update(yaml.load(_render_profile(profile_path, caller)))
+            except Exception as ex:
+                raise salt.exceptions.SaltException('Rendering profile failed: {}'.format(ex))
         else:
             raise salt.exceptions.SaltException('Profile "{}" is not found.'.format(profile))
 
