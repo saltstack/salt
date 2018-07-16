@@ -40,8 +40,10 @@ class MacServiceModuleTest(ModuleCase):
         '''
         if self.SERVICE_ENABLED:
             self.run_function('service.start', [self.SERVICE_NAME])
+            self.run_function('service.enable', [self.SERVICE_NAME])
         else:
             self.run_function('service.stop', [self.SERVICE_NAME])
+            self.run_function('service.disable', [self.SERVICE_NAME])
 
     def test_show(self):
         '''

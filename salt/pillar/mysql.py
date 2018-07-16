@@ -59,16 +59,27 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # Trying to import MySQLdb
     import MySQLdb
-    HAS_MYSQL = True
+    import MySQLdb.cursors
+    import MySQLdb.converters
 except ImportError:
-    HAS_MYSQL = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+    except ImportError:
+        MySQLdb = None
 
 
 def __virtual__():
-    if not HAS_MYSQL:
-        return False
-    return True
+    '''
+    Confirm that a python mysql client is installed.
+    '''
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 class MySQLExtPillar(SqlBaseExtPillar):

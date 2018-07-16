@@ -253,7 +253,7 @@ def file_hash(load, fnd):
                     except OSError:
                         pass
                     return file_hash(load, fnd)
-                if os.path.getmtime(path) == mtime:
+                if str(os.path.getmtime(path)) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret

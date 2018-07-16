@@ -186,7 +186,7 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
             ret['changes']['new'] = updated
             return ret
         ret['comment'] = 'Stack {0} exists.'.format(name)
-        ret['changes'] = None
+        ret['changes'] = {}
         return ret
     if __opts__['test']:
         ret['comment'] = 'Stack {0} is set to be created.'.format(name)
@@ -221,7 +221,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_cfn.exists'](name, region, key, keyid, profile):
         ret['comment'] = 'Stack {0} does not exist.'.format(name)
-        ret['changes'] = None
+        ret['changes'] = {}
         return ret
     if __opts__['test']:
         ret['comment'] = 'Stack {0} is set to be deleted.'.format(name)
@@ -232,7 +232,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
         code, message = _get_error(deleted)
         ret['comment'] = 'Stack {0} could not be deleted.\n{1}\n{2}'.format(name, code, message)
         ret['result'] = False
-        ret['changes'] = None
+        ret['changes'] = {}
         return ret
     if deleted:
         ret['comment'] = 'Stack {0} was deleted.'.format(name)

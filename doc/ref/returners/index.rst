@@ -80,9 +80,9 @@ Other optional functions can be included to add support for
         '''
         # Get a redis connection
         serv = redis.Redis(
-                    host='redis-serv.example.com',
-                    port=6379,
-                    db='0')
+            host='redis-serv.example.com',
+            port=6379,
+            db='0')
         serv.sadd("%(id)s:jobs" % ret, ret['jid'])
         serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret['return']))
         serv.sadd('jobs', ret['jid'])
@@ -147,7 +147,7 @@ must implement the following functions:
 ``prep_jid``
     Ensures that job ids (jid) don't collide, unless passed_jid is provided.
 
-    ``nochache`` is an optional boolean that indicates if return data
+    ``nocache`` is an optional boolean that indicates if return data
     should be cached. ``passed_jid`` is a caller provided jid which should be
     returned unconditionally.
 

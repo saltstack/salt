@@ -16,7 +16,7 @@ Salt Minions maintain a *proc* directory in the Salt ``cachedir``. The *proc*
 directory maintains files named after the executed job ID. These files contain
 the information about the current running jobs on the minion and allow for
 jobs to be looked up. This is located in the *proc* directory under the
-cachedir, with a default configuration it is under ``/var/cache/salt/proc``.
+cachedir, with a default configuration it is under ``/var/cache/salt/{master|minion}/proc``.
 
 Functions in the saltutil Module
 ================================

@@ -557,7 +557,7 @@ class Fileserver(object):
         if '../' in path:
             return fnd
         if salt.utils.url.is_escaped(path):
-            # don't attempt to find URL query arguements in the path
+            # don't attempt to find URL query arguments in the path
             path = salt.utils.url.unescape(path)
         else:
             if '?' in path:
@@ -850,7 +850,8 @@ class FSChan(object):
                 self.opts['__fs_update'] = True
         else:
             self.fs.update()
-        self.cmd_stub = {'master_tops': {}}
+        self.cmd_stub = {'master_tops': {},
+                         'ext_nodes': {}}
 
     def send(self, load, tries=None, timeout=None, raw=False):  # pylint: disable=unused-argument
         '''

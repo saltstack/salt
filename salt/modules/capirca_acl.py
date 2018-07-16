@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Capirca ACL
-============
+===========
 
 Generate ACL (firewall) configuration for network devices.
 
@@ -132,7 +132,8 @@ _TERM_FIELDS = {
     'flattened_addr': None,
     'flattened_saddr': None,
     'flattened_daddr': None,
-    'priority': None
+    'priority': None,
+    'ttl': None
 }
 
 # IP-type fields
@@ -425,7 +426,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     if first and not second:
         return first
     # Determine overlaps
-    # So we dont change the position of the existing terms/filters
+    # So we don't change the position of the existing terms/filters
     overlaps = []
     merged = []
     appended = []
@@ -682,7 +683,7 @@ def get_term_config(platform,
         select a source just using the name, instead of specifying a destination_port and protocol.
         Allows the same options as ``source_service``.
 
-    **term_fields
+    term_fields
         Term attributes.
         To see what fields are supported, please consult the list of supported keywords_.
         Some platforms have few other optional_ keywords.

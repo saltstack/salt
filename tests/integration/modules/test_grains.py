@@ -51,6 +51,7 @@ class TestModulesGrains(ModuleCase):
             'cpuarch',
             'domain',
             'fqdn',
+            'fqdns',
             'gid',
             'groupname',
             'host',
@@ -153,8 +154,7 @@ class GrainsAppendTestCase(ModuleCase):
     GRAIN_VAL = 'my-grain-val'
 
     def tearDown(self):
-        for item in self.run_function('grains.get', [self.GRAIN_KEY]):
-            self.run_function('grains.remove', [self.GRAIN_KEY, item])
+        self.run_function('grains.setval', [self.GRAIN_KEY, []])
 
     def test_grains_append(self):
         '''

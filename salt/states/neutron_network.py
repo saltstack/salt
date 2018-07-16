@@ -61,12 +61,11 @@ def present(name, auth=None, **kwargs):
          Set the network administrative state to up.
 
     vlan
-        Vlan ID. Alias for
-        provider:
-          - physical_network: provider
-          - network_type: vlan
-          - segmentation_id: (vlan id)
+        Vlan ID. Alias for provider
 
+        - physical_network: provider
+        - network_type: vlan
+        - segmentation_id: (vlan id)
     '''
     ret = {'name': name,
            'changes': {},

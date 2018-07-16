@@ -1051,16 +1051,15 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: 2018.3.0
+
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.verify text='Hello there.  How are you?'
-
         salt '*' gpg.verify filename='/path/to/important.file'
-
         salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''

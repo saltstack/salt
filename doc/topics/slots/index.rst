@@ -29,7 +29,7 @@ argument value in states.
 
 Slot syntax looks close to the simple python function call.
 
-.. code-block::
+.. code-block:: text
 
     __slot__:salt:<module>.<function>(<args>, ..., <kwargs...>, ...)
 

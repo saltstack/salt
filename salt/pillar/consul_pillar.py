@@ -134,10 +134,10 @@ import salt.utils.yaml
 # Import third party libs
 try:
     import consul
-    HAS_CONSUL = True
-    CONSUL_VERSION = consul.__version__
+    if not hasattr(consul, '__version__'):
+        consul.__version__ = '0.1'  # Some packages has no version, and so this pillar crashes on access to it.
 except ImportError:
-    HAS_CONSUL = False
+    consul = None
 
 __virtualname__ = 'consul'
 
@@ -149,7 +149,7 @@ def __virtual__():
     '''
     Only return if python-consul is installed
     '''
-    return __virtualname__ if HAS_CONSUL else False
+    return __virtualname__ if consul is not None else False
 
 
 def ext_pillar(minion_id,
@@ -290,9 +290,9 @@ def get_conn(opts, profile):
         pillarenv = opts_merged.get('pillarenv') or 'base'
         params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
 
-    if HAS_CONSUL:
+    if consul:
         # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
-        if CONSUL_VERSION < '0.4.7' and params.get('target'):
+        if consul.__version__ < '0.4.7' and params.get('target'):
             params.pop('target')
         return consul.Consul(**params)
     else:

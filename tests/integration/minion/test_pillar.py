@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -187,6 +187,29 @@ GPG_PILLAR_DECRYPTED = {
         },
     },
 }
+
+
+class BasePillarTest(ModuleCase):
+    '''
+    Tests for pillar decryption
+    '''
+    def test_pillar_top_compound_match(self, grains=None):
+        '''
+        Test that a compound match topfile that refers to a nodegroup via N@ works
+        as expected.
+        '''
+        if not grains:
+            grains = {}
+        grains['os'] = 'Fedora'
+        pillar_obj = pillar.Pillar(self.get_config('master', from_scratch=True), grains, 'minion', 'base')
+        ret = pillar_obj.compile_pillar()
+        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
+        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+
+        sub_pillar_obj = pillar.Pillar(self.get_config('master', from_scratch=True), grains, 'sub_minion', 'base')
+        sub_ret = sub_pillar_obj.compile_pillar()
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
 
 
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')

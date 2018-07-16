@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import python libs
@@ -307,7 +307,7 @@ class ScheduleTestCase(TestCase):
             {'schedule': {'testjob': {'function': 'test.true', 'seconds': 60, 'splay': 5}}})
         now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue((self.schedule.opts['schedule']['testjob']['_splay'] - now).total_seconds() > 60)
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > datetime.timedelta(seconds=60))
 
     @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
     def test_eval_schedule_cron(self):

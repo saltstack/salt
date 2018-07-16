@@ -372,7 +372,12 @@ def facts(puppet=False):
     '''
     ret = {}
     opt_puppet = '--puppet' if puppet else ''
-    output = __salt__['cmd.run']('facter {0}'.format(opt_puppet))
+    cmd_ret = __salt__['cmd.run_all']('facter {0}'.format(opt_puppet))
+
+    if cmd_ret['retcode'] != 0:
+        raise CommandExecutionError(cmd_ret['stderr'])
+
+    output = cmd_ret['stdout']
 
     # Loop over the facter output and  properly
     # parse it into a nice dictionary for using
@@ -398,9 +403,13 @@ def fact(name, puppet=False):
         salt '*' puppet.fact kernel
     '''
     opt_puppet = '--puppet' if puppet else ''
-    ret = __salt__['cmd.run'](
+    ret = __salt__['cmd.run_all'](
             'facter {0} {1}'.format(opt_puppet, name),
             python_shell=False)
-    if not ret:
+
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(ret['stderr'])
+
+    if not ret['stdout']:
         return ''
-    return ret
+    return ret['stdout']

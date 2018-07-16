@@ -93,7 +93,7 @@ try:
     import git
     import gitdb
     GITPYTHON_VERSION = _LooseVersion(git.__version__)
-except ImportError:
+except Exception:
     GITPYTHON_VERSION = None
 
 try:
@@ -467,12 +467,19 @@ class GitProvider(object):
             if rname in self.saltenv_revmap:
                 env_set.update(self.saltenv_revmap[rname])
             else:
-                env_set.add('base' if rname == self.base else rname)
+                if rname == self.base:
+                    env_set.add('base')
+                elif not self.disable_saltenv_mapping:
+                    env_set.add(rname)
 
         use_branches = 'branch' in self.ref_types
         use_tags = 'tag' in self.ref_types
 
         ret = set()
+        if salt.utils.stringutils.is_hex(self.base):
+            # gitfs_base or per-saltenv 'base' may point to a commit ID, which
+            # would not show up in the refs. Make sure we include it.
+            ret.add('base')
         for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
@@ -2692,9 +2699,7 @@ class GitFS(GitBase):
                 return cache_match
         ret = set()
         for repo in self.remotes:
-            repo_envs = set()
-            if not repo.disable_saltenv_mapping:
-                repo_envs.update(repo.envs())
+            repo_envs = repo.envs()
             for env_list in six.itervalues(repo.saltenv_revmap):
                 repo_envs.update(env_list)
             ret.update([x for x in repo_envs if repo.env_is_exposed(x)])

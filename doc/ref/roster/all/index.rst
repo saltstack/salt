@@ -17,3 +17,4 @@ roster modules
     flat
     range
     scan
+    sshconfig

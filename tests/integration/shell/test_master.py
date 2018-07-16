@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.master
@@ -101,7 +101,7 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             master.shutdown()
 
     # pylint: disable=invalid-name
@@ -131,7 +131,7 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             master.shutdown()
 
     def test_exit_status_correct_usage(self):

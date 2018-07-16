@@ -927,7 +927,7 @@ def _wipe(dev):
 def _wait(lfunc, log_lvl=None, log_msg=None, tries=10):
     '''
     Wait for lfunc to be True
-    :return: True if lfunc succeeded within tries, False if it didnt
+    :return: True if lfunc succeeded within tries, False if it didn't
     '''
     i = 0
     while i < tries:

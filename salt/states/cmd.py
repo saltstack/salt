@@ -12,7 +12,7 @@ A simple example to execute a command:
 .. code-block:: yaml
 
     # Store the current date in a file
-    date > /tmp/salt-run:
+    'date > /tmp/salt-run':
       cmd.run
 
 Only run if another execution failed, in this case truncate syslog if there is
@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    > /var/log/messages:
+    '> /var/log/messages/:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -37,7 +37,7 @@ touch /tmp/foo if it does not exist:
 
 .. code-block:: yaml
 
-    echo 'foo' | tee /tmp/bar > /tmp/baz:
+    "echo 'foo' | tee /tmp/bar > /tmp/baz":
       cmd.run:
         - creates:
           - /tmp/bar
@@ -55,7 +55,7 @@ In situations like this try the following:
 
     run_installer:
       cmd.run:
-        - name: /tmp/installer.bin  > /dev/null 2>&1
+        - name: /tmp/installer.bin > /dev/null 2>&1
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -199,8 +199,7 @@ executed when the state it is watching changes. Example:
 ``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
-``cmd.wait`` will be deprecated in future due to the confusion it causes. The
-preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
+The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
 works on ``cmd.run`` as well as on any other state. The example would then look as follows:
 
 .. code-block:: yaml
@@ -411,6 +410,7 @@ def wait(name,
          output_loglevel='debug',
          hide_output=False,
          use_vt=False,
+         success_retcodes=None,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it.
@@ -472,7 +472,7 @@ def wait(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -515,6 +515,13 @@ def wait(name,
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -609,7 +616,7 @@ def wait_script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -647,6 +654,13 @@ def wait_script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -671,6 +685,7 @@ def run(name,
         timeout=None,
         ignore_timeout=False,
         use_vt=False,
+        success_retcodes=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -728,7 +743,7 @@ def run(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -801,6 +816,13 @@ def run(name,
 
         .. versionadded:: 2016.3.6
 
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     .. note::
 
         cmd.run supports the usage of ``reload_modules``. This functionality
@@ -868,7 +890,8 @@ def run(name,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
-                       'quiet': quiet})
+                       'quiet': quiet,
+                       'success_retcodes': success_retcodes})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -932,6 +955,7 @@ def script(name,
            hide_output=False,
            defaults=None,
            context=None,
+           success_retcodes=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -998,7 +1022,7 @@ def script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1064,6 +1088,14 @@ def script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1112,7 +1144,8 @@ def script(name,
                        'hide_output': hide_output,
                        'use_vt': use_vt,
                        'context': tmpctx,
-                       'saltenv': __env__})
+                       'saltenv': __env__,
+                       'success_retcodes': success_retcodes})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,

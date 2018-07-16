@@ -57,7 +57,10 @@ def _groupname():
     Grain for the minion groupname
     '''
     if grp:
-        groupname = grp.getgrgid(os.getgid()).gr_name
+        try:
+            groupname = grp.getgrgid(os.getgid()).gr_name
+        except KeyError:
+            groupname = ''
     else:
         groupname = ''
 

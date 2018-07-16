@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Beacon to monitor temperature, humidity and pressure using the SenseHat
-of a Raspberry Pi.
+Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
+===============================================================================
 
 .. versionadded:: 2017.7.0
 

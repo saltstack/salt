@@ -152,8 +152,10 @@ def _strip_exc(exc):
 def _uptodate(ret, target, comments=None, local_changes=False):
     ret['comment'] = 'Repository {0} is up-to-date'.format(target)
     if local_changes:
-        ret['comment'] += ', but with local changes. Set \'force_reset\' to ' \
-                          'True to purge local changes.'
+        ret['comment'] += (
+            ', but with uncommitted changes. Set \'force_reset\' to True to '
+            'purge uncommitted changes.'
+        )
     if comments:
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
@@ -174,6 +176,18 @@ def _fail(ret, msg, comments=None):
         msg += '\n\nChanges already made: '
         msg += _format_comments(comments)
     ret['comment'] = msg
+    return ret
+
+
+def _already_cloned(ret, target, branch=None, comments=None):
+    ret['result'] = True
+    ret['comment'] = 'Repository already exists at {0}{1}'.format(
+        target,
+        ' and is checked out to branch \'{0}\''.format(branch) if branch else ''
+    )
+    if comments:
+        ret['comment'] += '\n\nChanges already made: '
+        ret['comment'] += _format_comments(comments)
     return ret
 
 
@@ -223,7 +237,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.{4}'.format(
+        'True{3} to force this update{4}.{5}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -233,6 +247,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
+            ' (or \'remote-changes\')' if local_changes else '',
             ' and discard these changes' if local_changes else '',
             branch_msg,
         ),
@@ -421,6 +436,11 @@ def latest(name,
         argument to ``True`` to force a hard-reset to the remote revision in
         these cases.
 
+        .. versionchanged:: Fluorine
+            This option can now be set to ``remote-changes``, which will
+            instruct Salt not to discard local changes if the repo is
+            up-to-date with the remote repository.
+
     submodules : False
         Update submodules on clone or branch change
 
@@ -532,21 +552,9 @@ def latest(name,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -620,6 +628,12 @@ def latest(name,
         return _fail(
             ret,
             '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
+        )
+
+    if force_reset not in (True, False, 'remote-changes'):
+        return _fail(
+            ret,
+            '\'force_reset\' must be one of True, False, or \'remote-changes\''
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
@@ -936,11 +950,13 @@ def latest(name,
                 local_changes = False
 
             if local_changes and revs_match:
-                if force_reset:
+                if force_reset is True:
                     msg = (
-                        '{0} is up-to-date, but with local changes. Since '
-                        '\'force_reset\' is enabled, these local changes '
-                        'would be reset.'.format(target)
+                        '{0} is up-to-date, but with uncommitted changes. '
+                        'Since \'force_reset\' is set to True, these local '
+                        'changes would be reset. To only reset when there are '
+                        'changes in the remote repository, set '
+                        '\'force_reset\' to \'remote-changes\'.'.format(target)
                     )
                     if __opts__['test']:
                         ret['changes']['forced update'] = True
@@ -950,9 +966,9 @@ def latest(name,
                     log.debug(msg.replace('would', 'will'))
                 else:
                     log.debug(
-                        '%s up-to-date, but with local changes. Since '
-                        '\'force_reset\' is disabled, no changes will be '
-                        'made.', target
+                        '%s up-to-date, but with uncommitted changes. Since '
+                        '\'force_reset\' is set to %s, no changes will be '
+                        'made.', target, force_reset
                     )
                     return _uptodate(ret,
                                      target,
@@ -1054,20 +1070,23 @@ def latest(name,
                         elif remote_rev_type == 'sha1':
                             has_remote_rev = True
 
-            # If fast_forward is not boolean, then we don't know if this will
-            # be a fast forward or not, because a fetch is required.
-            fast_forward = None if not local_changes else False
+            # If fast_forward is not boolean, then we don't yet know if this
+            # will be a fast forward or not, because a fetch is required.
+            fast_forward = False \
+                if (local_changes and force_reset != 'remote-changes') \
+                else None
 
             if has_remote_rev:
                 if (not revs_match and not update_head) \
                         and (branch is None or branch == local_branch):
-                    ret['comment'] = remote_loc.capitalize() \
-                        if rev == 'HEAD' \
-                        else remote_loc
-                    ret['comment'] += (
-                        ' is already present and local HEAD ({0}) does not '
+                    ret['comment'] = (
+                        '{0} is already present and local HEAD ({1}) does not '
                         'match, but update_head=False. HEAD has not been '
-                        'updated locally.'.format(local_rev[:7])
+                        'updated locally.'.format(
+                            remote_loc.capitalize() if rev == 'HEAD'
+                                else remote_loc,
+                            local_rev[:7]
+                        )
                     )
                     return ret
 
@@ -1081,9 +1100,8 @@ def latest(name,
                         # existed there and a remote was added and fetched, but
                         # the repository was not fast-forwarded. Regardless,
                         # going from no HEAD to a locally-present rev is
-                        # considered a fast-forward update, unless there are
-                        # local changes.
-                        fast_forward = not bool(local_changes)
+                        # considered a fast-forward update.
+                        fast_forward = True
                     else:
                         fast_forward = __salt__['git.merge_base'](
                             target,
@@ -1095,7 +1113,7 @@ def latest(name,
                             output_encoding=output_encoding)
 
             if fast_forward is False:
-                if not force_reset:
+                if force_reset is False:
                     return _not_fast_forward(
                         ret,
                         rev,
@@ -1439,7 +1457,10 @@ def latest(name,
                             password=password,
                             output_encoding=output_encoding)
 
-                    if fast_forward is False and not force_reset:
+                    if fast_forward is force_reset is False \
+                            or (fast_forward is True
+                                and local_changes
+                                and force_reset is False):
                         return _not_fast_forward(
                             ret,
                             rev,
@@ -1495,9 +1516,6 @@ def latest(name,
                             '\'{0}\' was checked out'.format(checkout_rev)
                         )
 
-                if local_changes:
-                    comments.append('Local changes were discarded')
-
                 if fast_forward is False:
                     __salt__['git.reset'](
                         target,
@@ -1506,9 +1524,20 @@ def latest(name,
                         password=password,
                         output_encoding=output_encoding)
                     ret['changes']['forced update'] = True
+                    if local_changes:
+                        comments.append('Uncommitted changes were discarded')
                     comments.append(
                         'Repository was hard-reset to {0}'.format(remote_loc)
                     )
+                elif fast_forward is True \
+                        and local_changes \
+                        and force_reset is not False:
+                    __salt__['git.discard_local_changes'](
+                        target,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                    comments.append('Uncommitted changes were discarded')
 
                 if branch_opts is not None:
                     __salt__['git.branch'](
@@ -1998,7 +2027,7 @@ def present(name,
 
     template
         If a new repository is initialized, this argument will specify an
-        alternate `template directory`_
+        alternate template directory.
 
         .. versionadded:: 2015.8.0
 
@@ -2032,21 +2061,9 @@ def present(name,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -2167,7 +2184,7 @@ def detached(name,
     .. versionadded:: 2016.3.0
 
     Make sure a repository is cloned to the given target directory and is
-    a detached HEAD checkout of the commit ID resolved from ``ref``.
+    a detached HEAD checkout of the commit ID resolved from ``rev``.
 
     name
         Address of the remote repository.
@@ -2176,10 +2193,6 @@ def detached(name,
         The branch, tag, or commit ID to checkout after clone.
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
-
-    ref
-        .. deprecated:: 2017.7.0
-            Use ``rev`` instead.
 
     target
         Name of the target directory where repository is about to be cloned.
@@ -2250,43 +2263,21 @@ def detached(name,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
             salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if ref is not None:
-        rev = ref
-        deprecation_msg = (
-            'The \'ref\' argument has been renamed to \'rev\' for '
-            'consistency. Please update your SLS to reflect this.'
-        )
-        ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2576,7 +2567,7 @@ def detached(name,
                     'refs'.format(remote)
                 )
 
-    #get refs and checkout
+    # get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
         if __salt__['git.describe'](
@@ -2696,6 +2687,202 @@ def detached(name,
     return ret
 
 
+def cloned(name,
+           target=None,
+           branch=None,
+           user=None,
+           password=None,
+           identity=None,
+           https_user=None,
+           https_pass=None,
+           output_encoding=None):
+    '''
+    .. versionadded:: 2018.3.2,Fluorine
+
+    Ensure that a repository has been cloned to the specified target directory.
+    If not, clone that repository. No fetches will be performed once cloned.
+
+    name
+        Address of the remote repository
+
+    target
+        Name of the target directory where repository should be cloned
+
+    branch
+        Remote branch to check out. If unspecified, the default branch (i.e.
+        the one to the remote HEAD points) will be checked out.
+
+        .. note::
+            The local branch name will match the remote branch name. If the
+            branch name is changed, then that branch will be checked out
+            locally, but keep in mind that remote repository will not be
+            fetched. If your use case requires that you keep the clone up to
+            date with the remote repository, then consider using
+            :py:func:`git.latest <salt.states.git.latest>`.
+
+    user
+        User under which to run git commands. By default, commands are run by
+        the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    identity
+        Path to a private key to use for ssh URLs. Works the same way as in
+        :py:func:`git.latest <salt.states.git.latest>`, see that state's
+        documentation for more information.
+
+    https_user
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass
+        HTTP Basic Auth password for HTTPS (only) clones
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+    '''
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+
+    if target is None:
+        ret['comment'] = '\'target\' argument is required'
+        return ret
+    elif not isinstance(target, six.string_types):
+        target = six.text_type(target)
+
+    if not os.path.isabs(target):
+        ret['comment'] = '\'target\' path must be absolute'
+        return ret
+
+    if branch is not None:
+        if not isinstance(branch, six.string_types):
+            branch = six.text_type(branch)
+        if not branch:
+            ret['comment'] = 'Invalid \'branch\' argument'
+            return ret
+
+    if not os.path.exists(target):
+        need_clone = True
+    else:
+        try:
+            __salt__['git.status'](target,
+                                   user=user,
+                                   password=password,
+                                   output_encoding=output_encoding)
+        except Exception as exc:
+            ret['comment'] = six.text_type(exc)
+            return ret
+        else:
+            need_clone = False
+
+    comments = []
+
+    def _clone_changes(ret):
+        ret['changes']['new'] = name + ' => ' + target
+
+    def _branch_changes(ret, old, new):
+        ret['changes']['branch'] = {'old': old, 'new': new}
+
+    if need_clone:
+        if __opts__['test']:
+            _clone_changes(ret)
+            comment = '{0} would be cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+            return _neutral_test(ret, comment)
+        clone_opts = ['--branch', branch] if branch is not None else None
+        try:
+            __salt__['git.clone'](target,
+                                  name,
+                                  opts=clone_opts,
+                                  user=user,
+                                  password=password,
+                                  identity=identity,
+                                  https_user=https_user,
+                                  https_pass=https_pass,
+                                  output_encoding=output_encoding)
+        except CommandExecutionError as exc:
+            msg = 'Clone failed: {0}'.format(_strip_exc(exc))
+            return _fail(ret, msg, comments)
+
+        comments.append(
+            '{0} cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+        )
+        _clone_changes(ret)
+        ret['comment'] = _format_comments(comments)
+        ret['result'] = True
+        return ret
+    else:
+        if branch is None:
+            return _already_cloned(ret, target, branch, comments)
+        else:
+            current_branch = __salt__['git.current_branch'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            if current_branch == branch:
+                return _already_cloned(ret, target, branch, comments)
+            else:
+                if __opts__['test']:
+                    _branch_changes(ret, current_branch, branch)
+                    return _neutral_test(
+                        ret,
+                        'Branch would be changed to \'{0}\''.format(branch))
+                try:
+                    __salt__['git.rev_parse'](
+                        target,
+                        rev=branch,
+                        user=user,
+                        password=password,
+                        ignore_retcode=True,
+                        output_encoding=output_encoding)
+                except CommandExecutionError:
+                    # Local head does not exist, so we need to check out a new
+                    # branch at the remote rev
+                    checkout_rev = '/'.join(('origin', branch))
+                    checkout_opts = ['-b', branch]
+                else:
+                    # Local head exists, so we just need to check it out
+                    checkout_rev = branch
+                    checkout_opts = None
+
+                try:
+                    __salt__['git.checkout'](
+                        target,
+                        rev=checkout_rev,
+                        opts=checkout_opts,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                except CommandExecutionError as exc:
+                    msg = 'Failed to change branch to \'{0}\': {1}'.format(branch, exc)
+                    return _fail(ret, msg, comments)
+                else:
+                    comments.append('Branch changed to \'{0}\''.format(branch))
+                    _branch_changes(ret, current_branch, branch)
+                    ret['comment'] = _format_comments(comments)
+                    ret['result'] = True
+                    return ret
+
+
 def config_unset(name,
                  value_regex=None,
                  repo=None,
@@ -2750,21 +2937,9 @@ def config_unset(name,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 
@@ -3023,21 +3198,9 @@ def config_set(name,
         cases.
 
         .. note::
-
-            On Windows, this option works slightly differently in the git state
-            and execution module than it does in the :mod:`"cmd" execution
-            module <salt.modules.cmdmod>`. The filenames in most git
-            repositories are created using a UTF-8 locale, and the system
-            encoding on Windows (CP1252) will successfully (but incorrectly)
-            decode many UTF-8 characters. This makes interacting with
-            repositories containing UTF-8 filenames on Windows unreliable.
-            Therefore, Windows will default to decoding the output from git
-            commands using UTF-8 unless this option is explicitly used to
-            specify the encoding.
-
-            On non-Windows platforms, the default output decoding behavior will
-            be observed (i.e. the encoding specified by the locale will be
-            tried first, and if that fails, UTF-8 will be used as a fallback).
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
 
         .. versionadded:: 2018.3.1
 

@@ -59,7 +59,7 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertTrue(ret['result'])
                 self.assertEqual(ret['comment'], 'Data source test already up-to-date')
-                self.assertEqual(ret['changes'], None)
+                self.assertEqual(ret['changes'], {})
 
             with patch('requests.put') as rput:
                 ret = grafana_datasource.present('test', 'type', 'newurl', profile=profile)

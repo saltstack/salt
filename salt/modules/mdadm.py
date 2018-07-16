@@ -244,10 +244,12 @@ def create(name,
     cmd = ['mdadm',
            '-C', name,
            '-R',
-           '-v'] + opts + [
+           '-v',
            '-l', six.text_type(level),
+           ] + opts + [
            '-e', metadata,
-           '-n', six.text_type(raid_devices)] + devices
+           '-n', six.text_type(raid_devices),
+           ] + devices
 
     cmd_str = ' '.join(cmd)
 

@@ -12,9 +12,18 @@ config, these are the defaults:
     redis.host: 'salt'
     redis.port: 6379
 
+.. versionadded:: 2018.3.1
+
+    Alternatively a UNIX socket can be specified by `unix_socket_path`:
+
+.. code-block:: yaml
+
+    redis.db: '0'
+    redis.unix_socket_path: /var/run/redis/redis.sock
+
 Cluster Mode Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     redis.db: '0'
     redis.cluster_mode: true
@@ -66,7 +75,7 @@ cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
@@ -110,6 +119,8 @@ try:
 except ImportError:
     HAS_REDIS_CLUSTER = False
 
+REDIS_POOL = None
+
 # Define the module's virtual name
 __virtualname__ = 'redis'
 
@@ -124,7 +135,7 @@ def __virtual__():
     if not HAS_REDIS:
         return False, 'Could not import redis returner; ' \
                       'redis python client is not installed.'
-    if not HAS_REDIS_CLUSTER and _get_options()['cluster_mode']:
+    if not HAS_REDIS_CLUSTER and _get_options().get('cluster_mode', False):
         return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
@@ -135,16 +146,18 @@ def _get_options(ret=None):
     '''
     attrs = {'host': 'host',
              'port': 'port',
+             'unix_socket_path': 'unix_socket_path',
              'db': 'db',
              'cluster_mode': 'cluster_mode',
              'startup_nodes': 'cluster.startup_nodes',
              'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
-        }
+             }
 
     if salt.utils.platform.is_proxy():
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
+            'unix_socket_path': __opts__.get('redis.unix_socket_path', None),
             'db': __opts__.get('redis.db', '0'),
             'cluster_mode': __opts__.get('redis.cluster_mode', False),
             'startup_nodes': __opts__.get('redis.cluster.startup_nodes', {}),
@@ -159,31 +172,24 @@ def _get_options(ret=None):
     return _options
 
 
-CONN_POOL = None
-
-
-def _get_conn_pool(_options):
-    global CONN_POOL
-    if CONN_POOL is None:
-        CONN_POOL = redis.ConnectionPool(host=_options.get('host'),
-                                         port=_options.get('port'),
-                                         db=_options.get('db'))
-    return CONN_POOL
-
-
 def _get_serv(ret=None):
     '''
     Return a redis server object
     '''
     _options = _get_options(ret)
-
-    if _options.get('cluster_mode'):
-        return StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
-                                  skip_full_coverage_check=_options.get('skip_full_coverage_check'),
-                                  decode_responses=True)
+    global REDIS_POOL
+    if REDIS_POOL:
+        return REDIS_POOL
+    elif _options.get('cluster_mode'):
+        REDIS_POOL = StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
+                                        skip_full_coverage_check=_options.get('skip_full_coverage_check'),
+                                        decode_responses=True)
     else:
-        pool = _get_conn_pool(_options)
-        return redis.StrictRedis(connection_pool=pool)
+        REDIS_POOL = redis.StrictRedis(host=_options.get('host'),
+                                       port=_options.get('port'),
+                                       unix_socket_path=_options.get('unix_socket_path', None),
+                                       db=_options.get('db'))
+    return REDIS_POOL
 
 
 def _get_ttl():

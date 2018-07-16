@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Management of Mongodb users
+Management of MongoDB Users
 ===========================
 
-.. note::
-    This module requires PyMongo to be installed.
+:depends:   - pymongo Python module
 '''
-
 from __future__ import absolute_import, print_function, unicode_literals
-
-import salt.utils.versions
 
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
@@ -31,9 +27,6 @@ def present(name,
             authdb=None,
             roles=None):
     '''
-    .. deprecated:: Fluorine
-        Use ``mongodb.user_present`` instead
-
     Ensure that the user is present with the specified properties
 
     name
@@ -84,13 +77,6 @@ def present(name,
               - dbOwner
 
     '''
-
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'mongodb_user.present\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'mongodb.user_present\' instead.'
-    )
-
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -167,9 +153,6 @@ def absent(name,
            database="admin",
            authdb=None):
     '''
-    .. deprecated:: Fluorine
-        Use ``mongodb.user_absent`` instead
-
     Ensure that the named user is absent
 
     name
@@ -194,13 +177,6 @@ def absent(name,
     authdb
         The database in which to authenticate
     '''
-
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'mongodb_user.absent\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'mongodb.user_absent\' instead.'
-    )
-
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -227,6 +203,5 @@ def absent(name,
         return ret
 
     # fallback
-    ret['comment'] = ('User {0} is not present, so it cannot be removed'
-            ).format(name)
+    ret['comment'] = 'User {0} is not present'.format(name)
     return ret

@@ -4,37 +4,19 @@ Tests for salt.utils.json
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import errno
-import functools
-import os
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.paths import TMP
-from tests.support.unit import TestCase, LOREM_IPSUM
+from tests.support.helpers import with_tempfile
+from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, LOREM_IPSUM, skipIf
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.json
+import salt.utils.platform
 import salt.utils.stringutils
-
-
-def with_tempfile(func):
-    '''
-    Generate a temp directory for a test
-    '''
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        temp_file = salt.utils.files.mkstemp(dir=TMP)
-        try:
-            return func(self, temp_file, *args, **kwargs)
-        finally:
-            try:
-                os.remove(temp_file)
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:
-                    raise
-    return wrapper
+from salt.ext import six
 
 
 class JSONTestCase(TestCase):
@@ -113,6 +95,21 @@ class JSONTestCase(TestCase):
         # Test to see if a ValueError is raised if no JSON is passed in
         self.assertRaises(ValueError, salt.utils.json.find_json, LOREM_IPSUM)
 
+    @skipIf(salt.utils.platform.is_windows(), 'skip until we figure out what to do about decoding unicode on windows')
+    @skipIf(not six.PY2, 'Test only needed on Python 2')
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_find_json_unicode_splitlines(self):
+        '''
+        Tests a case in salt-ssh where a unicode string is split into a list of
+        str types by .splitlines().
+        '''
+        raw = '{"foo": "öäü"}'
+        mock_split = MagicMock(return_value=[raw.encode('utf8')])
+
+        with patch.object(salt.utils.json, '__split', mock_split):
+            ret = salt.utils.json.find_json(raw)
+            self.assertEqual(ret, {'foo': 'öäü'})
+
     def test_dumps_loads(self):
         '''
         Test dumping to and loading from a string
@@ -135,7 +132,7 @@ class JSONTestCase(TestCase):
         # Loading it should be equal to the original data
         self.assertEqual(salt.utils.json.loads(ret), self.data)
 
-    @with_tempfile
+    @with_tempfile()
     def test_dump_load(self, json_out):
         '''
         Test dumping to and loading from a file handle

@@ -50,8 +50,8 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         'cmd': 'local',
     }
 
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(Reactor, self).__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -66,11 +66,16 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'])
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def render_reaction(self, glob_ref, tag, data):
         '''

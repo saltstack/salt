@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.call
@@ -233,20 +233,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
 
-            out = self.run_script(
+            _, timed_out = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
                 timeout=timeout,
+                catch_timeout=True,
             )
 
             try:
-                self.assertIn(
-                    'Process took more than {0} seconds to complete. '
-                    'Process Killed!'.format(timeout),
-                    out
-                )
+                self.assertTrue(timed_out)
             except AssertionError:
                 if os.path.isfile(minion_config_file):
                     os.unlink(minion_config_file)
@@ -329,6 +326,48 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_syslog_file_not_found(self):
+        '''
+        test when log_file is set to a syslog file that does not exist
+        '''
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = salt.utils.yaml.load(fh_.read())
+            minion_config['log_file'] = 'file:///dev/doesnotexist'
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    salt.utils.yaml.dump(minion_config, default_flow_style=False)
+                )
+        ret = self.run_script(
+            'salt-call',
+            '--config-dir {0} cmd.run "echo foo"'.format(
+                config_dir
+            ),
+            timeout=60,
+            catch_stderr=True,
+            with_retcode=True
+        )
+        try:
+            if sys.version_info >= (3, 5, 4):
+                self.assertIn('local:', ret[0])
+                self.assertIn('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.', ret[1])
+                self.assertEqual(ret[2], 0)
+            else:
+                self.assertIn(
+                    'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+                )
+                self.assertEqual(ret[2], 2)
+        finally:
+            self.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
     def test_issue_15074_output_file_append(self):
         output_file_append = os.path.join(TMP, 'issue-15074')
         try:
@@ -336,7 +375,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             _ = self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -349,7 +388,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} --output-file-append test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -363,58 +402,65 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(TMP, 'issue-14979')
-        current_umask = os.umask(0o077)
-        try:
-            # Let's create an initial output file with some data
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat1 = os.stat(output_file)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                # Let's create an initial output file with some data
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} -l trace -g'.format(
+                        self.get_config_dir(),
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                try:
+                    stat1 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
 
-            # Let's change umask
-            os.umask(0o777)
+                # Let's change umask
+                os.umask(0o777)  # pylint: disable=blacklisted-function
 
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} --output-file-append -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat2 = os.stat(output_file)
-            self.assertEqual(stat1.st_mode, stat2.st_mode)
-            # Data was appeneded to file
-            self.assertTrue(stat1.st_size < stat2.st_size)
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} --output-file-append -g'.format(
+                        self.config_dir,
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                try:
+                    stat2 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
+                self.assertEqual(stat1.st_mode, stat2.st_mode)
+                # Data was appeneded to file
+                self.assertTrue(stat1.st_size < stat2.st_size)
 
-            # Let's remove the output file
-            os.unlink(output_file)
-
-            # Not appending data
-            self.run_script(
-                'salt-call',
-                '-c {0} --output-file={1} -g'.format(
-                    self.get_config_dir(),
-                    output_file
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-            stat3 = os.stat(output_file)
-            # Mode must have changed since we're creating a new log file
-            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
-        finally:
-            if os.path.exists(output_file):
+                # Let's remove the output file
                 os.unlink(output_file)
-            # Restore umask
-            os.umask(current_umask)
+
+                # Not appending data
+                self.run_script(
+                    'salt-call',
+                    '-c {0} --output-file={1} -g'.format(
+                        self.config_dir,
+                        output_file
+                    ),
+                    catch_stderr=True,
+                    with_retcode=True
+                )
+                try:
+                    stat3 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
+                # Mode must have changed since we're creating a new log file
+                self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            finally:
+                if os.path.exists(output_file):
+                    os.unlink(output_file)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_42116_cli_pillar_override(self):

@@ -19,6 +19,7 @@ from random import randint
 import salt.auth
 import salt.crypt
 import salt.utils.event
+import salt.utils.files
 import salt.utils.minions
 import salt.utils.process
 import salt.utils.stringutils
@@ -350,7 +351,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
-            self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
+            self._socket.setsockopt(
+                zmq.SUBSCRIBE,
+                salt.utils.stringutils.to_bytes(self.hexid)
+            )
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
@@ -661,7 +665,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
 
         try:
             id_ = payload['load'].get('id', '')
-            if '\0' in id_:
+            if str('\0') in id_:
                 log.error('Payload contains an id with a null byte: %s', payload)
                 stream.send(self.serial.dumps('bad load: id contains a null byte'))
                 raise tornado.gen.Return()
@@ -806,11 +810,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Securely create socket
         log.info('Starting the Salt Puller on %s', pull_uri)
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             pull_sock.bind(pull_uri)
-        finally:
-            os.umask(old_umask)
 
         try:
             while True:

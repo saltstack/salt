@@ -511,7 +511,7 @@ def get_system_info():
 
     .. code-block:: bash
 
-        salt 'minion-id' system.get_info
+        salt 'minion-id' system.get_system_info
     '''
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
@@ -1288,7 +1288,7 @@ def get_pending_servermanager():
     key = r'SOFTWARE\Microsoft\ServerManager'
 
     # There are situations where it's possible to have '(value not set)' as
-    # the value data, and since an actual reboot wont be pending in that
+    # the value data, and since an actual reboot won't be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
     reg_ret = __salt__['reg.read_value']('HKLM', key, vname)

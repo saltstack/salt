@@ -6,7 +6,7 @@ IRC Bot engine
 
 Example Configuration
 
-.. code:: yaml
+.. code-block:: yaml
 
     engines:
       - ircbot:
@@ -26,7 +26,7 @@ Example Configuration
           allow_nicks:
             - gtmanfred
 
-Available commands on irc are
+Available commands on irc are:
 
 ping
     return pong
@@ -97,14 +97,15 @@ class IRCClient(object):
         self.allow_nicks = allow_nicks
         self.disable_query = disable_query
         self.io_loop = tornado.ioloop.IOLoop(make_current=False)
+        self.io_loop.make_current()
         self._connect()
 
     def _connect(self):
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         if self.ssl is True:
-            self._stream = tornado.iostream.SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE}, io_loop=self.io_loop)
+            self._stream = tornado.iostream.SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE})
         else:
-            self._stream = tornado.iostream.IOStream(_sock, io_loop=self.io_loop)
+            self._stream = tornado.iostream.IOStream(_sock)
         self._stream.set_close_callback(self.on_closed)
         self._stream.connect((self.host, self.port), self.on_connect)
 

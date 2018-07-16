@@ -84,3 +84,6 @@
 
 #my-saltify-config:
 #  driver: saltify
+
+#my-scaleway-config:
+#  driver: scaleway

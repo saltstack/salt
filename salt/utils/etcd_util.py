@@ -14,7 +14,7 @@ may be passed in. The following configurations are both valid:
 
     # No profile name
     etcd.host: 127.0.0.1
-    etcd.port: 4001
+    etcd.port: 2379
     etcd.username: larry  # Optional; requires etcd.password to be set
     etcd.password: 123pass  # Optional; requires etcd.username to be set
     etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
@@ -24,7 +24,7 @@ may be passed in. The following configurations are both valid:
     # One or more profiles defined
     my_etcd_config:
       etcd.host: 127.0.0.1
-      etcd.port: 4001
+      etcd.port: 2379
       etcd.username: larry  # Optional; requires etcd.password to be set
       etcd.password: 123pass  # Optional; requires etcd.username to be set
       etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
@@ -95,7 +95,7 @@ class EtcdClient(object):
             self.conf = opts_merged
 
         host = host or self.conf.get('etcd.host', '127.0.0.1')
-        port = port or self.conf.get('etcd.port', 4001)
+        port = port or self.conf.get('etcd.port', 2379)
         username = username or self.conf.get('etcd.username')
         password = password or self.conf.get('etcd.password')
         ca_cert = ca or self.conf.get('etcd.ca')

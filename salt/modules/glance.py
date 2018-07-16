@@ -103,6 +103,13 @@ def _auth(profile=None, api_version=2, **connection_args):
 
     Only intended to be used within glance-enabled modules
     '''
+    __utils__['versions.warn_until'](
+        'Neon',
+        (
+            'The glance module has been deprecated and will be removed in {version}.  '
+            'Please update to using the glanceng module'
+        ),
+    )
 
     if profile:
         prefix = profile + ":keystone."

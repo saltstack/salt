@@ -295,8 +295,7 @@ def _generate_states_report(sorted_data):
     '''
     states = []
     for state, data in sorted_data:
-        module, stateid, name, function = \
-            [x.rstrip('_').lstrip('-') for x in state.split('|')]
+        module, stateid, name, function = state.split('_|-')
         module_function = '.'.join((module, function))
         result = data.get('result', '')
         single = [

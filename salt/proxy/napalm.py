@@ -236,16 +236,7 @@ def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-    refresh_needed = False
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
-    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('out', {}))
-
-    if refresh_needed:
-        facts = call('get_facts', **{})
-        DETAILS['grains_cache'] = facts
-
-    return DETAILS.get('grains_cache', {})
+    return call('get_facts', **{})
 
 
 def grains_refresh():
@@ -300,11 +291,12 @@ def call(method, *args, **kwargs):
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
     :return: A dictionary with three keys:
 
-        * result (True/False): if the operation succeeded
-        * out (object): returns the object as-is from the call
-        * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
-        on the `correct driver repo`_ and make sure to read the FAQ_
+    - result (True/False): if the operation succeeded
+    - out (object): returns the object as-is from the call
+    - comment (string): provides more details in case the call failed
+    - traceback (string): complete traceback in case of exception. Please
+      submit an issue including this traceback on the `correct driver repo`_
+      and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
     .. _FAQ: https://github.com/napalm-automation/napalm#faq

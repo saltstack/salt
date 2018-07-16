@@ -48,15 +48,20 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 # Import 3rd-party libs
 from salt.ext import six
 
-LIBC = CDLL(find_library('c'))
+try:
+    LIBC = CDLL(find_library('c'))
 
-CALLOC = LIBC.calloc
-CALLOC.restype = c_void_p
-CALLOC.argtypes = [c_uint, c_uint]
+    CALLOC = LIBC.calloc
+    CALLOC.restype = c_void_p
+    CALLOC.argtypes = [c_uint, c_uint]
 
-STRDUP = LIBC.strdup
-STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+    STRDUP = LIBC.strdup
+    STRDUP.argstypes = [c_char_p]
+    STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+except AttributeError:
+    HAS_LIBC = False
+else:
+    HAS_LIBC = True
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -147,7 +152,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    return HAS_PAM
+    return HAS_LIBC and HAS_PAM
 
 
 def authenticate(username, password):

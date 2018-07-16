@@ -84,7 +84,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
-                           'modules': ['modules.override_test',
+                           'modules': ['modules.mantest',
+                                       'modules.override_test',
                                        'modules.runtests_decorators',
                                        'modules.runtests_helpers',
                                        'modules.salttest'],
@@ -94,7 +95,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all')
         self.assertEqual(ret, expected_return)
 
@@ -115,7 +117,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
         self.assertEqual(ret, expected_return)
 
@@ -129,7 +132,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
-                           'modules': ['modules.override_test',
+                           'modules': ['modules.mantest',
+                                       'modules.override_test',
                                        'modules.runtests_helpers',
                                        'modules.salttest'],
                            'renderers': [],
@@ -138,7 +142,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
@@ -159,7 +164,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
@@ -192,7 +198,18 @@ class SaltUtilSyncPillarTest(ModuleCase):
                      '''))
 
         self.run_function('saltutil.refresh_pillar')
-        self.run_function('test.sleep', [5])
+
+        pillar = False
+        timeout = time.time() + 30
+        while not pillar:
+            post_pillar = self.run_function('pillar.raw')
+            try:
+                self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                pillar = True
+            except AssertionError:
+                if time.time() > timeout:
+                    self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                continue
 
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))

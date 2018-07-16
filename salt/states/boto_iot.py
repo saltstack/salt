@@ -727,7 +727,7 @@ def topic_rule_present(name, ruleName, sql, actions, description='',
     if need_update:
         if __opts__['test']:
             msg = 'Rule {0} set to be modified.'.format(ruleName)
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = msg
             ret['result'] = None
             return ret

@@ -155,7 +155,7 @@ def parse(*models, **kwargs):
 
     Output Example:
 
-    .. code-block:: json
+    .. code-block:: python
 
         {
             "interfaces": {
@@ -442,7 +442,7 @@ def load_config(data, *models, **kwargs):
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?

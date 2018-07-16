@@ -102,7 +102,7 @@ def merge_overwrite(obj_a, obj_b, merge_lists=False):
 
 def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
-        if renderer == 'yamlex' or renderer.startswith('yamlex_'):
+        if renderer.split('|')[-1] == 'yamlex' or renderer.startswith('yamlex_'):
             strategy = 'aggregate'
         else:
             strategy = 'recurse'

@@ -31,7 +31,7 @@ class SSHPasswordTests(ShellCase):
         opts['selected_target_option'] = 'glob'
         opts['tgt'] = 'localhost'
         opts['arg'] = []
-        roster = os.path.join(self.get_config_dir(), 'roster')
+        roster = os.path.join(self.config_dir, 'roster')
         handle_ssh_ret = [
             {'localhost': {'retcode': 255, 'stderr': u'Permission denied (publickey).\r\n', 'stdout': ''}},
         ]

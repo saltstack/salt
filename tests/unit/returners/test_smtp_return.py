@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place (mp@saltstack.com)`
+    :codeauthor: Mike Place (mp@saltstack.com)
 
 
     tests.unit.returners.smtp_return_test
@@ -66,8 +66,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.gnupg'), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
@@ -79,8 +79,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                                             'renderer': 'jinja|yaml',
                                             'renderer_blacklist': [],
                                             'renderer_whitelist': [],
-                                            'file_roots': [],
-                                            'pillar_roots': [],
+                                            'file_roots': {},
+                                            'pillar_roots': {},
                                             'cachedir': '/'}), \
                     patch('salt.returners.smtp_return.smtplib.SMTP') as mocked_smtplib:
                 self._test_returner(mocked_smtplib)

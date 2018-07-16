@@ -81,6 +81,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = []
 
             ret = telegram_bot_msg.beacon(config)
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertEqual(ret, [])
@@ -107,6 +108,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertEqual(ret, [])
@@ -131,6 +133,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertTrue(ret)

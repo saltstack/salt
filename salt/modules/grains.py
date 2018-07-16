@@ -458,8 +458,8 @@ def delval(key, destructive=False):
     .. versionadded:: 0.17.0
 
     Delete a grain value from the grains config file. This will just set the
-    grain value to `None`. To completely remove the grain run `grains.delkey`
-    of pass `destructive=True` to `grains.delval`.
+    grain value to ``None``. To completely remove the grain, run ``grains.delkey``
+    or pass ``destructive=True`` to ``grains.delval``.
 
     key
         The grain key from which to delete the value.

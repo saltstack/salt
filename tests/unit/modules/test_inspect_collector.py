@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -22,6 +22,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import no_symlinks
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -34,6 +35,7 @@ from salt.modules.inspectlib.collector import Inspector
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(no_symlinks(), "Git missing 'core.symlinks=true' config")
 class InspectorCollectorTestCase(TestCase):
     '''
     Test inspectlib:collector:Inspector

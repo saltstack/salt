@@ -60,7 +60,7 @@ def get_data(datastore, path):
 
 def set_data_value(datastore, path, data):
     '''
-    Get a data entry in a datastore
+    Set a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
         One of the NETCONF store IETF types

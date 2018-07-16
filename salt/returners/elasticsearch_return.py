@@ -229,7 +229,7 @@ def returner(ret):
     if ret.get('return', None) is None:
         log.info(
             'Won\'t push new data to Elasticsearch, job with jid=%s was '
-            'not succesful', job_id
+            'not successful', job_id
         )
         return
 

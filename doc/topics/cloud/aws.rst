@@ -57,6 +57,10 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
+      # If 'role_arn' is specified the above credentials are used to
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
@@ -296,7 +300,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
           SecurityGroupId:
             - sg-750af413
       del_root_vol_on_destroy: True
-      del_all_vol_on_destroy: True
+      del_all_vols_on_destroy: True
       volumes:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
@@ -467,6 +471,19 @@ EC2 API or AWS Console.
     my-ec2-config:
       spot_config:
         spot_price: 0.10
+
+You can optionally specify tags to apply to the EC2 spot instance request.
+A spot instance request itself is an object in AWS. The following example
+will set two tags on the spot instance request.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      spot_config:
+        spot_price: 0.10
+        tag:
+          tag0: value
+          tag1: value
 
 By default, the spot instance type is set to 'one-time', meaning it will
 be launched and, if it's ever terminated for whatever reason, it will not
@@ -719,6 +736,28 @@ them have never been used, much less tested, by the Salt Stack team.
 * `All Images on Amazon`__
 
 .. __: https://aws.amazon.com/marketplace
+
+
+NOTE: If ``image`` of a profile does not start with ``ami-``, latest
+image with that name will be used. For example, to create a CentOS 7
+profile, instead of using the AMI like ``image: ami-1caef165``, we
+can use its name like ``image: 'CentOS Linux 7 x86_64 HVM EBS ENA 1803_01'``.
+We can also use a pattern like below to get the latest CentOS 7:
+
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      subnetid: subnet-XXXXXXXX
+      image: 'CentOS Linux 7 x86_64 HVM EBS *'
+      size: m1.medium
+      ssh_username: centos
+      securitygroupid:
+        - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
 
 
 show_image
@@ -1019,7 +1058,7 @@ so:-
         - AndThirdSecurityGroup
 
 Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
-and 'securitygroupname' are merged toghether to generate a single list for
+and 'securitygroupname' are merged together to generate a single list for
 SecurityGroups of instances.
 
 Specifying interface properties

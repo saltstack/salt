@@ -244,13 +244,13 @@ def start(token,
             - ``html``: send the output as HTML
             - ``code``: send the output as code
 
-        This can be overriden when executing a command, using the ``--out-type`` argument.
+        This can be overridden when executing a command, using the ``--out-type`` argument.
 
         .. versionadded:: 2017.7.0
 
     outputter: ``nested``
         The format to display the data, using the outputters available on the CLI.
-        This argument can also be overriden when executing a command, using the ``--out`` option.
+        This argument can also be overridden when executing a command, using the ``--out`` option.
 
         .. versionadded:: 2017.7.0
 

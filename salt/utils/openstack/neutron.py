@@ -81,6 +81,13 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'The neutron module has been deprecated and will be removed in {version}.  '
+                'Please update to using the neutronng module'
+            ),
+        )
         if not HAS_NEUTRON:
             return None
 

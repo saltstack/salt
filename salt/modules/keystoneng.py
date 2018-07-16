@@ -9,10 +9,12 @@ Keystone module for interacting with OpenStack Keystone
 Example configuration
 
 .. code-block:: yaml
+
     keystone:
       cloud: default
 
 .. code-block:: yaml
+
     keystone:
       auth:
         username: admin

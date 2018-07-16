@@ -250,7 +250,7 @@ def connection_factory_present(name,
                 ret['comment'] = 'Connection factory updated'
         else:
             ret['result'] = True
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Connection factory is already up-to-date'
     else:
         ret['result'] = False
@@ -528,7 +528,7 @@ def jdbc_datasource_present(name,
                 ret['comment'] = 'JDBC Datasource updated'
         else:
             ret['result'] = True
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'JDBC Datasource is already up-to-date'
     else:
         ret['result'] = False
@@ -602,7 +602,7 @@ def system_properties_present(server=None, **kwargs):
             ret['changes'] = kwargs
             ret['coment'] = 'System properties would have been updated'
     else:
-        ret['changes'] = None
+        ret['changes'] = {}
         ret['result'] = True
         ret['comment'] = 'System properties are already up-to-date'
     return ret
