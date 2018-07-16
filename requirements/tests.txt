@@ -37,3 +37,5 @@ junos-eznc
 jxmlease
 croniter
 kazoo
+ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version >= '3.5'
+ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version == '2.7'

@@ -23,6 +23,7 @@ from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
+import salt.exceptions
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
@@ -62,7 +63,6 @@ class StateRunnerTest(ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        #ret_output = self.run_run_plus('state.orchestrate', 'orch.simple')['out']
         ret_output = self.run_run('state.orchestrate orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
@@ -212,8 +212,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: False']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',

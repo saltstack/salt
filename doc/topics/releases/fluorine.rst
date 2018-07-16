@@ -57,6 +57,29 @@ Jinja filter`_:
 
 .. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
+Ansible Playbook State and Execution Modules
+============================================
+
+Along with the including the :py:mod:`ansible modules
+<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+added in Fluorine with the :py:func:`playbooks function
+<salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
+playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
+on a targeted host to run ansible playbooks, or used in an
+orchestration state runner.
+
+.. code-block:: yaml
+
+    install nginx:
+      ansible.playbooks:
+        - name: install.yml
+        - git_repo: git://github.com/gtmanfred/playbook.git
+        - git_kwargs:
+            rev: master
+
+The playbooks modules also includes the ability to specify a git repo to clone
+and use, or a specific directory can to used when running the playbook.
+
 New Docker Proxy Minion
 =======================
 
@@ -453,6 +476,27 @@ proxy.
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+Changes to :py:mod:`slack <salt.engines.slack>` Engine
+======================================================
+
+The output returned to Slack from functions run using this engine is now
+formatted using that function's proper outputter. Earlier releases would format
+the output in YAML for all functions except for when states were run.
+
+Enhancements to :py:mod:`wtmp <salt.beacons.wtmp>` Beacon
+=========================================================
+
+A new key, ``action``, has been added to the events fired by this beacon, which
+will contain either the string ``login`` or ``logout``. This will simplify
+reactors which use this beacon's data, as it will no longer be necessary to
+check the integer value of the ``type`` key to know whether the event is a
+login or logout.
+
+Additionally, in the event that your platform has a non-standard ``utmp.h``,
+you can now configure which type numbers indicate a login and logout.
+
+See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
+information.
 
 Deprecations
 ============

@@ -957,7 +957,7 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
-    qry = 'ALTER DATABASE {0} CHARACTER SET {1} COLLATE {2};'.format(
+    qry = 'ALTER DATABASE `{0}` CHARACTER SET {1} COLLATE {2};'.format(
         name.replace('%', r'\%').replace('_', r'\_'),
         character_set or existing.get('character_set'),
         collate or existing.get('collate'))
@@ -1810,11 +1810,16 @@ def grant_exists(grant,
             if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
-            grant_tokens_database = grant_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
-            target_tokens_database = target_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
-            if grant_tokens['user'] == target_tokens['user'] and \
-                    grant_tokens_database == target_tokens_database and \
-                    grant_tokens['host'] == target_tokens['host'] and \
+
+            _grant_tokens = {}
+            _target_tokens = {}
+            for item in ['user', 'database', 'host']:
+                _grant_tokens[item] = grant_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
+                _target_tokens[item] = target_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
+
+            if _grant_tokens['user'] == _target_tokens['user'] and \
+                    _grant_tokens['database'] == _target_tokens['database'] and \
+                    _grant_tokens['host'] == _target_tokens['host'] and \
                     set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
             else:
