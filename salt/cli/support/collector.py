@@ -28,8 +28,9 @@ import salt.cli.caller
 import salt.cli.support
 import salt.cli.support.console
 import salt.cli.support.intfunc
+import salt.output.table_out
 
-
+salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)
 
 
@@ -126,12 +127,13 @@ class SupportDataCollector(object):
         if not isinstance(data, dict):
             data = {'raw-content': str(data)}
 
-        data = json.loads(json.dumps(data))
-        self.__current_section.append(
-            {
-                title: yaml.safe_dump(data.get('return', data), default_flow_style=False, indent=4)
-            }
-        )
+        try:
+            content = salt.output.try_printout(data, 'table', {'extension_modules': '', 'color': False})
+        except Exception:  # Table output does not always doing things right
+            data = json.loads(json.dumps(data))
+            content = yaml.safe_dump(data.get('return', data), default_flow_style=False, indent=4)
+
+        self.__current_section.append({title: content})
 
     def link(self, title, path):
         '''
