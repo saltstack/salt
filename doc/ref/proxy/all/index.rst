@@ -22,6 +22,7 @@ proxy modules
     napalm
     netmiko_px
     nxos
+    nxos_api
     panos
     philips_hue
     rest_sample
