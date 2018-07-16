@@ -15,6 +15,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.ext import six
 import salt.states.pkg as pkg
+from salt.ext.six.moves import zip
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -176,3 +177,62 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
                 self.assertIsNone(ret['result'])
                 self.assertDictEqual(ret['changes'], pkgs)
+
+    def test_parse_version_string(self):
+        test_parameters = [
+            ("> 1.0.0, < 15.0.0, != 14.0.1", [(">", "1.0.0"), ("<", "15.0.0"), ("!=", "14.0.1")]),
+            ("> 1.0.0,< 15.0.0,!= 14.0.1", [(">", "1.0.0"), ("<", "15.0.0"), ("!=", "14.0.1")]),
+            (">= 1.0.0, < 15.0.0", [(">=", "1.0.0"), ("<", "15.0.0")]),
+            (">=1.0.0,< 15.0.0", [(">=", "1.0.0"), ("<", "15.0.0")]),
+            ("< 15.0.0", [("<", "15.0.0")]),
+            ("<15.0.0", [("<", "15.0.0")]),
+            ("15.0.0", [("==", "15.0.0")]),
+            ("", [])
+        ]
+        for version_string, expected_version_conditions in test_parameters:
+            version_conditions = pkg._parse_version_string(version_string)
+            self.assertEqual(len(expected_version_conditions),
+                             len(version_conditions))
+            for expected_version_condition, version_condition in zip(expected_version_conditions, version_conditions):
+                self.assertEqual(
+                    expected_version_condition[0], version_condition[0])
+                self.assertEqual(
+                    expected_version_condition[1], version_condition[1])
+
+    def test_fulfills_version_string(self):
+        test_parameters = [
+            ("> 1.0.0, < 15.0.0, != 14.0.1", [], False),
+            ("> 1.0.0, < 15.0.0, != 14.0.1", ["1.0.0"], False),
+            ("> 1.0.0, < 15.0.0, != 14.0.1", ["14.0.1"], False),
+            ("> 1.0.0, < 15.0.0, != 14.0.1", ["16.0.0"], False),
+            ("> 1.0.0, < 15.0.0, != 14.0.1", ["2.0.0"], True),
+            ("> 1.0.0, < 15.0.0, != 14.0.1", ["1.0.0", "14.0.1", "16.0.0", "2.0.0"], True),
+            ("> 15.0.0", [], False),
+            ("> 15.0.0", ["1.0.0"], False),
+            ("> 15.0.0", ["16.0.0"], True),
+            ("15.0.0", [], False),
+            ("15.0.0", ["15.0.0"], True),
+            # No version specified, whatever version installed. This is threated like ANY version installed fulfills.
+            ("", ["15.0.0"], True),
+            # No version specified, no version installed.
+            ("", [], False)
+        ]
+        for version_string, installed_versions, expected_result in test_parameters:
+            msg = "version_string: {}, installed_versions: {}, expected_result: {}".format(version_string, installed_versions, expected_result)
+            self.assertEqual(expected_result, pkg._fulfills_version_string(installed_versions, version_string), msg)
+
+    def test_fulfills_version_spec(self):
+        test_parameters = [
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "==", "1.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], ">=", "1.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], ">", "1.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "<", "2.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "<=", "2.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "!=", "1.0.0", True),
+            (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "==", "17.0.0", False),
+            (["1.0.0"], "!=", "1.0.0", False),
+            ([], "==", "17.0.0", False),
+        ]
+        for installed_versions, operator, version, expected_result in test_parameters:
+            msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(installed_versions, operator, version, expected_result)
+            self.assertEqual(expected_result, pkg._fulfills_version_spec(installed_versions, operator, version), msg)
