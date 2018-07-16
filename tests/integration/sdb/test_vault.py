@@ -50,14 +50,16 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.run_state('docker_container.absent', name='vault')
         self.run_state('docker_image.absent', name='vault', force=True)
 
-    def test_vault(self):
-        assert self.run_function('sdb.set', arg=['secret/test/secret/foo', 'bar']) is True
-        assert self.run_function('sdb.get', arg=['secret/test/secret/foo']) == 'bar'
-
     def test_sdb(self):
-        assert self.run_function('sdb.set', arg=['secret/test/secret/foo', 'bar']) is True
-        assert self.run_function('sdb.get', arg=['secret/test/secret/foo']) == 'bar'
+        assert self.run_function('sdb.set', arg=['sdb://secret/test/secret/foo', 'bar']) is True
+        assert self.run_function('sdb.get', arg=['sdb://secret/test/secret/foo']) == 'bar'
 
     def test_sdb_runner(self):
-        assert self.run_run('sdb.set secret/test/secret/foo bar') == 'True\n'
-        assert self.run_run('sdb.get secret/test/secret/foo') == 'bar\n'
+        assert self.run_run('sdb.set sdb://secret/test/secret/foo bar') == 'True\n'
+        assert self.run_run('sdb.get sdb://secret/test/secret/foo') == 'bar\n'
+
+    def test_config(self):
+        self.run_function('sdb.set', arg=['sdb://secret/test/secret/foo', 'bar'])
+        assert self.run_function('config.get', arg=['test_vault_minion_sdb']) == 'bar'
+        assert self.run_function('config.get', arg=['test_vault_master_sdb']) == 'bar'
+        assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'
