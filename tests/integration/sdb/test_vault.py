@@ -60,6 +60,4 @@ class VaultTestCase(ModuleCase, ShellCase):
 
     def test_config(self):
         self.run_function('sdb.set', arg=['sdb://secret/test/secret/foo', 'bar'])
-        assert self.run_function('config.get', arg=['test_vault_minion_sdb']) == 'bar'
-        assert self.run_function('config.get', arg=['test_vault_master_sdb']) == 'bar'
         assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'

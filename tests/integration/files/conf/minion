@@ -110,4 +110,3 @@ autosign_grains:
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false
-test_vault_minion_sdb: sdb://sdbvault/secret/test/secret/foo
