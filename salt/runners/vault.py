@@ -14,6 +14,8 @@ import json
 import logging
 import string
 import requests
+from urlparse import urlparse, urlunparse, ParseResult
+from urllib import quote as urlquote
 
 # Import Salt libs
 import salt.crypt
@@ -23,7 +25,6 @@ import salt.exceptions
 from salt.ext import six
 
 log = logging.getLogger(__name__)
-
 
 def generate_token(minion_id, signature, impersonated_by_master=False):
     '''
@@ -63,12 +64,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                     return {'error': response.reason}
                 config['auth']['token'] = response.json()['auth']['client_token']
 
-        role_name = config.get('role_name', None)
-        base_url = config['url']
-        if role_name is None
-            url = '{0}/v1/auth/token/create'.format(base_url)
-        else
-            url = '{0}/v1/auth/token/create/{1}'.format(base_url, role_name)
+        url = _get_vault_url(config)
         headers = {'X-Vault-Token': config['auth']['token']}
         audit_data = {
             'saltstack-jid': globals().get('__jid__', '<no jid set>'),
@@ -97,6 +93,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
             'verify': verify,
         }
     except Exception as e:
+        raise e
         return {'error': six.text_type(e)}
 
 
@@ -261,3 +258,15 @@ def _selftoken_expired():
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(six.text_type(e))
             )
+
+def _get_vault_url(config):
+    role_name = config.get('role_name', None)
+    auth_path = '/v1/auth/token/create'
+    base_url = urlparse(config['url'])
+    
+    url = ParseResult(scheme=base_url.scheme, 
+                      netloc=base_url.netloc,
+                      path='/'.join(urlquote(x) for x in (auth_path, role_name) if x),
+                      params='', query='', fragment='')
+
+    return urlunparse(url)            
