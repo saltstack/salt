@@ -28,6 +28,7 @@ from functools import partial
 from collections import namedtuple
 
 from tests.support import helpers
+from tests.support.ptest import PTestRunner
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
@@ -280,6 +281,12 @@ class SaltTestingParser(optparse.OptionParser):
                 )
             )
         self.output_options_group.add_option(
+            '--ptest-out',
+            default=False,
+            action='store_true',
+            help='Output test results in OpenEmbedded ptest format'
+        )
+        self.output_options_group.add_option(
             '--no-report',
             default=False,
             action='store_true',
@@ -519,6 +526,10 @@ class SaltTestingParser(optparse.OptionParser):
                 verbosity=self.options.verbosity,
                 failfast=failfast,
             ).run(tests)
+        elif self.options.ptest_out:
+            runner = PTestRunner(
+                stream=sys.stdout,
+                verbosity=self.options.verbosity).run(tests)
         else:
             runner = TextTestRunner(
                 stream=sys.stdout,
