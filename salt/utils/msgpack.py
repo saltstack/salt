@@ -19,7 +19,7 @@ import salt.utils.thread_local_proxy
 
 def pack(o, stream, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     Wraps msgpack.pack and ensures that the passed object is unwrapped if it is
     a proxy.
@@ -35,7 +35,7 @@ def pack(o, stream, **kwargs):
 
 def packb(o, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     Wraps msgpack.packb and ensures that the passed object is unwrapped if it
     is a proxy.
@@ -51,7 +51,7 @@ def packb(o, **kwargs):
 
 def unpack(stream, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     Wraps msgpack.unpack.
 
@@ -65,7 +65,7 @@ def unpack(stream, **kwargs):
 
 def unpackb(packed, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     Wraps msgpack.unpack.
 
