@@ -39,7 +39,7 @@ class SupportDataCollector(object):
     Data collector. It behaves just like another outputter,
     except it grabs the data to the archive files.
     '''
-    def __init__(self, name):
+    def __init__(self, name, output):
         '''
         constructor of the data collector
         :param name:
@@ -47,6 +47,7 @@ class SupportDataCollector(object):
         :param format:
         '''
         self.archive_path = name
+        self.__default_outputter = output
         self.__format = format
         self.__arch = None
         self.__current_section = None
@@ -119,17 +120,26 @@ class SupportDataCollector(object):
         self.__current_section = []
         self.__current_section_name = name
 
-    def write(self, title, data):
+    def write(self, title, data, output=None):
         '''
         Add a data to the current opened section.
         :return:
         '''
         if not isinstance(data, dict):
             data = {'raw-content': str(data)}
+        output = output or self.__default_outputter
 
-        try:
-            content = salt.output.try_printout(data, 'table', {'extension_modules': '', 'color': False})
-        except Exception:  # Table output does not always doing things right
+        if output != 'null':
+            try:
+                if 'return' in data:
+                    data = data['return']
+                content = salt.output.try_printout(data, output, {'extension_modules': '', 'color': False})
+            except Exception:  # Fall-back to just raw YAML
+                content = None
+        else:
+            content = None
+
+        if content is None:
             data = json.loads(json.dumps(data))
             content = yaml.safe_dump(data.get('return', data), default_flow_style=False, indent=4)
 
@@ -225,7 +235,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             else:
                 conf['kwargs'].update(arg)
 
-        return info, conf
+        return info, action_meta.get('output'), conf
 
     def collect_internal_data(self):
         '''
@@ -260,10 +270,10 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.put(category_name)
             self.collector.add(category_name)
             for action in scenario[category_name]:
-                info, conf = self._get_action(action)
+                info, output, conf = self._get_action(action)
                 if not conf.get('salt.int.intfunc'):
                     self.out.put('Collecting {}'.format(info.lower()), indent=2)
-                    self.collector.write(info, self._local_call(conf))
+                    self.collector.write(info, self._local_call(conf), output=output)
                 else:
                     self.collector.discard_current()
                     self._internal_function_call(conf)
@@ -339,7 +349,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             else:
                 if self._check_existing_archive_():
                     try:
-                        self.collector = SupportDataCollector(self.config['support_archive'])
+                        self.collector = SupportDataCollector(self.config['support_archive'],
+                                                              output=self.config['support_output_format'])
                     except Exception as ex:
                         self.out.error(ex)
                         exit_code = salt.defaults.exitcodes.EX_GENERIC

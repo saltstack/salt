@@ -1932,6 +1932,9 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
                         help='Show available units')
         self.add_option('-f', '--force', default=False, action='store_true', dest='support_archive_force_overwrite',
                         help='Force overwrite existing archive, if exists')
+        self.add_option('-o', '--out', default='null', dest='support_output_format',
+                        help=('Set the default output using the specified outputter, '
+                              'unless profile does not overrides this. Default: "yaml".'))
 
     def find_existing_configs(self, default):
         '''
