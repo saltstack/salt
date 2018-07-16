@@ -4,6 +4,8 @@ What is SaltStack?
 
 Dont merge this pls
 
+no merge lul
+
 SaltStack makes software for complex systems management at scale.
 SaltStack is the company that created and maintains the Salt Open
 project and develops and sells SaltStack Enterprise software, services
