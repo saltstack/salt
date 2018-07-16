@@ -16,7 +16,7 @@ all-users:
       info: Cron for user "{{uname}}"
       args:
         - {{uname}}
+  {%endfor%}
   - group.getent:
       info: List of all available groups
       output: table
-  {%endfor%}
