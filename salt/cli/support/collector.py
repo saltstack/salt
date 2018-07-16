@@ -2,13 +2,19 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import six
 import copy
 import yaml
 import json
 import logging
 import tarfile
 import time
-import exceptions
+
+if six.PY2:
+    import exceptions
+else:
+    import builtins as exceptions
+
 from io import BytesIO
 
 sys.modules['pkg_resources'] = None
