@@ -1,8 +1,10 @@
 network:
   - network.get_hostname:
       info: Hostname
+      output: txt
   - network.get_fqdn:
       info: FQDN
+      output: txt
   - network.default_route:
       info: Default route
       output: table
