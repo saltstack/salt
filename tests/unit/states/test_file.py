@@ -61,10 +61,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def tearDown(self):
         remove_dir = '/tmp/etc'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             remove_dir = 'c:\\tmp\\etc'
         try:
-            salt.utils.rm_rf(remove_dir)
+            salt.utils.files.rm_rf(remove_dir)
         except OSError:
             pass
 

@@ -56,7 +56,7 @@ def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
             file_refs,
             __pillar__,
             st_kwargs['id_'])
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
             test,
@@ -81,7 +81,7 @@ def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
