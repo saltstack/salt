@@ -337,6 +337,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                     except Exception as ex:
                         self.out.error(ex)
                         exit_code = salt.defaults.exitcodes.EX_GENERIC
+                        log.debug(ex, exc_info=True)
                     else:
                         try:
                             self.collector.open()
@@ -350,6 +351,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                                                archive_path, _main='YELLOW')
                         except Exception as ex:
                             self.out.error(ex)
+                            log.debug(ex, exc_info=True)
                             exit_code = salt.defaults.exitcodes.EX_SOFTWARE
 
         if exit_code:
