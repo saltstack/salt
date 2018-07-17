@@ -1,5 +1,5 @@
 all-users:
-  {%for uname in salt('user.list_users').get('return') %}
+  {%for uname in salt('user.list_users') %}
   - user.info:
       info: Information about "{{uname}}"
       args:
