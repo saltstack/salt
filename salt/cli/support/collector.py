@@ -386,6 +386,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         Collects minion targets data
         :return:
         '''
+        # TODO: remote collector?
 
     def _cleanup(self):
         '''
@@ -393,8 +394,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :return:
         '''
         if (hasattr(self, 'config')
-            and self.config.get('support_archive')
-            and os.path.exists(self.config['support_archive'])):
+           and self.config.get('support_archive')
+           and os.path.exists(self.config['support_archive'])):
             self.out.warning('Terminated earlier, cleaning up')
             os.unlink(self.config['support_archive'])
 
