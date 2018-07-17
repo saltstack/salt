@@ -1223,7 +1223,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             try:
                 # Make sure we have a sorted listdir in order to have
                 # expectable override results
-                files = sorted(os.listdir(mod_dir))
+                files = sorted(
+                    x for x in os.listdir(mod_dir) if x != '__pycache__'
+                )
             except OSError:
                 continue  # Next mod_dir
             if six.PY3:
