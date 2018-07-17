@@ -172,6 +172,25 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
     RUNNER_TYPE = 'run'
     CALL_TYPE = 'call'
 
+    def _setup_fun_config(self, fun_conf):
+        '''
+        Setup function configuration.
+
+        :param conf:
+        :return:
+        '''
+        conf = copy.deepcopy(self.config)
+        conf['file_client'] = 'local'
+        conf['fun'] = ''
+        conf['arg'] = []
+        conf['kwarg'] = {}
+        conf['cache_jobs'] = False
+        conf['print_metadata'] = False
+        conf.update(fun_conf)
+        conf['fun'] = conf['fun'].split(':')[-1]  # Discard typing prefix
+
+        return conf
+
     def _get_runner(self, conf):
         '''
         Get & setup runner.
@@ -179,7 +198,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :param conf:
         :return:
         '''
-        conf = copy.deepcopy(conf)
+        conf = self._setup_fun_config(copy.deepcopy(conf))
         if not getattr(self, '_runner', None):
             self._runner = salt.cli.support.localrunner.LocalRunner(conf)
         else:
@@ -193,29 +212,19 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :param conf:
         :return:
         '''
+        conf = self._setup_fun_config(copy.deepcopy(conf))
         if not getattr(self, '_caller', None):
             self._caller = salt.cli.caller.Caller.factory(conf)
         else:
-            self._caller.opts = copy.deepcopy(conf)
+            self._caller.opts = conf
         return self._caller
 
     def _local_call(self, call_conf):
         '''
         Execute local call
         '''
-        conf = copy.deepcopy(self.config)
-
-        conf['file_client'] = 'local'
-        conf['fun'] = ''
-        conf['arg'] = []
-        conf['kwarg'] = {}
-        conf['cache_jobs'] = False
-        conf['print_metadata'] = False
-        conf.update(call_conf)
-        conf['fun'] = conf['fun'].split(':')[-1]  # Discard typing prefix
-
         try:
-            ret = self._get_caller(conf).call()
+            ret = self._get_caller(call_conf).call()
         except SystemExit:
             ret = 'Data is not available at this moment'
             self.out.error(ret)
@@ -233,19 +242,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :param run_conf:
         :return:
         '''
-        conf = copy.deepcopy(self.config)
-
-        conf['file_client'] = 'local'
-        conf['fun'] = ''
-        conf['arg'] = []
-        conf['kwarg'] = {}
-        conf['cache_jobs'] = False
-        conf['print_metadata'] = False
-        conf.update(run_conf)
-        conf['fun'] = conf['fun'].split(':')[-1]
-
         try:
-            ret = self._get_runner(conf).run()
+            ret = self._get_runner(run_conf).run()
         except SystemExit:
             ret = 'Runner is not available at this moment'
             self.out.error(ret)
