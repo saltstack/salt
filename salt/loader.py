@@ -1104,6 +1104,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.disabled = set(self.opts.get('disable_{0}{1}'.format(
             self.tag, '' if self.tag[-1] == 's' else 's'), []))
 
+        # A map of suffix to description for imp
+        self.suffix_map = {}
+        # A list to determine precedence of extensions
+        # Prefer packages (directories) over modules (single files)!
+        self.suffix_order = ['']
+        for (suffix, mode, kind) in SUFFIXES:
+            self.suffix_map[suffix] = (suffix, mode, kind)
+            self.suffix_order.append(suffix)
+
         self._lock = threading.RLock()
         self._refresh_file_mapping()
 
@@ -1177,14 +1186,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         refresh the mapping of the FS on disk
         '''
         # map of suffix to description for imp
-        self.suffix_map = {}
-        suffix_order = ['']  # local list to determine precedence of extensions
-                             # Prefer packages (directories) over modules (single files)!
-
-        for (suffix, mode, kind) in SUFFIXES:
-            self.suffix_map[suffix] = (suffix, mode, kind)
-            suffix_order.append(suffix)
-
         if self.opts.get('cython_enable', True) is True:
             try:
                 global pyximport
@@ -1287,7 +1288,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if ext == '':
                         # is there something __init__?
                         subfiles = os.listdir(fpath)
-                        for suffix in suffix_order:
+                        for suffix in self.suffix_order:
                             if '' == suffix:
                                 continue  # Next suffix (__init__ must have a suffix)
                             init_file = '__init__{0}'.format(suffix)
@@ -1315,7 +1316,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                                 # Module name match, but a higher-priority
                                 # optimization level was already matched, skipping.
                                 continue
-                        elif not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
+                        elif not curr_ext or self.suffix_order.index(ext) >= self.suffix_order.index(curr_ext):
                             # Match found but a higher-priorty match already
                             # exists, so skip this.
                             continue
