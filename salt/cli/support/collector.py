@@ -129,13 +129,13 @@ class SupportDataCollector(object):
         Add a data to the current opened section.
         :return:
         '''
-        if not isinstance(data, dict):
+        if not isinstance(data, (dict, list, tuple)):
             data = {'raw-content': str(data)}
         output = output or self.__default_outputter
 
         if output != 'null':
             try:
-                if 'return' in data:
+                if isinstance(data, dict) and 'return' in data:
                     data = data['return']
                 content = salt.output.try_printout(data, output, {'extension_modules': '', 'color': False})
             except Exception:  # Fall-back to just raw YAML
@@ -145,7 +145,9 @@ class SupportDataCollector(object):
 
         if content is None:
             data = json.loads(json.dumps(data))
-            content = yaml.safe_dump(data.get('return', data), default_flow_style=False, indent=4)
+            if isinstance(data, dict) and data.get('return'):
+                data = data.get('return')
+            content = yaml.safe_dump(data, default_flow_style=False, indent=4)
 
         self.__current_section.append({title: content})
 
