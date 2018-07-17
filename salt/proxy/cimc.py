@@ -97,6 +97,16 @@ def __virtual__():
     return __virtualname__
 
 
+def _validate_response_code(response_code_to_check, cookie_to_logout=None):
+    formatted_response_code = str(response_code_to_check)
+    if formatted_response_code not in ["200", "201", "202", "204"]:
+        if cookie_to_logout:
+            logout(cookie_to_logout)
+        log.debug("Received error HTTP status code: {0}" .format(formatted_response_code))
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+
+
 def init(opts):
     """
     This function gets called when the proxy starts up.
@@ -155,11 +165,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
                                 status=True,
                                 headers=DETAILS["headers"])
 
-    if str(r["status"]) not in ["200", "201", "202", "204"]:
-        log.debug("Received error HTTP status code: {0}" .format(str(r["status"])))
-        logout(cookie)
-        raise salt.exceptions.CommandExecutionError(
-            "Did not receive a valid response from host.")
+    _validate_response_code(r["status"], cookie)
 
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
@@ -192,11 +198,8 @@ def get_config_resolver_class(cid=None, hierarchical=False):
                                 status=True,
                                 headers=DETAILS["headers"])
 
-    if str(r["status"]) not in ["200", "201", "202", "204"]:
-        log.debug("Received error HTTP status code: {0}" .format(str(r["status"])))
-        logout(cookie)
-        raise salt.exceptions.CommandExecutionError(
-            "Did not receive a valid response from host.")
+    _validate_response_code(r["status"], cookie)
+
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
     logout(cookie)
@@ -222,10 +225,8 @@ def logon():
                                 status=True,
                                 headers=DETAILS["headers"])
 
-    if str(r["status"]) not in ["200", "201", "202", "204"]:
-        log.debug("Received error HTTP status code: {0}" .format(str(r["status"])))
-        raise salt.exceptions.CommandExecutionError(
-            "Did not receive a valid response from host.")
+    _validate_response_code(r["status"])
+
     answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
     items = ET.fromstring(answer)
     for item in items.attrib:
@@ -287,7 +288,9 @@ def grains():
         try:
             compute_rack = get_config_resolver_class("computeRackUnit", False)
             DETAILS["grains_cache"] = compute_rack["outConfigs"]["computeRackUnit"]
-        except Exception as err:  # pylint: disable=broad-except
+        except salt.exceptions.CommandExecutionError:
+            pass
+        except Exception as err:
             log.error(err)
     return DETAILS["grains_cache"]
 
@@ -307,6 +310,8 @@ def ping():
     try:
         cookie = logon()
         logout(cookie)
+    except salt.exceptions.CommandExecutionError:
+        return False
     except Exception as err:  # pylint: disable=broad-except
         log.debug(err)
         return False
