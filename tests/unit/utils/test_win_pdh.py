@@ -4,7 +4,7 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -96,4 +96,4 @@ class WinPdhTestCase(TestCase):
 
     def test_get_counter(self):
         results = win_pdh.get_counter('Processor', '*', '% Processor Time')
-        self.assertTrue('\Processor(*)\\% Processor Time' in results)
+        self.assertTrue('\\Processor(*)\\% Processor Time' in results)
