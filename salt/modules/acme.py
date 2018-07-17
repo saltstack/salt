@@ -101,6 +101,7 @@ def cert(name,
          server=None,
          owner='root',
          group='root',
+         mode='0640',
          certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -113,8 +114,9 @@ def cert(name,
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
-    :param owner: owner of private key
-    :param group: group of private key
+    :param owner: owner of the private key file
+    :param group: group of the private key file
+    :param mode: mode of the private key file
     :param certname: Name of the certificate to save
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
@@ -178,7 +180,7 @@ def cert(name,
 
     ret = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
                                        {'comment': comment, 'not_after': expires(name)},
-                                       owner, group, '0640',
+                                       owner, group, mode,
                                        follow_symlinks=True)
 
     return ret
