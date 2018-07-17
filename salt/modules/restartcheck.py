@@ -299,13 +299,6 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
-def _is_older_nilrt():
-    '''
-    If this is an older version of NILinuxRT, return True. Otherwise, return False.
-    '''
-    return os.path.exists('/usr/local/natinst/bin/nisafemodeversion')
-
-
 def _kernel_versions_nilrt():
     '''
     Last installed kernel name, for Debian based systems.
@@ -314,23 +307,42 @@ def _kernel_versions_nilrt():
             List with possible names of last installed kernel
             as they are probably interpreted in output of `uname -a` command.
     '''
-    kernel_versions = []
+    kver = None
 
-    if __grains__.get('os_family') == NILRT_FAMILY_NAME and _is_older_nilrt():
-        # bzImage is copied in the rootfs without any package management or
-        # version info. We also can't depend on kernel headers like
-        # include/generated/uapi/linux/version.h being installed. Even if
-        # we fix this in newer versions of "old NILRT" we still need to be
-        # backwards compatible so it'll just get more complicated.
-        kpath = '/boot/runmode/bzImage'
-        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kpath))
-        re_result = re.search(r'[0-9]+\.[0-9]+\.[0-9]+-rt.*(?=\s\()', kernel_strings)
-        if re_result is not None:
-            kernel_versions.append(re_result.group(0))
+    def _get_kver_from_bin(kbin):
+        '''
+        Get kernel version from a binary image or None if detection fails
+        '''
+        kvregex = r'[0-9]+\.[0-9]+\.[0-9]+-rt\S+'
+        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kbin))
+        re_result = re.search(kvregex, kernel_strings)
+        return None if re_result is None else re_result.group(0)
+
+    if __grains__.get('lsb_distrib_id') == 'nilrt':
+        if 'arm' in __grains__.get('cpuarch'):
+            # the kernel is inside a uboot created itb (FIT) image alongside the
+            # device tree, ramdisk and a bootscript. There is no package management
+            # or any other kind of versioning info, so we need to extract the itb.
+            itb_path = '/boot/linux_runmode.itb'
+            compressed_kernel = '/var/volatile/tmp/uImage.gz'
+            uncompressed_kernel = '/var/volatile/tmp/uImage'
+            __salt__['cmd.run']('dumpimage -i {0} -T flat_dt -p0 kernel -o {1}'
+                                .format(itb_path, compressed_kernel))
+            __salt__['cmd.run']('gunzip -f {0}'.format(compressed_kernel))
+            kver = _get_kver_from_bin(uncompressed_kernel)
+        else:
+            # the kernel bzImage is copied to rootfs without package management or
+            # other versioning info.
+            kver = _get_kver_from_bin('/boot/runmode/bzImage')
     else:
-        kernel_versions.append(os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-'))
+        # kernels in newer NILRT's are installed via package management and
+        # have the version appended to the kernel image filename
+        if 'arm' in __grains__.get('cpuarch'):
+            kver = os.path.basename(os.readlink('/boot/uImage')).strip('uImage-')
+        else:
+            kver = os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-')
 
-    return kernel_versions
+    return [] if kver is None else [kver]
 
 
 def _check_timeout(start_time, timeout):
