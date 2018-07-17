@@ -337,6 +337,18 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         self.out.put('Saving highstate', indent=2)
         self.collector.write('Rendered highstate', self._local_call({'fun': 'state.show_highstate'}))
 
+    def _extract_return(self, data):
+        '''
+        Extracts return data from the results.
+
+        :param data:
+        :return:
+        '''
+        if isinstance(data, dict):
+            data = data.get('return', data)
+
+        return data
+
     def collect_master_data(self):
         '''
         Collects master system data.
@@ -348,7 +360,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             :param func:
             :return:
             '''
-            return self._local_call({'fun': func, 'arg': args, 'kwarg': kwargs})
+            return self._extract_return(self._local_call({'fun': func, 'arg': args, 'kwarg': kwargs}))
 
         def run(func, *args, **kwargs):
             '''
@@ -356,7 +368,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             :param func:
             :return:
             '''
-            return self._local_run({'fun': func, 'arg': args, 'kwarg': kwargs})
+            return self._extract_return(self._local_run({'fun': func, 'arg': args, 'kwarg': kwargs}))
 
         scenario = salt.cli.support.get_profile(self.config['support_profile'], call, run)
         for category_name in scenario:
