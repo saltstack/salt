@@ -32,7 +32,7 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
+def _ssh_state(chunks, st_kwargs,
               kwargs, test=False):
     '''
     funciton to run a state with the given chunk via salt-ssh
@@ -46,7 +46,6 @@ def _ssh_state(chunks, __opts__, __context__, __pillar__, __salt__, st_kwargs,
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -210,7 +209,6 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -377,7 +375,6 @@ def low(data, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -462,7 +459,6 @@ def high(data, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -696,7 +692,6 @@ def highstate(test=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -773,7 +768,6 @@ def top(topfn, test=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -938,10 +932,6 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         )
 
     ret = _ssh_state(chunk,
-                     __opts__,
-                     __context__,
-                     __pillar__,
-                     __salt__,
                      st_kwargs,
                      kwargs,
                      test=test)
@@ -1134,7 +1124,6 @@ def single(fun, name, test=None, **kwargs):
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
