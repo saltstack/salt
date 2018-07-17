@@ -180,7 +180,7 @@ def cert(name,
         comment = 'Certificate {0} obtained'.format(name)
     ret = {'comment': comment, 'not_after': expires(name)}
 
-    res = __salt__['file.check_perms'](_cert_file(name, 'privkey'), {}, owner, group, '0600', follow_symlinks=True)
+    res = __salt__['file.check_perms'](_cert_file(name, 'privkey'), {}, owner, group, '0640', follow_symlinks=True)
 
     if res is None:
         ret['result'] = False
