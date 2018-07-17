@@ -8,9 +8,11 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import compileall
 import inspect
 import logging
 import tempfile
+import textwrap
 import shutil
 import os
 import collections
@@ -916,3 +918,106 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self.update_lib(lib)
                 self.loader.clear()
                 self._verify_libs()
+
+
+class LazyLoaderOptimizationOrderTest(TestCase):
+    '''
+    Test the optimization order priority in the loader (PY3)
+    '''
+    module_name = 'lazyloadertest'
+    module_fullname = 'salt.loaded.ext.module.lazyloadertest'
+    module_content = textwrap.dedent('''\
+        # -*- coding: utf-8 -*-
+        from __future__ import absolute_import
+
+        def test():
+            return True
+        ''')
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+
+    def setUp(self):
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=TMP)
+        self.module_file = os.path.join(self.module_dir,
+                                        '{0}.py'.format(self.module_name))
+
+    def _get_loader(self, order=None):
+        opts = copy.deepcopy(self.opts)
+        if order is not None:
+            opts['optimization_order'] = order
+        # Return a loader
+        return LazyLoader([self.module_dir], opts, tag='module')
+
+    def _get_module_filename(self):
+        # The act of referencing the loader entry forces the module to be
+        # loaded by the LazyDict.
+        mod_fullname = self.loader[next(iter(self.loader))].__module__
+        return sys.modules[mod_fullname].__file__
+
+    def _expected(self, optimize=0):
+        if six.PY3:
+            return 'lazyloadertest.cpython-{0}{1}{2}.pyc'.format(
+                sys.version_info[0],
+                sys.version_info[1],
+                '' if not optimize else '.opt-{0}'.format(optimize)
+            )
+        else:
+            return 'lazyloadertest.pyc'
+
+    def _test_optimization_level(self, order):
+        # Write the file
+        with salt.utils.fopen(self.module_file, 'w') as fh:
+            fh.write(self.module_content)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        # Byte-compile it
+        if six.PY3:
+            compileall.compile_file(self.module_file, quiet=1, optimize=0)
+            compileall.compile_file(self.module_file, quiet=1, optimize=1)
+            compileall.compile_file(self.module_file, quiet=1, optimize=2)
+        else:
+            compileall.compile_file(self.module_file)
+
+        # Clean up the original file so that we can be assured we're only
+        # loading the byte-compiled files(s).
+        os.remove(self.module_file)
+
+        self.loader = self._get_loader(order)
+        filename = self._get_module_filename()
+        basename = os.path.basename(filename)
+        assert basename == self._expected(order[0]), basename
+
+        if six.PY2:
+            # We are only testing multiple optimization levels on Python 3.
+            return
+
+        # Remove the file and make a new loader. We should now load the
+        # byte-compiled file with an optimization level matching the 2nd
+        # element of the order list.
+        os.remove(filename)
+        self.loader = self._get_loader(order)
+        filename = self._get_module_filename()
+        basename = os.path.basename(filename)
+        assert basename == self._expected(order[1]), basename
+
+        # Remove the file and make a new loader. We should now load the
+        # byte-compiled file with an optimization level matching the 3rd
+        # element of the order list.
+        os.remove(filename)
+        self.loader = self._get_loader(order)
+        filename = self._get_module_filename()
+        basename = os.path.basename(filename)
+        assert basename == self._expected(order[2]), basename
+
+    def test_optimization_level(self):
+        self._test_optimization_level([0, 1, 2])
+        self._test_optimization_level([0, 2, 1])
+        self._test_optimization_level([1, 2, 0])
+        self._test_optimization_level([1, 0, 2])
+        self._test_optimization_level([2, 0, 1])
+        self._test_optimization_level([2, 1, 0])
