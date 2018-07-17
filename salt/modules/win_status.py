@@ -11,7 +11,7 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
-from ctypes import *
+import ctypes
 import datetime
 import logging
 import subprocess
@@ -55,87 +55,87 @@ __virtualname__ = 'status'
 
 
 # Taken from https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/ex/sysinfo/performance.htm
-class SYSTEM_PERFORMANCE_INFORMATION(Structure):
-    _fields_ = [('IdleProcessTime', c_int64),
-                ('IoReadTransferCount', c_int64),
-                ('IoWriteTransferCount', c_int64),
-                ('IoOtherTransferCount', c_int64),
-                ('IoReadOperationCount', c_ulong),
-                ('IoWriteOperationCount', c_ulong),
-                ('IoOtherOperationCount', c_ulong),
-                ('AvailablePages', c_ulong),
-                ('CommittedPages', c_ulong),
-                ('CommitLimit', c_ulong),
-                ('PeakCommitment', c_ulong),
-                ('PageFaultCount', c_ulong),
-                ('CopyOnWriteCount', c_ulong),
-                ('TransitionCount', c_ulong),
-                ('CacheTransitionCount', c_ulong),
-                ('DemandZeroCount', c_ulong),
-                ('PageReadCount', c_ulong),
-                ('PageReadIoCount', c_ulong),
-                ('CacheReadCount', c_ulong),  # Was c_ulong ** 2
-                ('CacheIoCount', c_ulong),
-                ('DirtyPagesWriteCount', c_ulong),
-                ('DirtyWriteIoCount', c_ulong),
-                ('MappedPagesWriteCount', c_ulong),
-                ('MappedWriteIoCount', c_ulong),
-                ('PagedPoolPages', c_ulong),
-                ('NonPagedPoolPages', c_ulong),
-                ('PagedPoolAllocs', c_ulong),
-                ('PagedPoolFrees', c_ulong),
-                ('NonPagedPoolAllocs', c_ulong),
-                ('NonPagedPoolFrees', c_ulong),
-                ('FreeSystemPtes', c_ulong),
-                ('ResidentSystemCodePage', c_ulong),
-                ('TotalSystemDriverPages', c_ulong),
-                ('TotalSystemCodePages', c_ulong),
-                ('NonPagedPoolLookasideHits', c_ulong),
-                ('PagedPoolLookasideHits', c_ulong),
-                ('AvailablePagedPoolPages', c_ulong),
-                ('ResidentSystemCachePage', c_ulong),
-                ('ResidentPagedPoolPage', c_ulong),
-                ('ResidentSystemDriverPage', c_ulong),
-                ('CcFastReadNoWait', c_ulong),
-                ('CcFastReadWait', c_ulong),
-                ('CcFastReadResourceMiss', c_ulong),
-                ('CcFastReadNotPossible', c_ulong),
-                ('CcFastMdlReadNoWait', c_ulong),
-                ('CcFastMdlReadWait', c_ulong),
-                ('CcFastMdlReadResourceMiss', c_ulong),
-                ('CcFastMdlReadNotPossible', c_ulong),
-                ('CcMapDataNoWait', c_ulong),
-                ('CcMapDataWait', c_ulong),
-                ('CcMapDataNoWaitMiss', c_ulong),
-                ('CcMapDataWaitMiss', c_ulong),
-                ('CcPinMappedDataCount', c_ulong),
-                ('CcPinReadNoWait', c_ulong),
-                ('CcPinReadWait', c_ulong),
-                ('CcPinReadNoWaitMiss', c_ulong),
-                ('CcPinReadWaitMiss', c_ulong),
-                ('CcCopyReadNoWait', c_ulong),
-                ('CcCopyReadWait', c_ulong),
-                ('CcCopyReadNoWaitMiss', c_ulong),
-                ('CcCopyReadWaitMiss', c_ulong),
-                ('CcMdlReadNoWait', c_ulong),
-                ('CcMdlReadWait', c_ulong),
-                ('CcMdlReadNoWaitMiss', c_ulong),
-                ('CcMdlReadWaitMiss', c_ulong),
-                ('CcReadAheadIos', c_ulong),
-                ('CcLazyWriteIos', c_ulong),
-                ('CcLazyWritePages', c_ulong),
-                ('CcDataFlushes', c_ulong),
-                ('CcDataPages', c_ulong),
-                ('ContextSwitches', c_ulong),
-                ('FirstLevelTbFills', c_ulong),
-                ('SecondLevelTbFills', c_ulong),
-                ('SystemCalls', c_ulong),
+class SYSTEM_PERFORMANCE_INFORMATION(ctypes.Structure):
+    _fields_ = [('IdleProcessTime', ctypes.c_int64),
+                ('IoReadTransferCount', ctypes.c_int64),
+                ('IoWriteTransferCount', ctypes.c_int64),
+                ('IoOtherTransferCount', ctypes.c_int64),
+                ('IoReadOperationCount', ctypes.c_ulong),
+                ('IoWriteOperationCount', ctypes.c_ulong),
+                ('IoOtherOperationCount', ctypes.c_ulong),
+                ('AvailablePages', ctypes.c_ulong),
+                ('CommittedPages', ctypes.c_ulong),
+                ('CommitLimit', ctypes.c_ulong),
+                ('PeakCommitment', ctypes.c_ulong),
+                ('PageFaultCount', ctypes.c_ulong),
+                ('CopyOnWriteCount', ctypes.c_ulong),
+                ('TransitionCount', ctypes.c_ulong),
+                ('CacheTransitionCount', ctypes.c_ulong),
+                ('DemandZeroCount', ctypes.c_ulong),
+                ('PageReadCount', ctypes.c_ulong),
+                ('PageReadIoCount', ctypes.c_ulong),
+                ('CacheReadCount', ctypes.c_ulong),  # Was c_ulong ** 2
+                ('CacheIoCount', ctypes.c_ulong),
+                ('DirtyPagesWriteCount', ctypes.c_ulong),
+                ('DirtyWriteIoCount', ctypes.c_ulong),
+                ('MappedPagesWriteCount', ctypes.c_ulong),
+                ('MappedWriteIoCount', ctypes.c_ulong),
+                ('PagedPoolPages', ctypes.c_ulong),
+                ('NonPagedPoolPages', ctypes.c_ulong),
+                ('PagedPoolAllocs', ctypes.c_ulong),
+                ('PagedPoolFrees', ctypes.c_ulong),
+                ('NonPagedPoolAllocs', ctypes.c_ulong),
+                ('NonPagedPoolFrees', ctypes.c_ulong),
+                ('FreeSystemPtes', ctypes.c_ulong),
+                ('ResidentSystemCodePage', ctypes.c_ulong),
+                ('TotalSystemDriverPages', ctypes.c_ulong),
+                ('TotalSystemCodePages', ctypes.c_ulong),
+                ('NonPagedPoolLookasideHits', ctypes.c_ulong),
+                ('PagedPoolLookasideHits', ctypes.c_ulong),
+                ('AvailablePagedPoolPages', ctypes.c_ulong),
+                ('ResidentSystemCachePage', ctypes.c_ulong),
+                ('ResidentPagedPoolPage', ctypes.c_ulong),
+                ('ResidentSystemDriverPage', ctypes.c_ulong),
+                ('CcFastReadNoWait', ctypes.c_ulong),
+                ('CcFastReadWait', ctypes.c_ulong),
+                ('CcFastReadResourceMiss', ctypes.c_ulong),
+                ('CcFastReadNotPossible', ctypes.c_ulong),
+                ('CcFastMdlReadNoWait', ctypes.c_ulong),
+                ('CcFastMdlReadWait', ctypes.c_ulong),
+                ('CcFastMdlReadResourceMiss', ctypes.c_ulong),
+                ('CcFastMdlReadNotPossible', ctypes.c_ulong),
+                ('CcMapDataNoWait', ctypes.c_ulong),
+                ('CcMapDataWait', ctypes.c_ulong),
+                ('CcMapDataNoWaitMiss', ctypes.c_ulong),
+                ('CcMapDataWaitMiss', ctypes.c_ulong),
+                ('CcPinMappedDataCount', ctypes.c_ulong),
+                ('CcPinReadNoWait', ctypes.c_ulong),
+                ('CcPinReadWait', ctypes.c_ulong),
+                ('CcPinReadNoWaitMiss', ctypes.c_ulong),
+                ('CcPinReadWaitMiss', ctypes.c_ulong),
+                ('CcCopyReadNoWait', ctypes.c_ulong),
+                ('CcCopyReadWait', ctypes.c_ulong),
+                ('CcCopyReadNoWaitMiss', ctypes.c_ulong),
+                ('CcCopyReadWaitMiss', ctypes.c_ulong),
+                ('CcMdlReadNoWait', ctypes.c_ulong),
+                ('CcMdlReadWait', ctypes.c_ulong),
+                ('CcMdlReadNoWaitMiss', ctypes.c_ulong),
+                ('CcMdlReadWaitMiss', ctypes.c_ulong),
+                ('CcReadAheadIos', ctypes.c_ulong),
+                ('CcLazyWriteIos', ctypes.c_ulong),
+                ('CcLazyWritePages', ctypes.c_ulong),
+                ('CcDataFlushes', ctypes.c_ulong),
+                ('CcDataPages', ctypes.c_ulong),
+                ('ContextSwitches', ctypes.c_ulong),
+                ('FirstLevelTbFills', ctypes.c_ulong),
+                ('SecondLevelTbFills', ctypes.c_ulong),
+                ('SystemCalls', ctypes.c_ulong),
                 # Windows 8 and above
-                ('CcTotalDirtyPages', c_ulonglong),
-                ('CcDirtyPagesThreshold', c_ulonglong),
-                ('ResidentAvailablePages', c_longlong),
+                ('CcTotalDirtyPages', ctypes.c_ulonglong),
+                ('CcDirtyPagesThreshold', ctypes.c_ulonglong),
+                ('ResidentAvailablePages', ctypes.c_longlong),
                 # Windows 10 and above
-                ('SharedCommittedPages', c_ulonglong)]
+                ('SharedCommittedPages', ctypes.c_ulonglong)]
 
 
 def __virtual__():
@@ -256,12 +256,12 @@ def vmstats():
     '''
     # Setup the SPI Structure
     spi = SYSTEM_PERFORMANCE_INFORMATION()
-    retlen = c_ulong()
+    retlen = ctypes.c_ulong()
 
     # 2 means to query System Performance Information and return it in a
     # SYSTEM_PERFORMANCE_INFORMATION Structure
-    windll.ntdll.NtQuerySystemInformation(
-        2, byref(spi), sizeof(spi), byref(retlen))
+    ctypes.windll.ntdll.NtQuerySystemInformation(
+        2, ctypes.byref(spi), ctypes.sizeof(spi), ctypes.byref(retlen))
 
     # Return each defined field in a dict
     ret = {}

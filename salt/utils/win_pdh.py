@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Salt Util for getting system information with the Performance Data Helper (pdh).
 Counter information is gathered from current activity or log files.
 
@@ -130,7 +130,7 @@ class Counter(object):
     PERF_DISPLAY_NO_SHOW = 0x40000000  # value is not displayed
 
     def build_counter(obj, instance, instance_index, counter):
-        '''
+        r'''
         Makes a fully resolved counter path. Counter names are formatted like
         this:
 
@@ -166,7 +166,7 @@ class Counter(object):
             (None, obj, instance, None, instance_index, counter), 0)
         if win32pdh.ValidatePath(path) is 0:
             return Counter(path, obj, instance, instance_index, counter)
-        raise CommandExecutionError('Invalid counter specified: %s' % path)
+        raise CommandExecutionError('Invalid counter specified: {0}'.format(path))
 
     build_counter = staticmethod(build_counter)
 
@@ -238,7 +238,7 @@ class Counter(object):
         '''
         type = self.get_info()['type']
         type_list = []
-        for member in self.__class__.__dict__.keys():
+        for member in dir(self):
             if member.startswith("PERF_"):
                 bit = getattr(self, member)
                 if bit and bit & type:
@@ -290,7 +290,7 @@ def list_instances(obj):
 
 
 def build_counter_list(counter_list):
-    '''
+    r'''
     Create a list of Counter objects to be used in the pdh query
 
     Args:
@@ -364,7 +364,7 @@ def get_all_counters(obj, instance_list=None):
         for instance in instance_list:
             instance = '*' if instance.lower() == '_total' else instance
             counter_list.append((obj, instance, counter))
-        else:
+        else:  # pylint: disable=useless-else-on-loop
             counter_list.append((obj, None, counter))
 
     return get_counters(counter_list) if counter_list else {}
@@ -405,7 +405,7 @@ def get_counters(counter_list):
 
         for counter in counters:
             try:
-                ret.update({'%s' % counter: counter.value()})
+                ret.update({counter.path: counter.value()})
             except pywintypes.error as exc:
                 if exc.strerror == 'No data to return.':
                     # Some counters are not active and will throw an error if
