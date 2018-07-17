@@ -201,11 +201,8 @@ def cert(name,
                            ''.format(name, res['stdout'], res['stderr'])}
 
     if 'no action taken' in res['stdout']:
-        return {'result': None,
-                'comment': 'No action taken on certificate {0}'.format(cert_file),
-                'not_after': expires(name)}
-
-    if renew:
+        comment = 'Certificate {0} unchanged'.format(cert_file)
+    elif renew:
         comment = 'Certificate {0} renewed'.format(name)
     else:
         comment = 'Certificate {0} obtained'.format(name)
