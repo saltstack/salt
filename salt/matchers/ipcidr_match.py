@@ -20,7 +20,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-def ipcidr_match(self, tgt):
+def match(self, tgt):
     '''
     Matches based on IP address or CIDR notation
     '''
