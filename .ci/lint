@@ -24,13 +24,13 @@ pipeline {
             parallel {
                 stage('salt linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; tox -e pylint-salt | tee pylint-report.xml'
+                        sh 'eval "$(pyenv init -)"; tox -e pylint-salt $(git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py salt/*.py salt/**/*.py)| tee pylint-report.xml'
                         archiveArtifacts artifacts: 'pylint-report.xml'
                     }
                 }
                 stage('test linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; tox -e pylint-tests | tee pylint-report-tests.xml'
+                        sh 'eval "$(pyenv init -)"; tox -e pylint-tests $(git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" tests/*.py tests/**/*.py)| tee pylint-report-tests.xml'
                         archiveArtifacts artifacts: 'pylint-report-tests.xml'
                     }
                 }
