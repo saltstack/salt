@@ -340,21 +340,21 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         Collects master system data.
         :return:
         '''
-        def call(func):
+        def call(func, *args, **kwargs):
             '''
             Call wrapper for templates
             :param func:
             :return:
             '''
-            return self._local_call({'fun': func})
+            return self._local_call({'fun': func, 'arg': args, 'kwarg': kwargs})
 
-        def run(func):
+        def run(func, *args, **kwargs):
             '''
             Runner wrapper for templates
             :param func:
             :return:
             '''
-            return self._local_run({'fun': func})
+            return self._local_run({'fun': func, 'arg': args, 'kwarg': kwargs})
 
         scenario = salt.cli.support.get_profile(self.config['support_profile'], call, run)
         for category_name in scenario:
