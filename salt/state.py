@@ -1773,7 +1773,7 @@ class State(object):
                 # and the attempt, we are safe to pass
                 pass
         with salt.utils.files.fopen(tfile, 'wb+') as fp_:
-            fp_.write(salt.utils.msgpack.dumps(ret, _msgpack_module=msgpack))
+            fp_.write(msgpack_serialize(ret))
 
     def call_parallel(self, cdata, low):
         '''
@@ -2228,8 +2228,7 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
-                            ret = salt.utils.msgpack.loads(
-                                fp_.read(), _msgpack_module=msgpack)
+                            ret = msgpack_deserialize(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
