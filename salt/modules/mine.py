@@ -331,7 +331,8 @@ def get(tgt,
                     return {}
 
 
-                if as_dict: ret[__opts__['id']] = {}
+                if as_dict:
+                    ret[__opts__['id']] = {}
 
                 for fun in functions:
                     if data.has_key(fun):
@@ -340,7 +341,8 @@ def get(tgt,
                         else:
                             ret[__opts__['id']] = data.get(fun)
 
-                if not len(ret[__opts__['id']]): del ret[__opts__['id']]
+                if not len(ret[__opts__['id']]):
+                    del ret[__opts__['id']]
 
         return ret
     load = {

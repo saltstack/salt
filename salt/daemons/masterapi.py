@@ -619,7 +619,8 @@ class RemoteFuncs(object):
         minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
-            if load.get('as_dict'): ret[minion] = {}
+            if load.get('as_dict'):
+                ret[minion] = {}
             if isinstance(fdata, dict):
                 for fun in functions_allowed:
                     if fdata.has_key(fun):
@@ -627,7 +628,8 @@ class RemoteFuncs(object):
                             ret[minion][fun] = fdata.get(fun)
                         else:
                             ret[minion] = fdata.get(fun)
-            if not len(ret[minion]): del ret[minion]
+            if not len(ret[minion]):
+                del ret[minion]
         return ret
 
     def _mine(self, load, skip_verify=False):

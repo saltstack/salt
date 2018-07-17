@@ -1189,7 +1189,8 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
         if mdata is None:
             continue
 
-        if opts.get('as_dict'): ret[minion] = {}
+        if opts.get('as_dict'):
+            ret[minion] = {}
         if isinstance(mdata, dict):
             for fun in functions:
                 if mdata.has_key(fun):
@@ -1197,6 +1198,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
                         ret[minion][fun] = mdata.get(fun)
                     else:
                         ret[minion] = mdata.get(fun)
-        if not len(ret[minion]): del ret[minion]
+        if not len(ret[minion]):
+            del ret[minion]
 
     return ret
