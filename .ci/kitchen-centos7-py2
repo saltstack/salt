@@ -11,7 +11,7 @@ pipeline {
         RBENV_VERSION = "2.4.2"
         TEST_SUITE = "py2"
         TEST_PLATFORM = "centos-7"
-        PY_COLORS=1
+        PY_COLORS = 1
     }
     stages {
         stage('github-pending') {
