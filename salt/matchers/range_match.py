@@ -19,7 +19,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def range_match(self, tgt):
+def match(self, tgt):
     '''
     Matches based on range cluster
     '''

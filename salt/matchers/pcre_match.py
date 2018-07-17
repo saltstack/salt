@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 
-def pcre_match(self, tgt):
+def match(self, tgt):
     '''
     Returns true if the passed pcre regex matches
     '''

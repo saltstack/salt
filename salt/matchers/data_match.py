@@ -19,7 +19,7 @@ import salt.loader  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def data_match(self, tgt):
+def match(self, tgt):
     '''
     Match based on the local data store on the minion
     '''

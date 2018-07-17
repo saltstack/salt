@@ -3195,23 +3195,14 @@ class Matcher(object):
     def __init__(self, opts, functions=None):
         self.opts = opts
         self.functions = functions
-        matcher_methods = opts.get('matcher_methods',
-                                   ['glob.glob_match', 'pcre.pcre_match',
-                                    'listmatch.list_match',
-                                    'grains.grain_match', 'grains.grain_pcre_match',
-                                    'data.data_match',
-                                    'pillar.pillar_match', 'pillar.pillar_pcre_match',
-                                    'pillar.pillar_exact_match',
-                                    'ipcidr.ipcidr_match', 'rangematch.range_match',
-                                    'compound.compound_match',
-                                    'nodegroup.nodegroup_match'])
-        Matcher._get_matchers_from_loader(opts, matcher_methods)
+        Matcher._get_matchers_from_loader(opts)
 
     @classmethod
-    def _get_matchers_from_loader(cls, opts, matcher_methods):
+    def _get_matchers_from_loader(cls, opts):
         matcher_functions = salt.loader.matchers(opts)
-        for meth in matcher_methods:
-            function_name = meth.split('.')[1]
+        for meth in matcher_functions:
+            function_parts = meth.split('.')
+            function_name = function_parts[0]
             if not getattr(cls, function_name, False):
                 setattr(cls, function_name, matcher_functions[meth])
 
