@@ -7,7 +7,9 @@ import yaml
 import os
 import salt.exceptions
 import jinja2
+import logging
 
+log = logging.getLogger(__name__)
 
 def _render_profile(path, caller):
     '''
@@ -36,8 +38,11 @@ def get_profile(profile, caller):
             profile_path = profile
         if os.path.exists(profile_path):
             try:
-                data.update(yaml.load(_render_profile(profile_path, caller)))
+                rendered_template = _render_profile(profile_path, caller, runner)
+                log.trace(rendered_template)
+                data.update(yaml.load(rendered_template))
             except Exception as ex:
+                log.debug(ex, exc_info=True)
                 raise salt.exceptions.SaltException('Rendering profile failed: {}'.format(ex))
         else:
             raise salt.exceptions.SaltException('Profile "{}" is not found.'.format(profile))

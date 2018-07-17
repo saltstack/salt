@@ -334,6 +334,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             if self.config['log_level'] not in ('quiet', ):
                 self.setup_logfile_logger()
                 salt.utils.verify.verify_log(self.config)
+                salt.cli.support.log = log  # Pass update logger so trace is available
 
             if self.config['support_profile_list']:
                 self.out.put('List of available profiles:')
