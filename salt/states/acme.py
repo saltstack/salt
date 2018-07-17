@@ -49,6 +49,7 @@ def cert(name,
          server=None,
          owner='root',
          group='root',
+         mode='0640',
          certname=None,
          preferred_challenges=None,
          tls_sni_01_port=None,
@@ -66,8 +67,9 @@ def cert(name,
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
-    :param owner: owner of private key
-    :param group: group of private key
+    :param owner: owner of the private key file
+    :param group: group of the private key file
+    :param mode: mode of the private key file
     :param certname: Name of the certificate to save
     :param preferred_challenges: A sorted, comma delimited list of the preferred
                                  challenge to use during authorization with the
@@ -123,6 +125,7 @@ def cert(name,
         server=server,
         owner=owner,
         group=group,
+        mode=mode,
         preferred_challenges=preferred_challenges,
         tls_sni_01_port=tls_sni_01_port,
         tls_sni_01_address=tls_sni_01_address,
