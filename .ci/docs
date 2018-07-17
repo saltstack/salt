@@ -1,8 +1,8 @@
 pipeline {
     agent { label 'docs' }
     options {
-    timestamps()
-    ansiColor('xterm')
+        timestamps()
+        ansiColor('xterm')
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"
