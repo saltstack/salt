@@ -11,17 +11,18 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def _render_profile(path, caller):
+
+def _render_profile(path, caller, runner):
     '''
     Render profile as Jinja2.
     :param path:
     :return:
     '''
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(path)), trim_blocks=False)
-    return env.get_template(os.path.basename(path)).render(salt=caller).strip()
+    return env.get_template(os.path.basename(path)).render(salt=caller, runners=runner).strip()
 
 
-def get_profile(profile, caller):
+def get_profile(profile, caller, runner):
     '''
     Get profile.
 

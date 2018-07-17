@@ -23,6 +23,8 @@ sys.modules['pkg_resources'] = None
 import salt.utils.stringutils
 import salt.utils.parsers
 import salt.utils.verify
+import salt.utils.platform
+import salt.utils.process
 import salt.exceptions
 import salt.defaults.exitcodes
 import salt.cli.caller
@@ -30,6 +32,7 @@ import salt.cli.support
 import salt.cli.support.console
 import salt.cli.support.intfunc
 import salt.output.table_out
+import salt.runner
 
 salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)
@@ -159,16 +162,60 @@ class SupportDataCollector(object):
         self.__current_section.append({title: path})
 
 
+class LocalRunner(salt.runner.Runner):
+    '''
+    Runner class that changes its default behaviour.
+    '''
+
+    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+        '''
+        Same as original _proc_function in AsyncClientMixin,
+        except it calls "low" without firing a print event.
+        '''
+        if daemonize and not salt.utils.platform.is_windows():
+            salt.log.setup.shutdown_multiprocessing_logging()
+            salt.utils.process.daemonize()
+            salt.log.setup.setup_multiprocessing_logging()
+
+        low['__jid__'] = jid
+        low['__user__'] = user
+        low['__tag__'] = tag
+
+        return self.low(fun, low, print_event=False, full_return=False)
+
+
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
     '''
     Class to run Salt Support subsystem.
     '''
+    RUNNER_TYPE = 'run'
+    CALL_TYPE = 'call'
+
+    def _get_runner(self, conf):
+        '''
+        Get & setup runner.
+
+        :param conf:
+        :return:
+        '''
+        conf = copy.deepcopy(conf)
+        if not getattr(self, '_runner', None):
+            self._runner = LocalRunner(conf)
+        else:
+            self._runner.opts = conf
+        return self._runner
+
     def _get_caller(self, conf):
+        '''
+        Get & setup caller from the factory.
+
+        :param conf:
+        :return:
+        '''
         if not getattr(self, '_caller', None):
             self._caller = salt.cli.caller.Caller.factory(conf)
         else:
-            self._caller.opts = conf
-
+            self._caller.opts = copy.deepcopy(conf)
         return self._caller
 
     def _local_call(self, call_conf):
@@ -180,10 +227,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         conf['file_client'] = 'local'
         conf['fun'] = ''
         conf['arg'] = []
-        conf['kwargs'] = {}
+        conf['kwarg'] = {}
         conf['cache_jobs'] = False
         conf['print_metadata'] = False
         conf.update(call_conf)
+        conf['fun'] = conf['fun'].split(':')[-1]  # Discard typing prefix
 
         try:
             ret = self._get_caller(conf).call()
@@ -192,7 +240,37 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.error(ret)
         except Exception as ex:
             ret = 'Unhandled exception occurred: {}'.format(ex)
+            log.debug(ex, exc_info=True)
             self.out.error(ret)
+
+        return ret
+
+    def _local_run(self, run_conf):
+        '''
+        Execute local runner
+
+        :param run_conf:
+        :return:
+        '''
+        conf = copy.deepcopy(self.config)
+
+        conf['file_client'] = 'local'
+        conf['fun'] = ''
+        conf['arg'] = []
+        conf['kwarg'] = {}
+        conf['cache_jobs'] = False
+        conf['print_metadata'] = False
+        conf.update(run_conf)
+        conf['fun'] = conf['fun'].split(':')[-1]
+
+        try:
+            ret = self._get_runner(conf).run()
+        except SystemExit:
+            ret = 'Runner is not available at this moment'
+            self.out.error(ret)
+        except Exception as ex:
+            ret = 'Unhandled exception occurred: {}'.format(ex)
+            log.debug(ex, exc_info=True)
 
         return ret
 
@@ -263,21 +341,52 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         :return:
         '''
         def call(func):
-            conf = {'fun': func}
-            return self._local_call(conf)
+            '''
+            Call wrapper for templates
+            :param func:
+            :return:
+            '''
+            return self._local_call({'fun': func})
 
-        scenario = salt.cli.support.get_profile(self.config['support_profile'], call)
+        def run(func):
+            '''
+            Runner wrapper for templates
+            :param func:
+            :return:
+            '''
+            return self._local_run({'fun': func})
+
+        scenario = salt.cli.support.get_profile(self.config['support_profile'], call, run)
         for category_name in scenario:
             self.out.put(category_name)
             self.collector.add(category_name)
             for action in scenario[category_name]:
                 info, output, conf = self._get_action(action)
-                if not conf.get('salt.int.intfunc'):
-                    self.out.put('Collecting {}'.format(info.lower()), indent=2)
-                    self.collector.write(info, self._local_call(conf), output=output)
+                action_type = self._get_action_type(action)  # run:<something> for runners
+                if action_type == self.RUNNER_TYPE:
+                    self.out.put('Running {}'.format(info.lower()), indent=2)
+                    self.collector.write(info, self._local_run(conf), output=output)
+                elif action_type == self.CALL_TYPE:
+                    if not conf.get('salt.int.intfunc'):
+                        self.out.put('Collecting {}'.format(info.lower()), indent=2)
+                        self.collector.write(info, self._local_call(conf), output=output)
+                    else:
+                        self.collector.discard_current()
+                        self._internal_function_call(conf)
                 else:
-                    self.collector.discard_current()
-                    self._internal_function_call(conf)
+                    self.out.error('Unknown action type "{}" for action: {}'.format(action_type, action))
+
+    def _get_action_type(self, action):
+        '''
+        Get action type.
+        :param action:
+        :return:
+        '''
+        action_name = next(iter(action or {'': None}))
+        if ':' not in action_name:
+            action_name = '{}:{}'.format(self.CALL_TYPE, action_name)
+
+        return action_name.split(':')[0] or None
 
     def collect_targets_data(self):
         '''
