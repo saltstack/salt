@@ -1195,7 +1195,7 @@ option to ``False`` to keep Salt from updating the mine with this information.
 
     docker.update_mine: False
 
-.. conf_master:: optimization_order
+.. conf_minion:: optimization_order
 
 ``optimization_order``
 ----------------------
