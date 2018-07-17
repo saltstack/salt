@@ -1,5 +1,9 @@
 pipeline {
     agent { label 'kitchen-slave' }
+    options {
+    timestamps()
+    ansiColor('xterm')
+    }
     environment {
         SALT_KITCHEN_PLATFORMS = "/var/jenkins/workspace/platforms.yml"
         SALT_KITCHEN_DRIVER = "/var/jenkins/workspace/driver.yml"
