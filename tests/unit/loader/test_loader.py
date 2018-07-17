@@ -981,7 +981,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             compileall.compile_file(self.module_file, quiet=1, optimize=1)
             compileall.compile_file(self.module_file, quiet=1, optimize=2)
         else:
-            compileall.compile_file(self.module_file)
+            compileall.compile_file(self.module_file, quiet=1)
 
         # Clean up the original file so that we can be assured we're only
         # loading the byte-compiled files(s).
