@@ -136,22 +136,18 @@ If Defined ProgramFiles(x86) (
 If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
 :: Set the location of the vcredist to download
-If %Python%==3 (
-    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2015.exe"
-    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2015.exe"
-
-) Else (
+If %Python%==2 (
     Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
     Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-)
 
-:: Check for 64 bit by finding the Program Files (x86) directory
-If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
-) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
+    :: Check for 64 bit by finding the Program Files (x86) directory
+    If Defined ProgramFiles(x86) (
+        powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
+    ) Else (
+        powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
+    )
+    @echo.
 )
-@echo.
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
