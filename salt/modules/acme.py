@@ -206,19 +206,11 @@ def cert(name,
         comment = 'Certificate {0} renewed'.format(name)
     else:
         comment = 'Certificate {0} obtained'.format(name)
-    ret = {'comment': comment, 'not_after': expires(name)}
 
-    res = __salt__['file.check_perms'](_cert_file(name, 'privkey'), {}, owner, group, '0640', follow_symlinks=True)
-
-    if res is None:
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed.'
-    elif not res[0].get('result', False):
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed with \n{0}'.format(res[0]['comment'])
-    else:
-        ret['result'] = True
-        ret['comment'] += '.'
+    ret = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
+                                       {'comment': comment, 'not_after': expires(name)},
+                                       owner, group, '0640',
+                                       follow_symlinks=True)
 
     return ret
 
