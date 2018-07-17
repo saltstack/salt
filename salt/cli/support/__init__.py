@@ -53,6 +53,7 @@ def get_profiles(config):
     '''
     profiles = []
     for profile_name in os.listdir(os.path.join(os.path.dirname(__file__), 'profiles')):
-        profiles.append(profile_name.split('.')[0])
+        if profile_name.endswith('.yml'):
+            profiles.append(profile_name.split('.')[0])
 
     return sorted(profiles)
