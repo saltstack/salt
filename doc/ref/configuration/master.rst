@@ -1622,6 +1622,9 @@ Default: ``[0, 1, 2]``
 In cases where Salt is distributed without .py files, this option determines
 the priority of optimization level(s) Salt's module loader should prefer.
 
+.. note::
+    This option is only supported on Python 3.5+.
+
 .. code-block:: yaml
 
     optimization_order:
