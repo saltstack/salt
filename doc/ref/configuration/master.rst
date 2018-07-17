@@ -1612,6 +1612,22 @@ the master will drop the request and the minion's key will remain accepted.
 
     allow_minion_key_revoke: False
 
+.. conf_master:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Master Large Scale Tuning Settings
 ==================================
