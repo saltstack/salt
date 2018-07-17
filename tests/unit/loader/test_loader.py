@@ -33,7 +33,15 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
 
-from salt.loader import LazyLoader, _module_dirs, grains, utils, proxy, minion_mods
+from salt.loader import (
+    LazyLoader,
+    USE_IMPORTLIB,
+    _module_dirs,
+    grains,
+    utils,
+    proxy,
+    minion_mods
+)
 
 log = logging.getLogger(__name__)
 
@@ -925,7 +933,6 @@ class LazyLoaderOptimizationOrderTest(TestCase):
     Test the optimization order priority in the loader (PY3)
     '''
     module_name = 'lazyloadertest'
-    module_fullname = 'salt.loaded.ext.module.lazyloadertest'
     module_content = textwrap.dedent('''\
         # -*- coding: utf-8 -*-
         from __future__ import absolute_import
@@ -968,20 +975,23 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         else:
             return 'lazyloadertest.pyc'
 
-    def _test_optimization_level(self, order):
-        # Write the file
+    def _write_module_file(self):
         with salt.utils.fopen(self.module_file, 'w') as fh:
             fh.write(self.module_content)
             fh.flush()
             os.fsync(fh.fileno())
 
-        # Byte-compile it
-        if six.PY3:
+    def _byte_compile(self):
+        if USE_IMPORTLIB:
             compileall.compile_file(self.module_file, quiet=1, optimize=0)
             compileall.compile_file(self.module_file, quiet=1, optimize=1)
             compileall.compile_file(self.module_file, quiet=1, optimize=2)
         else:
             compileall.compile_file(self.module_file, quiet=1)
+
+    def _test_optimization_order(self, order):
+        self._write_module_file()
+        self._byte_compile()
 
         # Clean up the original file so that we can be assured we're only
         # loading the byte-compiled files(s).
@@ -992,8 +1002,8 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
 
-        if six.PY2:
-            # We are only testing multiple optimization levels on Python 3.
+        if not USE_IMPORTLIB:
+            # We are only testing multiple optimization levels on Python 3.5+
             return
 
         # Remove the file and make a new loader. We should now load the
@@ -1014,10 +1024,28 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         basename = os.path.basename(filename)
         assert basename == self._expected(order[2]), basename
 
-    def test_optimization_level(self):
-        self._test_optimization_level([0, 1, 2])
-        self._test_optimization_level([0, 2, 1])
-        self._test_optimization_level([1, 2, 0])
-        self._test_optimization_level([1, 0, 2])
-        self._test_optimization_level([2, 0, 1])
-        self._test_optimization_level([2, 1, 0])
+    def test_optimization_order(self):
+        '''
+        Test the optimization_order config param
+        '''
+        self._test_optimization_order([0, 1, 2])
+        self._test_optimization_order([0, 2, 1])
+        if USE_IMPORTLIB:
+            # optimization_order only supported on Python 3.5+, earlier
+            # releases only support unoptimized .pyc files.
+            self._test_optimization_order([1, 2, 0])
+            self._test_optimization_order([1, 0, 2])
+            self._test_optimization_order([2, 0, 1])
+            self._test_optimization_order([2, 1, 0])
+
+    def test_load_source_file(self):
+        '''
+        Make sure that .py files are preferred over .pyc files
+        '''
+        self._write_module_file()
+        self._byte_compile()
+        self.loader = self._get_loader()
+        filename = self._get_module_filename()
+        basename = os.path.basename(filename)
+        expected = 'lazyloadertest.py' if six.PY3 else 'lazyloadertest.pyc'
+        assert basename == expected, basename
