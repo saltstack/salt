@@ -283,6 +283,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -296,6 +297,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -372,6 +374,7 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule
@@ -426,6 +429,7 @@ execution modules
     system
     system_profiler
     systemd
+    template
     telegram
     telemetry
     temp

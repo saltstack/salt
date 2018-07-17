@@ -15,6 +15,7 @@
 salt/**/*boto*                      @saltstack/team-boto
 
 # Team Core
+rfcs/*                              @saltstack/team-core
 salt/auth/*                         @saltstack/team-core
 salt/cache/*                        @saltstack/team-core
 salt/cli/*                          @saltstack/team-core
@@ -48,6 +49,7 @@ salt/spm/*                          @saltstack/team-spm
 # Team SSH
 salt/cli/ssh.py                     @saltstack/team-ssh
 salt/client/ssh/*                   @saltstack/team-ssh
+salt/roster/*                       @saltstack/team-ssh
 salt/runners/ssh.py                 @saltstack/team-ssh
 salt/**/thin.py                     @saltstack/team-ssh
 

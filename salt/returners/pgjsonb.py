@@ -189,6 +189,8 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pgjsonb'
 
+PG_SAVE_LOAD_SQL = '''INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)'''
+
 
 def __virtual__():
     if not HAS_PG:
@@ -257,6 +259,14 @@ def _get_serv(ret=None, commit=False):
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
+    if conn.server_version is not None and conn.server_version >= 90500:
+        global PG_SAVE_LOAD_SQL
+        PG_SAVE_LOAD_SQL = '''INSERT INTO jids
+                              (jid, load)
+                              VALUES (%(jid)s, %(load)s)
+                              ON CONFLICT (jid) DO UPDATE
+                              SET load=%(load)s'''
+
     cursor = conn.cursor()
 
     try:
@@ -317,13 +327,9 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     '''
     with _get_serv(commit=True) as cur:
-
-        sql = '''INSERT INTO jids
-               (jid, load)
-                VALUES (%s, %s)'''
-
         try:
-            cur.execute(sql, (jid, psycopg2.extras.Json(load)))
+            cur.execute(PG_SAVE_LOAD_SQL,
+                        {'jid': jid, 'load': psycopg2.extras.Json(load)})
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try:except: we get tons of duplicate entry errors

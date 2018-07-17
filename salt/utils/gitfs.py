@@ -476,6 +476,10 @@ class GitProvider(object):
         use_tags = 'tag' in self.ref_types
 
         ret = set()
+        if salt.utils.stringutils.is_hex(self.base):
+            # gitfs_base or per-saltenv 'base' may point to a commit ID, which
+            # would not show up in the refs. Make sure we include it.
+            ret.add('base')
         for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]

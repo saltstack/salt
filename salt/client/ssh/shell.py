@@ -374,6 +374,9 @@ class Shell(object):
         Execute a shell command via VT. This is blocking and assumes that ssh
         is being run
         '''
+        if not cmd:
+            return '', 'No command or passphrase', 245
+
         term = salt.utils.vt.Terminal(
                 cmd,
                 shell=True,

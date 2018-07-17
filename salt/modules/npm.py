@@ -180,7 +180,7 @@ def install(pkg=None,
 
 def _extract_json(npm_output):
     lines = npm_output.splitlines()
-    log.error(lines)
+    log.debug(lines)
 
     # Strip all lines until JSON output starts
     while lines and not lines[0].startswith('{') and not lines[0].startswith('['):

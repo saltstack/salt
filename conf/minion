@@ -21,6 +21,10 @@
 #proxy_username:
 #proxy_password:
 
+# List of hosts to bypass HTTP proxy. This key does nothing unless proxy_host etc is
+# configured, it does not support any kind of wildcards.
+#no_proxy: []
+
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
 # set to True, the order will be randomized instead. This can be helpful in distributing

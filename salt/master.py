@@ -366,13 +366,11 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
         )
 
     def __getstate__(self):
         return {'opts': self.opts,
                 'log_queue': self.log_queue,
-                'log_queue_level': self.log_queue_level
         }
 
     def fill_buckets(self):
@@ -597,11 +595,19 @@ class Master(SMaster):
                 pass
 
         if self.opts.get('git_pillar_verify_config', True):
-            git_pillars = [
-                x for x in self.opts.get('ext_pillar', [])
-                if 'git' in x
-                and not isinstance(x['git'], six.string_types)
-            ]
+            try:
+                git_pillars = [
+                    x for x in self.opts.get('ext_pillar', [])
+                    if 'git' in x
+                    and not isinstance(x['git'], six.string_types)
+                ]
+            except TypeError:
+                git_pillars = []
+                critical_errors.append(
+                    'Invalid ext_pillar configuration. It is likely that the '
+                    'external pillar type was not specified for one or more '
+                    'external pillars.'
+                )
             if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
@@ -2079,6 +2085,8 @@ class ClearFuncs(object):
 
             if not authorized:
                 # Authorization error occurred. Do not continue.
+                if auth_type == 'eauth' and not auth_list and 'username' in extra and 'eauth' in extra:
+                    log.debug('Auth configuration for eauth "%s" and user "%s" is empty', extra['eauth'], extra['username'])
                 log.warning(err_msg)
                 return {'error': {'name': 'AuthorizationError',
                                   'message': 'Authorization error occurred.'}}

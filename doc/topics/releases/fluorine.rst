@@ -4,6 +4,82 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+Non-Backward-Compatible Change to YAML Renderer
+===============================================
+
+In earlier releases, this was considered valid usage in Python 2, assuming that
+``data`` was a list or dictionary containing keys/values which are ``unicode``
+types:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data }}
+
+One common use case for this is when using one of Salt's :jinja_ref:`custom
+Jinja filters <custom-jinja-filters>` which return lists or dictionaries, such
+as the :jinja_ref:`ipv4` filter.
+
+In Python 2, Jinja will render the ``unicode`` string types within the
+list/dictionary with the "u" prefix (e.g. ``{u'foo': u'bar'}``). While not
+valid YAML, earlier releases would successfully load these values.
+
+As of this release, the above SLS would result in an error message. To allow
+for a data structure to be dumped directly into your SLS file, use the `tojson
+Jinja filter`_:
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data|tojson }}
+
+.. note::
+    This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
+    added a ``tojson`` filter which will be used if this filter is not already
+    present, making it available on platforms like RHEL 7 and Ubuntu 14.04
+    which provide older versions of Jinja.
+
+.. important::
+    The :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list` filters
+    do not actually dump the results to JSON. Since ``tojson`` accomplishes
+    what those filters were designed to do, they are now deprecated and will be
+    removed in the Neon release. The ``tojson`` filter should be used in all
+    cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
+    would have been used.
+
+.. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+
+Ansible Playbook State and Execution Modules
+============================================
+
+Along with the including the :py:mod:`ansible modules
+<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+added in Fluorine with the :py:func:`playbooks function
+<salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
+playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
+on a targeted host to run ansible playbooks, or used in an
+orchestration state runner.
+
+.. code-block:: yaml
+
+    install nginx:
+      ansible.playbooks:
+        - name: install.yml
+        - git_repo: git://github.com/gtmanfred/playbook.git
+        - git_kwargs:
+            rev: master
+
+The playbooks modules also includes the ability to specify a git repo to clone
+and use, or a specific directory can to used when running the playbook.
+
 New Docker Proxy Minion
 =======================
 
@@ -22,7 +98,6 @@ module.
       proxytype: docker
       name: keen_proskuriakova
 
-
 Grains Dictionary Passed into Custom Grains
 ===========================================
 
@@ -32,6 +107,78 @@ in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
+Configurable Module Environment
+===============================
+
+Salt modules (states, execution modules, returners, etc.) now can have custom
+environment variables applied when running shell commands. This can be
+configured by setting a ``system-environment`` key either in Grains or Pillar.
+The syntax is as follows:
+
+.. code-block:: yaml
+
+    system-environment:
+      <type>
+        <module>:
+          # Namespace for all functions in the module
+          _:
+            <key>: <value>
+
+          # Namespace only for particular function in the module
+          <function>:
+            <key>: <value>
+
+- ``<type>`` would be the type of module (i.e. ``states``, ``modules``, etc.).
+
+- ``<module>`` would be the module's name.
+
+  .. note::
+      The module name can be either the virtual name (e.g. ``pkg``), or the
+      physical name (e.g. ``yumpkg``).
+
+- ``<function>`` would be the function name within that module. To apply
+  environment variables to *all* functions in a given module, use an underscore
+  (i.e. ``_``) as the function name. For example, to set the same environment
+  variable for all package management functions, the following could be used:
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          pkg:
+            _:
+              SOMETHING: for_all
+
+  To set an environment variable in ``pkg.install`` only:
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          pkg:
+            install:
+              LC_ALL: en_GB.UTF-8
+
+  To set the same variable but only for SUSE minions (which use zypper for
+  package management):
+
+  .. code-block:: yaml
+
+      system-environment:
+        modules:
+          zypper:
+            install:
+              LC_ALL: en_GB.UTF-8
+
+.. note::
+    This is not supported throughout Salt; the module must explicitly support
+    this feature (though this may change in the future). As of this release,
+    the only modules which support this are the following ``pkg`` virtual
+    modules:
+
+    - :py:mod:`aptpkg <salt.modules.aptpkg>`
+    - :py:mod:`yumpkg <salt.modules.yumpkg>`
+    - :py:mod:`zypper <salt.modules.zypper>`
 
 "Virtual Package" Support Dropped for APT
 =========================================
@@ -315,6 +462,41 @@ several new features:
 In addition, it is no longer necessary to specify what the hash of the patched
 file should be.
 
+New no_proxy Minion Configuration
+=================================
+
+Pass a list of hosts using the ``no_proxy`` minion config option to bypass an HTTP
+proxy.
+
+.. note::
+    This key does nothing unless proxy_host is configured and it does not support
+    any kind of wildcards.
+
+.. code-block:: yaml
+
+    no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+Changes to :py:mod:`slack <salt.engines.slack>` Engine
+======================================================
+
+The output returned to Slack from functions run using this engine is now
+formatted using that function's proper outputter. Earlier releases would format
+the output in YAML for all functions except for when states were run.
+
+Enhancements to :py:mod:`wtmp <salt.beacons.wtmp>` Beacon
+=========================================================
+
+A new key, ``action``, has been added to the events fired by this beacon, which
+will contain either the string ``login`` or ``logout``. This will simplify
+reactors which use this beacon's data, as it will no longer be necessary to
+check the integer value of the ``type`` key to know whether the event is a
+login or logout.
+
+Additionally, in the event that your platform has a non-standard ``utmp.h``,
+you can now configure which type numbers indicate a login and logout.
+
+See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
+information.
 
 Deprecations
 ============
@@ -581,6 +763,34 @@ in the orchestration file.
 The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
+
+:py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
+---------------------------------------------------------------------------------------
+
+The ``password`` parameter has been changed to ``passwd`` to remove the
+name collusion with the influxdb client configuration (``client_kwargs``)
+allowing management of users when authentication is enabled on the influxdb
+instance
+
+Old behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - password: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
+New behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - passwd: exampleuserpassword
+      - user: admin
+      - password: adminpassword
 
 LDAP External Authentication
 ============================

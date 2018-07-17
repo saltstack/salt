@@ -54,6 +54,7 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.environment
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -136,16 +137,34 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 
 def _yum():
     '''
-    return yum or dnf depending on version
+    Determine package manager name (yum or dnf),
+    depending on the system version.
     '''
     contextkey = 'yum_bin'
     if contextkey not in __context__:
-        if 'fedora' in __grains__['os'].lower() \
-                and int(__grains__['osrelease']) >= 22:
+        if ('fedora' in __grains__['os'].lower()
+           and int(__grains__['osrelease']) >= 22):
             __context__[contextkey] = 'dnf'
         else:
             __context__[contextkey] = 'yum'
     return __context__[contextkey]
+
+
+def _call_yum(args, **kwargs):
+    '''
+    Call yum/dnf.
+    '''
+    params = {'output_loglevel': 'trace',
+              'python_shell': False,
+              'env': salt.utils.environment.get_module_environment(globals())}
+    params.update(kwargs)
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.append(_yum())
+    cmd.extend(args)
+
+    return __salt__['cmd.run_all'](cmd, **params)
 
 
 def _yum_pkginfo(output):
@@ -458,14 +477,11 @@ def latest_version(*names, **kwargs):
     cur_pkgs = list_pkgs(versions_as_list=True)
 
     # Get available versions for specified package(s)
-    cmd = [_yum(), '--quiet']
+    cmd = ['--quiet']
     cmd.extend(options)
     cmd.extend(['list', 'available'])
     cmd.extend(names)
-    out = __salt__['cmd.run_all'](cmd,
-                                  output_loglevel='trace',
-                                  ignore_retcode=True,
-                                  python_shell=False)
+    out = _call_yum(cmd, ignore_retcode=True)
     if out['retcode'] != 0:
         if out['stderr']:
             # Check first if this is just a matter of the packages being
@@ -875,50 +891,35 @@ def list_repo_pkgs(*args, **kwargs):
             )
     # Really old version of yum; does not even have --showduplicates option
     if yum_version and yum_version < _LooseVersion('3.2.13'):
-        cmd_prefix = ['yum', '--quiet']
+        cmd_prefix = ['--quiet']
         if cacheonly:
             cmd_prefix.append('-C')
         cmd_prefix.append('list')
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
-            out = __salt__['cmd.run_all'](
-                cmd_prefix + [pkg_src],
-                output_loglevel='trace',
-                ignore_retcode=True,
-                python_shell=False
-            )
+            out = _call_yum(cmd_prefix + [pkg_src], ignore_retcode=True)
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
     # The --showduplicates option is added in 3.2.13, but the
     # repository-packages subcommand is only in 3.4.3 and newer
     elif yum_version and yum_version < _LooseVersion('3.4.3'):
-        cmd_prefix = ['yum', '--quiet', '--showduplicates']
+        cmd_prefix = ['--quiet', '--showduplicates']
         if cacheonly:
             cmd_prefix.append('-C')
         cmd_prefix.append('list')
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
-            out = __salt__['cmd.run_all'](
-                cmd_prefix + [pkg_src],
-                output_loglevel='trace',
-                ignore_retcode=True,
-                python_shell=False
-            )
+            out = _call_yum(cmd_prefix + [pkg_src], ignore_retcode=True)
             if out['retcode'] == 0:
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
-            cmd = [_yum(), '--quiet', '--showduplicates',
-                   'repository-packages', repo, 'list']
+            cmd = ['--quiet', '--showduplicates', 'repository-packages', repo, 'list']
             if cacheonly:
                 cmd.append('-C')
             # Can't concatenate because args is a tuple, using list.extend()
             cmd.extend(args)
-
-            out = __salt__['cmd.run_all'](cmd,
-                                          output_loglevel='trace',
-                                          ignore_retcode=True,
-                                          python_shell=False)
+            out = _call_yum(cmd, ignore_retcode=True)
             if out['retcode'] != 0 and 'Error:' in out['stdout']:
                 continue
             _parse_output(out['stdout'])
@@ -969,13 +970,10 @@ def list_upgrades(refresh=True, **kwargs):
     if salt.utils.data.is_true(refresh):
         refresh_db(check_update=False, **kwargs)
 
-    cmd = [_yum(), '--quiet']
+    cmd = ['--quiet']
     cmd.extend(options)
     cmd.extend(['list', 'upgrades' if _yum() == 'dnf' else 'updates'])
-    out = __salt__['cmd.run_all'](cmd,
-                                  output_loglevel='trace',
-                                  ignore_retcode=True,
-                                  python_shell=False)
+    out = _call_yum(cmd, ignore_retcode=True)
     if out['retcode'] != 0 and 'Error:' in out:
         return {}
 
@@ -1100,30 +1098,25 @@ def refresh_db(**kwargs):
         1: False,
     }
 
+    ret = True
     check_update_ = kwargs.pop('check_update', True)
-
     options = _get_options(**kwargs)
 
-    clean_cmd = [_yum(), '--quiet', '--assumeyes', 'clean', 'expire-cache']
-    update_cmd = [_yum(), '--quiet', '--assumeyes', 'check-update']
-
-    if __grains__.get('os_family') == 'RedHat' \
-            and __grains__.get('osmajorrelease') == 7:
-        # This feature is disabled because it is not used by Salt and adds a
-        # lot of extra time to the command with large repos like EPEL
-        update_cmd.append('--setopt=autocheck_running_kernel=false')
-
+    clean_cmd = ['--quiet', '--assumeyes', 'clean', 'expire-cache']
     clean_cmd.extend(options)
-    update_cmd.extend(options)
+    _call_yum(clean_cmd, ignore_retcode=True)
 
-    __salt__['cmd.run'](clean_cmd, python_shell=False)
     if check_update_:
-        result = __salt__['cmd.retcode'](update_cmd,
-                                         output_loglevel='trace',
-                                         ignore_retcode=True,
-                                         python_shell=False)
-        return retcodes.get(result, False)
-    return True
+        update_cmd = ['--quiet', '--assumeyes', 'check-update']
+        if (__grains__.get('os_family') == 'RedHat'
+           and __grains__.get('osmajorrelease') == 7):
+            # This feature is disabled because it is not used by Salt and adds a
+            # lot of extra time to the command with large repos like EPEL
+            update_cmd.append('--setopt=autocheck_running_kernel=false')
+        update_cmd.extend(options)
+        ret = retcodes.get(_call_yum(update_cmd, ignore_retcode=True)['retcode'], False)
+
+    return ret
 
 
 def clean_metadata(**kwargs):
@@ -1658,62 +1651,35 @@ def install(name=None,
         if targets:
             if pkg_type == 'advisory':
                 targets = ["--advisory={0}".format(t) for t in targets]
-            cmd = []
-            if salt.utils.systemd.has_scope(__context__) \
-                and __salt__['config.get']('systemd.scope', True):
-                cmd.extend(['systemd-run', '--scope'])
-            cmd.extend([_yum(), '-y'])
+            cmd = ['-y']
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
             cmd.append('install' if pkg_type != 'advisory' else 'update')
             cmd.extend(targets)
-            out = __salt__['cmd.run_all'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=False,
-                redirect_stderr=True
-            )
+            out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
     targets = []
     with _temporarily_unhold(to_downgrade, targets):
         if targets:
-            cmd = []
-            if salt.utils.systemd.has_scope(__context__) \
-                and __salt__['config.get']('systemd.scope', True):
-                cmd.extend(['systemd-run', '--scope'])
-            cmd.extend([_yum(), '-y'])
+            cmd = ['-y']
             _add_common_args(cmd)
             cmd.append('downgrade')
             cmd.extend(targets)
-            out = __salt__['cmd.run_all'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=False,
-                redirect_stderr=True
-            )
+            out = _call_yum(cmd)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
     targets = []
     with _temporarily_unhold(to_reinstall, targets):
         if targets:
-            cmd = []
-            if salt.utils.systemd.has_scope(__context__) \
-                and __salt__['config.get']('systemd.scope', True):
-                cmd.extend(['systemd-run', '--scope'])
-            cmd.extend([_yum(), '-y'])
+            cmd = ['-y']
             _add_common_args(cmd)
             cmd.append('reinstall')
             cmd.extend(targets)
-            out = __salt__['cmd.run_all'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=False,
-                redirect_stderr=True
-            )
+            out = _call_yum(cmd)
             if out['retcode'] != 0:
                 errors.append(out['stdout'])
 
@@ -1920,11 +1886,7 @@ def upgrade(name=None,
             # dictionary's keys.
             targets.extend(pkg_params)
 
-    cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend([_yum(), '--quiet', '-y'])
+    cmd = ['--quiet', '-y']
     cmd.extend(options)
     if skip_verify:
         cmd.append('--nogpgcheck')
@@ -1940,10 +1902,7 @@ def upgrade(name=None,
             # for yum we have to use update instead of upgrade
             cmd.append('update' if not minimal else 'update-minimal')
     cmd.extend(targets)
-
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
+    result = _call_yum(cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
@@ -2048,18 +2007,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
 
-    cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend([_yum(), '-y', 'remove'] + targets)
-
-    out = __salt__['cmd.run_all'](
-        [_yum(), '-y', 'remove'] + targets,
-        output_loglevel='trace',
-        python_shell=False
-    )
-
+    out = _call_yum(['-y', 'remove'] + targets)
     if out['retcode'] != 0 and out['stderr']:
         errors = [out['stderr']]
     else:
@@ -2192,11 +2140,7 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
                 ret[target]['comment'] = ('Package {0} is set to be held.'
                                           .format(target))
             else:
-                out = __salt__['cmd.run_all'](
-                    [_yum(), 'versionlock', target],
-                    python_shell=False
-                )
-
+                out = _call_yum(['versionlock', target])
                 if out['retcode'] == 0:
                     ret[target].update(result=True)
                     ret[target]['comment'] = ('Package {0} is now being held.'
@@ -2301,11 +2245,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 ret[target]['comment'] = ('Package {0} is set to be unheld.'
                                           .format(target))
             else:
-                out = __salt__['cmd.run_all'](
-                    [_yum(), 'versionlock', 'delete'] + search_locks,
-                    python_shell=False
-                )
-
+                out = _call_yum(['versionlock', 'delete'] + search_locks)
                 if out['retcode'] == 0:
                     ret[target].update(result=True)
                     ret[target]['comment'] = ('Package {0} is no longer held.'

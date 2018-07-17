@@ -148,14 +148,18 @@ def _generate_minion_id():
                 addr=hosts.first() or 'localhost (N/A)', message=socket.gaierror)
             )
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
-    for f_name in ['/etc/hostname', '/etc/nodename', '/etc/hosts',
-                   r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))]:
-        if not os.path.exists(f_name):
-            continue
-        with salt.utils.files.fopen(f_name) as f_hdl:
-            for hst in (line.strip().split('#')[0].strip().split() or None for line in f_hdl.read().split(os.linesep)):
-                if hst and (hst[0][:4] in ['127.', '::1'] or len(hst) == 1):
-                    hosts.extend(hst)
+    for f_name in ('/etc/hostname', '/etc/nodename', '/etc/hosts',
+                   r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))):
+        try:
+            with salt.utils.files.fopen(f_name) as f_hdl:
+                for line in f_hdl:
+                    line = salt.utils.stringutils.to_unicode(line)
+                    hst = line.strip().split('#')[0].strip().split()
+                    if hst:
+                        if hst[0][:4] in ('127.', '::1') or len(hst) == 1:
+                            hosts.extend(hst)
+        except IOError:
+            pass
 
     # include public and private ipaddresses
     return hosts.extend([addr for addr in ip_addrs()
@@ -1225,7 +1229,11 @@ def hex2ip(hex_ip, invert=False):
             else:
                 ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
         try:
-            return ipaddress.IPv6Address(":".join(ip)).compressed
+            address = ipaddress.IPv6Address(":".join(ip))
+            if address.ipv4_mapped:
+                return str(address.ipv4_mapped)
+            else:
+                return address.compressed
         except ipaddress.AddressValueError as ex:
             log.error('hex2ip - ipv6 address error: {0}'.format(ex))
             return hex_ip
@@ -1278,7 +1286,11 @@ def active_tcp():
                     line = salt.utils.stringutils.to_unicode(line)
                     if line.strip().startswith('sl'):
                         continue
-                    ret.update(_parse_tcp_line(line))
+                    iret = _parse_tcp_line(line)
+                    sl = next(iter(iret))
+                    if iret[sl]['state'] == 1:  # 1 is ESTABLISHED
+                        del iret[sl]['state']
+                        ret[len(ret)] = iret[sl]
     return ret
 
 
@@ -1316,7 +1328,7 @@ def _remotes_on(port, which_end):
                         continue
                     iret = _parse_tcp_line(line)
                     sl = next(iter(iret))
-                    if iret[sl][which_end] == port:
+                    if iret[sl][which_end] == port and iret[sl]['state'] == 1:  # 1 is ESTABLISHED
                         ret.add(iret[sl]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
@@ -1352,6 +1364,7 @@ def _parse_tcp_line(line):
     ret[sl]['local_port'] = int(l_port, 16)
     ret[sl]['remote_addr'] = hex2ip(r_addr, True)
     ret[sl]['remote_port'] = int(r_port, 16)
+    ret[sl]['state'] = int(comps[3], 16)
     return ret
 
 

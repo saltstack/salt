@@ -298,7 +298,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             minion.shutdown()
 
     # pylint: disable=invalid-name
@@ -328,7 +328,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             minion.shutdown()
 
     def test_exit_status_correct_usage(self):

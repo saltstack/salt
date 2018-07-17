@@ -121,18 +121,30 @@ def _active_mounts_aix(ret):
     '''
     for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
-        if comps and comps[0] == 'node' or comps[0] == '--------':
-            continue
-        if len(comps) < 8:
-            ret[comps[1]] = {'device': comps[0],
-                             'fstype': comps[2],
-                             'opts': _resolve_user_group_names(comps[6].split(','))}
-        else:
-            ret[comps[2]] = {'node': comps[0],
-                             'device': comps[1],
-                             'fstype': comps[3],
-                             'opts': _resolve_user_group_names(comps[7].split(','))}
-
+        if comps:
+            if comps[0] == 'node' or comps[0] == '--------':
+                continue
+            comps_len = len(comps)
+            if line.startswith((' ', '\t')):
+                curr_opts = _resolve_user_group_names(comps[6].split(',')) if 7 == comps_len else []
+                if curr_opts:
+                    ret[comps[1]] = {'device': comps[0],
+                                    'fstype': comps[2],
+                                    'opts': curr_opts}
+                else:
+                    ret[comps[1]] = {'device': comps[0],
+                                    'fstype': comps[2]}
+            else:
+                curr_opts = _resolve_user_group_names(comps[7].split(',')) if 8 == comps_len else []
+                if curr_opts:
+                    ret[comps[2]] = {'node': comps[0],
+                                    'device': comps[1],
+                                    'fstype': comps[3],
+                                    'opts': curr_opts}
+                else:
+                    ret[comps[2]] = {'node': comps[0],
+                                    'device': comps[1],
+                                    'fstype': comps[3]}
     return ret
 
 
@@ -228,7 +240,7 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
-    elif __grains__['kernel'] == 'AIX':
+    elif 'AIX' in __grains__['kernel']:
         _active_mounts_aix(ret)
     elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
@@ -1046,7 +1058,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         return False
 
     # Darwin doesn't expect defaults when mounting without other options
-    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
+    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin', 'AIX']:
         opts = None
 
     if isinstance(opts, six.string_types):
@@ -1059,7 +1071,9 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
     if opts is not None:
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
-    if fstype:
+
+    # use of fstype on AIX is with /etc/filesystems
+    if fstype and 'AIX' not in __grains__['os']:
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
@@ -1086,6 +1100,10 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         if fstype == 'smbfs':
             force_mount = True
 
+    if 'AIX' in __grains__['os']:
+        if opts == 'defaults':
+            opts = ''
+
     if isinstance(opts, six.string_types):
         opts = opts.split(',')
     mnts = active()
@@ -1098,7 +1116,9 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
             umount(name, device, user=user)
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
-        if fstype:
+
+        # use of fstype on AIX is with /etc/filesystems
+        if fstype and 'AIX' not in __grains__['os']:
             args += ' -t {0}'.format(fstype)
         if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
@@ -1192,6 +1212,17 @@ def swaps():
                              'size': int(comps[3]),
                              'used': (int(comps[3]) - int(comps[4])),
                              'priority': '-'}
+    elif 'AIX' in __grains__['kernel']:
+        for line in __salt__['cmd.run_stdout']('swap -l').splitlines():
+            if line.startswith('device'):
+                continue
+            comps = line.split()
+
+            # AIX uses MB for units
+            ret[comps[0]] = {'type': 'device',
+                             'size': int(comps[3][:-2]) * 1024,
+                             'used': (int(comps[3][:-2]) - int(comps[4][:-2])) * 1024,
+                             'priority': '-'}
     elif __grains__['os'] != 'OpenBSD':
         with salt.utils.files.fopen('/proc/swaps') as fp_:
             for line in fp_:
@@ -1244,7 +1275,7 @@ def swapon(name, priority=None):
             return False
     else:
         cmd = 'swapon {0}'.format(name)
-        if priority:
+        if priority and 'AIX' not in __grains__['kernel']:
             cmd += ' -p {0}'.format(priority)
         __salt__['cmd.run'](cmd, python_shell=False)
 

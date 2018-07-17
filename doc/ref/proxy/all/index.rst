@@ -20,7 +20,9 @@ proxy modules
     junos
     marathon
     napalm
+    netmiko_px
     nxos
+    nxos_api
     panos
     philips_hue
     rest_sample

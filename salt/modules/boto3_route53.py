@@ -52,11 +52,13 @@ Execution module for Amazon Route53 written against Boto 3
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
+import re
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.versions
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext import six
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -243,7 +245,7 @@ def get_hosted_zones_by_domain(Name, region=None, key=None, keyid=None, profile=
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     zones = [z for z in _collect_results(conn.list_hosted_zones, 'HostedZones', {})
-            if z['Name'] == Name]
+            if z['Name'] == aws_encode(Name)]
     ret = []
     for z in zones:
         ret += get_hosted_zone(Id=z['Id'], region=region, key=key, keyid=keyid, profile=profile)
@@ -344,6 +346,7 @@ def create_hosted_zone(Name, VPCId=None, VPCName=None, VPCRegion=None, CallerRef
     '''
     if not Name.endswith('.'):
         raise SaltInvocationError('Domain must be fully-qualified, complete with trailing period.')
+    Name = aws_encode(Name)
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     deets = find_hosted_zone(Name=Name, PrivateZone=PrivateZone,
                              region=region, key=key, keyid=keyid, profile=profile)
@@ -718,6 +721,96 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
     return delete_hosted_zone(Id=Id, region=region, key=key, keyid=keyid, profile=profile)
 
 
+def aws_encode(x):
+    '''
+    An implementation of the encoding required to suport AWS's domain name
+    rules defined here__:
+
+    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+
+    While AWS's documentation specifies individual ASCII characters which need
+    to be encoded, we instead just try to force the string to one of
+    escaped unicode or idna depending on whether there are non-ASCII characters
+    present.
+
+    This means that we support things like ドメイン.テスト as a domain name string.
+
+    More information about IDNA encoding in python is found here__:
+
+    .. __: https://pypi.org/project/idna
+
+    '''
+    ret = None
+    try:
+        x.encode('ascii')
+        ret = re.sub(r'\\x([a-f0-8]{2})',
+                      _hexReplace, x.encode('unicode_escape'))
+    except UnicodeEncodeError:
+        ret = x.encode('idna')
+    except Exception as e:
+        log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs", x)
+        raise CommandExecutionError(e)
+    log.debug('AWS-encoded result for %s: %s', x, ret)
+    return ret
+
+
+def _aws_encode_changebatch(o):
+    '''
+    helper method to process a change batch & encode the bits which need encoding.
+    '''
+    change_idx = 0
+    while change_idx < len(o['Changes']):
+        o['Changes'][change_idx]['ResourceRecordSet']['Name'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['Name'])
+        if 'ResourceRecords' in o['Changes'][change_idx]['ResourceRecordSet']:
+            rr_idx = 0
+            while rr_idx < len(o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords']):
+                o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords'][rr_idx]['Value'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['ResourceRecords'][rr_idx]['Value'])
+                rr_idx += 1
+        if 'AliasTarget' in o['Changes'][change_idx]['ResourceRecordSet']:
+            o['Changes'][change_idx]['ResourceRecordSet']['AliasTarget']['DNSName'] = aws_encode(o['Changes'][change_idx]['ResourceRecordSet']['AliasTarget']['DNSName'])
+        change_idx += 1
+    return o
+
+
+def _aws_decode(x):
+    '''
+    An implementation of the decoding required to suport AWS's domain name
+    rules defined here__:
+
+    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
+
+    The important part is this:
+
+        If the domain name includes any characters other than a to z, 0 to 9, - (hyphen),
+        or _ (underscore), Route 53 API actions return the characters as escape codes.
+        This is true whether you specify the characters as characters or as escape
+        codes when you create the entity.
+        The Route 53 console displays the characters as characters, not as escape codes."
+
+        For a list of ASCII characters the corresponding octal codes, do an internet search on "ascii table".
+
+    We look for the existance of any escape codes which give us a clue that
+    we're received an escaped unicode string; or we assume it's idna encoded
+    and then decode as necessary.
+    '''
+    if '\\' in x:
+        return x.decode('unicode_escape')
+    return x.decode('idna')
+
+
+def _hexReplace(x):
+    '''
+    Converts a hex code to a base 16 int then the octal of it, minus the leading
+    zero.
+
+    This is necessary because x.encode('unicode_escape') automatically assumes
+    you want a hex string, which AWS will accept but doesn't result in what
+    you really want unless it's an octal escape sequence
+    '''
+    c = int(x.group(1), 16)
+    return '\\' + str(oct(c))[1:]
+
+
 def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                          StartRecordType=None, PrivateZone=None,
                          region=None, key=None, keyid=None, profile=None):
@@ -763,7 +856,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
         if done:
             return ret
         args = {'HostedZoneId': HostedZoneId}
-        args.update({'StartRecordName': next_rr_name}) if next_rr_name else None
+        args.update({'StartRecordName': aws_encode(next_rr_name)}) if next_rr_name else None
         # Grrr, can't specify type unless name is set...  We'll do this via filtering later instead
         args.update({'StartRecordType': next_rr_type}) if next_rr_name and next_rr_type else None
         args.update({'StartRecordIdentifier': next_rr_id}) if next_rr_id else None
@@ -774,6 +867,18 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
             next_rr_type = r.get('NextRecordType')
             next_rr_id = r.get('NextRecordIdentifier')
             for rr in rrs:
+                rr['Name'] = _aws_decode(rr['Name'])
+                # now iterate over the ResourceRecords and replace any encoded
+                # value strings with the decoded versions
+                if 'ResourceRecords' in rr:
+                    x = 0
+                    while x < len(rr['ResourceRecords']):
+                        if 'Value' in rr['ResourceRecords'][x]:
+                            rr['ResourceRecords'][x]['Value'] = _aws_decode(rr['ResourceRecords'][x]['Value'])
+                        x += 1
+                # or if we are an AliasTarget then decode the DNSName
+                if 'AliasTarget' in rr:
+                    rr['AliasTarget']['DNSName'] = _aws_decode(rr['AliasTarget']['DNSName'])
                 if StartRecordName and rr['Name'] != StartRecordName:
                     done = True
                     break
@@ -877,7 +982,8 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
             return []
         HostedZoneId = zone[0]['HostedZone']['Id']
 
-    args = {'HostedZoneId': HostedZoneId, 'ChangeBatch': ChangeBatch}
+    args = {'HostedZoneId': HostedZoneId, 'ChangeBatch': _aws_encode_changebatch(ChangeBatch)}
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     tries = 20  # A bit more headroom
     while tries:
