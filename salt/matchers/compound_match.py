@@ -22,7 +22,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def compound_match(self, tgt):
+def match(self, tgt):
     '''
     Runs the compound target check
     '''
