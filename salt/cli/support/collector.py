@@ -31,6 +31,7 @@ import salt.cli.caller
 import salt.cli.support
 import salt.cli.support.console
 import salt.cli.support.intfunc
+import salt.cli.support.localrunner
 import salt.output.table_out
 import salt.runner
 
@@ -164,28 +165,6 @@ class SupportDataCollector(object):
         self.__current_section.append({title: path})
 
 
-class LocalRunner(salt.runner.Runner):
-    '''
-    Runner class that changes its default behaviour.
-    '''
-
-    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
-        '''
-        Same as original _proc_function in AsyncClientMixin,
-        except it calls "low" without firing a print event.
-        '''
-        if daemonize and not salt.utils.platform.is_windows():
-            salt.log.setup.shutdown_multiprocessing_logging()
-            salt.utils.process.daemonize()
-            salt.log.setup.setup_multiprocessing_logging()
-
-        low['__jid__'] = jid
-        low['__user__'] = user
-        low['__tag__'] = tag
-
-        return self.low(fun, low, print_event=False, full_return=False)
-
-
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
     '''
     Class to run Salt Support subsystem.
@@ -202,7 +181,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         '''
         conf = copy.deepcopy(conf)
         if not getattr(self, '_runner', None):
-            self._runner = LocalRunner(conf)
+            self._runner = salt.cli.support.localrunner.LocalRunner(conf)
         else:
             self._runner.opts = conf
         return self._runner
