@@ -241,7 +241,8 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False):
+        exclude_minion=False,
+        as_dict=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -262,11 +263,16 @@ def get(tgt,
     exclude_minion
         Excludes the current minion from the result set
 
+    as_dict
+        Returns a dictionary of keys matching requested functions and their return values
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
+        salt '*' mine.get '*' network.interfaces,network.ipaddrs as_dict=True
+        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]' as_dict=True
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
@@ -300,8 +306,42 @@ def get(tgt,
                      }[tgt_type](tgt)
         if is_target:
             data = __salt__['data.get']('mine_cache')
-            if isinstance(data, dict) and fun in data:
-                ret[__opts__['id']] = data[fun]
+
+            if isinstance(data, dict):
+
+                if isinstance(fun, six.string_types):
+                    functions = list(set(fun.split(',')))
+                else:
+                    if not as_dict:
+                        log.warning('Passed function as object to mine.get but "as_dict" is {0}, '
+                                    'refusing to proceed'.format(
+                                                        as_dict
+                                   )
+                        )
+                        return {}
+                    else:
+                        functions = fun
+
+                if len(functions) > 1 and not as_dict:
+                    log.warning('Passed more than one function to mine.get but "as_dict" is {0} '
+                                'refusing to proceed'.format(
+                                                    as_dict
+                               )
+                    )
+                    return {}
+
+
+                if as_dict: ret[__opts__['id']] = {}
+
+                for fun in functions:
+                    if data.has_key(fun):
+                        if as_dict:
+                            ret[__opts__['id']][fun] = data.get(fun)
+                        else:
+                            ret[__opts__['id']] = data.get(fun)
+
+                if not len(ret[__opts__['id']]): del ret[__opts__['id']]
+
         return ret
     load = {
             'cmd': '_mine_get',
@@ -309,6 +349,7 @@ def get(tgt,
             'tgt': tgt,
             'fun': fun,
             'tgt_type': tgt_type,
+            'as_dict': as_dict,
     }
     ret = _mine_get(load, __opts__)
     if exclude_minion:

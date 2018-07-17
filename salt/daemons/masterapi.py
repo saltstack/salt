@@ -548,6 +548,30 @@ class RemoteFuncs(object):
         if not skip_verify:
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
+
+        if isinstance(load['fun'], six.string_types):
+            functions = list(set(load['fun'].split(',')))
+        else:
+            if not load.get('as_dict'):
+                log.warning('Passed function as object to mine.get but "as_dict" is {0}, '
+                            'refusing to proceed'.format(
+                                                load.get('as_dict')
+                           )
+                )
+                return {}
+            else:
+                functions = load['fun']
+
+        if len(functions) > 1 and not load.get('as_dict'):
+            log.warning('Passed more than one function to mine.get but "as_dict" is {0} '
+                        'refusing to proceed'.format(
+                                            load.get('as_dict')
+                       )
+            )
+            return {}
+
+        functions_allowed = []
+
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -557,8 +581,16 @@ class RemoteFuncs(object):
                 if re.match(match, load['id']):
                     if isinstance(self.opts['mine_get'][match], list):
                         perms.update(self.opts['mine_get'][match])
-            if not any(re.match(perm, load['fun']) for perm in perms):
+
+            _fun = []
+            for fun in functions:
+                if any(re.match(perm, fun) for perm in perms):
+                    _fun.append(fun)
+            if not len(_fun):
                 return {}
+            else:
+                functions_allowed = _fun
+
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
@@ -587,10 +619,15 @@ class RemoteFuncs(object):
         minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
+            if load.get('as_dict'): ret[minion] = {}
             if isinstance(fdata, dict):
-                fdata = fdata.get(load['fun'])
-                if fdata:
-                    ret[minion] = fdata
+                for fun in functions_allowed:
+                    if fdata.has_key(fun):
+                        if load.get('as_dict'):
+                            ret[minion][fun] = fdata.get(fun)
+                        else:
+                            ret[minion] = fdata.get(fun)
+            if not len(ret[minion]): del ret[minion]
         return ret
 
     def _mine(self, load, skip_verify=False):

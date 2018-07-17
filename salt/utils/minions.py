@@ -1156,11 +1156,47 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
             tgt_type)
     minions = _res['minions']
     cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+    else:
+        if not opts.get('as_dict'):
+            log.warning('Passed function as object to mine.get but "as_dict" is {0}, '
+                        'refusing to proceed'.format(
+                                            opts.get('as_dict')
+                       )
+            )
+            return {}
+        else:
+            functions = fun
+
+    if len(functions) > 1 and not opts.get('as_dict'):
+        log.warning('Passed more than one function to mine.get but "as_dict" is {0} '
+                    'refusing to proceed'.format(
+                                        opts.get('as_dict')
+                   )
+        )
+        return {}
+
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+    else:
+        functions = fun
+
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
         if mdata is None:
             continue
-        fdata = mdata.get(fun)
-        if fdata:
-            ret[minion] = fdata
+
+        if opts.get('as_dict'): ret[minion] = {}
+        if isinstance(mdata, dict):
+            for fun in functions:
+                if mdata.has_key(fun):
+                    if opts.get('as_dict'):
+                        ret[minion][fun] = mdata.get(fun)
+                    else:
+                        ret[minion] = mdata.get(fun)
+        if not len(ret[minion]): del ret[minion]
+
     return ret
