@@ -4258,8 +4258,8 @@ def _write_regpol_data(data_to_write,
                             16),
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
-                with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(salt.utils.stringutils.to_bytes(gpt_ini_data))
+                with salt.utils.files.fopen(gpt_ini_path, 'w') as gpt_file:
+                    gpt_file.write(gpt_ini_data)
         # TODO: This needs to be more specific
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
