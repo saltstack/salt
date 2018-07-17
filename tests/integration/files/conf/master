@@ -109,7 +109,7 @@ ignore_host_keys: True
 
 # test vault
 vault:
-  url: http://vault:8200
+  url: http://127.0.0.1:8200
   auth:
     method: token
     token: testsecret

@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
-from tests.support.case import ModuleCase
+from tests.support.case import ModuleCase, ShellCase
 from tests.support.helpers import destructiveTest
 from tests.support.paths import FILES
 
@@ -28,7 +28,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         '''
         config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
         self.run_state('docker_image.present', name='vault', tag='0.9.6')
-        self.run_state(
+        ret = self.run_state(
             'docker_container.running',
             name='vault',
             image='vault:0.9.6',
@@ -39,9 +39,14 @@ class VaultTestCase(ModuleCase, ShellCase):
             },
             cap_add='IPC_LOCK',
         )
-        self.run_function(
+        ret = self.run_function(
             'cmd.run',
-            'vault policy write testpolicy {0}/vault.hcl'.format(FILES),
+            cmd='vault login token=testsecret'.format(FILES),
+            env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
+        )
+        ret = self.run_function(
+            'cmd.run',
+            cmd='vault policy write testpolicy {0}/vault.hcl'.format(FILES),
             env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
         )
 
@@ -51,13 +56,13 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.run_state('docker_image.absent', name='vault', force=True)
 
     def test_sdb(self):
-        assert self.run_function('sdb.set', arg=['sdb://secret/test/secret/foo', 'bar']) is True
-        assert self.run_function('sdb.get', arg=['sdb://secret/test/secret/foo']) == 'bar'
+        assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_sdb/foo', value='bar') is True
+        assert self.run_function('sdb.get', arg=['sdb://sdbvault/secret/test/test_sdb/foo']) == 'bar'
 
     def test_sdb_runner(self):
-        assert self.run_run('sdb.set sdb://secret/test/secret/foo bar') == 'True\n'
-        assert self.run_run('sdb.get sdb://secret/test/secret/foo') == 'bar\n'
+        assert self.run_run('sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar') == ['True']
+        assert self.run_run('sdb.get sdb://sdbvault/secret/test/test_sdb_runner/foo') == ['bar']
 
     def test_config(self):
-        self.run_function('sdb.set', arg=['sdb://secret/test/secret/foo', 'bar'])
+        assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_pillar_sdb/foo', value='bar') is True
         assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'
