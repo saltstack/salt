@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.paths import FILES
 
 # Import Salt Libs
@@ -55,14 +55,17 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.run_state('docker_container.absent', name='vault')
         self.run_state('docker_image.absent', name='vault', force=True)
 
+    @flaky
     def test_sdb(self):
         assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_sdb/foo', value='bar') is True
         assert self.run_function('sdb.get', arg=['sdb://sdbvault/secret/test/test_sdb/foo']) == 'bar'
 
+    @flaky
     def test_sdb_runner(self):
         assert self.run_run('sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar') == ['True']
         assert self.run_run('sdb.get sdb://sdbvault/secret/test/test_sdb_runner/foo') == ['bar']
 
+    @flaky
     def test_config(self):
         assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_pillar_sdb/foo', value='bar') is True
         assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'
