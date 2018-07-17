@@ -1550,7 +1550,8 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with tornado.stack_context.StackContext(functools.partial(RequestContext, data)):
+        with tornado.stack_context.StackContext(functools.partial(RequestContext,
+                                                                  {'data': data, 'opts': opts})):
             with tornado.stack_context.StackContext(minion_instance.ctx):
                 run_func(minion_instance, opts, data)
 

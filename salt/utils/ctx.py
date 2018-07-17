@@ -17,7 +17,7 @@ class RequestContext(object):
     Simply import this class into any module and access the current request handler by this
     class's class method property 'current'. If it returns None, there's no active request.
     .. code:: python
-        from raas.utils.ctx import RequestContext
+        from salt.utils.ctx import RequestContext
         current_request_handler = RequestContext.current
     '''
 
