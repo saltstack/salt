@@ -22,7 +22,7 @@ def get(url, dest, **kwargs):
         '''
         Get value of s3.<key> from Minion config or from Pillar
         '''
-        if 's3.' + key in self.opts:
+        if 's3.' + key in __opts__:
             return __opts__['s3.' + key]
         try:
             return __opts__['pillar']['s3'][key]

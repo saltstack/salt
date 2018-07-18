@@ -25,7 +25,7 @@ def get(url, dest, **kwargs):
         '''
         Get value of <key> from Minion config or from Pillar
         '''
-        if key in self.opts:
+        if key in __opts__:
             return __opts__[key]
         try:
             return __opts__['pillar'][key]

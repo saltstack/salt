@@ -149,7 +149,7 @@ def get(url, dest, no_cache=False, **kwargs):
             header_callback=on_header,
             username=url_data.username,
             password=url_data.password,
-            opts=self.opts,
+            opts=__opts__,
             **get_kwargs
         )
         if 'handle' not in query:
