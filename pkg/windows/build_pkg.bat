@@ -130,24 +130,28 @@ If Defined ProgramFiles(x86) (
 )
 @echo.
 
-@echo Copying VCRedist to Prerequisites
-@echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
 If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
-:: Set the location of the vcredist to download
-If %Python%==2 (
-    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
+:: Don't include the vcredist for Py3 installations
+If %Python%==3 goto :vcredist_end
 
-    :: Check for 64 bit by finding the Program Files (x86) directory
-    If Defined ProgramFiles(x86) (
-        powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
-    ) Else (
-        powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
-    )
-    @echo.
+@echo Copying VCRedist to Prerequisites
+@echo ----------------------------------------------------------------------
+
+:: Set the location of the vcredist to download
+Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
+Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
+
+:: Check for 64 bit by finding the Program Files (x86) directory
+If Defined ProgramFiles(x86) (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
+) Else (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
 )
+@echo.
+
+:vcredist_end
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
