@@ -119,9 +119,9 @@ class ServiceModuleTest(ModuleCase):
 
         # check service was not enabled
         try:
-            self.assertIn('ERROR', enable)
-        except AssertionError:
             self.assertFalse(enable)
+        except AssertionError:
+            self.assertIn('ERROR', enable)
 
         # check service was not disabled
         if tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info']) == (14, 0o4) and not systemd:
