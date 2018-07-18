@@ -368,14 +368,14 @@ class DownloadWindowsDlls(Command):
         import pip
         # pip has moved many things to `_internal` starting with pip 10
         if LooseVersion(pip.__version__) < LooseVersion('10.0'):
-            from pip.utils.logging import indent_log
+            from pip.utils.logging import indent_log  # pylint: disable=no-name-in-module
         else:
             from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()
         url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
-            for fname in ('libeay32', 'ssleay32', 'msvcr120'):
+            for fname in ('libeay32', 'libsodium', 'ssleay32', 'msvcr120'):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue

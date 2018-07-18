@@ -1659,7 +1659,7 @@ def os_data():
                     # my_init as pid1
                     grains['init'] = 'runit'
                 else:
-                    log.info(
+                    log.debug(
                         'Could not determine init system from command line: (%s)',
                         ' '.join(init_cmdline)
                     )

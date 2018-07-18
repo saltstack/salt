@@ -1584,7 +1584,7 @@ def show_states(queue=False, **kwargs):
 
         salt '*' state.show_states
 
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     '''
     conflict = _check_queue(queue, kwargs)

@@ -33,7 +33,7 @@ class TimedProc(object):
             if not self.stdin_raw_newlines:
                 # Translate a newline submitted as '\n' on the CLI to an actual
                 # newline character.
-                self.stdin = self.stdin.replace('\\n', '\n').encode(__salt_system_encoding__)
+                self.stdin = salt.utils.stringutils.to_bytes(self.stdin.replace('\\n', '\n'))
             kwargs['stdin'] = subprocess.PIPE
 
         if not self.with_communicate:

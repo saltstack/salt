@@ -549,6 +549,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``win_installer``
     Specify windows minion client installer path
 
+``win_run_once``
+    Specify a list of commands to run on first login to a windows minion
+
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+
 Cloning a VM
 ============
 

@@ -203,8 +203,6 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 # pylint: enable=import-error
-import salt.utils
-salt.utils.zeromq.install_zmq()
 
 # salt imports
 import salt.ext.six as six
@@ -212,8 +210,9 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
-import salt.utils.yaml
 import salt.utils.minions
+import salt.utils.yaml
+import salt.utils.zeromq
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -224,6 +223,7 @@ from salt.exceptions import (
     EauthAuthenticationError
 )
 
+salt.utils.zeromq.install_zmq()
 json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
@@ -969,7 +969,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # minimum time required for return to complete. By default no waiting, if
         # we are a syndic then we must wait syndic_wait at a minimum
-        min_wait_time = Future().set_result(True)
+        min_wait_time = Future()
+        min_wait_time.set_result(True)
 
         # wait syndic a while to avoid missing published events
         if self.application.opts['order_masters']:
