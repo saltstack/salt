@@ -274,7 +274,7 @@ def _load_config(section, options, default_value='', file=INI_FILE):
         return results
     with salt.utils.files.fopen(file, 'r') as config_file:
         config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
-        config_parser.read_file(config_file)
+        config_parser.readfp(config_file)
         for option in options:
             if six.PY2:
                 results[option] = _remove_quotes(config_parser.get(section, option)) \
@@ -789,7 +789,7 @@ def _configure_static_interface(interface, **settings):
     if os.path.exists(INTERFACES_CONFIG):
         try:
             with salt.utils.files.fopen(INTERFACES_CONFIG, 'r') as config_file:
-                parser.read_file(config_file)
+                parser.readfp(config_file)
         except configparser.MissingSectionHeaderError:
             pass
     hwaddr = interface.hwaddr[:-1]
