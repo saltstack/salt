@@ -262,16 +262,13 @@ def get(tgt,
     exclude_minion
         Excludes the current minion from the result set
 
-    as_dict
-        Returns a dictionary of keys matching requested functions and their return values
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
-        salt '*' mine.get '*' network.interfaces,network.ipaddrs as_dict=True
-        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]' as_dict=True
+        salt '*' mine.get '*' network.interfaces,network.ipaddrs
+        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]'
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
