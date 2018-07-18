@@ -350,8 +350,8 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
 
         jid = extra.pop('jid', '')
-        log_fmt_jid = extra.pop('log_fmt_jid', '[JID: %(jid)s]')
         if jid:
+            log_fmt_jid = extra.pop('log_fmt_jid')
             jid = log_fmt_jid % {'jid': jid}
 
         if not extra:
