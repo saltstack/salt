@@ -179,10 +179,10 @@ def cert(name,
         comment = 'Certificate {0} obtained'.format(name)
 
     ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
-    ret, perms = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
-                                              ret,
-                                              owner, group, mode,
-                                              follow_symlinks=True)
+    ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
+                                          ret,
+                                          owner, group, mode,
+                                          follow_symlinks=True)
 
     return ret
 
