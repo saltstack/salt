@@ -2,13 +2,20 @@
 '''
 HTTP Client Module Directory
 '''
-from __future__ import unicode_literals
+from __future__ import unicode_literals, absolute_import
+
+# Import Python Libraries
+from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
 
 # Import salt Libraries
 from salt.exceptions import MinionError
 
 # Import salt ext Libraries
+# pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
+from salt.ext.six.moves.urllib.parse import urlunparse
+import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
+# pylint: enable=no-name-in-module,import-error
 
 __virtualname__ = 'http'
 __virtual_aliases__ = ('https')

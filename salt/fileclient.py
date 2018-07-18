@@ -11,14 +11,10 @@ import logging
 import os
 import string
 import shutil
-import ftplib
-from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
 import salt.utils.atomicfile
 
 # Import salt libs
-from salt.exceptions import (
-    CommandExecutionError, MinionError
-)
+from salt.exceptions import MinionError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -36,12 +32,10 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
 from salt.ext import six
-import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
-from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
+from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
@@ -545,7 +539,6 @@ class Client(object):
             except Exception as exc:
                 raise MinionError('Could not fetch {0}: {1}'.format(url, exc))
         return ''
-
 
     def get_template(
             self,

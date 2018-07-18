@@ -2,7 +2,7 @@
 '''
 Swift Client Module Directory
 '''
-from __future__ import unicode_literals
+from __future__ import unicode_literals, absolute_import
 
 # import Salt Library
 from salt.utils.openstack.swift import SaltSwift
