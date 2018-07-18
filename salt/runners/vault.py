@@ -14,8 +14,6 @@ import json
 import logging
 import string
 import requests
-from urlparse import urlparse, urlunparse, ParseResult
-from urllib import quote as urlquote
 
 # Import Salt libs
 import salt.crypt
