@@ -549,25 +549,15 @@ class RemoteFuncs(object):
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
 
+        _ret_dict = False
         if isinstance(load['fun'], six.string_types):
             functions = list(set(load['fun'].split(',')))
+            if len(functions) > 1:
+                _ret_dict = True
+        elif isinstance(load['fun'], list):
+            functions = load['fun']
+            _ret_dict = True
         else:
-            if not load.get('as_dict'):
-                log.warning('Passed function as object to mine.get but "as_dict" is {0}, '
-                            'refusing to proceed'.format(
-                                                load.get('as_dict')
-                           )
-                )
-                return {}
-            else:
-                functions = load['fun']
-
-        if len(functions) > 1 and not load.get('as_dict'):
-            log.warning('Passed more than one function to mine.get but "as_dict" is {0} '
-                        'refusing to proceed'.format(
-                                            load.get('as_dict')
-                       )
-            )
             return {}
 
         functions_allowed = []
@@ -619,17 +609,14 @@ class RemoteFuncs(object):
         minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
-            if load.get('as_dict'):
-                ret[minion] = {}
             if isinstance(fdata, dict):
                 for fun in functions_allowed:
                     if fdata.has_key(fun):
-                        if load.get('as_dict'):
-                            ret[minion][fun] = fdata.get(fun)
+                        if _ret_dict:
+                            ret.setdefault(fun, {})
+                            ret[fun][minion] = fdata.get(fun)
                         else:
                             ret[minion] = fdata.get(fun)
-            if not len(ret[minion]):
-                del ret[minion]
         return ret
 
     def _mine(self, load, skip_verify=False):

@@ -241,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        as_dict=False):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -308,41 +307,24 @@ def get(tgt,
             data = __salt__['data.get']('mine_cache')
 
             if isinstance(data, dict):
+                _ret_dict = False
 
                 if isinstance(fun, six.string_types):
                     functions = list(set(fun.split(',')))
+                    if len(functions) > 1:
+                        _ret_dict = True
+                elif isinstance(fun, list):
+                    functions = fun
+                    _ret_dict = True
                 else:
-                    if not as_dict:
-                        log.warning('Passed function as object to mine.get but "as_dict" is {0}, '
-                                    'refusing to proceed'.format(
-                                                        as_dict
-                                   )
-                        )
-                        return {}
-                    else:
-                        functions = fun
-
-                if len(functions) > 1 and not as_dict:
-                    log.warning('Passed more than one function to mine.get but "as_dict" is {0} '
-                                'refusing to proceed'.format(
-                                                    as_dict
-                               )
-                    )
                     return {}
-
-
-                if as_dict:
-                    ret[__opts__['id']] = {}
 
                 for fun in functions:
                     if data.has_key(fun):
-                        if as_dict:
-                            ret[__opts__['id']][fun] = data.get(fun)
+                        if _ret_dict:
+                            ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
                         else:
                             ret[__opts__['id']] = data.get(fun)
-
-                if not len(ret[__opts__['id']]):
-                    del ret[__opts__['id']]
 
         return ret
     load = {
@@ -351,7 +333,6 @@ def get(tgt,
             'tgt': tgt,
             'fun': fun,
             'tgt_type': tgt_type,
-            'as_dict': as_dict,
     }
     ret = _mine_get(load, __opts__)
     if exclude_minion:
