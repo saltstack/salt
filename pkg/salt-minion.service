@@ -5,6 +5,7 @@ After=network.target salt-master.service
 
 [Service]
 KillMode=process
+Restart=on-failure
 Type=notify
 NotifyAccess=all
 LimitNOFILE=8192
