@@ -613,8 +613,7 @@ class RemoteFuncs(object):
                 for fun in functions_allowed:
                     if fdata.has_key(fun):
                         if _ret_dict:
-                            ret.setdefault(fun, {})
-                            ret[fun][minion] = fdata.get(fun)
+                            ret.setdefault(fun, {})[minion] = fdata.get(fun)
                         else:
                             ret[minion] = fdata.get(fun)
         return ret
