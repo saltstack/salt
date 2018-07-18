@@ -15,7 +15,10 @@ from tests.support.mock import (
     Mock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    ANY,
+    call,
+    patch
 )
 
 # Import salt libs
@@ -24,18 +27,13 @@ import salt.runners.vault as vault
 
 log = logging.getLogger(__name__)
 
-
 class VaultTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the runner module of the Vault integration
     '''
 
     def setup_loader_modules(self):
-        return {
-            vault: {
-            '__opts__': {'vault': {'url': "http://127.0.0.1", "auth": {'token': 'test', 'method': 'token'}}}
-            }
-        }
+        return {vault: {}}
 
     def setUp(self):
         self.grains = {
@@ -156,43 +154,109 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)
 
-
-    def _mock_json_response(self, data):
-        response = MagicMock()
-        response.json = MagicMock(return_value=data)
-        response.status_code = 200
-        return Mock(return_value=response)
-
-
-    # define matcher:
-    # @urlmatch(netloc=r'^vault$')
-    # def _vault_mock(url, request):
-    #     return '{"": ""}'
-    
-    def test_generate_token(self):
-        # open context to patch
-        with patch('salt.runners.vault._validate_signature', MagicMock(return_value=None)):
-            with patch('requests.post', self._mock_json_response({'auth': {'client_token': 'test'}})):
-                result = vault.generate_token('test-minion', 'signature')
-                log.debug('generate_token result: %s', result)
-                self.assertTrue(isinstance(result, dict))
-                self.assertFalse('error' in result)
-                
-
-
-    def test_get_vault_url(self):
-        self.assertEqual(vault._get_vault_url(
+    def test_get_token_create_url(self):
+        self.assertEqual(vault._get_token_create_url(
             {"url": "http://127.0.0.1"}),
             "http://127.0.0.1/v1/auth/token/create")
-        self.assertEqual(vault._get_vault_url(
-            {"url": "https://127.0.0.1/test"}),
+        self.assertEqual(vault._get_token_create_url(
+            {"url": "https://127.0.0.1/"}),
             "https://127.0.0.1/v1/auth/token/create")
-        self.assertEqual(vault._get_vault_url(
-            {"url": "http://127.0.0.1", "role_name": "therole"}),
-            "http://127.0.0.1/v1/auth/token/create/therole")
-        self.assertEqual(vault._get_vault_url(
+        self.assertEqual(vault._get_token_create_url(
+            {"url": "http://127.0.0.1:8200", "role_name": "therole"}),
+            "http://127.0.0.1:8200/v1/auth/token/create/therole")
+        self.assertEqual(vault._get_token_create_url(
             {"url": "https://127.0.0.1/test", "role_name": "therole"}),
-            "https://127.0.0.1/v1/auth/token/create/therole")
-        self.assertEqual(vault._get_vault_url(
-            {"url": "https://127.0.0.1/test?s=test", "role_name": "therole&"}),
-            "https://127.0.0.1/v1/auth/token/create/therole%26")
+            "https://127.0.0.1/test/v1/auth/token/create/therole")
+
+
+class _Helpers:
+    '''
+    Mock helpers
+    '''
+    def _mock_json_response(self, data, status_code = 200, reason = ""):
+        response = MagicMock()
+        response.json = MagicMock(return_value=data)
+        response.status_code = status_code
+        response.reason = reason
+        return Mock(return_value=response)
+
+class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin, _Helpers):
+    '''
+    Tests for the runner module of the Vault with approle setup
+    '''
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+            '__opts__': {'vault': {'url': "http://127.0.0.1", "auth": {'token': 'test', 'method': 'token'}}}
+            }
+        }
+
+    @patch('salt.runners.vault._validate_signature', MagicMock(return_value=None))
+    @patch('salt.runners.vault._get_token_create_url', MagicMock(return_value="http://fake_url"))
+    def test_generate_token(self):
+        mock = self._mock_json_response({'auth': {'client_token': 'test'}})
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            log.debug('generate_token result: %s', result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse('error' in result)
+            self.assertTrue('token' in result)
+            self.assertEqual(result['token'], 'test')
+            mock.assert_called_with("http://fake_url", headers=ANY, json=ANY, verify=ANY)
+    
+        mock = self._mock_json_response({}, status_code=403, reason="no reason")
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], "no reason")
+
+        mock = self._mock_json_response({}, status_code=403, reason="no reason")
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], 'no reason')
+            
+        with patch('salt.runners.vault._get_policies', MagicMock(return_value=[])):
+            result = vault.generate_token('test-minion', 'signature')            
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], 'No policies matched minion')
+
+        with patch('salt.runners.vault._get_policies', MagicMock(side_effect = Exception('Test Exception Reason'))):
+            result = vault.generate_token('test-minion', 'signature')            
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], 'Test Exception Reason')
+
+
+class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin, _Helpers):
+    '''
+    Tests for the runner module of the Vault with approle setup
+    '''
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+            '__opts__': {'vault': {'url': "http://127.0.0.1", "auth": {'method': 'approle', 'role_id': 'role', 'secret_id': 'secret'}}}
+            }
+        }
+
+    @patch('salt.runners.vault._validate_signature', MagicMock(return_value=None))
+    @patch('salt.runners.vault._get_token_create_url', MagicMock(return_value="http://fake_url"))
+    def test_generate_token(self):
+        mock = self._mock_json_response({'auth': {'client_token': 'test'}})
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            log.debug('generate_token result: %s', result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse('error' in result)
+            self.assertTrue('token' in result)
+            self.assertEqual(result['token'], 'test')
+            calls = [
+                call("http://127.0.0.1/v1/auth/approle/login", json=ANY, verify=ANY), 
+                call("http://fake_url", headers=ANY, json=ANY, verify=ANY)
+                ]
+            mock.assert_has_calls(calls)
