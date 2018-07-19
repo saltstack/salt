@@ -24,11 +24,6 @@ Function Get-Settings {
             "SitePkgs3Dir" = "C:\Python35\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
-        # The script deletes the DownLoadDir (above) for each install.
-        # You may want to set an environment variable SALTREPO_LOCAL_CACHE, a cache which lives as long as you decide.
-        if ( [bool]$Env:SALTREPO_LOCAL_CACHE ) {
-          $Settings.Set_Item("DownloadDir", "$Env:SALTREPO_LOCAL_CACHE")
-        }
 
         $ini.Add("Settings", $Settings)
         Write-Verbose "DownloadDir === $($ini['Settings']['DownloadDir']) ==="

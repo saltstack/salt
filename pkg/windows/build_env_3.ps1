@@ -191,44 +191,19 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower())))
 
 #==============================================================================
 # Update PIP and SetupTools
-#    caching depends on environment variable SALT_PIP_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
-} else {
-    $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
-    if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
-    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
-}
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 
 #==============================================================================
 # Install pypi resources using pip
-#    caching depends on environment variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
-} else {
-    if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
-    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
-}
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 
 #==============================================================================
 # Cleaning Up PyWin32
@@ -304,9 +279,7 @@ If (-Not $Silent) {
 # Remove the temporary download directory
 #------------------------------------------------------------------------------
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning up downloaded files unless you use SALTREPO_LOCAL_CACHE"
+Write-Output " - $script_name :: Cleaning up downloaded files"
 Write-Output " ----------------------------------------------------------------"
 Write-Output ""
-if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
-    Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
-}
+Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
