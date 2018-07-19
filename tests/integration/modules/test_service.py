@@ -129,10 +129,10 @@ class ServiceModuleTest(ModuleCase):
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         else:
             try:
+                self.assertFalse(disable)
+            except AssertionError:
                 disable = self.run_function('service.disable', [srv_name])
                 self.assertTrue('error' in disable.lower())
-            except AssertionError:
-                self.assertFalse(disable)
 
         if salt.utils.is_darwin():
             self.assertFalse(self.run_function('service.disabled', [srv_name]))
