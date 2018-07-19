@@ -430,6 +430,9 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         self.out = salt.cli.support.console.MessagesOutput()
         try:
             self.parse_args()
+            if not self.config['support_profile']:
+                self.print_help()
+                raise SystemExit()
         except (Exception, SystemExit) as ex:
             if not isinstance(ex, exceptions.SystemExit):
                 exit_code = salt.defaults.exitcodes.EX_GENERIC

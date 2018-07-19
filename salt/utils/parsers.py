@@ -1919,7 +1919,7 @@ class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser,
     def _mixin_setup(self):
         self.add_option('-P', '--show-profiles', default=False, action='store_true',
                         dest='support_profile_list', help='Show available profiles')
-        self.add_option('-p', '--profile', default='default', dest='support_profile',
+        self.add_option('-p', '--profile', default='', dest='support_profile',
                         help='Specify support profile or comma-separated profiles, e.g.: "salt,network"')
         support_archive = '{t}/{h}-support.tar.bz2'.format(t=tempfile.gettempdir(),
                                                            h=salt.utils.network.get_fqhostname())
