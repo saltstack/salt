@@ -572,19 +572,16 @@ def change(connect_spec, dn, before, after):
     # convert the "iterable of values" to lists in case that's what
     # modifyModlist() expects (also to ensure that the caller's dicts
     # are not modified)
-    before = dict(((attr, list(vals))
+    before = dict(((attr, salt.utils.data.encode(vals))
                    for attr, vals in six.iteritems(before)))
-    after = dict(((attr, list(vals))
+    after = dict(((attr, salt.utils.data.encode(vals))
                   for attr, vals in six.iteritems(after)))
 
     if 'unicodePwd' in after:
         after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
 
-    modlist = salt.utils.data.decode(
-        ldap.modlist.modifyModlist(before, after),
-        to_str=True,
-        preserve_tuples=True
-    )
+    modlist = ldap.modlist.modifyModlist(before, after)
+
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
