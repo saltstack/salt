@@ -507,18 +507,23 @@ class Pillar(object):
                 if self.opts.get('pillar_source_merging_strategy', None) == "none":
                     saltenvs &= set([self.saltenv or 'base'])
 
+            top_file = salt.utils.url.strip_proto(self.opts['state_top'])
+
             for saltenv in saltenvs:
-                top = self.client.cache_file(self.opts['state_top'], saltenv)
-                if top:
-                    tops[saltenv].append(compile_template(
-                        top,
-                        self.rend,
-                        self.opts['renderer'],
-                        self.opts['renderer_blacklist'],
-                        self.opts['renderer_whitelist'],
-                        saltenv=saltenv,
-                        _pillar_rend=True,
-                    ))
+                for pillarloc in self.opts['file_roots'][self.opts['pillarenv']]:
+                    pillar_top = salt.utils.path.join(pillarloc, top_file)
+
+                    top = self.client.cache_file(pillar_top, self.opts['pillarenv'])
+                    if top:
+                        tops[saltenv].append(compile_template(
+                            top,
+                            self.rend,
+                            self.opts['renderer'],
+                            self.opts['renderer_blacklist'],
+                            self.opts['renderer_whitelist'],
+                            saltenv=saltenv,
+                            _pillar_rend=True,
+                        ))
         except Exception as exc:
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
