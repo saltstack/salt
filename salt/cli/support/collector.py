@@ -352,20 +352,28 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.put(category_name)
             self.collector.add(category_name)
             for action in scenario[category_name]:
-                info, output, conf = self._get_action(action)
-                action_type = self._get_action_type(action)  # run:<something> for runners
-                if action_type == self.RUNNER_TYPE:
-                    self.out.put('Running {}'.format(info.lower()), indent=2)
-                    self.collector.write(info, self._local_run(conf), output=output)
-                elif action_type == self.CALL_TYPE:
-                    if not conf.get('salt.int.intfunc'):
-                        self.out.put('Collecting {}'.format(info.lower()), indent=2)
-                        self.collector.write(info, self._local_call(conf), output=output)
+                if not action:
+                    continue
+                action_name = next(iter(action))
+                if not isinstance(action[action_name], six.string_types):
+                    info, output, conf = self._get_action(action)
+                    action_type = self._get_action_type(action)  # run:<something> for runners
+                    if action_type == self.RUNNER_TYPE:
+                        self.out.put('Running {}'.format(info.lower()), indent=2)
+                        self.collector.write(info, self._local_run(conf), output=output)
+                    elif action_type == self.CALL_TYPE:
+                        if not conf.get('salt.int.intfunc'):
+                            self.out.put('Collecting {}'.format(info.lower()), indent=2)
+                            self.collector.write(info, self._local_call(conf), output=output)
+                        else:
+                            self.collector.discard_current()
+                            self._internal_function_call(conf)
                     else:
-                        self.collector.discard_current()
-                        self._internal_function_call(conf)
+                        self.out.error('Unknown action type "{}" for action: {}'.format(action_type, action))
                 else:
-                    self.out.error('Unknown action type "{}" for action: {}'.format(action_type, action))
+                    # TODO: This needs to be moved then to the utils.
+                    #       But the code is not yet there (other PRs)
+                    self.out.msg('\n'.join(salt.cli.support.console.wrap(action[action_name])), ident=2)
 
     def _get_action_type(self, action):
         '''
