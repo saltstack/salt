@@ -170,7 +170,7 @@ def present(name,
     __salt__['grafana4.update_datasource'](
         datasource['id'], profile=profile, **data)
     ret['result'] = True
-    ret['changes'] = deep_diff(datasource, data, ignore=['id', 'orgId'])
+    ret['changes'] = deep_diff(datasource, data, ignore=['id', 'orgId', 'readOnly'])
     ret['comment'] = 'Data source {0} updated'.format(name)
     return ret
 
