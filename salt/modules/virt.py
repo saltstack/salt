@@ -109,6 +109,7 @@ import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1069,6 +1070,24 @@ def _nic_profile(profile_name, hypervisor, dmac=None):
     return _complete_nics(interfaces, hypervisor, dmac=dmac)
 
 
+def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
+    '''
+    Get network devices from the profile and merge uer defined ones with them.
+    '''
+    nicp = _nic_profile(profile, hypervisor, dmac=dmac)
+    log.debug('NIC profile is %s', nicp)
+    if interfaces:
+        users_nics = _complete_nics(interfaces, hypervisor)
+        for unic in users_nics:
+            found = [nic for nic in nicp if nic['name'] == unic['name']]
+            if found:
+                found[0].update(unic)
+            else:
+                nicp.append(unic)
+        log.debug('Merged NICs: %s', nicp)
+    return nicp
+
+
 def init(name,
          cpu,
          mem,
@@ -1339,17 +1358,7 @@ def init(name,
             '\'dmac\' parameter has been deprecated. Rather use the \'interfaces\' parameter '
             'to properly define the desired MAC address. \'dmac\' will be removed in {version}.'
         )
-    nicp = _nic_profile(nic, hypervisor, dmac=dmac)
-    log.debug('NIC profile is %s', nicp)
-    if interfaces:
-        users_nics = _complete_nics(interfaces, hypervisor)
-        for unic in users_nics:
-            found = [nic for nic in nicp if nic['name'] == unic['name']]
-            if found:
-                found[0].update(unic)
-            else:
-                nicp.append(unic)
-        log.debug('Merged NICs: %s', nicp)
+    nicp = _get_merged_nics(hypervisor, nic, interfaces, dmac=dmac)
 
     # the disks are computed as follows:
     # 1 - get the disks defined in the profile
@@ -1458,6 +1467,318 @@ def init(name,
     conn.close()
 
     return True
+
+
+def _disks_equal(disk1, disk2):
+    '''
+    Test if two disk elements should be considered like the same device
+    '''
+    return ElementTree.tostring(disk1.find('source')) == \
+        ElementTree.tostring(disk2.find('source'))
+
+
+def _nics_equal(nic1, nic2):
+    '''
+    Test if two interface elements should be considered like the same device
+    '''
+
+    def _filter_nic(nic):
+        '''
+        Filter out elements to ignore when comparing nics
+        '''
+        nic_copy = copy.deepcopy(nic)
+        for tag in ['mac', 'alias', 'target', 'address', 'model']:
+            element = nic_copy.find(tag)
+            if element is not None:
+                nic_copy.remove(element)
+
+        # Remove the bridge attribute if not needed: it's auto-added by libvirt
+        source = nic_copy.find('source')
+        if 'network' in source.attrib and 'bridge' in source.attrib:
+            del source.attrib['bridge']
+
+        return nic_copy
+    return ElementTree.tostring(_filter_nic(nic1)).strip() == ElementTree.tostring(_filter_nic(nic2)).strip()
+
+
+def _graphics_equal(gfx1, gfx2):
+    '''
+    Test if two graphics devices should be considered the same device
+    '''
+    def _filter_graphics(gfx):
+        '''
+        When the domain is running, the graphics element may contain additional properties
+        with the default values. This function will strip down the default values.
+        '''
+        gfx_copy = copy.deepcopy(gfx)
+
+        defaults = [{'node': '.', 'attrib': 'port', 'values': ['5900', '-1']},
+                    {'node': '.', 'attrib': 'address', 'values': ['127.0.0.1']},
+                    {'node': 'listen', 'attrib': 'address', 'values': ['127.0.0.1']}]
+
+        for default in defaults:
+            node = gfx_copy.find(default['node'])
+            attrib = default['attrib']
+            if node is not None and (attrib not in node.attrib or node.attrib[attrib] in default['values']):
+                node.set(attrib, default['values'][0])
+        return gfx_copy
+
+    return ElementTree.tostring(_filter_graphics(gfx1)) == ElementTree.tostring(_filter_graphics(gfx2))
+
+
+def _diff_lists(old, new, comparator):
+    '''
+    Compare lists to extract the changes
+
+    :param old: old list
+    :param new: new list
+    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    '''
+    def _remove_indent(node):
+        '''
+        Remove the XML indentation to compare XML trees more easily
+        '''
+        node_copy = copy.deepcopy(node)
+        node_copy.text = None
+        for item in node_copy.iter():
+            item.tail = None
+        return node_copy
+
+    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    for new_item in new:
+        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        if found:
+            old.remove(found[0])
+            diff['unchanged'].append(found[0])
+        else:
+            diff['new'].append(new_item)
+    diff['deleted'] = old
+    return diff
+
+
+def _diff_disk_lists(old, new):
+    '''
+    Compare disk definitions to extract the changes and fix target devices
+
+    :param old: list of ElementTree nodes representing the old disks
+    :param new: list of ElementTree nodes representing the new disks
+    '''
+    diff = _diff_lists(old, new, _disks_equal)
+
+    # Fix the target device to avoid duplicates with the unchanged disks
+    # The requested device names may not be honoured by hypervisor and will
+    # likely be set right at the next start of the VM
+    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
+    for disk in diff['new']:
+        target_node = disk.find('target')
+        target = target_node.get('dev')
+        if target in targets:
+            prefix = [item for item in prefixes if target.startswith(item)][0]
+            for i in range(1024):
+                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+                if attempt not in targets:
+                    target_node.set('dev', attempt)
+                    targets.append(attempt)
+                    break
+    return diff
+
+
+def _diff_interface_lists(old, new):
+    '''
+    Compare network interface definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old interfaces
+    :param new: list of ElementTree nodes representing the new interfaces
+    '''
+    diff = _diff_lists(old, new, _nics_equal)
+
+    # Remove duplicated addresses mac addresses and let libvirt generate them for us
+    macs = [nic.find('mac').get('address') for nic in diff['unchanged']]
+    for nic in diff['new']:
+        mac = nic.find('mac')
+        if mac.get('address') in macs:
+            nic.remove(mac)
+
+    return diff
+
+
+def _diff_graphics_lists(old, new):
+    '''
+    Compare graphic devices definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old graphic devices
+    :param new: list of ElementTree nodes representing the new graphic devices
+    '''
+    return _diff_lists(old, new, _graphics_equal)
+
+
+def update(name,
+           cpu=0,
+           mem=0,
+           disk_profile=None,
+           disks=None,
+           nic_profile=None,
+           interfaces=None,
+           graphics=None,
+           live=True,
+           **kwargs):
+    '''
+    Update the definition of an existing domain.
+
+    :param name: Name of the domain to update
+    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param disk_profile: disk profile to use
+    :param disks:
+        disks definitions as documented in the :func:`init` function.
+        If neither the profile nor this parameter are defined, the disk devices
+        will not be changed.
+    :param nic_profile: network interfaces profile to use
+    :param interfaces:
+        network interfaces  definitions as documented in the :func:`init` function.
+        If neither the profile nor this parameter are defined, the interface devices
+        will not be changed.
+    :param graphics:
+        the new graphics definition as defined in :ref:`init-graphics-def`. If not set,
+        the graphics will not be changed. To remove a graphics device set this parameter
+        to ``{'type': 'none'}``
+    :param live:
+        ``False`` to avoid trying to live update the definition. In such a case, the
+        new definition is applied at the next start of the virtual machine. If ``True``,
+        not all aspects of the definition can be live updated, but as much as possible
+        will be attempted. (Default: ``True``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    :return:
+        dictionary indicating the status of what has been done. It is structured in
+        the following way:
+        {
+          'definition': True,
+          'cpu': True,
+          'mem': True,
+          'disks': {'attached': [list of actually attached disks],
+                    'detached': [list of actually detached disks]},
+          'nics': {'attached': [list of actually attached nics],
+                   'detached': [list of actually detached nics]},
+          'errors': ['error messages for failures']
+        }
+
+    .. versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.update domain cpu=2 mem=1024
+    '''
+    status = {
+        'definition': False,
+        'disk': {'attached': [], 'detached': []},
+        'interface': {'attached': [], 'detached': []}
+    }
+    conn = __get_conn(**kwargs)
+    domain = _get_domain(conn, name)
+    desc = ElementTree.fromstring(domain.XMLDesc(0))
+    need_update = False
+
+    # Compute the XML to get the disks, interfaces and graphics
+    hypervisor = desc.get('type')
+    new_desc = ElementTree.fromstring(_gen_xml(name,
+                                               cpu,
+                                               mem,
+                                               _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
+                                               _get_merged_nics(hypervisor, nic_profile, interfaces),
+                                               hypervisor,
+                                               graphics,
+                                               **kwargs))
+
+    # Update the cpu
+    cpu_node = desc.find('vcpu')
+    if cpu and int(cpu_node.text) != cpu:
+        cpu_node.text = six.text_type(cpu)
+        cpu_node.set('current', six.text_type(cpu))
+        need_update = True
+
+    # Update the memory, note that libvirt outputs all memory sizes in KiB
+    mem_node = desc.find('memory')
+    if mem and int(mem_node.text) != mem * 1024:
+        mem_node.text = six.text_type(mem)
+        mem_node.set('unit', 'MiB')
+        need_update = True
+
+    # Update the XML definition with the new disks and diff changes
+    devices_node = desc.find('devices')
+    parameters = {'disk': ['disks', 'disk_profile'],
+                  'interface': ['interfaces', 'nic_profile'],
+                  'graphics': ['graphics']}
+    changes = {}
+    for dev_type in parameters:
+        changes[dev_type] = {}
+        func_locals = locals()
+        if [param for param in parameters[dev_type] if func_locals.get(param, None)]:
+            old = devices_node.findall(dev_type)
+            new = new_desc.findall('devices/{0}'.format(dev_type))
+            changes[dev_type] = globals()['_diff_{0}_lists'.format(dev_type)](old, new)
+            if changes[dev_type]['deleted'] or changes[dev_type]['new']:
+                for item in old:
+                    devices_node.remove(item)
+                devices_node.extend(new)
+                need_update = True
+
+    # Set the new definition
+    if need_update:
+        try:
+            conn.defineXML(ElementTree.tostring(desc))
+            status['definition'] = True
+        except libvirt.libvirtError as err:
+            conn.close()
+            raise err
+
+        # Do the live changes now that we know the definition has been properly set
+        # From that point on, failures are not blocking to try to live update as much
+        # as possible.
+        commands = []
+        if domain.isActive() and live:
+            if cpu:
+                commands.append({'device': 'cpu',
+                                 'cmd': 'setVcpusFlags',
+                                 'args': [cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE]})
+            if mem:
+                commands.append({'device': 'mem',
+                                 'cmd': 'setMemoryFlags',
+                                 'args': [mem * 1024, libvirt.VIR_DOMAIN_AFFECT_LIVE]})
+
+            for dev_type in ['disk', 'interface']:
+                for added in changes[dev_type].get('new', []):
+                    commands.append({'device': dev_type,
+                                     'cmd': 'attachDevice',
+                                     'args': [ElementTree.tostring(added)]})
+
+                for removed in changes[dev_type].get('deleted', []):
+                    commands.append({'device': dev_type,
+                                     'cmd': 'detachDevice',
+                                     'args': [ElementTree.tostring(removed)]})
+
+        for cmd in commands:
+            try:
+                ret = getattr(domain, cmd['cmd'])(*cmd['args'])
+                device_type = cmd['device']
+                if device_type in ['cpu', 'mem']:
+                    status[device_type] = not bool(ret)
+                else:
+                    actions = {'attachDevice': 'attached', 'detachDevice': 'detached'}
+                    status[device_type][actions[cmd['cmd']]].append(cmd['args'][0])
+
+            except libvirt.libvirtError as err:
+                if 'errors' not in status:
+                    status['errors'] = []
+                status['errors'].append(six.text_type(err))
+
+    conn.close()
+    return status
 
 
 def list_domains(**kwargs):
