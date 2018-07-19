@@ -51,10 +51,10 @@ Functions to interact with Hashicorp Vault.
         .. versionadded:: 2018.3.0
 
     role_name
-        Role name for minion tokens created. If omitted, minion tokens will be 
-        created without any role, thus being able to inherit any master token 
+        Role name for minion tokens created. If omitted, minion tokens will be
+        created without any role, thus being able to inherit any master token
         policy (including token creation capabilities). Optional.
-        
+
         For details please see:
         https://www.vaultproject.io/api/auth/token/index.html#create-token
         Example configuration:
@@ -62,12 +62,12 @@ Functions to interact with Hashicorp Vault.
 
     auth
         Currently only token and approle auth types are supported. Required.
-        
+
         Approle is the preferred way to authenticate with Vault as it provide
-        some advanced options to control authentication process. 
+        some advanced options to control authentication process.
         Please visit Vault documentation for more info:
         https://www.vaultproject.io/docs/auth/approle.html
-                
+
         The token must be able to create tokens with the policies that should be
         assigned to minions.
 
