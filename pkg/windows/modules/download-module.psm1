@@ -17,7 +17,7 @@ Function DownloadFileWithProgress {
 
 
     begin {
-        Write-Host -ForegroundColor Green "  download-module.DownloadFileWithProgress  $url  $localFile"
+        Write-Host -ForegroundColor DarkGreen "  download-module.DownloadFileWithProgress  $url  $localFile"
         $client = New-Object System.Net.WebClient
         $Global:downloadComplete = $false
         $eventDataComplete = Register-ObjectEvent $client DownloadFileCompleted `
