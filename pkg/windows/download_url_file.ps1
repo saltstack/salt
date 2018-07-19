@@ -9,6 +9,6 @@ Param(
 
 Import-Module ./Modules/download-module.psm1
 
-Write-Host -ForegroundColor Green "  download_url_file $url $file"
+Write-Host -ForegroundColor DarkGreen "  download_url_file $url $file"
 DownloadFileWithProgress $url $file
 
