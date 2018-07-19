@@ -146,3 +146,21 @@ class MessagesOutput(IndentOutput):
                                               m=message.format(*_values), e=self._colors['ENDC']))
         self._device.write(os.linesep)
         self._device.flush()
+
+
+def wrap(txt, width=80, ident=0):
+    '''
+    Wrap text to the required dimensions and clean it up, prepare for display.
+
+    :param txt:
+    :param width:
+    :return:
+    '''
+    ident = ' ' * ident
+    txt = (txt or '').replace(os.linesep, ' ').strip()
+
+    wrapper = textwrap.TextWrapper()
+    wrapper.fix_sentence_endings = False
+    wrapper.initial_indent = wrapper.subsequent_indent = ident
+
+    return wrapper.wrap(txt)
