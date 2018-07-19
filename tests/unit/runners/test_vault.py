@@ -226,20 +226,14 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertTrue('error' in result)
             self.assertEqual(result['error'], "no reason")
 
-        mock = _mock_json_response({}, status_code=403, reason="no reason")
-        with patch('requests.post', mock):
-            result = vault.generate_token('test-minion', 'signature')
-            self.assertTrue(isinstance(result, dict))
-            self.assertTrue('error' in result)
-            self.assertEqual(result['error'], 'no reason')
-
         with patch('salt.runners.vault._get_policies', MagicMock(return_value=[])):
             result = vault.generate_token('test-minion', 'signature')
             self.assertTrue(isinstance(result, dict))
             self.assertTrue('error' in result)
             self.assertEqual(result['error'], 'No policies matched minion')
 
-        with patch('salt.runners.vault._get_policies', MagicMock(side_effect=Exception('Test Exception Reason'))):
+        with patch('requests.post',
+                   MagicMock(side_effect=Exception('Test Exception Reason'))):
             result = vault.generate_token('test-minion', 'signature')
             self.assertTrue(isinstance(result, dict))
             self.assertTrue('error' in result)
