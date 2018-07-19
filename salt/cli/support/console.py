@@ -1,7 +1,9 @@
 # coding=utf-8
 '''
 Collection of tools to report messages to console.
-This is subject to be moved to utils.
+
+NOTE: This is subject to incorporate other formatting bits
+      from all around everywhere and then to be moved to utils.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -9,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os
 import salt.utils.color
+import textwrap
 
 
 class IndentOutput(object):
@@ -44,6 +47,25 @@ class MessagesOutput(IndentOutput):
     '''
     Messages output to the CLI.
     '''
+    def msg(self, message, title=None, title_color=None, color='BLUE', ident=0):
+        '''
+        Hint message.
+
+        :param message:
+        :param title:
+        :param title_color:
+        :param color:
+        :param ident:
+        :return:
+        '''
+        if title and not title_color:
+            title_color = color
+        if title_color and not title:
+            title_color = None
+
+        self.__colored_output(title, message, title_color, color, ident=ident)
+
+
     def info(self, message, ident=0):
         '''
         Write an info message to the CLI.
@@ -75,9 +97,14 @@ class MessagesOutput(IndentOutput):
         self.__colored_output('Error', message, 'RED', 'LIGHT_RED', ident=ident)
 
     def __colored_output(self, title, message, title_color, message_color, ident=0):
-        for chunk in [self._colors[title_color], ' ' * ident, '{}:'.format(title), ' ',
-                      self._colors[message_color], message, self._colors['ENDC']]:
-            self._device.write(str(chunk))
+        if title and not title.endswith(':'):
+            _linesep = title.endswith(os.linesep)
+            title = '{}:{}'.format(title.strip(), _linesep and os.linesep or ' ')
+
+        for chunk in [title_color and self._colors[title_color] or None, ' ' * ident,
+                      title, self._colors[message_color], message, self._colors['ENDC']]:
+            if chunk:
+                self._device.write(str(chunk))
         self._device.write(os.linesep)
         self._device.flush()
 
