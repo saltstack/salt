@@ -1,5 +1,5 @@
 #
-# Download url to file.
+# ps1 wrapper for psm1
 #
 #
 Param(
@@ -9,6 +9,5 @@ Param(
 
 Import-Module ./Modules/download-module.psm1
 
-Write-Host -ForegroundColor DarkGreen "  download_url_file $url $file"
 DownloadFileWithProgress $url $file
 
