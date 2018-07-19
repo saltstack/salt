@@ -89,7 +89,7 @@ outside a ``pyeapi`` Proxy, e.g.:
     Minion. If you want to use the :mod:`pyeapi Proxy <salt.proxy.arista_pyeapi>`,
     please follow the documentation notes for a proper setup.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import logging
