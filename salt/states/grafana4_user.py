@@ -100,7 +100,7 @@ def present(name,
         user = __salt__['grafana4.get_user'](name, profile)
         ret['changes']['new'] = user
 
-    user_data = __salt__['grafana4.get_user_data'](user['id'])
+    user_data = __salt__['grafana4.get_user_data'](user['id'], profile=profile)
     data = _get_json_data(login=name, email=email, name=fullname, theme=theme,
                           defaults=user_data)
     if data != _get_json_data(login=None, email=None, name=None, theme=None,
