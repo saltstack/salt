@@ -1,8 +1,12 @@
 sysinfo:
+  - description: |
+      Get the Salt grains of the current system.
   - grains.items:
       info: System grains
 
 packages:
+  - description: |
+      Fetch list of all the installed packages.
   - pkg.list_pkgs:
       info: Installed packages
 
