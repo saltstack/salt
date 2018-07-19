@@ -297,6 +297,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
