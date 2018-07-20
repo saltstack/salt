@@ -179,6 +179,9 @@ TEST_SUITES = {
     'scheduler':
         {'display_name': 'Scheduler',
          'path': 'integration/scheduler'},
+    'sdb':
+        {'display_name': 'Sdb',
+         'path': 'integration/sdb'},
 }
 
 
@@ -468,6 +471,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run salt-api tests'
+        )
+        self.test_selection_group.add_option(
+            '--sdb',
+            '--sdb-tests',
+            dest='sdb',
+            action='store_true',
+            default=False,
+            help='Run sdb tests'
         )
         self.test_selection_group.add_option(
             '-P',
