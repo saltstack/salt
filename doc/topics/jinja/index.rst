@@ -1152,7 +1152,7 @@ Returns:
 .. jinja_ref:: traverse
 
 ``traverse``
---------------
+------------
 
 .. versionadded:: 2018.3.3
 
