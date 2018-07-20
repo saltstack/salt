@@ -407,7 +407,10 @@ def flopen(*args, **kwargs):
     with fopen(*args, **kwargs) as f_handle:
         try:
             if is_fcntl_available(check_sunos=True):
-                fcntl.flock(f_handle.fileno(), fcntl.LOCK_SH)
+                lock_type = fcntl.LOCK_SH
+                if salt.utils.platform.is_aix() and ('a' in args[1] or 'w' in args[1]):
+                    lock_type = fcntl.LOCK_EX
+                fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle
         finally:
             if is_fcntl_available(check_sunos=True):

@@ -457,8 +457,10 @@ class _filesystems_entry(object):
     def dict_from_lines(cls, lines, keys=filesystems_keys):
         if len(lines) < 2:
             raise ValueError('Invalid number of lines: {0}'.format(lines))
-
-        if len(keys) < 6:
+        if not keys:
+            # if empty force default filesystems_keys
+            keys = _filesystems_entry.filesystems_keys
+        elif len(keys) < 6:
             raise ValueError('Invalid key array: {0}'.format(keys))
 
         blk_lines = lines
@@ -479,7 +481,10 @@ class _filesystems_entry(object):
 
     @classmethod
     def dict_from_cmd_line(cls, ipargs, keys=filesystems_keys):
-        if len(keys) < 1:
+        if not keys:
+            # if empty force default filesystems_keys
+            keys = _filesystems_entry.filesystems_keys
+        elif len(keys) < 1:
             raise ValueError('Invalid key array: {0}'.format(keys))
 
         cmdln_dict = ipargs
@@ -1204,8 +1209,11 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-    # use of fstype on AIX is with /etc/filesystems
-    if fstype and 'AIX' not in __grains__['os']:
+    # use of fstype on AIX differs from typical Linux use of -t functionality
+    # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
+    if fstype and 'AIX' in __grains__['os']:
+        args += ' -v {0}'.format(fstype)
+    else:
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
@@ -1249,9 +1257,13 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-        # use of fstype on AIX is with /etc/filesystems
-        if fstype and 'AIX' not in __grains__['os']:
+        # use of fstype on AIX differs from typical Linux use of -t functionality
+        # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
+        if fstype and 'AIX' in __grains__['os']:
+            args += ' -v {0}'.format(fstype)
+        else:
             args += ' -t {0}'.format(fstype)
+
         if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
         else:
@@ -1639,7 +1651,6 @@ def filesystems(config='/etc/filesystems'):
 def set_filesystems(
         name,
         device,
-        fstype,
         vfstype,
         opts='-',
         mount='true',
@@ -1651,7 +1662,17 @@ def set_filesystems(
     .. versionadded:: 2018.3.3
 
     Verify that this mount is represented in the filesystems, change the mount
-    to match the data passed, or add the mount if it is not present.
+    to match the data passed, or add the mount if it is not present on AIX
+
+        Provide information if the path is mounted
+
+    :param name:          The name of the mount point where the device is mounted.
+    :param device:        The device that is being mounted.
+    :param vfstype:       The file system that is used (AIX has two fstypes, fstype and vfstype - similar to Linux fstype)
+    :param opts:          Additional options used when mounting the device.
+    :param mount:         Mount if not mounted, default True.
+    :param config:        Configuration file, default /etc/filesystems.
+    :param match:         File systems type to match on, default auto
 
     CLI Example:
 
@@ -1667,7 +1688,6 @@ def set_filesystems(
     entry_args = {
         'name': name,
         'dev': device.replace('\\ ', '\\040'),
-        'fstype': fstype,
         'vfstype': vfstype,
         'opts': opts,
         'mount': mount,
@@ -1717,7 +1737,7 @@ def set_filesystems(
             'autofs',
             'stnfs'])
 
-        if fstype in specialFSes:
+        if vfstype in specialFSes:
             match_on = ['name']
         else:
             match_on = ['dev']
