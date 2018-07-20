@@ -268,8 +268,7 @@ def present(host, groups, interfaces, **kwargs):
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
                 sum_kwargs = dict(new_inventory)
-                for elem in connection_args:
-                    sum_kwargs = new_inventory.get(elem, 0) + connection_args[elem]
+                sum_kwargs.update(connection_args)
                 sum_kwargs['clear_old'] = True
 
                 hostupdate = __salt__['zabbix.host_inventory_set'](hostid, **sum_kwargs)
