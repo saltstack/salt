@@ -1,5 +1,9 @@
 pipeline {
     agent { label 'kitchen-slave' }
+    options {
+        timestamps()
+        ansiColor('xterm')
+    }
     environment {
         SALT_KITCHEN_PLATFORMS = "/var/jenkins/workspace/platforms.yml"
         SALT_KITCHEN_DRIVER = "/var/jenkins/workspace/driver.yml"
@@ -7,6 +11,7 @@ pipeline {
         RBENV_VERSION = "2.4.2"
         TEST_SUITE = "py2"
         TEST_PLATFORM = "ubuntu-1604"
+        PY_COLORS = 1
     }
     stages {
         stage('github-pending') {
@@ -31,21 +36,25 @@ pipeline {
                         sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
                     }
                 }}
-                archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
             }
             post {
                 always {
                     script { withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                         sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                            sh 'ssh-add ~/.ssh/jenkins/jenkins-testing.pem'
+                            sh 'ssh-add ~/.ssh/jenkins-testing.pem'
                             sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
                         }
                     }}
+                    archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
                 }
             }
         }
     }
     post {
+        always {
+            junit 'artifacts/xml-unittests-output/*.xml'
+            cleanWs()
+        }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
