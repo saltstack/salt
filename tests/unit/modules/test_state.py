@@ -11,6 +11,7 @@ import os
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
@@ -356,6 +357,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': '/D',
                     'environment': None,
                     '__cli': 'salt',
+                },
+                '__salt__': {
+                    'config.option': MagicMock(return_value=''),
                 },
             },
         }
@@ -752,28 +756,25 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                           "whitelist=sls1.sls",
                                           pillar="A")
 
-                        mock = MagicMock(return_value=True)
-                        with patch.dict(state.__salt__,
-                                        {'config.option': mock}):
-                            mock = MagicMock(return_value="A")
+                        mock = MagicMock(return_value="A")
+                        with patch.object(state, '_filter_running',
+                                          mock):
+                            mock = MagicMock(return_value=True)
                             with patch.object(state, '_filter_running',
                                               mock):
                                 mock = MagicMock(return_value=True)
-                                with patch.object(state, '_filter_running',
+                                with patch.object(salt.payload, 'Serial',
                                                   mock):
-                                    mock = MagicMock(return_value=True)
-                                    with patch.object(salt.payload, 'Serial',
-                                                      mock):
-                                        with patch.object(os.path,
-                                                          'join', mock):
-                                            with patch.object(
-                                                              state,
-                                                              '_set'
-                                                              '_retcode',
-                                                              mock):
-                                                self.assertTrue(state.
-                                                                highstate
-                                                                (arg))
+                                    with patch.object(os.path,
+                                                      'join', mock):
+                                        with patch.object(
+                                                          state,
+                                                          '_set'
+                                                          '_retcode',
+                                                          mock):
+                                            self.assertTrue(state.
+                                                            highstate
+                                                            (arg))
 
     def test_clear_request(self):
         '''
@@ -914,17 +915,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                                     MockState.HighState.flag = False
                                     mock = MagicMock(return_value=True)
-                                    with patch.dict(state.__salt__,
-                                                    {'config.option':
-                                                     mock}):
-                                        mock = MagicMock(return_value=
-                                                         True)
-                                        with patch.object(
-                                                          state,
-                                                          '_filter_'
-                                                          'running',
-                                                          mock):
-                                            self.sub_test_sls()
+                                    with patch.object(state,
+                                                      '_filter_'
+                                                      'running',
+                                                      mock):
+                                        self.sub_test_sls()
 
     def sub_test_sls(self):
         '''
@@ -946,6 +941,75 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                               None,
                                                               None,
                                                               True))
+
+    def test_sls_sync(self):
+        '''
+        Test test.sls with the sync argument
+
+        We're only mocking the sync functions we expect to sync. If any other
+        sync functions are run then they will raise a KeyError, which we want
+        as it will tell us that we are syncing things we shouldn't.
+        '''
+        mock_empty_list = MagicMock(return_value=[])
+        with patch.object(state, 'running', mock_empty_list), \
+                patch.object(state, '_disabled', mock_empty_list), \
+                patch.object(state, '_get_pillar_errors', mock_empty_list):
+
+            sync_mocks = {
+                'saltutil.sync_modules': Mock(),
+                'saltutil.sync_states': Mock(),
+            }
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,states')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # sync_mods=True should be interpreted as sync_mods=all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods=True)
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all when "all" is passed along with module types.
+            # This tests that we *only* run a sync_all and avoid unnecessary
+            # extra syncing.
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
 
     def test_pkg(self):
         '''

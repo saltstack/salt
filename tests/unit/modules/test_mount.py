@@ -117,12 +117,12 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                            mock_open(read_data=file_data),
                            create=True) as m:
                     m.return_value.__iter__.return_value = file_data.splitlines()
-                    self.assertEqual(mount.fstab(), {'/tmp': {'device': 'swap',
-                                                              'device_fsck': '-',
-                                                              'fstype': 'tmpfs',
-                                                              'mount_at_boot': 'yes',
-                                                              'opts': ['size=2048m'],
-                                                              'pass_fsck': '-'}})
+                    self.assertEqual(mount.vfstab(), {'/tmp': {'device': 'swap',
+                                                               'device_fsck': '-',
+                                                               'fstype': 'tmpfs',
+                                                               'mount_at_boot': 'yes',
+                                                               'opts': ['size=2048m'],
+                                                               'pass_fsck': '-'}})
 
     def test_rm_fstab(self):
         '''
