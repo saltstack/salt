@@ -126,7 +126,7 @@ The data from Consul can be merged into a nested key in Pillar.
     ext_pillar:
       - consul: my_consul_config pillar_root=consul_data
 
-By default, keys containing YAML data will be deserialized before being merged into Pillar.  
+By default, keys containing YAML data will be deserialized before being merged into Pillar.
 This behavior can be disabled by setting ``expand_keys`` to ``false``.
 
 .. code-block:: yaml
