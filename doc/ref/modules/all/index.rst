@@ -324,6 +324,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    peeringdb
     pf
     philips_hue
     pillar
