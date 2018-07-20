@@ -1174,7 +1174,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
         if not isinstance(mdata, dict):
             continue
 
-        if not _ret_dict and functions in mdata:
+        if not _ret_dict and functions[0] in mdata:
             ret[minion] = mdata.get(functions)
         elif _ret_dict:
             for fun in functions:

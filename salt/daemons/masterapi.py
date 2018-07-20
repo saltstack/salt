@@ -613,7 +613,7 @@ class RemoteFuncs(object):
             if not isinstance(fdata, dict):
                 continue
 
-            if not _ret_dict and functions_allowed in fdata:
+            if not _ret_dict and functions_allowed[0] in fdata:
                 ret[minion] = fdata.get(fun)
             elif _ret_dict:
                 for fun in functions_allowed:

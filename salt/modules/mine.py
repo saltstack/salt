@@ -316,7 +316,7 @@ def get(tgt,
                 else:
                     return {}
 
-                if not _ret_dict and functions in data:
+                if not _ret_dict and functions[0] in data:
                     ret[__opts__['id']] = data.get(functions)
                 elif _ret_dict:
                     for fun in functions:
