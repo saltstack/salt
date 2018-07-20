@@ -448,7 +448,7 @@ def _osx_memdata():
     sysctl = salt.utils.path.which('sysctl')
     if sysctl:
         mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
-        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage'.format(sysctl)).split()[2]
+        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage'.format(sysctl)).split()[2].replace(',', '.')
         if swap_total.endswith('K'):
             _power = 2**10
         elif swap_total.endswith('M'):
