@@ -3738,7 +3738,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
 
     def get_file_time_from_mtime(f):
         if f == '.' or f == '..':
-            return (None,None)
+            return (None, None)
         lstat = __salt__['file.lstat'](os.path.join(name, f))
         if lstat:
             mtime = lstat['st_mtime']
