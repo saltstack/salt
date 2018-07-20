@@ -55,7 +55,6 @@ class WinPKGTest(ModuleCase):
         # now add new sls
         with salt.utils.fopen(CURL, 'w') as fp_:
             fp_.write(textwrap.dedent('''
-                {% set PROGRAM_FILES = "%ProgramFiles%" %}
                 curl:
                   '7.46.0':
                     full_name: 'cURL'
