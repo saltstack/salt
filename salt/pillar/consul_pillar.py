@@ -267,7 +267,7 @@ def fetch_tree(client, path, expand_keys):
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
     '''
-    index, items = consul_fetch(client, path)
+    _, items = consul_fetch(client, path)
     ret = {}
     has_children = re.compile(r'/$')
 
