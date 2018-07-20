@@ -610,7 +610,7 @@ class RemoteFuncs(object):
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
 
-            if fdata is None or not isinstance(fdata, dict):
+            if not isinstance(fdata, dict):
                 continue
 
             if not _ret_dict and functions_allowed in fdata:

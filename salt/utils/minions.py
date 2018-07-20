@@ -1171,7 +1171,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
 
-        if mdata is None or not isinstance(mdata, dict):
+        if not isinstance(mdata, dict):
             continue
 
         if not _ret_dict and functions in mdata:
