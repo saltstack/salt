@@ -1989,6 +1989,7 @@ def running(name,
         if __opts__['test']:
             ret['result'] = None
             comments.append('Container would be started')
+            return _format_comments(ret, comments)
         else:
             try:
                 post_state = __salt__['docker.start'](name)['state']['new']
