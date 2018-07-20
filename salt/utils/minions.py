@@ -1170,14 +1170,15 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
 
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
-        if mdata is None:
+
+        if mdata is None or not isinstance(mdata, dict):
             continue
 
-        if isinstance(mdata, dict):
+        if not _ret_dict and functions in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
             for fun in functions:
-                if mdata.has_key(fun):
-                    if _ret_dict:
-                        ret.setdefault(fun, {})[minion] = mdata.get(fun)
-                    else:
-                        ret[minion] = mdata.get(fun)
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
     return ret

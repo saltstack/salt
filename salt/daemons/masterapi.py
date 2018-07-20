@@ -609,13 +609,17 @@ class RemoteFuncs(object):
         minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
-            if isinstance(fdata, dict):
+
+            if fdata is None or not isinstance(fdata, dict):
+                continue
+
+            if not _ret_dict and functions_allowed in fdata:
+                ret[minion] = fdata.get(fun)
+            elif _ret_dict:
                 for fun in functions_allowed:
-                    if fdata.has_key(fun):
-                        if _ret_dict:
-                            ret.setdefault(fun, {})[minion] = fdata.get(fun)
-                        else:
-                            ret[minion] = fdata.get(fun)
+                    if fun in fdata:
+                        ret.setdefault(fun, {})[minion] = fdata.get(fun)
+
         return ret
 
     def _mine(self, load, skip_verify=False):

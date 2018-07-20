@@ -316,12 +316,12 @@ def get(tgt,
                 else:
                     return {}
 
-                for fun in functions:
-                    if data.has_key(fun):
-                        if _ret_dict:
+                if not _ret_dict and functions in data:
+                    ret[__opts__['id']] = data.get(functions)
+                elif _ret_dict:
+                    for fun in functions:
+                        if fun in data:
                             ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
-                        else:
-                            ret[__opts__['id']] = data.get(fun)
 
         return ret
     load = {
