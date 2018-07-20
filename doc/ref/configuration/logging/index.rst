@@ -238,7 +238,7 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
     'salt.modules': 'debug'
     'salt.loader.saltmaster.ext.module.custom_module': 'all'
 
-.. conf_log:: log_fmt_console
+.. conf_log:: log_fmt_jid
 
 ``log_fmt_jid``
 -------------------
