@@ -182,6 +182,9 @@ TEST_SUITES = {
     'sdb':
         {'display_name': 'Sdb',
          'path': 'integration/sdb'},
+    'logging':
+        {'display_name': 'Logging',
+         'path': 'integration/logging'},
 }
 
 
