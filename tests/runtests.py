@@ -516,6 +516,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             help='Run scheduler integration tests'
         )
+        self.test_selection_group.add_option(
+            '--logging',
+            dest='logging',
+            action='store_true',
+            default=False,
+            help='Run logging integration tests'
+        )
 
     def validate_options(self):
         if self.options.cloud_provider or self.options.external_api:
