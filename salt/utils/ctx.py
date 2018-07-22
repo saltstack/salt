@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+
+# Import python libs
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import threading
+
 
 class ClassProperty(property):
     '''
@@ -17,7 +22,7 @@ class RequestContext(object):
     Simply import this class into any module and access the current request handler by this
     class's class method property 'current'. If it returns None, there's no active request.
     .. code:: python
-        from salt.utils.ctx import RequestContext
+        from raas.utils.ctx import RequestContext
         current_request_handler = RequestContext.current
     '''
 
