@@ -107,7 +107,7 @@ def validate(config):
         'unmount'
     ]
 
-    # Configuration for inotify beacon should be a dict of dicts
+    # Configuration for inotify beacon should be a list of dicts
     if not isinstance(config, list):
         return False, 'Configuration for inotify beacon must be a list.'
     else:
