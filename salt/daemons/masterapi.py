@@ -1068,9 +1068,9 @@ class LocalFuncs(object):
         try:
             fun = load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
-                                       load.get('kwarg', {}),
-                                       username)
+            return runner_client.asynchronous(fun,
+                                              load.get('kwarg', {}),
+                                              username)
         except Exception as exc:
             log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,
