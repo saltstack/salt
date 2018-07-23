@@ -447,7 +447,7 @@ class SyncClientMixin(object):
 
 class AsyncClientMixin(object):
     '''
-    A mixin for *Client interfaces to enable easy async function execution
+    A mixin for *Client interfaces to enable easy asynchronous function execution
     '''
     client = None
     tag_prefix = None
