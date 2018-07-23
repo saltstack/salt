@@ -68,10 +68,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret, [{'diskusage': 50, 'mount': '/'}])
 
     def test_diskusage_nomatch(self):
+        disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch('psutil.disk_partitions',
                    MagicMock(return_value=STUB_DISK_PARTITION)), \
-                patch('psutil.disk_usage',
-                      MagicMock(return_value=STUB_DISK_USAGE)):
+                patch('psutil.disk_usage', disk_usage_mock):
             config = [{'/': '70%'}]
 
             ret = diskusage.validate(config)
@@ -82,10 +82,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.assertNotEqual(ret, [{'diskusage': 50, 'mount': '/'}])
 
     def test_diskusage_match_regex(self):
+        disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch('psutil.disk_partitions',
                    MagicMock(return_value=STUB_DISK_PARTITION)), \
-                patch('psutil.disk_usage',
-                      MagicMock(return_value=STUB_DISK_USAGE)):
+                patch('psutil.disk_usage', disk_usage_mock):
             config = [{r'^\/': '50%'}]
 
             ret = diskusage.validate(config)
