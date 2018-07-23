@@ -1935,9 +1935,9 @@ class ClearFuncs(object):
         try:
             fun = clear_load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
-                                       clear_load.get('kwarg', {}),
-                                       username)
+            return runner_client.asynchronous(fun,
+                                              clear_load.get('kwarg', {}),
+                                              username)
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
