@@ -1598,6 +1598,40 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    def test_line_insert_ensure_before_first_line(self, name):
+        '''
+        Test for file.line for insertion ensuring the line is before first line
+        :return:
+        '''
+        cfg_content = '#!/bin/bash'
+        file_content = os.linesep.join([
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            cfg_content,
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
+            handles = atomic_open_mock.filehandles[name]
+            # We should only have opened the file once
+            open_count = len(handles)
+            assert open_count == 1, open_count
+            # We should only have invoked .writelines() once...
+            writelines_content = handles[0].writelines_calls
+            writelines_count = len(writelines_content)
+            assert writelines_count == 1, writelines_count
+
+    @with_tempfile()
     def test_line_insert_ensure_after(self, name):
         '''
         Test for file.line for insertion ensuring the line is after
