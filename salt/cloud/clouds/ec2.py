@@ -1892,7 +1892,7 @@ def request_instance(vm_=None, call=None):
             if 'tag' in _bd:
                 _bd.pop('tag')
 
-    ex_blockdevicemappings = block_device_mappings(vm_)
+    ex_blockdevicemappings = blockdevicemappings_holder
     if ex_blockdevicemappings:
         params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping',
                       ex_blockdevicemappings))
