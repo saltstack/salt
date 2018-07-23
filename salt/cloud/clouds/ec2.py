@@ -2873,16 +2873,16 @@ def create(vm_=None, call=None):
     block_device_volume_id_map = {}
 
     if ex_blockdevicetags:
-       for k, v in six.iteritems(ret['blockDeviceMapping']):
-          if isinstance(v, dict):
-              if v['deviceName'] in ex_blockdevicetags:
-                  ex_blockdevicetags[v['deviceName']]['Name'] = vm_['name']
-                  block_device_volume_id_map[v[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[v['deviceName']]
-          else:
-              for _d in v:
-                  if _d['deviceName'] in ex_blockdevicetags:
-                      ex_blockdevicetags[_d['deviceName']]['Name'] = vm_['name']
-                      block_device_volume_id_map[_d[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[_d['deviceName']]
+        for k, v in six.iteritems(ret['blockDeviceMapping']):
+            if isinstance(v, dict):
+                if v['deviceName'] in ex_blockdevicetags:
+                    ex_blockdevicetags[v['deviceName']]['Name'] = vm_['name']
+                    block_device_volume_id_map[v[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[v['deviceName']]
+            else:
+                for _d in v:
+                    if _d['deviceName'] in ex_blockdevicetags:
+                        ex_blockdevicetags[_d['deviceName']]['Name'] = vm_['name']
+                        block_device_volume_id_map[_d[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[_d['deviceName']]
 
     if block_device_volume_id_map:
 
