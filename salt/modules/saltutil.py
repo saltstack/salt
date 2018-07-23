@@ -955,7 +955,7 @@ def refresh_modules(async=True):
     Signal the minion to refresh the module and grain data
 
     The default is to refresh module asynchronously. To block
-    until the module refresh is complete, set the 'async' flag
+    until the module refresh is complete, set the 'asynchronous' flag
     to False.
 
     CLI Example:
