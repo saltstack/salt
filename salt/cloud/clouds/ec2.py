@@ -2876,13 +2876,13 @@ def create(vm_=None, call=None):
         for k, v in six.iteritems(ret['blockDeviceMapping']):
             if isinstance(v, dict):
                 if v['deviceName'] in ex_blockdevicetags:
-                    if not 'Name' in ex_blockdevicetags[v['deviceName']]:
+                    if 'Name' not in ex_blockdevicetags[v['deviceName']]:
                         ex_blockdevicetags[v['deviceName']]['Name'] = vm_['name']
                     block_device_volume_id_map[v[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[v['deviceName']]
             else:
                 for _d in v:
                     if _d['deviceName'] in ex_blockdevicetags:
-                        if not 'Name' in ex_blockdevicetags[_d['deviceName']]:
+                        if 'Name' not in ex_blockdevicetags[_d['deviceName']]:
                             ex_blockdevicetags[_d['deviceName']]['Name'] = vm_['name']
                         block_device_volume_id_map[_d[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[_d['deviceName']]
 
