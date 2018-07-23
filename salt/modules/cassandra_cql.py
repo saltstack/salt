@@ -128,7 +128,7 @@ def __virtual__():
 
 
 def _async_log_errors(errors):
-    log.error('Cassandra_cql async call returned: %s', errors)
+    log.error('Cassandra_cql asynchronous call returned: %s', errors)
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):
