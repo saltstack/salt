@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
@@ -12,12 +12,13 @@ from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 
 CURL = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'win', 'repo-ng', 'curl.sls')
 
 
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinPKGTest(ModuleCase):
     '''
     Tests for salt.modules.win_pkg. There are already
@@ -53,7 +54,7 @@ class WinPKGTest(ModuleCase):
         _check_pkg(pkgs)
 
         # now add new sls
-        with salt.utils.fopen(CURL, 'w') as fp_:
+        with salt.utils.files.fopen(CURL, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 curl:
                   '7.46.0':
