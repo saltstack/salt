@@ -246,7 +246,7 @@ class Runner(RunnerClient):
                                                       pub=async_pub)
                     # by default: info will be not enougth to be printed out !
                     log.warning(
-                        'Running in async mode. Results of this execution may '
+                        'Running in asynchronous mode. Results of this execution may '
                         'be collected by attaching to the master event bus or '
                         'by examing the master job cache, if configured. '
                         'This execution is running under tag %s', async_pub['tag']
