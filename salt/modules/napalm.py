@@ -299,22 +299,19 @@ def compliance_report(filepath=None,
             (including pure Python).
 
     string
-
-        .. versionchanged:: Fluorine
+        .. versionadded:: Fluorine
 
         The compliance report send as inline string, to be used as the file to
         send through the renderer system. Note, not all renderer modules can
         work with strings; the 'py' renderer requires a file, for example.
 
     renderer: ``jinja|yaml``
-
-        .. versionchanged:: Fluorine
+        .. versionadded:: Fluorine
 
         The renderer pipe to send the file through; this is overridden by a
         "she-bang" at the top of the file.
 
     kwargs
-
         .. versionchanged:: Fluorine
 
         Keyword args to pass to Salt's compile_template() function.
@@ -413,6 +410,23 @@ def netmiko_args(**kwargs):
     Return the key-value arguments used for the authentication arguments for
     the netmiko module.
 
+    When running in a non-native NAPALM driver (e.g., ``panos``, `f5``, ``mos`` -
+    either from https://github.com/napalm-automation-community or defined in
+    user's own environment, one can specify the Netmiko device type (the
+    ``device_type`` argument) via the ``netmiko_device_type_map`` configuration
+    option / Pillar key, e.g.,
+
+    .. code-block:: yaml
+
+        netmiko_device_type_map:
+          f5: f5_ltm
+          dellos10: dell_os10
+
+    The configuration above defines the mapping between the NAPALM ``os`` Grain
+    and the Netmiko ``device_type``, e.g., when the NAPALM Grain is ``f5``, it
+    would use the ``f5_ltm`` SSH Netmiko driver to execute commands over SSH on
+    the remote network device.
+
     CLI Example:
 
     .. code-block:: bash
@@ -440,7 +454,10 @@ def netmiko_args(**kwargs):
         'fortios': 'fortinet',
         'panos': 'paloalto_panos',
         'aos': 'alcatel_aos',
-        'vyos': 'vyos'
+        'vyos': 'vyos',
+        'f5': 'f5_ltm',
+        'ce': 'huawei',
+        's350': 'cisco_s300'
     }
     # If you have a device type that is not listed here, please submit a PR
     # to add it, and/or add the map into your opts/Pillar: netmiko_device_type_map
@@ -925,3 +942,347 @@ def junos_call(fun, *args, **kwargs):
             'comment': '{} is not a valid function'.format(fun)
         }
     return __salt__[mod_fun](*args, **kwargs)
+
+
+def pyeapi_nxos_api_args(**prev_kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the key-value arguments used for the authentication arguments for the
+    :mod:`pyeapi execution module <salt.module.arista_pyeapi>`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.pyeapi_nxos_api_args
+    '''
+    kwargs = {}
+    napalm_opts = salt.utils.napalm.get_device_opts(__opts__, salt_obj=__salt__)
+    optional_args = napalm_opts['OPTIONAL_ARGS']
+    kwargs['host'] = napalm_opts['HOSTNAME']
+    kwargs['username'] = napalm_opts['USERNAME']
+    kwargs['password'] = napalm_opts['PASSWORD']
+    kwargs['timeout'] = napalm_opts['TIMEOUT']
+    kwargs['transport'] = optional_args.get('transport')
+    kwargs['port'] = optional_args.get('port')
+    kwargs['verify'] = optional_args.get('verify')
+    prev_kwargs.update(kwargs)
+    return prev_kwargs
+
+
+@proxy_napalm_wrap
+def pyeapi_run_commands(*commands, **kwargs):
+    '''
+    Execute a list of commands on the Arista switch, via the ``pyeapi`` library.
+    This function forwards the existing connection details to the
+    :mod:`pyeapi.run_commands <salt.module.arista_pyeapi.run_commands>`
+    execution function.
+
+    commands
+        A list of commands to execute.
+
+    encoding: ``json``
+        The requested encoding of the command output. Valid values for encoding
+        are ``json`` (default) or ``text``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.pyeapi_run_commands 'show version' encoding=text
+        salt '*' napalm.pyeapi_run_commands 'show ip bgp neighbors'
+    '''
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['pyeapi.run_commands'](*commands, **pyeapi_kwargs)
+
+
+@proxy_napalm_wrap
+def pyeapi_call(method, *args, **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Invoke an arbitrary method from the ``pyeapi`` library.
+    This function forwards the existing connection details to the
+    :mod:`pyeapi.run_commands <salt.module.arista_pyeapi.run_commands>`
+    execution function.
+
+    method
+        The name of the ``pyeapi`` method to invoke.
+
+    kwargs
+        Key-value arguments to send to the ``pyeapi`` method.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
+        salt '*' napalm.pyeapi_call get_config as_string=True
+   '''
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['pyeapi.call'](method, *args, **pyeapi_kwargs)
+
+
+@proxy_napalm_wrap
+def pyeapi_conn(**kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the connection object with the Arista switch, over ``pyeapi``,
+    passing the authentication details from the existing NAPALM connection.
+
+    .. warning::
+        This function is not suitable for CLI usage, more rather to be used in
+        various Salt modules, to reusing the established connection, as in
+        opposite to opening a new connection for each task.
+
+    Usage example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.pyeapi_conn']()
+        res1 = conn.run_commands('show version')
+        res2 = conn.get_config(as_string=True)
+    '''
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['pyeapi.get_connection'](**pyeapi_kwargs)
+
+
+@proxy_napalm_wrap
+def pyeapi_config(commands=None,
+                  config_file=None,
+                  template_engine='jinja',
+                  context=None,
+                  defaults=None,
+                  saltenv='base',
+                  **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Configures the Arista switch with the specified commands, via the ``pyeapi``
+    library. This function forwards the existing connection details to the
+    :mod:`pyeapi.run_commands <salt.module.arista_pyeapi.run_commands>`
+    execution function.
+
+    commands
+        The list of configuration commands to load on the Arista switch.
+
+        .. note::
+            This argument is ignored when ``config_file`` is specified.
+
+    config_file
+        The source file with the configuration commands to be sent to the device.
+
+        The file can also be a template that can be rendered using the template
+        engine of choice. This can be specified using the absolute path to the
+        file, or using one of the following URL schemes:
+
+        - ``salt://``
+        - ``https://``
+        - ``ftp:/``
+        - ``s3:/``
+        - ``swift://``
+
+    template_engine: ``jinja``
+        The template engine to use when rendering the source file. Default:
+        ``jinja``. To simply fetch the file without attempting to render, set
+        this argument to ``None``.
+
+    context: ``None``
+        Variables to add to the template context.
+
+    defaults: ``None``
+        Default values of the ``context`` dict.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file. Ignored if
+        ``config_file`` is not a ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
+   '''
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['pyeapi.config'](commands=commands,
+                                     config_file=config_file,
+                                     template_engine=template_engine,
+                                     context=context,
+                                     defaults=defaults,
+                                     saltenv=saltenv,
+                                     **pyeapi_kwargs)
+
+
+@proxy_napalm_wrap
+def nxos_api_rpc(commands,
+                 method='cli',
+                 **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Execute an arbitrary RPC request via the Nexus API.
+
+    commands
+        The RPC commands to be executed.
+
+    method: ``cli``
+        The type of the response, i.e., raw text (``cli_ascii``) or structured
+        document (``cli``). Defaults to ``cli`` (structured data).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.nxos_api_rpc 'show version'
+    '''
+    nxos_api_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['nxos_api.rpc'](commands, method=method, **nxos_api_kwargs)
+
+
+@proxy_napalm_wrap
+def nxos_api_config(commands=None,
+                    config_file=None,
+                    template_engine='jinja',
+                    context=None,
+                    defaults=None,
+                    saltenv='base',
+                    **kwargs):
+    '''
+     .. versionadded:: Fluorine
+
+    Configures the Nexus switch with the specified commands, via the NX-API.
+
+    commands
+        The list of configuration commands to load on the Nexus switch.
+
+        .. note::
+            This argument is ignored when ``config_file`` is specified.
+
+    config_file
+        The source file with the configuration commands to be sent to the device.
+
+        The file can also be a template that can be rendered using the template
+        engine of choice. This can be specified using the absolute path to the
+        file, or using one of the following URL schemes:
+
+        - ``salt://``
+        - ``https://``
+        - ``ftp:/``
+        - ``s3:/``
+        - ``swift://``
+
+    template_engine: ``jinja``
+        The template engine to use when rendering the source file. Default:
+        ``jinja``. To simply fetch the file without attempting to render, set
+        this argument to ``None``.
+
+    context: ``None``
+        Variables to add to the template context.
+
+    defaults: ``None``
+        Default values of the ``context`` dict.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file. Ignored if
+        ``config_file`` is not a ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.nxos_api_config 'spanning-tree mode mstp'
+        salt '*' napalm.nxos_api_config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
+    '''
+    nxos_api_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['nxos_api.config'](commands=commands,
+                                       config_file=config_file,
+                                       template_engine=template_engine,
+                                       context=context,
+                                       defaults=defaults,
+                                       saltenv=saltenv,
+                                       **nxos_api_kwargs)
+
+
+@proxy_napalm_wrap
+def nxos_api_show(commands, raw_text=True, **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Execute one or more show (non-configuration) commands.
+
+    commands
+        The commands to be executed.
+
+    raw_text: ``True``
+        Whether to return raw text or structured data.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.nxos_api_show 'show version'
+        salt '*' napalm.nxos_api_show 'show bgp sessions' 'show processes' raw_text=False
+    '''
+    nxos_api_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__['nxos_api.show'](commands,
+                                     raw_text=raw_text,
+                                     **nxos_api_kwargs)
+
+
+@proxy_napalm_wrap
+def rpc(command, **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    This is a wrapper to execute RPC requests on various network operating
+    systems supported by NAPALM, invoking the following functions for the NAPALM
+    native drivers:
+
+    - :py:func:`napalm.junos_rpc <salt.modules.napalm.junos_rpc>` for ``junos``
+    - :py:func:`napalm.pyeapi_run_commands <salt.modules.napalm.pyeapi_run_commands>`
+      for ``eos``
+    - :py:func:`napalm.nxos_api_rpc <salt.modules.napalm.nxos_api_rpc>` for
+      ``nxos``
+    - :py:func:`napalm.netmiko_commands <salt.modules.napalm.netmiko_commands>`
+      for ``ios``, ``iosxr``, and ``nxos_ssh``
+
+    command
+        The RPC command to execute. This depends on the nature of the operating
+        system.
+
+    kwargs
+        Key-value arguments to be sent to the underlying Execution function.
+
+    The function capabilities are extensible in the user environment via the
+    ``napalm_rpc_map`` configuration option / Pillar, e.g.,
+
+    .. code-block:: yaml
+
+        napalm_rpc_map:
+          f5: napalm.netmiko_commands
+          panos: panos.call
+
+    The mapping above reads: when the NAPALM ``os`` Grain is ``f5``, then call
+    ``napalm.netmiko_commands`` for RPC requests.
+
+    By default, if the user does not specify any map, non-native NAPALM drivers
+    will invoke the ``napalm.netmiko_commands`` Execution function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.rpc 'show version'
+        salt '*' napalm.rpc get-interfaces
+    '''
+    default_map = {
+        'junos': 'napalm.junos_rpc',
+        'eos': 'napalm.pyeapi_run_commands',
+        'nxos': 'napalm.nxos_api_rpc'
+    }
+    napalm_map = __salt__['config.get']('napalm_rpc_map', {})
+    napalm_map.update(default_map)
+    fun = napalm_map.get(__grains__['os'], 'napalm.netmiko_commands')
+    return __salt__[fun](command, **kwargs)
