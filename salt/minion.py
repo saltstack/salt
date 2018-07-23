@@ -487,7 +487,7 @@ class MinionBase(object):
                                 preferred_masters[0] = opts['master'][master_idx]
                                 preferred_masters[1:] = [m for m in opts['master'] if m != preferred_masters[0]]
                                 opts['master'] = preferred_masters
-                                log.info('Distributed to the master at \'{0}\'.'.format(opts['master'][0]))
+                                log.info('Distributed to the master at \'%s\'.', opts['master'][0])
                             except (KeyError, AttributeError, TypeError):
                                 log.warning('Failed to distribute to a specific master.')
                         else:
@@ -704,7 +704,7 @@ class MinionBase(object):
             for att in range(self.opts['discovery'].get('attempts', 3)):
                 try:
                     att += 1
-                    log.info('Attempting {0} time{1} to discover masters'.format(att, (att > 1 and 's' or '')))
+                    log.info('Attempting %s time %s to discover masters', att, (att > 1 and 's' or ''))
                     masters.update(master_discovery_client.discover())
                     if not masters:
                         time.sleep(self.opts['discovery'].get('pause', 5))
@@ -3206,7 +3206,6 @@ class Matcher(object):
             if not getattr(cls, function_name, False):
                 setattr(cls, function_name, matcher_functions[meth])
 
-
     def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
@@ -3229,6 +3228,7 @@ class Matcher(object):
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
+
 
 class ProxyMinionManager(MinionManager):
     '''
