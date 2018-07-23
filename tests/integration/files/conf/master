@@ -106,3 +106,17 @@ discovery: false
 # enable using ssh minions and regular minions
 enable_ssh_minions: True
 ignore_host_keys: True
+
+# test vault
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+  policies:
+  - testpolicy
+peer_run:
+  .*:
+  - vault.generate_token
+sdbvault:
+  driver: vault

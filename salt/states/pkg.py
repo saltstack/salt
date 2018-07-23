@@ -170,10 +170,63 @@ def _get_comparison_spec(pkgver):
     comparison operator was passed, the comparison is assumed to be an "equals"
     comparison, and "==" will be the operator returned.
     '''
-    oper, verstr = salt.utils.pkg.split_comparison(pkgver)
+    oper, verstr = salt.utils.pkg.split_comparison(pkgver.strip())
     if oper in ('=', ''):
         oper = '=='
     return oper, verstr
+
+
+def _parse_version_string(version_conditions_string):
+    '''
+    Returns a list of two-tuples containing (operator, version).
+    '''
+    result = []
+    version_conditions_string = version_conditions_string.strip()
+    if not version_conditions_string:
+        return result
+    for version_condition in version_conditions_string.split(','):
+        operator_and_version = _get_comparison_spec(version_condition)
+        result.append(operator_and_version)
+    return result
+
+
+def _fulfills_version_string(installed_versions, version_conditions_string, ignore_epoch=False, allow_updates=False):
+    '''
+    Returns True if any of the installed versions match the specified version conditions,
+    otherwise returns False.
+
+    installed_versions
+        The installed versions
+
+    version_conditions_string
+        The string containing all version conditions. E.G.
+        1.2.3-4
+        >=1.2.3-4
+        >=1.2.3-4, <2.3.4-5
+        >=1.2.3-4, <2.3.4-5, !=1.2.4-1
+
+    ignore_epoch : False
+        When a package version contains an non-zero epoch (e.g.
+        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
+        set this option to ``True`` to ignore the epoch when comparing
+        versions.
+
+    allow_updates : False
+        Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
+        This means a package on the Minion can have a newer version than the latest available in
+        the repository without enforcing a re-installation of the package.
+        (Only applicable if only one strict version condition is specified E.G. version: 2.0.6~ubuntu3)
+    '''
+    version_conditions = _parse_version_string(version_conditions_string)
+    for installed_version in installed_versions:
+        fullfills_all = True
+        for operator, version_string in version_conditions:
+            if allow_updates and len(version_conditions) == 1 and operator == '==':
+                operator = '>='
+            fullfills_all = fullfills_all and _fulfills_version_spec([installed_version], operator, version_string, ignore_epoch=ignore_epoch)
+        if fullfills_all:
+            return True
+    return False
 
 
 def _fulfills_version_spec(versions, oper, desired_version,
@@ -307,14 +360,11 @@ def _find_download_targets(name=None,
 
         version_spec = True
         try:
-            oper, verstr = _get_comparison_spec(pkgver)
+            if not _fulfills_version_string(cver.keys(), pkgver, ignore_epoch=ignore_epoch):
+                targets[pkgname] = pkgver
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
-
-        if not _fulfills_version_spec(cver.keys(), oper, verstr,
-                                      ignore_epoch=ignore_epoch):
-            targets[pkgname] = pkgver
 
     if problems:
         return {'name': name,
@@ -427,18 +477,16 @@ def _find_remove_targets(name=None,
             continue
         version_spec = True
         try:
-            oper, verstr = _get_comparison_spec(pkgver)
+            if _fulfills_version_string(cver, pkgver, ignore_epoch=ignore_epoch):
+                targets.append(pkgname)
+            else:
+                log.debug(
+                    'Current version (%s) did not match desired version '
+                    'specification (%s), will not remove', cver, pkgver
+                )
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
-        if not _fulfills_version_spec(cver, oper, verstr,
-                                      ignore_epoch=ignore_epoch):
-            log.debug(
-                'Current version (%s) did not match desired version '
-                'specification (%s), will not remove', cver, verstr
-            )
-        else:
-            targets.append(pkgname)
 
     if problems:
         return {'name': name,
@@ -624,7 +672,7 @@ def _find_install_targets(name=None,
             not_installed = dict([
                 (name, version)
                 for name, version in desired.items()
-                if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
+                if not (name in cur_pkgs and (version is None or _fulfills_version_string(cur_pkgs[name], version)))
             ])
             if not_installed:
                 try:
@@ -694,18 +742,18 @@ def _find_install_targets(name=None,
     problems = []
     warnings = []
     failed_verify = False
-    for key, val in six.iteritems(desired):
-        cver = cur_pkgs.get(key, [])
-        if resolve_capabilities and not cver and key in cur_prov:
-            cver = cur_pkgs.get(cur_prov.get(key)[0], [])
+    for package_name, version_string in six.iteritems(desired):
+        cver = cur_pkgs.get(package_name, [])
+        if resolve_capabilities and not cver and package_name in cur_prov:
+            cver = cur_pkgs.get(cur_prov.get(package_name)[0], [])
 
         # Package not yet installed, so add to targets
         if not cver:
-            targets[key] = val
+            targets[package_name] = version_string
             continue
         if sources:
             if reinstall:
-                to_reinstall[key] = val
+                to_reinstall[package_name] = version_string
                 continue
             elif 'lowpkg.bin_pkg_info' not in __salt__:
                 continue
@@ -713,36 +761,36 @@ def _find_install_targets(name=None,
             # package's name and version
             err = 'Unable to cache {0}: {1}'
             try:
-                cached_path = __salt__['cp.cache_file'](val, saltenv=kwargs['saltenv'])
+                cached_path = __salt__['cp.cache_file'](version_string, saltenv=kwargs['saltenv'])
             except CommandExecutionError as exc:
-                problems.append(err.format(val, exc))
+                problems.append(err.format(version_string, exc))
                 continue
             if not cached_path:
-                problems.append(err.format(val, 'file not found'))
+                problems.append(err.format(version_string, 'file not found'))
                 continue
             elif not os.path.exists(cached_path):
-                problems.append('{0} does not exist on minion'.format(val))
+                problems.append('{0} does not exist on minion'.format(version_string))
                 continue
             source_info = __salt__['lowpkg.bin_pkg_info'](cached_path)
             if source_info is None:
-                warnings.append('Failed to parse metadata for {0}'.format(val))
+                warnings.append('Failed to parse metadata for {0}'.format(version_string))
                 continue
             else:
-                oper = '=='
                 verstr = source_info['version']
         else:
+            verstr = version_string
             if reinstall:
-                to_reinstall[key] = val
+                to_reinstall[package_name] = version_string
                 continue
-            if not __salt__['pkg_resource.check_extra_requirements'](key, val):
-                targets[key] = val
+            if not __salt__['pkg_resource.check_extra_requirements'](package_name, version_string):
+                targets[package_name] = version_string
                 continue
             # No version specified and pkg is installed
-            elif __salt__['pkg_resource.version_clean'](val) is None:
+            elif __salt__['pkg_resource.version_clean'](version_string) is None:
                 if (not reinstall) and pkg_verify:
                     try:
                         verify_result = __salt__['pkg.verify'](
-                            key,
+                            package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options
                         )
@@ -750,43 +798,43 @@ def _find_install_targets(name=None,
                         failed_verify = exc.strerror
                         continue
                     if verify_result:
-                        to_reinstall[key] = val
-                        altered_files[key] = verify_result
+                        to_reinstall[package_name] = version_string
+                        altered_files[package_name] = verify_result
                 continue
-            try:
-                oper, verstr = _get_comparison_spec(val)
-            except CommandExecutionError as exc:
-                problems.append(exc.strerror)
-                continue
+        version_fulfilled = False
+        allow_updates = bool(not sources and kwargs.get('allow_updates'))
+        try:
+            version_fulfilled = _fulfills_version_string(cver, verstr, ignore_epoch=ignore_epoch, allow_updates=allow_updates)
+        except CommandExecutionError as exc:
+            problems.append(exc.strerror)
+            continue
 
         # Compare desired version against installed version.
         version_spec = True
-        if not sources and 'allow_updates' in kwargs:
-            if kwargs['allow_updates']:
-                oper = '>='
-        if not _fulfills_version_spec(cver, oper, verstr,
-                                      ignore_epoch=ignore_epoch):
+        if not version_fulfilled:
             if reinstall:
-                to_reinstall[key] = val
-            elif pkg_verify and oper == '==':
-                try:
-                    verify_result = __salt__['pkg.verify'](
-                        key,
-                        ignore_types=ignore_types,
-                        verify_options=verify_options)
-                except (CommandExecutionError, SaltInvocationError) as exc:
-                    failed_verify = exc.strerror
-                    continue
-                if verify_result:
-                    to_reinstall[key] = val
-                    altered_files[key] = verify_result
+                to_reinstall[package_name] = version_string
             else:
-                log.debug(
-                    'Current version (%s) did not match desired version '
-                    'specification (%s), adding to installation targets',
-                    cver, val
-                )
-                targets[key] = val
+                version_conditions = _parse_version_string(version_string)
+                if pkg_verify and any(oper == '==' for oper, version in version_conditions):
+                    try:
+                        verify_result = __salt__['pkg.verify'](
+                            package_name,
+                            ignore_types=ignore_types,
+                            verify_options=verify_options)
+                    except (CommandExecutionError, SaltInvocationError) as exc:
+                        failed_verify = exc.strerror
+                        continue
+                    if verify_result:
+                        to_reinstall[package_name] = version_string
+                        altered_files[package_name] = verify_result
+                else:
+                    log.debug(
+                        'Current version (%s) did not match desired version '
+                        'specification (%s), adding to installation targets',
+                        cver, version_string
+                    )
+                    targets[package_name] = version_string
 
     if failed_verify:
         problems.append(failed_verify)
@@ -861,9 +909,7 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
         elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
             ok.append(pkgname)
             continue
-        oper, verstr = _get_comparison_spec(pkgver)
-        if _fulfills_version_spec(cver, oper, verstr,
-                                  ignore_epoch=ignore_epoch):
+        if _fulfills_version_string(cver, pkgver, ignore_epoch=ignore_epoch):
             ok.append(pkgname)
         else:
             failed.append(pkgname)
@@ -1455,7 +1501,7 @@ def installed(
             If this parameter is set to True and the package is not already
             installed, the state will fail.
 
-   :param bool report_reboot_exit_codes:
+    :param bool report_reboot_exit_codes:
        If the installer exits with a recognized exit code indicating that
        a reboot is required, the module function
 

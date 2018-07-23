@@ -31,6 +31,7 @@ execution modules
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
@@ -297,6 +298,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
