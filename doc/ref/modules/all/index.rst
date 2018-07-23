@@ -31,6 +31,7 @@ execution modules
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris

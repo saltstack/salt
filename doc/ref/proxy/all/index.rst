@@ -10,6 +10,7 @@ proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    arista_pyeapi
     cimc
     chronos
     cimc
