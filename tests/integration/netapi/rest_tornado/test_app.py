@@ -398,7 +398,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     def test_post_with_incorrect_client(self):
         '''
-        The /minions endpoint is async only, so if you try something else
+        The /minions endpoint is asynchronous only, so if you try something else
         make sure you get an error
         '''
         # get a token for this test
