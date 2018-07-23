@@ -549,7 +549,7 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: Fluorine
 
     Sync engine modules from ``salt://_matchers`` to the minion
 
