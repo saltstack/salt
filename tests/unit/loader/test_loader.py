@@ -983,9 +983,14 @@ class LazyLoaderOptimizationOrderTest(TestCase):
 
     def _byte_compile(self):
         if USE_IMPORTLIB:
+            # Skip this check as "optimize" is unique to PY3's compileall
+            # module, and this will be a false error when Pylint is run on
+            # Python 2.
+            # pylint: disable=unexpected-keyword-arg
             compileall.compile_file(self.module_file, quiet=1, optimize=0)
             compileall.compile_file(self.module_file, quiet=1, optimize=1)
             compileall.compile_file(self.module_file, quiet=1, optimize=2)
+            # pylint: enable=unexpected-keyword-arg
         else:
             compileall.compile_file(self.module_file, quiet=1)
 
