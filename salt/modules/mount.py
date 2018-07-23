@@ -450,8 +450,8 @@ class _filesystems_entry(object):
 
     filesystems_keys = ('device', 'name', 'fstype', 'vfstype', 'opts', 'mount')
 
-    # preserve data format
-    compatibility_keys = ('device', 'name', 'fstype', 'vfstype', 'opts', 'mount', 'account', 'boot', 'check', 'free', 'nodename', 'quota', 'size', 'vol', 'log')
+    # preserve data format of filesystems
+    compatibility_keys = ('dev', 'dev', 'name', 'fstype', 'vfstype', 'opts', 'mount', 'type', 'vfs', 'account', 'boot', 'check', 'free', 'nodename', 'quota', 'size', 'vol', 'log')
 
     @classmethod
     def dict_from_lines(cls, lines, keys=filesystems_keys):
@@ -461,7 +461,7 @@ class _filesystems_entry(object):
             # if empty force default filesystems_keys
             keys = _filesystems_entry.filesystems_keys
         elif len(keys) < 6:
-            raise ValueError('Invalid key array: {0}'.format(keys))
+            raise ValueError('Invalid key name array: {0}'.format(keys))
 
         blk_lines = lines
         orddict = OrderedDict()
@@ -475,26 +475,24 @@ class _filesystems_entry(object):
             if len(comps) != 2:
                 raise cls.ParseError("Invalid Entry!")
 
-            orddict[comps[0].strip()] = comps[1].strip()
+            key_name = comps[0].strip()
+            if key_name in keys:
+                orddict[key_name] = comps[1].strip()
+            else:
+                raise ValueError('Invalid name for use in filesystems: {0}'.format(key_name))
 
         return orddict
 
     @classmethod
-    def dict_from_cmd_line(cls, ipargs, keys=filesystems_keys):
-        if not keys:
-            # if empty force default filesystems_keys
-            keys = _filesystems_entry.filesystems_keys
-        elif len(keys) < 1:
-            raise ValueError('Invalid key array: {0}'.format(keys))
-
+    def dict_from_cmd_line(cls, ipargs, keys):
         cmdln_dict = ipargs
-        for key in keys:
-            # ignore unknown or local scope keys
-            if key.startswith('__'):
-                continue
-
-            if key not in _filesystems_entry.compatibility_keys:
-                cmdln_dict[key] = keys[key]
+        if keys:
+            for key, value in keys:
+                # ignore unknown or local scope keys
+                if key.startswith('__'):
+                    continue
+                if key in _filesystems_entry.compatibility_keys:
+                    cmdln_dict[key] = value
 
         return cmdln_dict
 
@@ -1750,7 +1748,7 @@ def set_filesystems(
         criteria = entry_ip.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _filesystems_entry.filesystems_keys
+        filterFn = lambda key: key not in _filesystems_entry.compatibility_keys
         invalid_keys = filter(filterFn, match_on)
 
         msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)

@@ -654,7 +654,7 @@ def mounted(name,
                                                   device,
                                                   fstype,
                                                   opts,
-                                                  mount,                                                  
+                                                  mount,
                                                   config,
                                                   match_on=match_on)
             else:
