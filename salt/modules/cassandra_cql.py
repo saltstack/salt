@@ -361,7 +361,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,
+def cql_query_with_prepare(query, statement_name, statement_arguments, asynchronous=False,
                            callback_errors=None,
                            contact_points=None, port=None, cql_user=None, cql_pass=None):
     '''
@@ -377,8 +377,8 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     :type  statement_name: str
     :param statement_arguments: Bind parameters for the SQL statement
     :type  statement_arguments: list[str]
-    :param async:          Run this query in asynchronous mode
-    :type  async:          bool
+    :param asynchronous:          Run this query in asynchronous mode
+    :type  asynchronous:          bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -401,7 +401,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
 
         # Insert data asynchronously
         salt this-node cassandra_cql.cql_query_with_prepare "name_insert" "INSERT INTO USERS (first_name, last_name) VALUES (?, ?)" \
-            statement_arguments=['John','Doe'], async=True
+            statement_arguments=['John','Doe'], asynchronous=True
 
         # Select data, should not be asynchronous because there is not currently a facility to return data from a future
         salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
@@ -431,7 +431,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     ret = []
 
     try:
-        if async:
+        if asynchronous:
             future_results = session.execute_async(bound_statement.bind(statement_arguments))
             # future_results.add_callbacks(_async_log_errors)
         else:
@@ -441,7 +441,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
         msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, e)
         raise CommandExecutionError(msg)
 
-    if not async and results:
+    if not asynchronous and results:
         for result in results:
             values = {}
             for key, value in six.iteritems(result):
