@@ -25,7 +25,7 @@ class SaltSupportTestCase(TestCase):
 
     def test_console_indent_output(self):
         '''
-        Test console indent output.
+        Test console standard output.
         '''
         message = 'Stubborn processes on dumb terminal'
         device = MagicMock()
