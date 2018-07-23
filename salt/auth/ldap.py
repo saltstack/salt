@@ -32,6 +32,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
+               'auth.ldap.starttls': False,
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
@@ -82,7 +83,9 @@ class _LDAPConnection(object):
     Setup an LDAP connection.
     '''
 
-    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
+    def __init__(self, uri, server, port,
+                 starttls, tls, no_verify,
+                 binddn, bindpw,
                  anonymous, accountattributename, activedirectory=False):
         '''
         Bind to an LDAP directory using passed credentials.
@@ -90,8 +93,8 @@ class _LDAPConnection(object):
         self.uri = uri
         self.server = server
         self.port = port
+        self.starttls = starttls
         self.tls = tls
-        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
@@ -99,6 +102,13 @@ class _LDAPConnection(object):
                 'LDAP connection could not be made, the python-ldap module is '
                 'not installed. Install python-ldap to use LDAP external auth.'
             )
+        if self.starttls and self.tls:
+            raise CommandExecutionError(
+                'Cannot bind with both starttls and tls enabled.'
+                'Please enable only one of the protocols'
+            )
+
+        schema = 'ldaps' if tls else 'ldap'
         if self.uri == '':
             self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
@@ -116,6 +126,8 @@ class _LDAPConnection(object):
                     raise CommandExecutionError(
                         'LDAP bind password is not set: password cannot be empty if auth.ldap.anonymous is False'
                     )
+                if self.starttls:
+                    self.ldap.start_tls_s()
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
@@ -136,7 +148,8 @@ def _bind_for_search(anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],
@@ -180,7 +193,8 @@ def _bind(username, password, anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],

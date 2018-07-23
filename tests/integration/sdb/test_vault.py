@@ -28,7 +28,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         '''
         config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
         self.run_state('docker_image.present', name='vault', tag='0.9.6')
-        ret = self.run_state(
+        self.run_state(
             'docker_container.running',
             name='vault',
             image='vault:0.9.6',
@@ -39,12 +39,12 @@ class VaultTestCase(ModuleCase, ShellCase):
             },
             cap_add='IPC_LOCK',
         )
-        ret = self.run_function(
+        self.run_function(
             'cmd.run',
-            cmd='vault login token=testsecret'.format(FILES),
+            cmd='vault login token=testsecret',
             env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
         )
-        ret = self.run_function(
+        self.run_function(
             'cmd.run',
             cmd='vault policy write testpolicy {0}/vault.hcl'.format(FILES),
             env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
