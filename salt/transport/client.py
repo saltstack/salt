@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
-from salt.utils.async import SyncWrapper
+from salt.utils.asynchronous import SyncWrapper
 
 log = logging.getLogger(__name__)
 
