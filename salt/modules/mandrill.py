@@ -137,7 +137,7 @@ def _http_request(url,
 
 
 def send(message,
-         async=False,
+         asynchronous=False,
          ip_pool=None,
          send_at=None,
          api_url=None,
@@ -151,7 +151,7 @@ def send(message,
         sent as dictionary with at fields as specified in the Mandrill API
         documentation.
 
-    async: ``False``
+    asynchronous: ``False``
         Enable a background sending mode that is optimized for bulk sending.
         In asynchronous mode, messages/send will immediately return a status of
         "queued" for every recipient. To handle rejections when sending in asynchronous
@@ -238,7 +238,7 @@ def send(message,
     data = {
         'key': params['api_key'],
         'message': message,
-        'async': async,
+        'asynchronous': asynchronous,
         'ip_pool': ip_pool,
         'send_at': send_at
     }
