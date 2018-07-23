@@ -55,6 +55,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                 log.debug('Vault token expired. Recreating one')
                 # Requesting a short ttl token
                 url = '{0}/v1/auth/approle/login'.format(config['url'])
+
                 payload = {'role_id': config['auth']['role_id']}
                 if 'secret_id' in config['auth']:
                     payload['secret_id'] = config['auth']['secret_id']
@@ -63,7 +64,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                     return {'error': response.reason}
                 config['auth']['token'] = response.json()['auth']['client_token']
 
-        url = '{0}/v1/auth/token/create'.format(config['url'])
+        url = _get_token_create_url(config)
         headers = {'X-Vault-Token': config['auth']['token']}
         audit_data = {
             'saltstack-jid': globals().get('__jid__', '<no jid set>'),
@@ -73,7 +74,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         payload = {
                     'policies': _get_policies(minion_id, config),
                     'num_uses': 1,
-                    'metadata': audit_data
+                    'meta': audit_data
                   }
 
         if payload['policies'] == []:
@@ -85,9 +86,9 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         if response.status_code != 200:
             return {'error': response.reason}
 
-        authData = response.json()['auth']
+        auth_data = response.json()['auth']
         return {
-            'token': authData['client_token'],
+            'token': auth_data['client_token'],
             'url': config['url'],
             'verify': verify,
         }
@@ -256,3 +257,13 @@ def _selftoken_expired():
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(six.text_type(e))
             )
+
+
+def _get_token_create_url(config):
+    '''
+    Create Vault url for token creation
+    '''
+    role_name = config.get('role_name', None)
+    auth_path = '/v1/auth/token/create'
+    base_url = config['url']
+    return '/'.join(x.strip('/') for x in (base_url, auth_path, role_name) if x)
