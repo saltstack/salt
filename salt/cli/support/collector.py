@@ -458,6 +458,10 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                     self.out.highlight(msg_template, unit)
                 exit_code = salt.defaults.exitcodes.EX_OK
             else:
+                if not self.config['support_profile']:
+                    self.print_help()
+                    raise SystemExit()
+
                 if self._check_existing_archive_():
                     try:
                         self.collector = SupportDataCollector(self.config['support_archive'],
@@ -467,10 +471,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                         exit_code = salt.defaults.exitcodes.EX_GENERIC
                         log.debug(ex, exc_info=True)
                     else:
-                        if not self.config['support_profile']:
-                            self.print_help()
-                            raise SystemExit()
-
                         try:
                             self.collector.open()
                             self.collect_local_data()
