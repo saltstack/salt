@@ -153,12 +153,12 @@ def send(message,
 
     async: ``False``
         Enable a background sending mode that is optimized for bulk sending.
-        In async mode, messages/send will immediately return a status of
-        "queued" for every recipient. To handle rejections when sending in async
+        In asynchronous mode, messages/send will immediately return a status of
+        "queued" for every recipient. To handle rejections when sending in asynchronous
         mode, set up a webhook for the 'reject' event. Defaults to false for
         messages with no more than 10 recipients; messages with more than 10
         recipients are always sent asynchronously, regardless of the value of
-        async.
+        asynchronous.
 
     ip_pool
         The name of the dedicated ip pool that should be used to send the

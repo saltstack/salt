@@ -14,7 +14,7 @@ def cmd(
         arg=(),
         **kwargs):
     '''
-    Execute a runner async:
+    Execute a runner asynchronous:
 
     USAGE:
 

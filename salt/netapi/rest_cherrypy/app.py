@@ -529,7 +529,7 @@ described above, the most effective and most scalable way to use both Salt and
 salt-api is to run commands asynchronously using the ``local_async``,
 ``runner_async``, and ``wheel_async`` clients.
 
-Running async jobs results in being able to process 3x more commands per second
+Running asynchronous jobs results in being able to process 3x more commands per second
 for ``LocalClient`` and 17x more commands per second for ``RunnerClient``, in
 addition to much less network traffic and memory requirements. Job returns can
 be fetched from Salt's job cache via the ``/jobs/<jid>`` endpoint, or they can
