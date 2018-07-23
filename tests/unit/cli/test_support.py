@@ -52,3 +52,12 @@ class SaltSupportIndentOutputTestCase(TestCase):
         for idx, data in enumerate(['', '\x1b[0;36m', self.message, '\x1b[0;0m', '\n']):
             assert self.device.write.call_args_list[idx][0][0] == data
 
+    def test_indent_output(self):
+        '''
+        Test indent distance.
+        :return:
+        '''
+        self.iout.put(self.message, indent=10)
+        for idx, data in enumerate([' ' * 10, '\x1b[0;36m', self.message, '\x1b[0;0m', '\n']):
+            assert self.device.write.call_args_list[idx][0][0] == data
+
