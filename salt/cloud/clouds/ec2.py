@@ -2871,6 +2871,7 @@ def create(vm_=None, call=None):
                 ex_blockdevicetags[_bd['DeviceName']] = _bd['tag']
 
     block_device_volume_id_map = {}
+
     if ex_blockdevicetags:
        for k, v in six.iteritems(ret['blockDeviceMapping']):
           if isinstance(v, dict):
@@ -2884,6 +2885,7 @@ def create(vm_=None, call=None):
                       block_device_volume_id_map[_d[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[_d['deviceName']]
 
     if block_device_volume_id_map:
+
         for volid, tags in six.iteritems(block_device_volume_id_map):
             __utils__['cloud.fire_event'](
                 'event',
@@ -2893,6 +2895,7 @@ def create(vm_=None, call=None):
                 sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
             )
+
             salt.utils.cloud.wait_for_fun(
                 set_tags,
                 timeout=30,
@@ -2901,6 +2904,8 @@ def create(vm_=None, call=None):
                 resource_id=volid,
                 call='action',
                 location=location
+            )
+
     return ret
 
 
