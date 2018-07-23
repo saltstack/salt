@@ -25,9 +25,11 @@ Functions to interact with Hashicorp Vault.
         vault:
             url: https://vault.service.domain:8200
             verify: /etc/ssl/certs/ca-certificates.crt
+            role_name: minion_role
             auth:
-                method: token
-                token: 11111111-2222-3333-4444-555555555555
+                method: approle
+                role_id: 11111111-2222-3333-4444-1111111111111
+                secret_id: 11111111-1111-1111-1111-1111111111111
             policies:
                 - saltstack/minions
                 - saltstack/minion/{minion}
@@ -48,11 +50,28 @@ Functions to interact with Hashicorp Vault.
 
         .. versionadded:: 2018.3.0
 
-    auth
-        Currently only token auth is supported. The token must be able to create
-        tokens with the policies that should be assigned to minions. Required.
+    role_name
+        Role name for minion tokens created. If omitted, minion tokens will be
+        created without any role, thus being able to inherit any master token
+        policy (including token creation capabilities). Optional.
 
-        You can still use the token via a OS environment variable via this
+        For details please see:
+        https://www.vaultproject.io/api/auth/token/index.html#create-token
+        Example configuration:
+        https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
+
+    auth
+        Currently only token and approle auth types are supported. Required.
+
+        Approle is the preferred way to authenticate with Vault as it provide
+        some advanced options to control authentication process.
+        Please visit Vault documentation for more info:
+        https://www.vaultproject.io/docs/auth/approle.html
+
+        The token must be able to create tokens with the policies that should be
+        assigned to minions.
+
+        You can still use the token auth via a OS environment variable via this
         config example:
 
         .. code-block: yaml
@@ -64,7 +83,6 @@ Functions to interact with Hashicorp Vault.
                token: sdb://osenv/VAULT_TOKEN
            osenv:
              driver: env
-
 
         And then export the VAULT_TOKEN variable in your OS:
 
