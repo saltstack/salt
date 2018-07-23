@@ -814,7 +814,7 @@ class SlackClient(object):
             log.debug('Command %s will run via runner_functions', cmd)
             # pylint is tripping
             # pylint: disable=missing-whitespace-after-comma
-            job_id_dict = runner.async(cmd, {'args': args, 'kwargs': kwargs})
+            job_id_dict = runner.asynchronous(cmd, {'args': args, 'kwargs': kwargs})
             job_id = job_id_dict['jid']
 
         # Default to trying to run as a client module.
