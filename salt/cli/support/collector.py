@@ -326,7 +326,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
 
         return data
 
-    def collect_master_data(self):
+    def collect_local_data(self):
         '''
         Collects master system data.
         :return:
@@ -430,9 +430,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         self.out = salt.cli.support.console.MessagesOutput()
         try:
             self.parse_args()
-            if not self.config['support_profile']:
-                self.print_help()
-                raise SystemExit()
         except (Exception, SystemExit) as ex:
             if not isinstance(ex, exceptions.SystemExit):
                 exit_code = salt.defaults.exitcodes.EX_GENERIC
@@ -470,9 +467,13 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                         exit_code = salt.defaults.exitcodes.EX_GENERIC
                         log.debug(ex, exc_info=True)
                     else:
+                        if not self.config['support_profile']:
+                            self.print_help()
+                            raise SystemExit()
+
                         try:
                             self.collector.open()
-                            self.collect_master_data()
+                            self.collect_local_data()
                             self.collect_internal_data()
                             self.collect_targets_data()
                             self.collector.close()
