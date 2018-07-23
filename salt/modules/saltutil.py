@@ -950,7 +950,7 @@ def refresh_pillar():
 pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
-def refresh_modules(async=True):
+def refresh_modules(asynchronous=True):
     '''
     Signal the minion to refresh the module and grain data
 
@@ -965,7 +965,7 @@ def refresh_modules(async=True):
         salt '*' saltutil.refresh_modules
     '''
     try:
-        if async:
+        if asynchronous:
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
