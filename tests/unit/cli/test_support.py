@@ -18,12 +18,12 @@ except ImportError:
 
 @skipIf(not bool(pytest), 'Pytest needs to be installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltSupportTestCase(TestCase):
+class SaltSupportIndentOutputTestCase(TestCase):
     '''
-    Unit Tests for the salt-support.
+    Unit Tests for the salt-support indent output.
     '''
 
-    def test_console_indent_output(self):
+    def test_standard_output(self):
         '''
         Test console standard output.
         '''
