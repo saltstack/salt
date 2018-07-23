@@ -63,3 +63,18 @@ class SaltSupportIndentOutputTestCase(TestCase):
         for idx, data in enumerate([' ' * 10, str(self.colors['CYAN']), self.message, str(self.colors['ENDC']), '\n']):
             assert self.device.write.call_args_list[idx][0][0] == data
 
+    def test_color_config(self):
+        '''
+        Test color config changes on each ident.
+        :return:
+        '''
+
+        conf = {0: 'MAGENTA', 2: 'RED', 4: 'WHITE', 6: 'YELLOW'}
+        self.iout = IndentOutput(conf=conf, device=self.device)
+        for indent in sorted(list(conf.keys())):
+            self.iout.put(self.message, indent=indent)
+
+        step = 1
+        for ident_key in sorted(list(conf)):
+            assert str(self.device.write.call_args_list[step][0][0]) == str(self.colors[conf[ident_key]])
+            step += 5
