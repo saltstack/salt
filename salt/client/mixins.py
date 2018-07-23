@@ -377,11 +377,10 @@ class SyncClientMixin(object):
                     data['return'] = func(*args, **kwargs)
                 except TypeError as exc:
                     data['return'] = salt.utils.text.cli_info('Usage:\n{}'.format(func.__doc__),
-                                                              'Passed invalid arguments')
-                    log.exception(exc)
+                                                              'Passed invalid arguments: {}'.format(exc))
                 except Exception as exc:
-                    data['return'] = salt.utils.text.cli_info(six.text_type(exc), 'General error occurred')
-                    log.exception(exc)
+                    data['return'] = salt.utils.text.cli_info(six.text_type(exc),
+                                                              'General error occurred: {}'.format(exc))
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:
@@ -394,12 +393,8 @@ class SyncClientMixin(object):
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = six.text_type(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                    self.client,
-                    fun,
-                    traceback.format_exc(),
-                    )
-                log.exception(ex)
+                data['return'] = 'Exception occurred in {client} {fun}: {tb}'.format(
+                    client=self.client, fun=fun, tb=traceback.format_exc())
             data['success'] = False
 
         if self.store_job:
