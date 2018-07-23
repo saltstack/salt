@@ -244,7 +244,7 @@ def _json_dumps(obj, **kwargs):
 
 # # master side
 #  - "runner" (done)
-#  - "wheel" (need async api...)
+#  - "wheel" (need asynchronous api...)
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -653,7 +653,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         self.write(self.serialize(ret))
 
-    # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
+    # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
         :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system

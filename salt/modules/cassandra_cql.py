@@ -456,7 +456,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
 
     # If this was a synchronous call, then we either have an empty list
     # because there was no return, or we have a return
-    # If this was an async call we only return the empty list
+    # If this was an asynchronous call we only return the empty list
     return ret
 
 

@@ -2534,7 +2534,7 @@ class WebsocketEndpoint(object):
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe
         handler.opts = self.opts
-        # Process to handle async push to a client.
+        # Process to handle asynchronous push to a client.
         # Each GET request causes a process to be kicked off.
         proc = Process(target=event_stream, args=(handler, child_pipe))
         proc.start()

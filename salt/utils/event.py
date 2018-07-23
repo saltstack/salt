@@ -383,7 +383,7 @@ class SaltEvent(object):
                 io_loop=self.io_loop
             )
 
-            # For the async case, the connect will be defered to when
+            # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub
@@ -427,7 +427,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be deferred to when
+            # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
