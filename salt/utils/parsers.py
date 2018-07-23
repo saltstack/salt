@@ -1920,7 +1920,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         self.add_option(
             '--async',
             default=False,
-            dest='async',
+            dest='asynchronous',
             action='store_true',
             help=('Run the salt command but don\'t wait for a reply.')
         )
