@@ -566,7 +566,7 @@ configuration.
           Ebs.VolumeSize: 100
           Ebs.VolumeType: gp2
           tag:
-            tag0: value
+            tag0: myserver
             tag1: value
         - DeviceName: /dev/sdb
           Ebs.VolumeType: gp2
@@ -589,12 +589,14 @@ name as shown in the following configuration.
           Ebs.VolumeSize: 100
           Ebs.VolumeType: gp2
           tag:
+            Name: myserver
             tag0: value
             tag1: value
         - DeviceName: /dev/sdb
           Ebs.VolumeType: gp2
           Ebs.VolumeSize: 3001
           tag:
+            Name: customvalue
             tagX: value
             tagY: value
 
