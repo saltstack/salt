@@ -2873,19 +2873,19 @@ def create(vm_=None, call=None):
     block_device_volume_id_map = {}
 
     if ex_blockdevicetags:
-        for k, v in six.iteritems(ret['blockDeviceMapping']):
+        for _device, _map in six.iteritems(ret['blockDeviceMapping']):
             bd_items = []
-            if isinstance(v, dict):
-                bd_items.append(v)
+            if isinstance(_map, dict):
+                bd_items.append(_map)
             else:
-                for i in v:
-                    bd_items.append(i)
+                for mapitem in _map:
+                    bd_items.append(mapitem)
 
-            for i in bd_items:
-                if i['deviceName'] in ex_blockdevicetags and 'Name' not in ex_blockdevicetags[i['deviceName']]:
-                    ex_blockdevicetags[i['deviceName']]['Name'] = vm_['name']
-                if i['deviceName'] in ex_blockdevicetags:
-                    block_device_volume_id_map[i[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[i['deviceName']]
+            for blockitem in bd_items:
+                if blockitem['deviceName'] in ex_blockdevicetags and 'Name' not in ex_blockdevicetags[blockitem['deviceName']]:
+                    ex_blockdevicetags[blockitem['deviceName']]['Name'] = vm_['name']
+                if blockitem['deviceName'] in ex_blockdevicetags:
+                    block_device_volume_id_map[blockitem[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[blockitem['deviceName']]
 
     if block_device_volume_id_map:
 
@@ -2899,7 +2899,7 @@ def create(vm_=None, call=None):
                 transport=__opts__['transport']
             )
 
-            salt.utils.cloud.wait_for_fun(
+            __utils__['cloud.wait_for_fun'](
                 set_tags,
                 timeout=30,
                 name=vm_['name'],
