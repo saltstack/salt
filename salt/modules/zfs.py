@@ -1214,7 +1214,11 @@ def get(*dataset, **kwargs):
     fields.insert(1, 'property')
     opts['-o'] = ",".join(fields)
     if kwargs.get('type', False):
-        opts['-t'] = kwargs.get('type')
+        zfs_cmd = salt.utils.path.which('zfs')
+        res = __salt__['cmd.run_stderr']('{0} get -t'.format(zfs_cmd),
+                                         output_loglevel='quiet')
+        if 'invalid option' not in res:
+            opts['-t'] = kwargs.get('type')
     if kwargs.get('source', False):
         opts['-s'] = kwargs.get('source')
 
