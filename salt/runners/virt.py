@@ -195,14 +195,14 @@ def init(
         on the salt fileserver, but http, https and ftp can also be used.
 
     hypervisor
-        The hypervisor to use for the new virtual machine. Default is 'kvm'.
+        The hypervisor to use for the new virtual machine. Default is `kvm`.
 
     host
         The host to use for the new virtual machine, if this is omitted
         Salt will automatically detect what host to use.
 
     seed
-        Set to False to prevent Salt from seeding the new virtual machine.
+        Set to `False` to prevent Salt from seeding the new virtual machine.
 
     nic
         The nic profile to use, defaults to the "default" nic profile which
@@ -218,6 +218,17 @@ def init(
 
     saltenv
         The Salt environment to use
+
+    enable_vnc
+        Whether a VNC screen is attached to resulting VM. Default is `False`.
+
+    seed_cmd
+        If seed is `True`, use this execution module function to seed new VM.
+        Default is `seed.apply`.
+
+    enable_qcow
+        Clone disk image as a copy-on-write qcow2 image, using downloaded
+        `image` as backing file.
     '''
     __jid_event__.fire_event({'message': 'Searching for hosts'}, 'progress')
     data = query(host, quiet=True)
