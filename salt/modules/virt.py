@@ -561,6 +561,10 @@ def _gen_xml(name,
             graphics['listen'] = {'type': 'address', 'address': '0.0.0.0'}
         elif 'address' not in graphics['listen'] and graphics['listen']['type'] == 'address':
             graphics['listen']['address'] = '0.0.0.0'
+
+        # Graphics of type 'none' means no graphics device at all
+        if graphics.get('type', 'none') == 'none':
+            graphics = None
     context['graphics'] = graphics
 
     if 'boot_dev' in kwargs:
@@ -1267,7 +1271,7 @@ def init(name,
     The graphics dictionnary can have the following properties:
 
     type
-        Graphics type. The possible values are ``'spice'``, ``'vnc'`` and other values
+        Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
         allowed as a libvirt graphics type (Default: ``None``)
 
         See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
