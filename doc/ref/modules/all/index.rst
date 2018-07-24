@@ -271,9 +271,9 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
