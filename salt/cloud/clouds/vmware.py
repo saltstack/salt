@@ -1470,7 +1470,7 @@ def test_vcenter_connection(kwargs=None, call=None):
         # Get the service instance object
         _get_si()
     except Exception as exc:
-        return 'failed to connect: {0}'.format(exc)
+        raise SaltCloudSystemExit('failed to connect: {0}'.format(exc))
 
     return 'connection successful'
 
