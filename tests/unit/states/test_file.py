@@ -61,7 +61,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def tearDown(self):
         remove_dir = '/tmp/etc'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             remove_dir = 'c:\\tmp\\etc'
         try:
             salt.utils.rm_rf(remove_dir)
@@ -1187,7 +1187,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to ensure that some text appears at the beginning of a file.
         '''
         name = '/tmp/etc/motd'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = 'c:\\tmp\\etc\\motd'
         assert not os.path.exists(os.path.split(name)[0])
         source = ['salt://motd/hr-messages.tmpl']
@@ -1222,7 +1222,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = ('The following files will be changed:\n/tmp/etc:'
                     ' directory - new\n')
             pchanges = {'/tmp/etc': {'directory': 'new'}}
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = 'The directory "c:\\tmp\\etc" will be changed'
                 pchanges = {'c:\\tmp\\etc': {'directory': 'new'}}
             ret.update({'comment': comt, 'name': name, 'pchanges': pchanges})
