@@ -87,6 +87,7 @@ execution modules
     chocolatey
     chronos
     cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
