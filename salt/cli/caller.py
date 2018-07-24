@@ -27,6 +27,7 @@ import salt.utils.kinds as kinds
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.defaults.exitcodes
 from salt.cli import daemons
 from salt.log import LOG_LEVELS
@@ -127,6 +128,10 @@ class BaseCaller(object):
         '''
         Execute the salt call logic
         '''
+        if self.opts.get('retcode_passthrough'):
+            salt.utils.versions.warn_until(
+                'Sodium', ('The option "--retcode-passthrough" is deprecated and is now always ON. '
+                           'It will be removed in version Sodium.'))
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
             pr = salt.utils.profile.activate_profile(profiling_enabled)
@@ -148,9 +153,7 @@ class BaseCaller(object):
                     out=out,
                     opts=self.opts,
                     _retcode=ret.get('retcode', 0))
-            # _retcode will be available in the kwargs of the outputter function
-            if self.opts.get('retcode_passthrough', False):
-                sys.exit(ret['retcode'])
+            sys.exit(ret['retcode'])
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -178,7 +181,7 @@ class BaseCaller(object):
                 sys.stderr.write(' Possible reasons: {0}\n'.format(self.minion.function_errors[mod_name]))
             else:
                 sys.stderr.write('\n')
-            sys.exit(-1)
+            sys.exit(salt.defaults.exitcodes.EX_NOTFOUND)
         metadata = self.opts.get('metadata')
         if metadata is not None:
             metadata = salt.utils.args.yamlify_arg(metadata)
@@ -377,9 +380,7 @@ class RAETCaller(BaseCaller):
                     out=ret.get('out', 'nested'),
                     opts=self.opts,
                     _retcode=ret.get('retcode', 0))
-            # _retcode will be available in the kwargs of the outputter function
-            if self.opts.get('retcode_passthrough', False):
-                sys.exit(ret['retcode'])
+            sys.exit(ret['retcode'])
 
         except SaltInvocationError as err:
             raise SystemExit(err)

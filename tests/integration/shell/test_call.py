@@ -28,6 +28,7 @@ from tests.integration.utils import testprogram
 # Import salt libs
 import salt.utils.files
 import salt.utils.yaml
+import salt.defaults.exitcodes
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -320,7 +321,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             self.assertIn(
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
             )
-            self.assertEqual(ret[2], 2)
+            self.assertEqual(ret[2], salt.defaults.exitcodes.EX_CONFIG)
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
@@ -362,7 +363,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.assertIn(
                     'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
                 )
-                self.assertEqual(ret[2], 2)
+                self.assertEqual(ret[2], salt.defaults.exitcodes.EX_CONFIG)
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):

@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import os
 import sys
+import salt.defaults.exitcodes
 
 
 def write_launchd_plist(program):
@@ -54,9 +55,9 @@ def write_launchd_plist(program):
         sys.stderr.write(
             'Supported programs: \'{0}\'\n'.format(supported_programs)
         )
-        sys.exit(-1)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
-        return plist_sample_text.format(
+    return plist_sample_text.format(
             program=program,
             python=sys.executable,
             script=os.path.join(os.path.dirname(sys.executable), program)

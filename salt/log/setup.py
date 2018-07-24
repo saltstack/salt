@@ -47,6 +47,7 @@ from salt.log.handlers import (TemporaryLoggingHandler,
                                RotatingFileHandler,
                                QueueHandler)
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
+import salt.defaults.exitcodes
 
 
 LOG_LEVELS = {
@@ -661,7 +662,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 'Failed to setup the Syslog logging handler: %s', err
             )
             shutdown_multiprocessing_logging_listener()
-            sys.exit(2)
+            sys.exit(salt.defaults.exitcodes.EX_CONFIG)
     else:
         # make sure, the logging directory exists and attempt to create it if necessary
         log_dir = os.path.dirname(log_path)

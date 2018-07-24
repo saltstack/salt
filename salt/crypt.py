@@ -22,6 +22,7 @@ import binascii
 import weakref
 import getpass
 import tornado.gen
+import salt.defaults.exitcodes
 
 # Import third party libs
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
@@ -356,7 +357,7 @@ class MasterKeys(dict):
                         'The signature-file may be either named differently '
                         'or has to be created with \'salt-key --gen-signature\''
                     )
-                    sys.exit(1)
+                    sys.exit(salt.defaults.exitcodes.EX_NOTFOUND)
 
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
@@ -610,7 +611,7 @@ class AsyncAuth(object):
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
-                    sys.exit(2)
+                    sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 if acceptance_wait_time:
                     log.info(
                         'Waiting %s seconds before retry.', acceptance_wait_time
@@ -1110,7 +1111,7 @@ class AsyncAuth(object):
             finger,
             salt.utils.crypt.pem_finger(master_key, sum_type=self.opts['hash_type'])
         )
-        sys.exit(42)
+        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
 
 
 # TODO: remove, we should just return a sync wrapper of AsyncAuth
@@ -1206,7 +1207,7 @@ class SAuth(AsyncAuth):
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
-                    sys.exit(2)
+                    sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 if acceptance_wait_time:
                     log.info('Waiting %s seconds before retry.', acceptance_wait_time)
                     time.sleep(acceptance_wait_time)
@@ -1311,7 +1312,7 @@ class SAuth(AsyncAuth):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n%s', salt.version.__version__, m_pub_fn
             )
-            sys.exit(42)
+            sys.exit(salt.defaults.exitcodes.EX_NOPERM)
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:

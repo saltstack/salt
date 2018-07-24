@@ -30,6 +30,8 @@ from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 import salt.utils.files
 import salt.version
+import salt.defaults.exitcodes
+
 
 log = logging.getLogger(__name__)
 
@@ -234,7 +236,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     '''
     if not HAS_CLICK:
         print("click is not installed, please install using pip")
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
     if salt_dir is None:
         salt_dir = '.'
@@ -248,7 +250,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     else:
         if extension not in list(zip(*MODULE_OPTIONS))[0]:
             print("Module extension option not valid")
-            sys.exit(1)
+            sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
         chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension][0]
 

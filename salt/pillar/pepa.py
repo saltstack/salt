@@ -283,6 +283,7 @@ from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 import salt.utils.files
 import salt.utils.yaml
+import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 try:
@@ -547,7 +548,7 @@ if __name__ == '__main__':
     # Load configuration file
     if not os.path.isfile(args.config):
         log.critical("Configuration file doesn't exist: %s", args.config)
-        sys.exit(1)
+        sys.exit(salt.defaults.exitcodes.EX_CONFIG)
 
     # Get configuration
     with salt.utils.files.fopen(args.config) as fh_:
