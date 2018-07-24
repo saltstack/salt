@@ -473,7 +473,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['log_file'], minion_config)
         self.assertEqual(config['id'], 'hello_world')
 
-
     @with_tempdir()
     def test_minion_id_lowercase(self, tempdir):
         minion_config = os.path.join(tempdir, 'minion')
@@ -487,7 +486,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = sconfig.minion_config(minion_config)           # Load the configuration
         self.assertEqual(config['id'], 'hello_world')
-
 
     @with_tempdir()
     def test_backend_rename(self, tempdir):
