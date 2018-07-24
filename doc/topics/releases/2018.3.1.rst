@@ -43,6 +43,23 @@ replaced  with ``--update-roster``, which will enable salt-ssh to add minions
 to the flat roster file.  This behavior can also be enabled by setting
 ``ssh_update_roster: True`` in the master config file.
 
+Changes to :py:func:`file.blockreplace <salt.states.file.blockreplace>` State
+=============================================================================
+
+The ``append_newline`` argument was added to this state. Additionally, to
+improve idempotence, if the string represented by ``marker_end`` is found in
+the middle of the line, the content preceding the marker will be removed when
+the block is replaced. This allows one to remove ``append_newline: False`` from
+the SLS and have the block properly replaced if the end of the content block is
+immediately followed by the ``marker_end`` (i.e. no newline before the marker).
+
+.. note::
+    This will require changes to your SLS if your ``marker_end`` does not
+    include the very beginning of the content you want to keep.
+
+See the :py:func:`file.blockreplace <salt.states.file.blockreplace>` state
+documentation for further information.
+
 Changelog for v2018.3.0..v2018.3.1
 ==================================
 
