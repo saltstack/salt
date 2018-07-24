@@ -11,7 +11,6 @@ import re
 import shutil
 import subprocess
 import time
-import urllib
 
 # Import salt libs
 import salt.utils
@@ -20,6 +19,8 @@ from salt.exceptions import CommandExecutionError, FileLockError, MinionError
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
+
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +38,16 @@ HASHES = {
     'md5': 32,
 }
 HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
+
+
+def __clean_tmp(tmp):
+    '''
+    Remove temporary files
+    '''
+    try:
+        salt.utils.rm_rf(tmp)
+    except Exception:
+        pass
 
 
 def guess_archive_type(name):
@@ -116,7 +127,15 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             fstat = os.stat(dest)
         except OSError:
             pass
-    shutil.move(tgt, dest)
+
+    # The move could fail if the dest has xattr protections, so delete the
+    # temp file in this case
+    try:
+        shutil.move(tgt, dest)
+    except Exception:
+        __clean_tmp(tgt)
+        raise
+
     if fstat is not None:
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
@@ -134,10 +153,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
                 subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
         # The temp file failed to move
-        try:
-            os.remove(tgt)
-        except Exception:
-            pass
+        __clean_tmp(tgt)
 
 
 def rename(src, dst):
@@ -259,20 +275,29 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace('Write lock for %s (%s) released', path, lock_fn)
 
 
+def get_umask():
+    '''
+    Returns the current umask
+    '''
+    ret = os.umask(0)  # pylint: disable=blacklisted-function
+    os.umask(ret)  # pylint: disable=blacklisted-function
+    return ret
+
+
 @contextlib.contextmanager
 def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.is_windows():
-        # Don't attempt on Windows
+    if mask is None or salt.utils.is_windows():
+        # Don't attempt on Windows, or if no mask was passed
         yield
     else:
         try:
-            orig_mask = os.umask(mask)
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
-            os.umask(orig_mask)
+            os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def safe_filename_leaf(file_basename):
@@ -288,7 +313,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe=u'')
+        return quote(re_obj.group(0), safe=u'')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',

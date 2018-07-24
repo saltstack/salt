@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python libs
@@ -11,6 +11,7 @@ import os
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
@@ -357,6 +358,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     'environment': None,
                     '__cli': 'salt',
                 },
+                '__salt__': {
+                    'config.option': MagicMock(return_value=''),
+                },
             },
         }
 
@@ -698,9 +702,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(state, '_check_queue', mock):
             self.assertEqual(state.top("reverse_top.sls"), "A")
 
-            mock = MagicMock(side_effect=[False, True, True])
-            with patch.object(state, '_check_pillar', mock):
-                with patch.dict(state.__pillar__, {"_errors": "E"}):
+            mock = MagicMock(side_effect=[['E'], None, None])
+            with patch.object(state, '_get_pillar_errors', mock):
+                with patch.dict(state.__pillar__, {"_errors": ['E']}):
                     self.assertListEqual(state.top("reverse_top.sls"), ret)
 
                 with patch.dict(state.__opts__, {"test": "A"}):
@@ -752,28 +756,25 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                           "whitelist=sls1.sls",
                                           pillar="A")
 
-                        mock = MagicMock(return_value=True)
-                        with patch.dict(state.__salt__,
-                                        {'config.option': mock}):
-                            mock = MagicMock(return_value="A")
+                        mock = MagicMock(return_value="A")
+                        with patch.object(state, '_filter_running',
+                                          mock):
+                            mock = MagicMock(return_value=True)
                             with patch.object(state, '_filter_running',
                                               mock):
                                 mock = MagicMock(return_value=True)
-                                with patch.object(state, '_filter_running',
+                                with patch.object(salt.payload, 'Serial',
                                                   mock):
-                                    mock = MagicMock(return_value=True)
-                                    with patch.object(salt.payload, 'Serial',
-                                                      mock):
-                                        with patch.object(os.path,
-                                                          'join', mock):
-                                            with patch.object(
-                                                              state,
-                                                              '_set'
-                                                              '_retcode',
-                                                              mock):
-                                                self.assertTrue(state.
-                                                                highstate
-                                                                (arg))
+                                    with patch.object(os.path,
+                                                      'join', mock):
+                                        with patch.object(
+                                                          state,
+                                                          '_set'
+                                                          '_retcode',
+                                                          mock):
+                                            self.assertTrue(state.
+                                                            highstate
+                                                            (arg))
 
     def test_clear_request(self):
         '''
@@ -857,14 +858,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                True),
                                      ["A"])
 
-                mock = MagicMock(side_effect=[False,
-                                              True,
-                                              True,
-                                              True,
-                                              True])
-                with patch.object(state, '_check_pillar', mock):
+                mock = MagicMock(side_effect=[['E', '1'], None, None, None, None])
+                with patch.object(state, '_get_pillar_errors', mock):
                     with patch.dict(state.__context__, {"retcode": 5}):
-                        with patch.dict(state.__pillar__, {"_errors": "E1"}):
+                        with patch.dict(state.__pillar__, {"_errors": ['E', '1']}):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
@@ -918,17 +915,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                                     MockState.HighState.flag = False
                                     mock = MagicMock(return_value=True)
-                                    with patch.dict(state.__salt__,
-                                                    {'config.option':
-                                                     mock}):
-                                        mock = MagicMock(return_value=
-                                                         True)
-                                        with patch.object(
-                                                          state,
-                                                          '_filter_'
-                                                          'running',
-                                                          mock):
-                                            self.sub_test_sls()
+                                    with patch.object(state,
+                                                      '_filter_'
+                                                      'running',
+                                                      mock):
+                                        self.sub_test_sls()
 
     def sub_test_sls(self):
         '''
@@ -950,6 +941,75 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                               None,
                                                               None,
                                                               True))
+
+    def test_sls_sync(self):
+        '''
+        Test test.sls with the sync argument
+
+        We're only mocking the sync functions we expect to sync. If any other
+        sync functions are run then they will raise a KeyError, which we want
+        as it will tell us that we are syncing things we shouldn't.
+        '''
+        mock_empty_list = MagicMock(return_value=[])
+        with patch.object(state, 'running', mock_empty_list), \
+                patch.object(state, '_disabled', mock_empty_list), \
+                patch.object(state, '_get_pillar_errors', mock_empty_list):
+
+            sync_mocks = {
+                'saltutil.sync_modules': Mock(),
+                'saltutil.sync_states': Mock(),
+            }
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,states')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # sync_mods=True should be interpreted as sync_mods=all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods=True)
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all when "all" is passed along with module types.
+            # This tests that we *only* run a sync_all and avoid unnecessary
+            # extra syncing.
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
 
     def test_pkg(self):
         '''
@@ -979,3 +1039,62 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 MockJson.flag = False
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(state.pkg(tar_file, 0, "md5"))
+
+    def test_get_pillar_errors_CC(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal clean
+        :return:
+        '''
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz'}),
+                                       ({'foo': 'bar'}, None),
+                                       ({}, {'fred': 'baz'})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, None),
+                                  ({}, None)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EC(self):
+        '''
+        Test _get_pillar_errors function.
+        EC: External erroneous, Internal clean
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz', '_errors': errors}),
+                                       ({}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External erroneous, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_CE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz'}),
+                                       ({'foo': 'bar', '_errors': errors}, None)]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)

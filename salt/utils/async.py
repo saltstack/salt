@@ -7,19 +7,9 @@ from __future__ import absolute_import
 
 import tornado.ioloop
 import tornado.concurrent
-# attempt to use zmq-- if we have it otherwise fallback to tornado loop
-try:
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
 
 import contextlib
+from salt.utils import zeromq
 
 
 @contextlib.contextmanager
@@ -53,7 +43,7 @@ class SyncWrapper(object):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = LOOP_CLASS()
+        self.io_loop = zeromq.ZMQDefaultLoop()
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
@@ -94,10 +84,8 @@ class SyncWrapper(object):
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
                 self.async.close()
-            self.io_loop.close()
-            # Other things should be deallocated after the io_loop closes.
-            # See Issue #26889.
             del self.async
+            self.io_loop.close()
             del self.io_loop
         elif hasattr(self, 'io_loop'):
             self.io_loop.close()

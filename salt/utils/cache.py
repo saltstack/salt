@@ -18,11 +18,7 @@ import salt.utils.dictupdate
 
 # Import third party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 

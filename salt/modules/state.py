@@ -29,6 +29,7 @@ import salt.config
 import salt.payload
 import salt.state
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -99,17 +100,16 @@ def _set_retcode(ret, highstate=None):
         __context__['retcode'] = 2
 
 
-def _check_pillar(kwargs, pillar=None):
+def _get_pillar_errors(kwargs, pillar=None):
     '''
-    Check the pillar for errors, refuse to run the state if there are errors
-    in the pillar and return the pillar errors
+    Checks all pillars (external and internal) for errors.
+    Return an error message, if anywhere or None.
+
+    :param kwargs: dictionary of options
+    :param pillar: external pillar
+    :return: None or an error message
     '''
-    if kwargs.get('force'):
-        return True
-    pillar_dict = pillar if pillar is not None else __pillar__
-    if '_errors' in pillar_dict:
-        return False
-    return True
+    return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
 
 
 def _wait(jid):
@@ -280,7 +280,7 @@ def _get_opts(**kwargs):
 
 
 def _get_initial_pillar(opts):
-    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+    return __pillar__ if __opts__.get('__cli', None) == 'salt-call' \
         and opts['pillarenv'] == __opts__['pillarenv'] \
         else None
 
@@ -411,10 +411,10 @@ def template(tem, queue=False, **kwargs):
                                context=__context__,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
@@ -458,8 +458,7 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def apply_(mods=None,
-          **kwargs):
+def apply_(mods=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -492,6 +491,18 @@ def apply_(mods=None,
         .. note::
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
+
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.apply exclude=bar,baz
+            salt '*' state.apply exclude=foo*
+            salt '*' state.apply exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     queue : False
         Instead of failing immediately when another state run is in progress,
@@ -587,6 +598,22 @@ def apply_(mods=None,
         .. code-block:: bash
 
             salt '*' state.apply test localconfig=/path/to/minion.yml
+
+    sync_mods
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.apply test sync_mods=states,modules
+            salt '*' state.apply test sync_mods=all
+
+        .. note::
+            This option is ignored when no SLS files are specified, as a
+            :ref:`highstate <running-highstate>` automatically syncs all custom
+            module types.
+
+        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -621,17 +648,16 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write state request file {0}. Check permission.'
-        log.error(msg.format(notify_path))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write state request file {0}. Check permission.'
+            log.error(msg.format(notify_path))
     return ret
 
 
@@ -685,17 +711,16 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            msg = 'Unable to write state request file {0}. Check permission.'
-            log.error(msg.format(notify_path))
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                msg = 'Unable to write state request file {0}. Check permission.'
+                log.error(msg.format(notify_path))
     return True
 
 
@@ -757,6 +782,18 @@ def highstate(test=None, queue=False, **kwargs):
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
         .. versionadded:: 2016.3.0
+
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.highstate exclude=bar,baz
+            salt '*' state.highstate exclude=foo*
+            salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     saltenv
         Specify a salt fileserver environment to be used when applying states
@@ -872,11 +909,10 @@ def highstate(test=None, queue=False, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
-        return err
+        return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
     ret = {}
@@ -907,7 +943,7 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, test=None, exclude=None, queue=False, **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -934,6 +970,18 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
         .. versionadded:: 2016.3.0
+
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.sls foo,bar,baz exclude=bar,baz
+            salt '*' state.sls foo,bar,baz exclude=ba*
+            salt '*' state.sls foo,bar,baz exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     queue : False
         Instead of failing immediately when another state run is in progress,
@@ -985,6 +1033,17 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         the requisite ordering as well as fully validate the state run.
 
         .. versionadded:: 2015.8.4
+
+    sync_mods
+        If specified, the desired custom module types will be synced prior to
+        running the SLS files:
+
+        .. code-block:: bash
+
+            salt '*' state.sls test sync_mods=states,modules
+            salt '*' state.sls test sync_mods=all
+
+        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
 
     CLI Example:
 
@@ -1054,6 +1113,28 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
+    if sync_mods is True:
+        sync_mods = ['all']
+    if sync_mods is not None:
+        sync_mods = salt.utils.split_input(sync_mods)
+    else:
+        sync_mods = []
+
+    if 'all' in sync_mods and sync_mods != ['all']:
+        # Prevent unnecessary extra syncing
+        sync_mods = ['all']
+
+    for module_type in sync_mods:
+        try:
+            __salt__['saltutil.sync_{0}'.format(module_type)](
+                saltenv=opts['environment']
+            )
+        except KeyError:
+            log.warning(
+                'Invalid custom module type \'%s\', ignoring',
+                module_type
+            )
+
     try:
         st_ = salt.state.HighState(opts,
                                    pillar_override,
@@ -1071,26 +1152,23 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
-        return err
+        return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
-    umask = os.umask(0o77)
-    if kwargs.get('cache'):
-        if os.path.isfile(cfn):
-            with salt.utils.fopen(cfn, 'rb') as fp_:
-                high_ = serial.load(fp_)
-                return st_.state.call_high(high_, orchestration_jid)
-    os.umask(umask)
+    with salt.utils.files.set_umask(0o077):
+        if kwargs.get('cache'):
+            if os.path.isfile(cfn):
+                with salt.utils.fopen(cfn, 'rb') as fp_:
+                    high_ = serial.load(fp_)
+                    return st_.state.call_high(high_, orchestration_jid)
 
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
 
     st_.push_active()
-    ret = {}
     try:
         high_, errors = st_.render_highstate({opts['environment']: mods})
 
@@ -1112,32 +1190,32 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write to SLS cache file {0}. Check permission.'
-        log.error(msg.format(cache_file))
-    _set_retcode(ret, high_)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
+            with salt.utils.fopen(cache_file, 'w+b') as fp_:
+                serial.dump(ret, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write to SLS cache file {0}. Check permission.'
+            log.error(msg.format(cache_file))
+        _set_retcode(ret, high_)
+        # Work around Windows multiprocessing bug, set __opts__['test'] back to
+        # value from before this function was run.
+        __opts__['test'] = orig_test
 
-    try:
-        with salt.utils.fopen(cfn, 'w+b') as fp_:
-            try:
-                serial.dump(high_, fp_)
-            except TypeError:
-                # Can't serialize pydsl
-                pass
-    except (IOError, OSError):
-        msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
-        log.error(msg.format(cfn))
-    os.umask(cumask)
+        try:
+            with salt.utils.fopen(cfn, 'w+b') as fp_:
+                try:
+                    serial.dump(high_, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
+            log.error(msg.format(cfn))
+
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
@@ -1197,11 +1275,10 @@ def top(topfn, test=None, queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                context=__context__,
                                initial_pillar=_get_initial_pillar(opts))
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
-        return err
+        return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
@@ -1259,10 +1336,10 @@ def show_highstate(queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
     try:
@@ -1293,10 +1370,10 @@ def show_lowstate(queue=False, **kwargs):
     st_ = salt.state.HighState(opts,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
     try:
@@ -1394,11 +1471,10 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         st_ = salt.state.HighState(opts,
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
-        return err
+        return ['Pillar failed to render with the following messages:'] + errors
 
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
@@ -1480,10 +1556,10 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -1567,10 +1643,10 @@ def show_sls(mods, test=None, queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -1616,10 +1692,10 @@ def show_top(queue=False, **kwargs):
 
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
         __context__['retcode'] = 5
-        raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+        raise CommandExecutionError('Pillar failed to render', info=errors)
 
     errors = []
     top_ = st_.get_top()
@@ -2002,8 +2078,9 @@ def event(tagmatch='*',
                         indent=None if not pretty else 4)))
                 sys.stdout.flush()
 
-            count -= 1
-            log.debug('Remaining event matches: %s', count)
+            if count > 0:
+                count -= 1
+                log.debug('Remaining event matches: %s', count)
 
             if count == 0:
                 break

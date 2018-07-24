@@ -195,7 +195,7 @@ def cluster_status(**kwargs):
 def alias_exists(alias_name, **kwargs):
     '''
 
-    Check alias existance
+    Check alias existence
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
 

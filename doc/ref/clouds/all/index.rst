@@ -1,8 +1,8 @@
 .. _all-salt.clouds:
 
-===============================
-Full list of Salt Cloud modules
-===============================
+=============
+cloud modules
+=============
 
 .. currentmodule:: salt.cloud.clouds
 

@@ -34,60 +34,60 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     aws:
-        region:
-            us-east-1:
-                profile:
-                    keyid: GKTADJGHEIQSXMKKRBJ08H
-                    key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-                    region: us-east-1
+      region:
+        us-east-1:
+          profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     Ensure VPC exists:
-        boto_vpc.present:
-            - name: myvpc
-            - cidr_block: 10.10.11.0/24
-            - dns_hostnames: True
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_vpc.present:
+        - name: myvpc
+        - cidr_block: 10.10.11.0/24
+        - dns_hostnames: True
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     Ensure subnet exists:
-        boto_vpc.subnet_present:
-            - name: mysubnet
-            - vpc_id: vpc-123456
-            - cidr_block: 10.0.0.0/16
-            - region: us-east-1
-            - profile: myprofile
+      boto_vpc.subnet_present:
+        - name: mysubnet
+        - vpc_id: vpc-123456
+        - cidr_block: 10.0.0.0/16
+        - region: us-east-1
+        - profile: myprofile
 
     {% set profile = salt['pillar.get']('aws:region:us-east-1:profile' ) %}
     Ensure internet gateway exists:
-        boto_vpc.internet_gateway_present:
-            - name: myigw
-            - vpc_name: myvpc
-            - profile: {{ profile }}
+      boto_vpc.internet_gateway_present:
+        - name: myigw
+        - vpc_name: myvpc
+        - profile: {{ profile }}
 
     Ensure route table exists:
-        boto_vpc.route_table_present:
-            - name: my_route_table
-            - vpc_id: vpc-123456
-            - routes:
-              - destination_cidr_block: 0.0.0.0/0
-                instance_id: i-123456
-            - subnet_names:
-              - subnet1
-              - subnet2
-            - region: us-east-1
-            - profile:
-                keyid: GKTADJGHEIQSXMKKRBJ08H
-                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_vpc.route_table_present:
+        - name: my_route_table
+        - vpc_id: vpc-123456
+        - routes:
+          - destination_cidr_block: 0.0.0.0/0
+            instance_id: i-123456
+          - subnet_names:
+            - subnet1
+            - subnet2
+          - region: us-east-1
+          - profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 .. versionadded:: 2016.11.0
 
@@ -895,17 +895,17 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     .. code-block:: yaml
 
         boto_vpc.route_table_present:
-            - name: my_route_table
-            - vpc_id: vpc-123456
-            - routes:
-              - destination_cidr_block: 0.0.0.0/0
-                internet_gateway_name: InternetGateway
-              - destination_cidr_block: 10.10.11.0/24
-                instance_id: i-123456
-              - destination_cidr_block: 10.10.12.0/24
-                interface_id: eni-123456
-              - destination_cidr_block: 10.10.13.0/24
-                instance_name: mygatewayserver
+          - name: my_route_table
+          - vpc_id: vpc-123456
+          - routes:
+            - destination_cidr_block: 0.0.0.0/0
+              internet_gateway_name: InternetGateway
+            - destination_cidr_block: 10.10.11.0/24
+              instance_id: i-123456
+            - destination_cidr_block: 10.10.12.0/24
+              interface_id: eni-123456
+            - destination_cidr_block: 10.10.13.0/24
+              instance_name: mygatewayserver
             - subnet_names:
               - subnet1
               - subnet2
@@ -1304,7 +1304,7 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     .. code-block:: yaml
 
         boto_vpc.nat_gateway_present:
-            - subnet_name: my-subnet
+          - subnet_name: my-subnet
 
     name
         Name of the state
@@ -1486,23 +1486,18 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
     .. code-block:: yaml
 
         boto_vpc.accept_vpc_peering_connection:
-            - conn_name: salt_peering_connection
+          - conn_name: salt_peering_connection
 
         # usage with vpc peering connection id and region
         boto_vpc.accept_vpc_peering_connection:
-            - conn_id: pbx-1873d472
-            - region: us-west-2
+          - conn_id: pbx-1873d472
+          - region: us-west-2
 
     '''
     log.debug('Called state to accept VPC peering connection')
     pending = __salt__['boto_vpc.is_peering_connection_pending'](
-        conn_id=conn_id,
-        conn_name=conn_name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile
-    )
+        conn_id=conn_id, conn_name=conn_name, region=region, key=key,
+        keyid=keyid, profile=profile)
 
     ret = {
         'name': name,
@@ -1511,32 +1506,27 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
         'comment': 'Boto VPC peering state'
     }
 
-    if not pending['exists']:
+    if not pending:
         ret['result'] = True
-        ret['changes'].update({
-            'old': 'No pending VPC peering connection found. '
-                   'Nothing to be done.'
-        })
+        ret['changes'].update({'old':
+              'No pending VPC peering connection found. Nothing to be done.'})
         return ret
 
     if __opts__['test']:
-        ret['changes'].update({'old': 'Pending VPC peering connection found '
-                                      'and can be accepted'})
+        ret['changes'].update({'old':
+              'Pending VPC peering connection found and can be accepted'})
         return ret
-    log.debug('Calling module to accept this VPC peering connection')
-    result = __salt__['boto_vpc.accept_vpc_peering_connection'](
-            conn_id=conn_id, name=conn_name, region=region, key=key,
+    fun = 'boto_vpc.accept_vpc_peering_connection'
+    log.debug('Calling `{0}()` to accept this VPC peering connection'.format(fun))
+    result = __salt__[fun](conn_id=conn_id, name=conn_name, region=region, key=key,
             keyid=keyid, profile=profile)
 
     if 'error' in result:
-        ret['comment'] = "Failed to request VPC peering: {0}".format(result['error'])
+        ret['comment'] = "Failed to accept VPC peering: {0}".format(result['error'])
         ret['result'] = False
         return ret
 
-    ret['changes'].update({
-        'old': '',
-        'new': result['msg']
-    })
+    ret['changes'].update({'old': '', 'new': result['msg']})
 
     return ret
 

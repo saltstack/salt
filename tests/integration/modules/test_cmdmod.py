@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import sys
+import tempfile
 import textwrap
 
 # Import Salt Testing libs
@@ -11,15 +12,16 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     skip_if_binaries_missing,
-    skip_if_not_root
+    skip_if_not_root,
+    this_user,
 )
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
     'python',
@@ -139,6 +141,28 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function('cmd.script_retcode', [script])
         self.assertEqual(ret, 0)
 
+    def test_script_cwd(self):
+        '''
+        cmd.script with cwd
+        '''
+        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        args = 'saltines crackers biscuits=yes'
+        script = 'salt://script.py'
+        ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
+        self.assertEqual(ret['stdout'], args)
+
+    def test_script_cwd_with_space(self):
+        '''
+        cmd.script with cwd
+        '''
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        os.mkdir(tmp_cwd)
+
+        args = 'saltines crackers biscuits=yes'
+        script = 'salt://script.py'
+        ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
+        self.assertEqual(ret['stdout'], args)
+
     @destructiveTest
     def test_tty(self):
         '''
@@ -204,12 +228,7 @@ class CMDModuleTest(ModuleCase):
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
-        try:
-            runas = os.getlogin()
-        except:  # pylint: disable=W0702
-            # On some distros (notably Gentoo) os.getlogin() fails
-            import pwd
-            runas = pwd.getpwuid(os.getuid())[0]
+        runas = this_user()
 
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
@@ -234,3 +253,13 @@ class CMDModuleTest(ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
+
+    def test_cmd_run_whoami(self):
+        '''
+        test return of whoami
+        '''
+        cmd = self.run_function('cmd.run', ['whoami'])
+        if salt.utils.is_windows():
+            self.assertIn('administrator', cmd)
+        else:
+            self.assertEqual('root', cmd)

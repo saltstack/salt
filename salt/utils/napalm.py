@@ -15,18 +15,19 @@ Utils for the NAPALM modules and proxy.
 .. versionadded:: 2017.7.0
 '''
 
+# Import Python libs
 from __future__ import absolute_import
-
 import traceback
 import logging
 import importlib
 from functools import wraps
-log = logging.getLogger(__file__)
 
-import salt.utils
+# Import Salt libs
+from salt.ext import six as six
 import salt.output
+import salt.utils
 
-# Import third party lib
+# Import third party libs
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
@@ -36,21 +37,16 @@ try:
     # pylint: enable=W0611
     HAS_NAPALM = True
     HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
-    log.debug('napalm seems to be installed')
     try:
         NAPALM_MAJOR = int(napalm.__version__.split('.')[0])
-        log.debug('napalm version: %s', napalm.__version__)
     except AttributeError:
         NAPALM_MAJOR = 0
 except ImportError:
-    log.info('napalm doesnt seem to be installed, trying to import napalm_base')
     HAS_NAPALM = False
     try:
         import napalm_base
-        log.debug('napalm_base seems to be installed')
         HAS_NAPALM_BASE = True
     except ImportError:
-        log.info('napalm_base doesnt seem to be installed either')
         HAS_NAPALM_BASE = False
 
 try:
@@ -62,7 +58,7 @@ try:
 except ImportError:
     HAS_CONN_CLOSED_EXC_CLASS = False
 
-from salt.ext import six as six
+log = logging.getLogger(__file__)
 
 
 def is_proxy(opts):
@@ -98,8 +94,6 @@ def virtual(opts, virtualname, filename):
     Returns the __virtual__.
     '''
     if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
-        if HAS_NAPALM_BASE:
-            log.info('You still seem to use napalm_base. Please consider upgrading to napalm >= 2.0.0')
         return virtualname
     else:
         return (
@@ -244,7 +238,7 @@ def call(napalm_device, method, *args, **kwargs):
             # either running in a not-always-alive proxy
             # either running in a regular minion
             # close the connection when the call is over
-            # unless the CLOSE is explicitely set as False
+            # unless the CLOSE is explicitly set as False
             napalm_device['DRIVER'].close()
     return {
         'out': out,
@@ -398,7 +392,7 @@ def proxy_napalm_wrap(func):
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
@@ -424,7 +418,7 @@ def proxy_napalm_wrap(func):
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions

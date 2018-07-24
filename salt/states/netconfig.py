@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 # import NAPALM utils
 import salt.utils.napalm
+import salt.utils.versions
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -133,6 +134,10 @@ def managed(name,
 
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
+    .. warning::
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
+
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
         either remotely.
@@ -147,7 +152,7 @@ def managed(name,
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
         ``salt://templates/example.jinja``.
-        Alternatively, for local files, the user can specify the abolute path.
+        Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
 
         Examples:
@@ -208,8 +213,15 @@ def managed(name,
         Commit? Default: ``True``.
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         result after the template was rendered.
+
+        .. note::
+            This argument cannot be used directly on the command line. Instead,
+            it can be passed through the ``pillar`` variable when executing
+            either of the :py:func:`state.sls <salt.modules.state.sls>` or
+            :py:func:`state.apply <salt.modules.state.apply>` (see below for an
+            example).
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -217,8 +229,8 @@ def managed(name,
     defaults: None
         Default variables/context passed to the template.
 
-    **template_vars
-        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitely specify this
+    template_vars
+        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitly specify this
         argument. This represents any other variable that will be sent to the template rendering system. Please
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
         template variable.
@@ -261,7 +273,7 @@ def managed(name,
 
         $ sudo salt 'juniper.device' state.sls router.config test=True
 
-        $ sudo salt -N all-routers state.sls router.config debug=True
+        $ sudo salt -N all-routers state.sls router.config pillar="{'debug': True}"
 
     ``router.config`` depends on the location of the SLS file (see above). Running this command, will be executed all
     five steps from above. These examples above are not meant to be used in a production environment, their sole purpose
@@ -298,9 +310,12 @@ def managed(name,
 
     Raw output example (useful when the output is reused in other states/execution modules):
 
-    .. code-block:: python
+    .. code-block:: bash
 
         $ sudo salt --out=pprint 'juniper.device' state.sls router.config test=True debug=True
+
+    .. code-block:: python
+
         {
             'juniper.device': {
                 'netconfig_|-ntp_peers_example_using_pillar_|-ntp_peers_example_using_pillar_|-managed': {
@@ -320,16 +335,20 @@ def managed(name,
             }
         }
     '''
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __opts__.get('test', test)
-    debug = __opts__.get('debug', debug)
-    commit = __opts__.get('commit', commit)
-    replace = __opts__.get('replace', replace)  # this might be a bit risky
-    skip_verify = __opts__.get('skip_verify', skip_verify)
+    test = __salt__['config.merge']('test', test)
+    debug = __salt__['config.merge']('debug', debug)
+    commit = __salt__['config.merge']('commit', commit)
+    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
+    skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
 
     config_update_ret = _update_config(template_name,
                                        template_source=template_source,

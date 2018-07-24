@@ -211,26 +211,13 @@ Section -Prerequisites
     Var /Global CheckVcRedist
     StrCpy $CheckVcRedist "False"
 
-    # Visual C++ 2015 redist packages
-    !define PY3_VC_REDIST_NAME "VC_Redist_2015"
-    !define PY3_VC_REDIST_X64_GUID "{50A2BC33-C9CD-3BF1-A8FF-53C10A0B183C}"
-    !define PY3_VC_REDIST_X86_GUID "{BBF2AC74-720C-3CB3-8291-5E34039232FA}"
-
     # Visual C++ 2008 SP1 MFC Security Update redist packages
     !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
     !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
     !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
 
-    ${If} ${PYTHON_VERSION} == 3
-        StrCpy $VcRedistName ${PY3_VC_REDIST_NAME}
-        ${If} ${CPUARCH} == "AMD64"
-            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X64_GUID}
-        ${Else}
-            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X86_GUID}
-        ${EndIf}
-        StrCpy $CheckVcRedist "True"
-
-    ${Else}
+    # VCRedist only needs to be installed for Python 2
+    ${If} ${PYTHON_VERSION} == 2
 
         StrCpy $VcRedistName ${PY2_VC_REDIST_NAME}
         ${If} ${CPUARCH} == "AMD64"
@@ -267,7 +254,7 @@ Section -Prerequisites
             # /qb! used by 2008 installer
             # It just ignores the unrecognized switches...
             ClearErrors
-            ExecWait '"$INSTDIR\vcredist.exe" /qb! /passive /norestart' $0
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /quiet /norestart' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \
@@ -403,7 +390,6 @@ Section -Post
     nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe -E -s $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
-    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
@@ -588,7 +574,7 @@ FunctionEnd
 #   Push "this is some string"
 #   Push "some"
 #   Call StrStr
-#   Pop $0 ; "some string"
+#   Pop $0 # "some string"
 #------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
@@ -694,7 +680,7 @@ Function AddToPath
 
     # Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
-        DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
+        DetailPrint "AddToPath Failed: new length $2 > ${NSIS_MAX_STRLEN}"
         MessageBox MB_OK \
             "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
             /SD IDOK

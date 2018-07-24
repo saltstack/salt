@@ -4,13 +4,12 @@
 Understanding Jinja
 ===================
 
-`Jinja <http://jinja.pocoo.org/docs/>`_ is the default templating language
-in SLS files.
+`Jinja`_ is the default templating language in SLS files.
+
+.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja in States
 ===============
-
-.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja is evaluated before YAML, which means it is evaluated before the States
 are run.
@@ -160,10 +159,9 @@ Saltstack extends `builtin filters`_ with these custom filters:
 ``strftime``
 ------------
 
-Converts any time related object into a time based string. It requires a
-valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
-:ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-the official Python documentation.
+Converts any time related object into a time based string. It requires valid
+strftime directives. An exhaustive list can be found :ref:`here
+<strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -1348,7 +1346,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ 'www.google.com' | dns_check }}
+  {{ 'www.google.com' | dns_check(port=443) }}
 
 Returns:
 
@@ -1526,6 +1524,54 @@ Returns:
 
 .. jinja_ref:: jinja-in-files
 
+Escape filters
+--------------
+
+.. jinja_ref:: regex_escape
+
+``regex_escape``
+----------------
+
+.. versionadded:: 2017.7.0
+
+Allows escaping of strings so they can be interpreted literally by another function.
+
+Example:
+
+.. code-block:: jinja
+
+  regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
+
+Set Theory Filters
+------------------
+
+.. jinja_ref:: unique
+
+``unique``
+----------
+
+.. versionadded:: 2017.7.0
+
+Performs set math using Jinja filters.
+
+Example:
+
+.. code-block:: jinja
+
+  unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  unique = ['foo', 'bar']
+
 Jinja in Files
 ==============
 
@@ -1653,7 +1699,7 @@ Logs
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- do salt.log.error('testing jinja logging') -%}
 

@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon APIGateway
 
-.. versionadded::
+.. versionadded:: 2016.11.0
 
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

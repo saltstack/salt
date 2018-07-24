@@ -1861,14 +1861,14 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
-                path_content = _splitlines_preserving_trailing_newline(
-                    fp_.read())
-            changes_diff = ''.join(difflib.unified_diff(
-                path_content, _splitlines_preserving_trailing_newline(body)))
+                path_content = fp_.read().splitlines(True)
+            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines(True)))
         if __opts__['test'] is False:
             fh_ = None
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                # Make sure we match the file mode from salt.utils.fopen
+                mode = 'wb' if six.PY2 and salt.utils.is_windows() else 'w'
+                fh_ = salt.utils.atomicfile.atomic_open(path, mode)
                 fh_.write(body)
             finally:
                 if fh_:
@@ -1921,8 +1921,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
@@ -2270,8 +2270,7 @@ def blockreplace(path,
         backup='.bak',
         dry_run=False,
         show_changes=True,
-        append_newline=False,
-        ):
+        append_newline=False):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2318,18 +2317,30 @@ def blockreplace(path,
         The file extension to use for a backup of the file if any edit is made.
         Set to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file.
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``,
-        return a boolean if any changes were made.
+    show_changes : True
+        Controls how changes are presented. If ``True``, this function will
+        return a unified diff of the changes made. If False, then it will
+        return a boolean (``True`` if any changes were made, otherwise
+        ``False``).
 
-    append_newline:
-        Append a newline to the content block. For more information see:
-        https://github.com/saltstack/salt/issues/33686
+    append_newline : False
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is ``None`` then a newline will only
+        be added to the content block if it does not already end in a newline.
 
         .. versionadded:: 2016.3.4
+        .. versionchanged:: 2017.7.5,2018.3.1
+            New behavior added when value is ``None``.
+        .. versionchanged:: Fluorine
+            The default value of this argument will change to ``None`` to match
+            the behavior of the :py:func:`file.blockreplace state
+            <salt.states.file.blockreplace>`
 
     CLI Example:
 
@@ -2339,15 +2350,15 @@ def blockreplace(path,
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     '''
-    path = os.path.expanduser(path)
-
-    if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
-
     if append_if_not_found and prepend_if_not_found:
         raise SaltInvocationError(
             'Only one of append and prepend_if_not_found is permitted'
         )
+
+    path = os.path.expanduser(path)
+
+    if not os.path.exists(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -2355,71 +2366,121 @@ def blockreplace(path,
             .format(path)
         )
 
-    # Search the file; track if any changes have been made for the return val
+    if append_newline is None and not content.endswith((os.linesep, '\n')):
+        append_newline = True
+
+    # Split the content into a list of lines, removing newline characters. To
+    # ensure that we handle both Windows and POSIX newlines, first split on
+    # Windows newlines, and then split on POSIX newlines.
+    split_content = []
+    for win_line in content.split('\r\n'):
+        for content_line in win_line.split('\n'):
+            split_content.append(content_line)
+
+    line_count = len(split_content)
+
     has_changes = False
     orig_file = []
     new_file = []
     in_block = False
-    old_content = ''
-    done = False
-    # we do not use in_place editing to avoid file attrs modifications when
+    block_found = False
+    linesep = None
+
+    def _add_content(linesep, lines=None, include_marker_start=True,
+                     end_line=None):
+        if lines is None:
+            lines = []
+            include_marker_start = True
+
+        if end_line is None:
+            end_line = marker_end
+        end_line = end_line.rstrip('\r\n') + linesep
+
+        if include_marker_start:
+            lines.append(marker_start + linesep)
+
+        if split_content:
+            for index, content_line in enumerate(split_content, 1):
+                if index != line_count:
+                    lines.append(content_line + linesep)
+                else:
+                    # We're on the last line of the content block
+                    if append_newline:
+                        lines.append(content_line + linesep)
+                        lines.append(end_line)
+                    else:
+                        lines.append(content_line + end_line)
+        else:
+            lines.append(end_line)
+
+        return lines
+
+    # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
-    # we could also use salt.utils.filebuffer.BufferedReader
+    #
+    # We could also use salt.utils.filebuffer.BufferedReader
     try:
-        fi_file = fileinput.input(path,
-                    inplace=False, backup=False,
-                    bufsize=1, mode='rb')
-        for line in fi_file:
+        fi_file = fileinput.input(
+            path,
+            inplace=False,
+            backup=False,
+            bufsize=1,
+            mode='rb')
 
+        for line in fi_file:
             line = salt.utils.to_str(line)
-            result = line
+            write_line_to_new_file = True
+
+            if linesep is None:
+                # Auto-detect line separator
+                if line.endswith('\r\n'):
+                    linesep = '\r\n'
+                elif line.endswith('\n'):
+                    linesep = '\n'
+                else:
+                    # No newline(s) in file, fall back to system's linesep
+                    linesep = os.linesep
 
             if marker_start in line:
-                # managed block start found, start recording
+                # We've entered the content block
                 in_block = True
-
             else:
                 if in_block:
-                    if marker_end in line:
-                        # end of block detected
+                    # We're not going to write the lines from the old file to
+                    # the new file until we have exited the block.
+                    write_line_to_new_file = False
+
+                    marker_end_pos = line.find(marker_end)
+                    if marker_end_pos != -1:
+                        # End of block detected
                         in_block = False
+                        # We've found and exited the block
+                        block_found = True
 
-                        # Handle situations where there may be multiple types
-                        # of line endings in the same file. Separate the content
-                        # into lines. Account for Windows-style line endings
-                        # using os.linesep, then by linux-style line endings
-                        # using '\n'
-                        split_content = []
-                        for linesep_line in content.split(os.linesep):
-                            for content_line in linesep_line.split('\n'):
-                                split_content.append(content_line)
+                        _add_content(linesep, lines=new_file,
+                                     include_marker_start=False,
+                                     end_line=line[marker_end_pos:])
 
-                        # Trim any trailing new lines to avoid unwanted
-                        # additional new lines
-                        while not split_content[-1]:
-                            split_content.pop()
-
-                        # push new block content in file
-                        for content_line in split_content:
-                            new_file.append(content_line + os.linesep)
-
-                        done = True
-
-                    else:
-                        # remove old content, but keep a trace
-                        old_content += line
-                        result = None
-            # else: we are not in the marked block, keep saving things
-
+            # Save the line from the original file
             orig_file.append(line)
-            if result is not None:
-                new_file.append(result)
-        # end for. If we are here without block management we maybe have some problems,
-        # or we need to initialise the marked block
+            if write_line_to_new_file:
+                new_file.append(line)
 
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(
+            'Failed to read from {0}: {1}'.format(path, exc)
+        )
     finally:
-        fi_file.close()
+        if linesep is None:
+            # If the file was empty, we will not have set linesep yet. Assume
+            # the system's line separator. This is needed for when we
+            # prepend/append later on.
+            linesep = os.linesep
+        try:
+            fi_file.close()
+        except Exception:
+            pass
 
     if in_block:
         # unterminated block => bad, always fail
@@ -2427,35 +2488,27 @@ def blockreplace(path,
             'Unterminated marked block. End of file reached before marker_end.'
         )
 
-    if not done:
+    if not block_found:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + os.linesep)
-            if append_newline is True:
-                new_file.insert(0, content + os.linesep)
-            else:
-                new_file.insert(0, content)
-            new_file.insert(0, marker_start + os.linesep)
-            done = True
+            prepended_content = _add_content(linesep)
+            prepended_content.extend(new_file)
+            new_file = prepended_content
+            block_found = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(os.linesep):
-                    new_file[-1] += os.linesep
+                if not new_file[-1].endswith(linesep):
+                    new_file[-1] += linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + os.linesep)
-            if append_newline is True:
-                new_file.append(content + os.linesep)
-            else:
-                new_file.append(content)
-            new_file.append(marker_end + os.linesep)
-            done = True
+            _add_content(linesep, lines=new_file)
+            block_found = True
         else:
             raise CommandExecutionError(
                 'Cannot edit marked block. Markers were not found in file.'
             )
 
-    if done:
+    if block_found:
         diff = ''.join(difflib.unified_diff(orig_file, new_file))
         has_changes = diff is not ''
         if has_changes and not dry_run:
@@ -3368,7 +3421,11 @@ def stats(path, hash_type=None, follow_symlinks=True):
             pstat = os.lstat(path)
         except OSError:
             # Not a broken symlink, just a nonexistent path
-            return ret
+            # NOTE: The file.directory state checks the content of the error
+            # message in this exception. Any changes made to the message for this
+            # exception will reflect the file.directory state as well, and will
+            # likely require changes there.
+            raise CommandExecutionError('Path not found: {0}'.format(path))
     else:
         if follow_symlinks:
             pstat = os.stat(path)
@@ -3496,7 +3553,7 @@ def path_exists_glob(path):
     Expansion allows usage of ? * and character ranges []. Tilde expansion
     is not supported. Returns True/False.
 
-    .. versionadded:: Hellium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -3832,8 +3889,15 @@ def get_managed(
         parsed_scheme = urlparsed_source.scheme
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+        unix_local_source = parsed_scheme in ('file', '')
 
-        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+        if unix_local_source:
+            sfn = parsed_path
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+
+        if parsed_scheme and parsed_scheme.lower() in string.ascii_lowercase:
             parsed_path = ':'.join([parsed_scheme, parsed_path])
             parsed_scheme = 'file'
 
@@ -3841,9 +3905,10 @@ def get_managed(
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and parsed_scheme == 'file':
+        elif not source_hash and unix_local_source:
             source_sum = _get_local_file_source_sum(parsed_path)
         elif not source_hash and source.startswith(os.sep):
+            # This should happen on Windows
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
@@ -4193,36 +4258,10 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     # Check permissions
     perms = {}
     cur = stats(name, follow_symlinks=follow_symlinks)
-    if not cur:
-        # NOTE: The file.directory state checks the content of the error
-        # message in this exception. Any changes made to the message for this
-        # exception will reflect the file.directory state as well, and will
-        # likely require changes there.
-        raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
-    # Mode changes if needed
-    if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.normalize_mode(mode)
-            if mode != perms['lmode']:
-                if __opts__['test'] is True:
-                    ret['changes']['mode'] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.normalize_mode(get_mode(name)):
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change mode to {0}'.format(mode)
-                        )
-                    else:
-                        ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if isinstance(user, int):
@@ -4298,6 +4337,27 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                                       .format(group))
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
+
+    # Mode changes if needed
+    if mode is not None:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            mode = salt.utils.normalize_mode(mode)
+            if mode != perms['lmode']:
+                if __opts__['test'] is True:
+                    ret['changes']['mode'] = mode
+                else:
+                    set_mode(name, mode)
+                    if mode != salt.utils.normalize_mode(get_mode(name)):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change mode to {0}'.format(mode)
+                        )
+                    else:
+                        ret['changes']['mode'] = mode
 
     if isinstance(orig_comment, six.string_types):
         if orig_comment:
@@ -4425,6 +4485,11 @@ def check_managed_changes(
             defaults,
             skip_verify,
             **kwargs)
+
+        # Ensure that user-provided hash string is lowercase
+        if source_sum and ('hsum' in source_sum):
+            source_sum['hsum'] = source_sum['hsum'].lower()
+
         if comments:
             __clean_tmp(sfn)
             return False, comments
@@ -4498,11 +4563,18 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = {}
-    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
+        source_sum = dict()
+
+    try:
+        lstats = stats(name, hash_type=source_sum.get('hash_type', None),
+                       follow_symlinks=False)
+    except CommandExecutionError:
+        lstats = {}
+
     if not lstats:
         changes['newfile'] = name
         return changes
+
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:
@@ -4659,7 +4731,7 @@ def manage_file(name,
     source
         file reference on the master
 
-    source_hash
+    source_sum
         sum hash for source
 
     user
@@ -4741,21 +4813,22 @@ def manage_file(name,
     if source_sum and ('hsum' in source_sum):
         source_sum['hsum'] = source_sum['hsum'].lower()
 
-    if source and not sfn:
-        # File is not present, cache it
-        sfn = __salt__['cp.cache_file'](source, saltenv)
+    if source:
         if not sfn:
-            return _error(
-                ret, 'Source file \'{0}\' not found'.format(source))
-        htype = source_sum.get('hash_type', __opts__['hash_type'])
-        # Recalculate source sum now that file has been cached
-        source_sum = {
-            'hash_type': htype,
-            'hsum': get_hash(sfn, form=htype)
-        }
+            # File is not present, cache it
+            sfn = __salt__['cp.cache_file'](source, saltenv)
+            if not sfn:
+                return _error(
+                    ret, 'Source file \'{0}\' not found'.format(source))
+            htype = source_sum.get('hash_type', __opts__['hash_type'])
+            # Recalculate source sum now that file has been cached
+            source_sum = {
+                'hash_type': htype,
+                'hsum': get_hash(sfn, form=htype)
+            }
+
         if keep_mode:
-            if _urlparse(source).scheme in ('salt', 'file') \
-                    or source.startswith('/'):
+            if _urlparse(source).scheme in ('salt', 'file', ''):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
@@ -4785,7 +4858,7 @@ def manage_file(name,
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
             if not skip_verify \
-                    and _urlparse(source).scheme not in ('salt', ''):
+                    and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = (
@@ -4973,8 +5046,6 @@ def manage_file(name,
                 makedirs_(name, user=user, group=group, mode=dir_mode)
 
         if source:
-            # It is a new file, set the diff accordingly
-            ret['changes']['diff'] = 'New file'
             # Apply the new file
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
@@ -4998,6 +5069,8 @@ def manage_file(name,
                     )
                     ret['result'] = False
                     return ret
+            # It is a new file, set the diff accordingly
+            ret['changes']['diff'] = 'New file'
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
@@ -5018,30 +5091,25 @@ def manage_file(name,
 
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
-            if mode:
-                current_umask = os.umask(0o77)
-
-            # Create a new file when test is False and source is None
-            if contents is None:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['new'] = 'file {0} created'.format(name)
-                        ret['comment'] = 'Empty file'
-                    else:
-                        return _error(
-                            ret, 'Empty file {0} not created'.format(name)
-                        )
-            else:
-                if not __opts__['test']:
-                    if touch(name):
-                        ret['changes']['diff'] = 'New file'
-                    else:
-                        return _error(
-                            ret, 'File {0} not created'.format(name)
-                        )
-
-            if mode:
-                os.umask(current_umask)
+            with salt.utils.files.set_umask(0o077 if mode else None):
+                # Create a new file when test is False and source is None
+                if contents is None:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['new'] = 'file {0} created'.format(name)
+                            ret['comment'] = 'Empty file'
+                        else:
+                            return _error(
+                                ret, 'Empty file {0} not created'.format(name)
+                            )
+                else:
+                    if not __opts__['test']:
+                        if touch(name):
+                            ret['changes']['diff'] = 'New file'
+                        else:
+                            return _error(
+                                ret, 'File {0} not created'.format(name)
+                            )
 
         if contents is not None:
             # Write the static contents to a temporary file
@@ -5075,8 +5143,7 @@ def manage_file(name,
         # out what mode to use for the new file.
         if mode is None and not salt.utils.is_windows():
             # Get current umask
-            mask = os.umask(0)
-            os.umask(mask)
+            mask = salt.utils.files.get_umask()
             # Calculate the mode value that results from the umask
             mode = oct((0o777 ^ mask) & 0o666)
 

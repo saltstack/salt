@@ -28,20 +28,8 @@ except ImportError:
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-try:
-    import zmq
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
 
 import tornado.gen  # pylint: disable=F0401
 
@@ -67,6 +55,7 @@ import salt.log.setup
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.files
 import salt.utils.job
 import salt.utils.verify
 import salt.utils.minions
@@ -375,23 +364,13 @@ class Master(SMaster):
 
         :param dict: The salt options
         '''
-        if HAS_ZMQ:
-            # Warn if ZMQ < 3.2
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]
-                )
-            if zmq_version_info < (3, 2):
-                log.warning(
-                    'You have a version of ZMQ less than ZMQ 3.2! There are '
-                    'known connection keep-alive issues with ZMQ < 3.2 which '
-                    'may result in loss of contact with minions. Please '
-                    'upgrade your ZMQ!'
-                )
+        if zmq and ZMQ_VERSION_INFO < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def __set_max_open_files(self):
@@ -481,9 +460,8 @@ class Master(SMaster):
         # Check to see if we need to create a pillar cache dir
         if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
             try:
-                prev_umask = os.umask(0o077)
-                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
-                os.umask(prev_umask)
+                with salt.utils.files.set_umask(0o077):
+                    os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
             except OSError:
                 pass
 
@@ -504,7 +482,8 @@ class Master(SMaster):
                             git_pillar.init_remotes(
                                 repo['git'],
                                 salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                                salt.pillar.git_pillar.GLOBAL_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -855,9 +834,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
@@ -1355,7 +1333,8 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
-            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
+            if self.opts.get('minion_data_cache_events') is True:
+                self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):

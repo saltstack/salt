@@ -173,7 +173,7 @@ GitFS, as described :ref:`here <gitfs-dependencies>`.
     used for git_pillar remotes. This is the reverse behavior from gitfs, where
     branches/tags make up your environments.
 
-    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    See :ref:`here <git-pillar-config-opts>` for documentation on the
     git_pillar configuration options and their usage.
 
 Here is an example git_pillar configuration:
@@ -299,7 +299,7 @@ instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 
-.. _git-pillar-multiple-repos:
+.. _git-pillar-multiple-remotes:
 
 How Multiple Remotes Are Handled
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -491,12 +491,7 @@ except ImportError:
 
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint')
-
-# Fall back to default per-remote-only. This isn't technically needed since
-# salt.utils.gitfs.GitBase.init_remotes() will default to
-# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
-# runners and other modules that import salt.pillar.git_pillar.
-PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+GLOBAL_ONLY = ('base', 'branch')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -550,7 +545,11 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts['pillar_roots'] = {}
         opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
-        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+        pillar.init_remotes(
+            repo,
+            PER_REMOTE_OVERRIDES,
+            PER_REMOTE_ONLY,
+            GLOBAL_ONLY)
         if __opts__.get('__role') == 'minion':
             # If masterless, fetch the remotes. We'll need to remove this once
             # we make the minion daemon able to run standalone.

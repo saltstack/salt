@@ -32,6 +32,7 @@ import salt.fileserver
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.files
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -94,8 +95,8 @@ def init_git_pillar(opts):
                     pillar.init_remotes(
                         opts_dict['git'],
                         git_pillar.PER_REMOTE_OVERRIDES,
-                        git_pillar.PER_REMOTE_ONLY
-                    )
+                        git_pillar.PER_REMOTE_ONLY,
+                        git_pillar.GLOBAL_ONLY)
                     ret.append(pillar)
                 except FileserverConfigError:
                     if opts.get('git_pillar_verify_config', True):
@@ -231,10 +232,9 @@ def mk_key(opts, user):
         os.unlink(keyfile)
 
     key = salt.crypt.Crypticle.generate_key_string()
-    cumask = os.umask(191)
-    with salt.utils.fopen(keyfile, 'w+') as fp_:
-        fp_.write(key)
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.fopen(keyfile, 'w+') as fp_:
+            fp_.write(key)
     # 600 octal: Read and write access to the owner only.
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.
@@ -586,7 +586,18 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('tgt_type', 'glob')
+        expr_form = load.get('expr_form')
+        if expr_form is not None and 'tgt_type' not in load:
+            salt.utils.warn_until(
+                u'Neon',
+                u'_mine_get: minion {0} uses pre-Nitrogen API key '
+                u'"expr_form". Accepting for backwards compatibility '
+                u'but this is not guaranteed '
+                u'after the Neon release'.format(load['id'])
+            )
+            match_type = expr_form
+        else:
+            match_type = load.get('tgt_type', 'glob')
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
@@ -730,7 +741,8 @@ class RemoteFuncs(object):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
                              {'grains': load['grains'], 'pillar': data})
-            self.event.fire_event('Minion data cache refresh', tagify(load['id'], 'refresh', 'minion'))
+            if self.opts.get('minion_data_cache_events') is True:
+                self.event.fire_event('Minion data cache refresh', tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):

@@ -6,6 +6,10 @@ Manage kubernetes resources as salt states
 NOTE: This module requires the proper pillar values set. See
 salt.modules.kubernetes for more information.
 
+.. warning::
+
+    Configuration options will change in Flourine.
+
 The kubernetes module is used to manage different kubernetes resources.
 
 

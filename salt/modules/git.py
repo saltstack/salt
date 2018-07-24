@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import glob
 import logging
 import os
 import re
@@ -178,6 +179,28 @@ def _format_git_opts(opts):
     return _format_opts(opts)
 
 
+def _find_ssh_exe():
+    '''
+    Windows only: search for Git's bundled ssh.exe in known locations
+    '''
+    # Known locations for Git's ssh.exe in Windows
+    globmasks = [os.path.join(os.getenv('SystemDrive'), os.sep,
+                              'Program Files*', 'Git', 'usr', 'bin',
+                              'ssh.exe'),
+                 os.path.join(os.getenv('SystemDrive'), os.sep,
+                              'Program Files*', 'Git', 'bin',
+                              'ssh.exe')]
+    for globmask in globmasks:
+        ssh_exe = glob.glob(globmask)
+        if ssh_exe and os.path.isfile(ssh_exe[0]):
+            ret = ssh_exe[0]
+            break
+    else:
+        ret = None
+
+    return ret
+
+
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
              saltenv='base', **kwargs):
@@ -238,18 +261,12 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             )
             tmp_ssh_wrapper = None
             if salt.utils.is_windows():
-                for suffix in ('', ' (x86)'):
-                    ssh_exe = (
-                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
-                        .format(suffix)
-                    )
-                    if os.path.isfile(ssh_exe):
-                        env['GIT_SSH_EXE'] = ssh_exe
-                        break
-                else:
+                ssh_exe = _find_ssh_exe()
+                if ssh_exe is None:
                     raise CommandExecutionError(
                         'Failed to find ssh.exe, unable to use identity file'
                     )
+                env['GIT_SSH_EXE'] = ssh_exe
                 # Use the windows batch file instead of the bourne shell script
                 ssh_id_wrapper += '.bat'
                 env['GIT_SSH'] = ssh_id_wrapper
@@ -263,7 +280,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 env['GIT_SSH'] = tmp_ssh_wrapper
 
             if 'salt-call' not in _salt_cli \
-                    and __salt__['ssh.key_is_encrypted'](id_file):
+                    and __utils__['ssh.key_is_encrypted'](id_file):
                 errors.append(
                     'Identity file {0} is passphrase-protected and cannot be '
                     'used in a non-interactive command. Using salt-call from '
@@ -290,25 +307,33 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
-                # Cleanup the temporary ssh wrapper file
-                try:
-                    __salt__['file.remove'](tmp_ssh_wrapper)
-                    log.debug('Removed ssh wrapper file %s', tmp_ssh_wrapper)
-                except AttributeError:
-                    # No wrapper was used
-                    pass
-                except (SaltInvocationError, CommandExecutionError) as exc:
-                    log.warning('Failed to remove ssh wrapper file %s: %s', tmp_ssh_wrapper, exc)
+                if tmp_ssh_wrapper:
+                    # Cleanup the temporary ssh wrapper file
+                    try:
+                        __salt__['file.remove'](tmp_ssh_wrapper)
+                        log.debug('Removed ssh wrapper file %s', tmp_ssh_wrapper)
+                    except AttributeError:
+                        # No wrapper was used
+                        pass
+                    except (SaltInvocationError, CommandExecutionError) as exc:
+                        log.warning(
+                            'Failed to remove ssh wrapper file %s: %s',
+                            tmp_ssh_wrapper, exc
+                        )
 
-                # Cleanup the temporary identity file
-                try:
-                    __salt__['file.remove'](tmp_identity_file)
-                    log.debug('Removed identity file %s', tmp_identity_file)
-                except AttributeError:
-                    # No identify file was used
-                    pass
-                except (SaltInvocationError, CommandExecutionError) as exc:
-                    log.warning('Failed to remove identity file %s: %s', tmp_identity_file, exc)
+                if tmp_identity_file:
+                    # Cleanup the temporary identity file
+                    try:
+                        __salt__['file.remove'](tmp_identity_file)
+                        log.debug('Removed identity file %s', tmp_identity_file)
+                    except AttributeError:
+                        # No identify file was used
+                        pass
+                    except (SaltInvocationError, CommandExecutionError) as exc:
+                        log.warning(
+                            'Failed to remove identity file %s: %s',
+                            tmp_identity_file, exc
+                        )
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:

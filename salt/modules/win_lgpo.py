@@ -54,6 +54,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
+from salt.serializers.configparser import deserialize
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -619,8 +620,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryExactPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -632,8 +633,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths and sub-paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths and sub-paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -644,8 +645,8 @@ class _policy_info(object):
                         },
                     },
                     'RestrictNullSessAccess': {
-                        'Policy': 'Network access: Restrict anonymous access to '
-                                  'Named Pipes and Shares',
+                        'Policy': 'Network access: Restrict anonymous access '
+                                  'to Named Pipes and Shares',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
@@ -898,9 +899,9 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'CachedLogonsCount': {
-                        'Policy': 'Interactive logon: Number of previous logons '
-                                  'to cache (in case domain controller is not '
-                                  'available)',
+                        'Policy': 'Interactive logon: Number of previous '
+                                  'logons to cache (in case domain controller '
+                                  'is not available)',
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 50}
@@ -915,8 +916,9 @@ class _policy_info(object):
                         },
                     },
                     'ForceUnlockLogon': {
-                        'Policy': 'Interactive logon: Require Domain Controller '
-                                  'authentication to unlock workstation',
+                        'Policy': 'Interactive logon: Require Domain '
+                                  'Controller authentication to unlock '
+                                  'workstation',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -983,8 +985,8 @@ class _policy_info(object):
                     },
                     'EnableUIADesktopToggle': {
                         'Policy': 'User Account Control: Allow UIAccess '
-                                  'applications to prompt for elevation without '
-                                  'using the secure desktop',
+                                  'applications to prompt for elevation '
+                                  'without using the secure desktop',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -998,8 +1000,8 @@ class _policy_info(object):
                     },
                     'ConsentPromptBehaviorAdmin': {
                         'Policy': 'User Account Control: Behavior of the '
-                                  'elevation prompt for administrators in Admin '
-                                  'Approval Mode',
+                                  'elevation prompt for administrators in '
+                                  'Admin Approval Mode',
                         'Settings': self.uac_admin_prompt_lookup.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1077,7 +1079,7 @@ class _policy_info(object):
                     },
                     'EnableSecureUIAPaths': {
                         'Policy': 'User Account Control: Only elevate UIAccess '
-                                  'applicaitons that are installed in secure '
+                                  'applications that are installed in secure '
                                   'locations',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
@@ -1091,8 +1093,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableLUA': {
-                        'Policy': 'User Account Control: Run all administrators '
-                                  'in Admin Approval Mode',
+                        'Policy': 'User Account Control: Run all '
+                                  'administrators in Admin Approval Mode',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1354,8 +1356,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableForcedLogoff': {
-                        'Policy': 'Microsoft network server: Disconnect clients '
-                                  'when logon hours expire',
+                        'Policy': 'Microsoft network server: Disconnect '
+                                  'clients when logon hours expire',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1422,7 +1424,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
-                        'Policy': 'Devices: Allow undock without having to log on',
+                        'Policy': 'Devices: Allow undock without having to log '
+                                  'on',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1497,8 +1500,8 @@ class _policy_info(object):
                         },
                     },
                     'SubmitControl': {
-                        'Policy': 'Domain controller: Allow server operators to '
-                                  'schedule tasks',
+                        'Policy': 'Domain controller: Allow server operators '
+                                  'to schedule tasks',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1577,8 +1580,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'SignSecureChannel': {
-                        'Policy': 'Domain member: Digitally sign secure channel '
-                                  'data (when possible)',
+                        'Policy': 'Domain member: Digitally sign secure '
+                                  'channel data (when possible)',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2301,7 +2304,7 @@ class _policy_info(object):
                     },
                     'RecoveryConsoleSecurityLevel': {
                         'Policy': 'Recovery console: Allow automatic '
-                                  'adminstrative logon',
+                                  'administrative logon',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2433,15 +2436,18 @@ class _policy_info(object):
         '''
         converts a binary 0/1 to Disabled/Enabled
         '''
-        if val is not None:
-            if ord(val) == 0:
-                return 'Disabled'
-            elif ord(val) == 1:
-                return 'Enabled'
+        try:
+            if val is not None:
+                if ord(val) == 0:
+                    return 'Disabled'
+                elif ord(val) == 1:
+                    return 'Enabled'
+                else:
+                    return 'Invalid Value: {0!r}'.format(val)  # pylint: disable=repr-flag-used-in-string
             else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
+                return 'Not Defined'
+        except TypeError:
+            return 'Invalid Value'
 
     @classmethod
     def _binary_enable_zero_disable_one_reverse_conversion(cls, val, **kwargs):
@@ -3122,12 +3128,13 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
     '''
     value = None
     values = []
+    encoded_semicolon = ';'.encode('utf-16-le')
     if return_value_name:
         values = {}
     if search_string:
         registry = Registry()
-        if len(search_string.split('{0};'.format(chr(0)))) >= 3:
-            vtype = registry.vtype_reverse[ord(search_string.split('{0};'.format(chr(0)))[2])]
+        if len(search_string.split(encoded_semicolon)) >= 3:
+            vtype = registry.vtype_reverse[ord(search_string.split(encoded_semicolon)[2].decode('utf-32-le'))]
         else:
             vtype = None
         search_string = re.escape(search_string)
@@ -3135,29 +3142,28 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
         matches = [m for m in matches]
         if matches:
             for match in matches:
-                pol_entry = policy_data[match.start():(policy_data.index(']',
+                pol_entry = policy_data[match.start():(policy_data.index(']'.encode('utf-16-le'),
                                                                          match.end())
                                                        )
-                                        ].split('{0};'.format(chr(0)))
+                                        ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1]
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
                         if value:
-                            vlist = list(ord(v) for v in value)
                             if vtype == 'REG_DWORD':
-                                for v in struct.unpack('I', struct.pack('2H', *vlist)):
+                                for v in struct.unpack('I', value):
                                     value = v
                             elif vtype == 'REG_QWORD':
-                                for v in struct.unpack('I', struct.pack('4H', *vlist)):
+                                for v in struct.unpack('Q', value):
                                     value = v
                         else:
                             value = 0
                     elif vtype == 'REG_MULTI_SZ':
-                        value = value.rstrip(chr(0)).split(chr(0))
+                        value = value.decode('utf-16-le').rstrip(chr(0)).split(chr(0))
                     else:
-                        value = value.rstrip(chr(0))
+                        value = value.decode('utf-16-le').rstrip(chr(0))
                 if return_value_name:
                     log.debug('we want value names and the value')
                     values[valueName] = value
@@ -3268,35 +3274,52 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
     '''
     registry = Registry()
     this_element_value = None
-    expected_string = ''
+    expected_string = b''
+    encoded_semicolon = ';'.encode('utf-16-le')
+    encoded_null = chr(0).encode('utf-16-le')
+    if reg_key:
+        reg_key = reg_key.encode('utf-16-le')
+    if reg_valueName:
+        reg_valueName = reg_valueName.encode('utf-16-le')
     if reg_data and not check_deleted:
         if reg_vtype == 'REG_DWORD':
-            this_element_value = ''
-            for v in struct.unpack('2H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + six.unichr(v)
-        elif reg_vtype == 'REG_QWORD':
-            this_element_value = ''
-            for v in struct.unpack('4H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + six.unichr(v)
+            this_element_value = struct.pack('I', int(reg_data))
+        elif reg_vtype == "REG_QWORD":
+            this_element_value = struct.pack('Q', int(reg_data))
         elif reg_vtype == 'REG_SZ':
-            this_element_value = '{0}{1}'.format(reg_data, chr(0))
+            this_element_value = b''.join([reg_data.encode('utf-16-le'),
+                                           encoded_null])
     if check_deleted:
         reg_vtype = 'REG_SZ'
-        expected_string = u'[{1}{0};**del.{2}{0};{3}{0};{4}{0};{5}{0}]'.format(
-                                chr(0),
-                                reg_key,
-                                reg_valueName,
-                                chr(registry.vtype[reg_vtype]),
-                                six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
-                                ' ')
+        expected_string = b''.join(['['.encode('utf-16-le'),
+                                    reg_key,
+                                    encoded_null,
+                                    encoded_semicolon,
+                                    '**del.'.encode('utf-16-le'),
+                                    reg_valueName,
+                                    encoded_null,
+                                    encoded_semicolon,
+                                    chr(registry.vtype[reg_vtype]).encode('utf-32-le'),
+                                    encoded_semicolon,
+                                    six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                    encoded_semicolon,
+                                    ' '.encode('utf-16-le'),
+                                    encoded_null,
+                                    ']'.encode('utf-16-le')])
     else:
-        expected_string = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'.format(
-                                chr(0),
-                                reg_key,
-                                reg_valueName,
-                                chr(registry.vtype[reg_vtype]),
-                                six.unichr(len(this_element_value.encode('utf-16-le'))),
-                                this_element_value)
+        expected_string = b''.join(['['.encode('utf-16-le'),
+                                    reg_key,
+                                    encoded_null,
+                                    encoded_semicolon,
+                                    reg_valueName,
+                                    encoded_null,
+                                    encoded_semicolon,
+                                    chr(registry.vtype[reg_vtype]).encode('utf-32-le'),
+                                    encoded_semicolon,
+                                    six.unichr(len(this_element_value)).encode('utf-32-le'),
+                                    encoded_semicolon,
+                                    this_element_value,
+                                    ']'.encode('utf-16-le')])
     return expected_string
 
 
@@ -3324,13 +3347,16 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
     expected_string = None
     # https://msdn.microsoft.com/en-us/library/dn606006(v=vs.85).aspx
     this_vtype = 'REG_SZ'
-    standard_layout = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'
+    encoded_semicolon = ';'.encode('utf-16-le')
+    encoded_null = chr(0).encode('utf-16-le')
+    if reg_key:
+        reg_key = reg_key.encode('utf-16-le')
+    if reg_valuename:
+        reg_valuename = reg_valuename.encode('utf-16-le')
     if etree.QName(element).localname == 'decimal' and etree.QName(parent_element).localname != 'elements':
         this_vtype = 'REG_DWORD'
         if 'value' in element.attrib:
-            this_element_value = ''
-            for val in struct.unpack('2H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + six.unichr(val)
+            this_element_value = struct.pack('I', int(element.attrib['value']))
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3345,9 +3371,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         # server, so untested/assumed
         this_vtype = 'REG_QWORD'
         if 'value' in element.attrib:
-            this_element_value = ''
-            for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + six.unichr(val)
+            this_element_value = struct.pack('Q', int(element.attrib['value']))
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3359,7 +3383,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             return None
     elif etree.QName(element).localname == 'string':
         this_vtype = 'REG_SZ'
-        this_element_value = '{0}{1}'.format(element.text, chr(0))
+        this_element_value = b''.join([element.text.encode('utf-16-le'),
+                                       encoded_null])
     elif etree.QName(parent_element).localname == 'elements':
         standard_element_expected_string = True
         if etree.QName(element).localname == 'boolean':
@@ -3370,22 +3395,19 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1)
+            this_element_value = chr(1).encode('utf-16-le')
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
             this_vtype = 'REG_DWORD'
             requested_val = this_element_value
             if this_element_value is not None:
-                temp_val = ''
-                for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
-                    temp_val = temp_val + six.unichr(v)
-                this_element_value = temp_val
+                this_element_value = struct.pack('I', int(this_element_value))
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
                     if requested_val is not None:
-                        this_element_value = str(requested_val)
+                        this_element_value = str(requested_val).encode('utf-16-le')
             if check_deleted:
                 this_vtype = 'REG_SZ'
         elif etree.QName(element).localname == 'longDecimal':
@@ -3393,15 +3415,12 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             this_vtype = 'REG_QWORD'
             requested_val = this_element_value
             if this_element_value is not None:
-                temp_val = ''
-                for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
-                    temp_val = temp_val + six.unichr(v)
-                this_element_value = temp_val
+                this_element_value = struct.pack('Q', int(this_element_value))
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
                     if requested_val is not None:
-                        this_element_value = str(requested_val)
+                        this_element_value = str(requested_val).encode('utf-16-le')
         elif etree.QName(element).localname == 'text':
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = 'REG_SZ'
@@ -3409,39 +3428,55 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 if element.attrib['expandable'].lower() == 'true':
                     this_vtype = 'REG_EXPAND_SZ'
             if this_element_value is not None:
-                this_element_value = '{0}{1}'.format(this_element_value, chr(0))
+                this_element_value = b''.join([this_element_value.encode('utf-16-le'),
+                                               encoded_null])
         elif etree.QName(element).localname == 'multiText':
-            this_vtype = 'REG_MULTI_SZ'
+            this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
                 this_element_value = '{0}{1}{1}'.format(chr(0).join(this_element_value), chr(0))
         elif etree.QName(element).localname == 'list':
             standard_element_expected_string = False
-            del_keys = ''
+            del_keys = b''
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(range(1, len(this_element_value) + 1))
+                element_valuenames = list([str(z) for z in range(1, len(this_element_value) + 1)])
             if 'additive' in element.attrib:
                 if element.attrib['additive'].lower() == 'false':
                     # a delete values will be added before all the other
                     # value = data pairs
-                    del_keys = u'[{1}{0};**delvals.{0};{2}{0};{3}{0};{4}{0}]'.format(
-                                    chr(0),
-                                    reg_key,
-                                    chr(registry.vtype[this_vtype]),
-                                    chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
-                                    ' ')
+                    del_keys = b''.join(['['.encode('utf-16-le'),
+                                         reg_key,
+                                         encoded_null,
+                                         encoded_semicolon,
+                                         '**delvals.'.encode('utf-16-le'),
+                                         encoded_null,
+                                         encoded_semicolon,
+                                         chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                         encoded_semicolon,
+                                         chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                         encoded_semicolon,
+                                         ' '.encode('utf-16-le'),
+                                         encoded_null,
+                                         ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
             if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
                 if this_element_value is not None:
                     element_valuenames = this_element_value.keys()
                     element_values = this_element_value.values()
-
-            if 'valuePrefix' in element.attrib and element.attrib['valuePrefix'] != '':
-                if this_element_value is not None:
-                    element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                          k) for k in element_valuenames]
+            if 'valuePrefix' in element.attrib:
+                # if the valuePrefix attribute exists, the valuenames are <prefix><number>
+                # most prefixes attributes are empty in the admx files, so the valuenames
+                # end up being just numbers
+                if element.attrib['valuePrefix'] != '':
+                    if this_element_value is not None:
+                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
+                                                              k) for k in element_valuenames]
+            else:
+                # if there is no valuePrefix attribute, the valuename is the value
+                if element_values is not None:
+                    element_valuenames = [str(z) for z in element_values]
             if not check_deleted:
                 if this_element_value is not None:
                     log.debug('_processValueItem has an explicit element_value of {0}'.format(this_element_value))
@@ -3449,61 +3484,103 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                     log.debug('element_valuenames == {0} and element_values == {1}'.format(element_valuenames,
                                                                                            element_values))
                     for i, item in enumerate(element_valuenames):
-                        expected_string = expected_string + standard_layout.format(
-                                                chr(0),
-                                                reg_key,
-                                                element_valuenames[i],
-                                                chr(registry.vtype[this_vtype]),
-                                                six.unichr(len('{0}{1}'.format(element_values[i],
-                                                                           chr(0)).encode('utf-16-le'))),
-                                                '{0}{1}'.format(element_values[i], chr(0)))
+                        expected_string = expected_string + b''.join(['['.encode('utf-16-le'),
+                                                                      reg_key,
+                                                                      encoded_null,
+                                                                      encoded_semicolon,
+                                                                      element_valuenames[i].encode('utf-16-le'),
+                                                                      encoded_null,
+                                                                      encoded_semicolon,
+                                                                      chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                                                      encoded_semicolon,
+                                                                      six.unichr(len('{0}{1}'.format(element_values[i],
+                                                                                 chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                                                      encoded_semicolon,
+                                                                      b''.join([element_values[i].encode('utf-16-le'),
+                                                                               encoded_null]),
+                                                                      ']'.encode('utf-16-le')])
                 else:
-                    expected_string = del_keys + r'[{1}{0};'.format(chr(0),
-                                                                    reg_key)
+                    expected_string = del_keys + b''.join(['['.encode('utf-16-le'),
+                                                           reg_key,
+                                                           encoded_null,
+                                                           encoded_semicolon])
             else:
-                expected_string = u'[{1}{0};**delvals.{0};{2}{0};{3}{0};{4}{0}]'.format(
-                                        chr(0),
-                                        reg_key,
-                                        chr(registry.vtype[this_vtype]),
-                                        chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
-                                        ' ')
+                expected_string = b''.join(['['.encode('utf-16-le'),
+                                            reg_key,
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            '**delvals.'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                            encoded_semicolon,
+                                            chr(len(' {0}'.format(chr(0)))).encode('utf-32-le'),
+                                            encoded_semicolon,
+                                            ' '.encode('utf-16-le'),
+                                            encoded_null,
+                                            ']'.encode('utf-16-le')])
         elif etree.QName(element).localname == 'enum':
             if this_element_value is not None:
                 pass
 
         if standard_element_expected_string and not check_deleted:
             if this_element_value is not None:
-                expected_string = standard_layout.format(
-                                        chr(0),
-                                        reg_key,
-                                        reg_valuename,
-                                        chr(registry.vtype[this_vtype]),
-                                        six.unichr(len(this_element_value.encode('utf-16-le'))),
-                                        this_element_value)
+                expected_string = b''.join(['['.encode('utf-16-le'),
+                                            reg_key,
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            reg_valuename,
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                            encoded_semicolon,
+                                            six.unichr(len(this_element_value)).encode('utf-32-le'),
+                                            encoded_semicolon,
+                                            this_element_value,
+                                            ']'.encode('utf-16-le')])
             else:
-                expected_string = u'[{1}{0};{2}{0};{3}{0};'.format(chr(0),
-                                                                   reg_key,
-                                                                   reg_valuename,
-                                                                   chr(registry.vtype[this_vtype]))
+                expected_string = b''.join(['['.encode('utf-16-le'),
+                                            reg_key,
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            reg_valuename,
+                                            encoded_null,
+                                            encoded_semicolon,
+                                            chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                            encoded_semicolon])
 
     if not expected_string:
         if etree.QName(element).localname == "delete" or check_deleted:
             # delete value
-            expected_string = u'[{1}{0};**del.{2}{0};{3}{0};{4}{0};{5}{0}]'.format(
-                                    chr(0),
-                                    reg_key,
-                                    reg_valuename,
-                                    chr(registry.vtype[this_vtype]),
-                                    six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
-                                    ' ')
+            expected_string = b''.join(['['.encode('utf-16-le'),
+                                        reg_key,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        '**del.'.encode('utf-16-le'),
+                                        reg_valuename,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        ' '.encode('utf-16-le'),
+                                        encoded_null,
+                                        ']'.encode('utf-16-le')])
         else:
-            expected_string = standard_layout.format(
-                                    chr(0),
-                                    reg_key,
-                                    reg_valuename,
-                                    chr(registry.vtype[this_vtype]),
-                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
-                                    this_element_value)
+            expected_string = b''.join(['['.encode('utf-16-le'),
+                                        reg_key,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        reg_valuename,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        six.unichr(len(this_element_value)).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        this_element_value,
+                                        ']'.encode('utf-16-le')])
     return expected_string
 
 
@@ -3528,17 +3605,16 @@ def _checkAllAdmxPolicies(policy_class,
     full_names = {}
     if policy_filedata:
         log.debug('POLICY CLASS {0} has file data'.format(policy_class))
-        policy_filedata_split = re.sub(r'\]$',
-                                       '',
-                                       re.sub(r'^\[',
-                                              '',
-                                              policy_filedata.replace(module_policy_data.reg_pol_header, ''))
-                                       ).split('][')
-
+        policy_filedata_split = re.sub(salt.utils.to_bytes(r'\]{0}$'.format(chr(0))),
+                                       b'',
+                                       re.sub(salt.utils.to_bytes(r'^\[{0}'.format(chr(0))),
+                                              b'',
+                                              re.sub(re.escape(module_policy_data.reg_pol_header.encode('utf-16-le')), b'', policy_filedata))
+                                       ).split(']['.encode('utf-16-le'))
         for policy_item in policy_filedata_split:
-            policy_item_key = policy_item.split('{0};'.format(chr(0)))[0]
+            policy_item_key = policy_item.split('{0};'.format(chr(0)).encode('utf-16-le'))[0].decode('utf-16-le').lower()
             if policy_item_key:
-                for admx_item in REGKEY_XPATH(admx_policy_definitions, keyvalue=policy_item_key.lower()):
+                for admx_item in REGKEY_XPATH(admx_policy_definitions, keyvalue=policy_item_key):
                     if etree.QName(admx_item).localname == 'policy':
                         if admx_item not in admx_policies:
                             admx_policies.append(admx_item)
@@ -3601,8 +3677,11 @@ def _checkAllAdmxPolicies(policy_class,
                 break
             this_policynamespace = admx_policy.nsmap[admx_policy.prefix]
             if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                # some policies have a disabled list but not an enabled list
+                # added this to address those issues
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
                                          this_policyname,
                                          this_key,
@@ -3610,13 +3689,16 @@ def _checkAllAdmxPolicies(policy_class,
                                          ENABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                # some policies have a disabled list but not an enabled list
+                # added this to address those issues
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
                                          this_policyname,
                                          this_key,
@@ -3624,25 +3706,27 @@ def _checkAllAdmxPolicies(policy_class,
                                          DISABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if ENABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, ENABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, DISABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3657,7 +3741,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                 '1')),
                                           policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3668,7 +3752,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                   check_deleted=True)),
                                             policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3841,7 +3925,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                       admx_policy,
                                                                                       elements_item,
                                                                                       check_deleted=False)
-                                                                    ) + r'(?!\*\*delvals\.)',
+                                                                    ) + salt.utils.to_bytes(r'(?!\*\*delvals\.)'),
                                                           policy_filedata):
                                     configured_value = _getDataFromRegPolData(_processValueItem(child_item,
                                                                                                 child_key,
@@ -4034,7 +4118,6 @@ def _read_regpol_file(reg_pol_path):
     if os.path.exists(reg_pol_path):
         with salt.utils.fopen(reg_pol_path, 'rb') as pol_file:
             returndata = pol_file.read()
-        returndata = returndata.decode('utf-16-le')
     return returndata
 
 
@@ -4044,12 +4127,13 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     for a policy_regpath and policy_regkey combo
     '''
     if policy_data:
-        specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
-        _thisSearch = r'\[{1}{0};{3}{2}{0};'.format(
-                chr(0),
-                re.escape(policy_regpath),
-                re.escape(policy_regkey),
-                specialValueRegex)
+        specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+        _thisSearch = b''.join([salt.utils.to_bytes(r'\['),
+                               re.escape(policy_regpath),
+                               b'\00;',
+                               specialValueRegex,
+                               re.escape(policy_regkey),
+                               b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
             return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
@@ -4080,9 +4164,9 @@ def _write_regpol_data(data_to_write,
         if not os.path.exists(policy_file_path):
             ret = __salt__['file.makedirs'](policy_file_path)
         with salt.utils.fopen(policy_file_path, 'wb') as pol_file:
-            if not data_to_write.startswith(reg_pol_header):
+            if not data_to_write.startswith(reg_pol_header.encode('utf-16-le')):
                 pol_file.write(reg_pol_header.encode('utf-16-le'))
-            pol_file.write(data_to_write.encode('utf-16-le'))
+            pol_file.write(data_to_write)
         try:
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
@@ -4158,13 +4242,14 @@ def _policyFileReplaceOrAppendList(string_list, policy_data):
     update existing strings or append the strings
     '''
     if not policy_data:
-        policy_data = ''
+        policy_data = b''
     # we are going to clean off the special pre-fixes, so we get only the valuename
-    specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
+    specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
     for this_string in string_list:
-        list_item_key = this_string.split('{0};'.format(chr(0)))[0].lstrip('[')
+        list_item_key = this_string.split(b'\00;')[0].lstrip(b'[')
         list_item_value_name = re.sub(specialValueRegex,
-                                      '', this_string.split('{0};'.format(chr(0)))[1],
+                                      b'',
+                                      this_string.split(b'\00;')[1],
                                       flags=re.IGNORECASE)
         log.debug('item value name is {0}'.format(list_item_value_name))
         data_to_replace = _regexSearchKeyValueCombo(policy_data,
@@ -4175,7 +4260,7 @@ def _policyFileReplaceOrAppendList(string_list, policy_data):
             policy_data = policy_data.replace(data_to_replace, this_string)
         else:
             log.debug('appending {0}'.format([this_string]))
-            policy_data = ''.join([policy_data, this_string])
+            policy_data = b''.join([policy_data, this_string])
     return policy_data
 
 
@@ -4186,16 +4271,16 @@ def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
     '''
     # we are going to clean off the special pre-fixes, so we get only the valuename
     if not policy_data:
-        policy_data = ''
-    specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
+        policy_data = b''
+    specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
     item_key = None
     item_value_name = None
     data_to_replace = None
     if not append_only:
-        item_key = this_string.split('{0};'.format(chr(0)))[0].lstrip('[')
+        item_key = this_string.split(b'\00;')[0].lstrip(b'[')
         item_value_name = re.sub(specialValueRegex,
-                                 '',
-                                 this_string.split('{0};'.format(chr(0)))[1],
+                                 b'',
+                                 this_string.split(b'\00;')[1],
                                  flags=re.IGNORECASE)
         log.debug('item value name is {0}'.format(item_value_name))
         data_to_replace = _regexSearchKeyValueCombo(policy_data, item_key, item_value_name)
@@ -4204,7 +4289,7 @@ def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
         policy_data = policy_data.replace(data_to_replace, this_string)
     else:
         log.debug('appending {0}'.format([this_string]))
-        policy_data = ''.join([policy_data, this_string])
+        policy_data = b''.join([policy_data, this_string])
 
     return policy_data
 
@@ -4222,9 +4307,10 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
     REGISTRY_FILE_VERSION (u'\x01\00')
 
     https://msdn.microsoft.com/en-us/library/aa374407(VS.85).aspx
-    [Registry Path<NULL>;Reg Value<NULL>;Reg Type<NULL>;SizeInBytes<NULL>;Data<NULL>]
+    +    https://msdn.microsoft.com/en-us/library/cc232696.aspx
+    [Registry Path<NULL>;Reg Value<NULL>;Reg Type;SizeInBytes;Data<NULL>]
     '''
-    existing_data = ''
+    existing_data = b''
     base_policy_settings = {}
     policy_data = _policy_info()
     policySearchXpath = '//ns1:*[@id = "{0}" or @name = "{0}"]'
@@ -4242,8 +4328,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
         for adm_namespace in admtemplate_data:
             for adm_policy in admtemplate_data[adm_namespace]:
                 if str(admtemplate_data[adm_namespace][adm_policy]).lower() == 'not configured':
-                    if adm_policy in base_policy_settings[adm_namespace]:
-                        base_policy_settings[adm_namespace].pop(adm_policy)
+                    if base_policy_settings.get(adm_namespace, {}).pop(adm_policy, None) is not None:
+                        log.debug('Policy "{0}" removed'.format(adm_policy))
                 else:
                     log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                     if adm_namespace not in base_policy_settings:
@@ -4550,37 +4636,34 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
 def _getScriptSettingsFromIniFile(policy_info):
     '''
     helper function to parse/read a GPO Startup/Shutdown script file
+
+    psscript.ini and script.ini file definitions are here
+        https://msdn.microsoft.com/en-us/library/ff842529.aspx
+        https://msdn.microsoft.com/en-us/library/dd303238.aspx
     '''
-    _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    if _existingData:
-        _existingData = _existingData.split('\r\n')
-        script_settings = {}
-        this_section = None
-        for eLine in _existingData:
-            if eLine.startswith('[') and eLine.endswith(']'):
-                this_section = eLine.replace('[', '').replace(']', '')
-                log.debug('adding section {0}'.format(this_section))
-                if this_section:
-                    script_settings[this_section] = {}
-            else:
-                if '=' in eLine:
-                    log.debug('working with config line {0}'.format(eLine))
-                    eLine = eLine.split('=')
-                    if this_section in script_settings:
-                        script_settings[this_section][eLine[0]] = eLine[1]
-        if 'SettingName' in policy_info['ScriptIni']:
-            log.debug('Setting Name is in policy_info')
-            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-                log.debug('the value is set in the file')
-                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+    _existingData = None
+    if os.path.isfile(policy_info['ScriptIni']['IniPath']):
+        with salt.utils.fopen(policy_info['ScriptIni']['IniPath'], 'rb') as fhr:
+            _existingData = fhr.read()
+        if _existingData:
+            try:
+                _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
+                log.debug('Have deserialized data {0}'.format(_existingData))
+            except Exception as error:
+                log.error('An error occurred attempting to deserialize data for {0}'.format(policy_info['Policy']))
+                raise CommandExecutionError(error)
+            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
+                if 'SettingName' in policy_info['ScriptIni']:
+                    log.debug('Need to look for {0}'.format(policy_info['ScriptIni']['SettingName']))
+                    if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
+                        return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
+                    else:
+                        return None
+                else:
+                    return _existingData[policy_info['ScriptIni']['Section']]
             else:
                 return None
-        elif policy_info['ScriptIni']['Section'] in script_settings:
-            log.debug('no setting name')
-            return script_settings[policy_info['ScriptIni']['Section']]
-        else:
-            log.debug('broad else')
-            return None
+
     return None
 
 
@@ -4850,7 +4933,7 @@ def get_policy_info(policy_name,
                 policy_class,
                 ', '.join(policy_data.policies.keys()))
         return ret
-    if policy_name in policy_data.policies[policy_class]:
+    if policy_name in policy_data.policies[policy_class]['policies']:
         ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
         ret['policy_found'] = True
         ret['message'] = ''
@@ -4971,7 +5054,10 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
                                                                          _pol['Registry']['Path'],
                                                                          _pol['Registry']['Value'])['vdata']
-                    log.debug('Value {0} found for reg policy {1}'.format(class_vals[policy_name], policy_name))
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
                 elif 'Secedit' in _pol:
                     # get value from secedit
                     _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])

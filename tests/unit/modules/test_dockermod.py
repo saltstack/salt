@@ -136,6 +136,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
+                                 'config.get': MagicMock(return_value=True),
                                  'cp.cache_file': MagicMock(return_value=False)}):
                     with patch.dict(docker_mod.__utils__,
                                     {'docker.get_client_args': client_args_mock}):
@@ -143,6 +144,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                             command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
+
+    def test_update_mine(self):
+        '''
+        Test the docker.update_mine config option
+        '''
+        def config_get_disabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': False}[val]
+
+        def config_get_enabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': True}[val]
+
+        mine_mock = Mock()
+        dunder_salt = {
+            'config.get': MagicMock(side_effect=config_get_disabled),
+            'mine.send': mine_mock,
+        }
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            docker_mod.stop('foo', timeout=1)
+            mine_mock.assert_not_called()
+
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            dunder_salt['config.get'].side_effect = config_get_enabled
+            docker_mod.stop('foo', timeout=1)
+            self.assert_called_once(mine_mock)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -724,6 +763,35 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
                 ret = docker_mod.compare_container('container1', 'container2')
                 self.assertEqual(ret, {})
+
+    def test_compare_container_ulimits_order(self):
+        '''
+        Test comparing two containers when the order of the Ulimits HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
 
     def test_resolve_tag(self):
         '''

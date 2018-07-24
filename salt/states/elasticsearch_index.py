@@ -65,6 +65,7 @@ def present(name, definition=None):
     **Example:**
 
     .. code-block:: yaml
+
         # Default settings
         mytestindex:
           elasticsearch_index.present

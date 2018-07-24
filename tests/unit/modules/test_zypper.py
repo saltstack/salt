@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 
 # Import Python Libs
@@ -49,8 +49,8 @@ def get_test_data(filename):
     with salt.utils.fopen(
             os.path.join(
                 os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
-        return rfh.read()
+                    os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename), mode='rb') as rfh:
+        return salt.utils.to_str(rfh.read(), 'utf-8')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -361,6 +361,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                    ZyppCallMock(return_value=get_test_data('zypper-available.txt'))), \
                 patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True)):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
+            self.assertDictEqual(zypper.latest_version('vim', 'fakepkg'), {'vim': '7.4.326-2.62', 'fakepkg': ''})
 
     def test_upgrade_success(self):
         '''

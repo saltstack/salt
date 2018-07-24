@@ -8,8 +8,9 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP
+from tests.support.helpers import no_symlinks
 
 # Import salt libs
 import salt.utils
@@ -18,6 +19,7 @@ import salt.utils.find
 
 class TestUtils(TestCase):
 
+    @skipIf(no_symlinks(), "Git missing 'core.symlinks=true' config")
     def test_safe_walk_symlink_recursion(self):
         tmp = mkdtemp(dir=TMP)
         try:

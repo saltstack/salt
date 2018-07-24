@@ -333,3 +333,65 @@ class SystemModuleTest(ModuleCase):
         if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
             self.assertTrue(self.run_function('system._has_settable_hwclock'))
             self.assertTrue(self._hwclock_has_compare())
+
+
+@skipIf(not salt.utils.is_windows(), 'These tests can only be run on windows')
+class WinSystemModuleTest(ModuleCase):
+    '''
+    Validate the date/time functions in the win_system module
+    '''
+    def test_get_computer_name(self):
+        '''
+        Test getting the computer name
+        '''
+        ret = self.run_function('system.get_computer_name')
+
+        self.assertTrue(isinstance(ret, str))
+        import socket
+        name = socket.gethostname()
+        self.assertEqual(name, ret)
+
+    @destructiveTest
+    def test_set_computer_desc(self):
+        '''
+        Test setting the computer description
+        '''
+        desc = 'test description'
+        set_desc = self.run_function('system.set_computer_desc', [desc])
+        self.assertTrue(set_desc)
+
+        get_desc = self.run_function('system.get_computer_desc')
+        self.assertEqual(set_desc['Computer Description'], get_desc)
+
+    def test_get_system_time(self):
+        '''
+        Test getting the system time
+        '''
+        ret = self.run_function('system.get_system_time')
+        now = datetime.datetime.now()
+        self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
+
+    @destructiveTest
+    def test_set_system_time(self):
+        '''
+        Test setting the system time
+        '''
+        test_time = '10:55'
+        set_time = self.run_function('system.set_system_time', [test_time + ' AM'])
+        get_time = self.run_function('system.get_system_time').rsplit(':', 1)[0]
+        self.assertEqual(get_time, test_time)
+
+    def test_get_system_date(self):
+        '''
+        Test getting system date
+        '''
+        ret = self.run_function('system.get_system_date')
+        date = datetime.datetime.now().date().strftime("%m/%d/%Y")
+        self.assertEqual(date, ret)
+
+    @destructiveTest
+    def test_set_system_date(self):
+        '''
+        Test setting system date
+        '''
+        self.assertTrue(self.run_function('system.set_system_date', ['3/25/2018']))

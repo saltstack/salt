@@ -46,6 +46,8 @@ class Mock(object):
             data = self.__mapping.get(name)
         elif name in ('__file__', '__path__'):
             data = '/dev/null'
+        elif name == '__qualname__':
+            raise AttributeError("'Mock' object has no attribute '__qualname__'")
         else:
             data = Mock(mapping=self.__mapping)
         return data
@@ -104,6 +106,7 @@ MOCK_MODULES = [
 
     'tornado',
     'tornado.concurrent',
+    'tornado.escape',
     'tornado.gen',
     'tornado.httpclient',
     'tornado.httpserver',
@@ -135,8 +138,8 @@ MOCK_MODULES = [
     'pymongo',
     'rabbitmq_server',
     'redis',
-    'requests',
-    'requests.exceptions',
+    #'requests',
+    #'requests.exceptions',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
@@ -158,6 +161,7 @@ MOCK_MODULES = [
     'jnpr.junos.utils.sw',
     'dns',
     'dns.resolver',
+    'keyring',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
@@ -199,6 +203,8 @@ def mock_decorator_with_params(*oargs, **okwargs):
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['msgpack'].version = (1, 0, 0)
+sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
 sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
@@ -232,8 +238,7 @@ formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
-        'python2': ('http://docs.python.org/2', None),
-        'python3': ('http://docs.python.org/3', None)
+    'python': ('https://docs.python.org/3', None)
 }
 # <---- Intersphinx Settings -------------------------------------------------
 
@@ -245,9 +250,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2017.7.2'  # latest release
-previous_release = '2016.11.8'  # latest release from previous branch
-previous_release_dir = '2016.11'  # path on web server for previous branch
+latest_release = '2018.3.2'  # latest release
+previous_release = '2017.7.7'  # latest release from previous branch
+previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -258,8 +263,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release # version, latest_release, previous_release
+build_type = 'previous'  # latest, previous, develop, next
+release = previous_release  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -318,6 +323,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
+.. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
 .. |windownload| raw:: html
 
      <p>Python2 x86: <a
@@ -336,19 +342,23 @@ rst_prolog = """\
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 
-.. |osxdownload| raw:: html
+.. |osxdownloadpy2| raw:: html
 
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg"><strong>salt-{release}-py2-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg.md5"><strong>md5</strong></a></p>
+
+.. |osxdownloadpy3| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
-    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
+    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
@@ -360,7 +370,7 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack2' #change to 'saltstack' to use previous theme
+html_theme = os.environ.get('HTML_THEME', 'saltstack2') # set 'HTML_THEME=saltstack' to use previous theme
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'

@@ -484,7 +484,7 @@ def daemonize(redirect_out=True):
     os.chdir('/')
     # noinspection PyArgumentList
     os.setsid()
-    os.umask(18)
+    os.umask(0o022)  # pylint: disable=blacklisted-function
 
     # do second fork
     try:
@@ -1143,10 +1143,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Oxygen comes out, after
+    # We'll be showing errors to the users until Salt Fluorine comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Oxygen',
+        'Fluorine',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1183,7 +1183,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Oxygen is out.{1}'.format(
+            'Fluorine is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1586,7 +1586,7 @@ def subdict_match(data,
                            exact_match=exact_match):
                 return True
             continue
-        if isinstance(match, list):
+        if isinstance(match, (list, tuple)):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
@@ -2016,7 +2016,11 @@ def check_state_result(running, recurse=False, highstate=None):
 
     ret = True
     for state_id, state_result in six.iteritems(running):
-        if not recurse and not isinstance(state_result, dict):
+        expected_type = dict
+        # The __extend__ state is a list
+        if "__extend__" == state_id:
+            expected_type = list
+        if not recurse and not isinstance(state_result, expected_type):
             ret = False
         if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
@@ -2356,7 +2360,7 @@ def alias_function(fun, name, doc=None):
         orig_name = fun.__name__
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
-        alias_fun.__doc__ = alias_msg + fun.__doc__
+        alias_fun.__doc__ = alias_msg + (fun.__doc__ or '')
 
     return alias_fun
 
@@ -3126,7 +3130,7 @@ def chugid_and_umask(runas, umask):
     if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def rand_string(size=32):

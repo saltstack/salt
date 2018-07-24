@@ -265,8 +265,13 @@ def managed(name,
         ret['comment'] = ' '.join(errors)
         return ret
 
+    try:
+        currently_enabled = __salt__['ip.is_enabled'](name)
+    except CommandExecutionError:
+        currently_enabled = False
+
     if not enabled:
-        if __salt__['ip.is_enabled'](name):
+        if currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be disabled'
@@ -280,18 +285,13 @@ def managed(name,
             ret['comment'] += ' (already disabled)'
         return ret
     else:
-        try:
-            currently_enabled = __salt__['ip.is_disabled'](name)
-        except CommandExecutionError:
-            currently_enabled = False
         if not currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be enabled'
                                   .format(name))
             else:
-                result = __salt__['ip.enable'](name)
-                if not result:
+                if not __salt__['ip.enable'](name):
                     ret['result'] = False
                     ret['comment'] = ('Failed to enable interface \'{0}\' to '
                                       'make changes'.format(name))

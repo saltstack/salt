@@ -438,7 +438,7 @@ def refresh_db(root=None):
 
 def install(name=None,
             refresh=False,
-            sysupgrade=False,
+            sysupgrade=None,
             pkgs=None,
             sources=None,
             **kwargs):
@@ -478,7 +478,8 @@ def install(name=None,
 
     sysupgrade
         Whether or not to upgrade the system packages before installing.
-
+        If refresh is set to ``True`` but sysupgrade is not specified, ``-u`` will be
+        applied
 
     Multiple Package Installation Options:
 
@@ -516,9 +517,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refresh = salt.utils.is_true(refresh)
-    sysupgrade = salt.utils.is_true(sysupgrade)
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -538,18 +536,18 @@ def install(name=None,
         cmd.extend(['systemd-run', '--scope'])
     cmd.append('pacman')
 
+    targets = []
     errors = []
     if pkg_type == 'file':
         cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         cmd.append('-S')
-        if refresh:
+        if refresh is True:
             cmd.append('-y')
-        if sysupgrade:
+        if sysupgrade is True or (sysupgrade is None and refresh is True):
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
-        targets = []
         wildcards = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:

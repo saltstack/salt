@@ -9,7 +9,7 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 .. note::
     There are three PostgreSQL returners.  Any can function as an external
-    :ref:`master job cache <external-master-cache>`. but each has different
+    :ref:`master job cache <external-job-cache>`. but each has different
     features.  SaltStack recommends
     :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
     a version of PostgreSQL that has the appropriate native binary JSON types.
@@ -254,14 +254,14 @@ def returner(ret):
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret, alter_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)'''
+                    VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
                               psycopg2.extras.Json(ret['return']),
                               ret['id'],
                               ret.get('success', False),
                               psycopg2.extras.Json(ret),
-                              time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              time.time()))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with pgjsonb returner. PostgreSQL server unavailable.')
 
@@ -278,9 +278,9 @@ def event_return(events):
             tag = event.get('tag', '')
             data = event.get('data', '')
             sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, %s)'''
+                     VALUES (%s, %s, %s, to_timestamp(%s))'''
             cur.execute(sql, (tag, psycopg2.extras.Json(data),
-                              __opts__['id'], time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              __opts__['id'], time.time()))
 
 
 def save_load(jid, load, minions=None):

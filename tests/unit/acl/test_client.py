@@ -19,9 +19,14 @@ class ClientACLTestCase(TestCase):
             'users': ['joker', 'penguin', '*bad_*', 'blocked_.*', '^Homer$'],
             'modules': ['cmd.run', 'test.fib', 'rm-rf.*'],
         }
+        self.whitelist = {
+            'users': ['testuser', 'saltuser'],
+            'modules': ['test.ping', 'grains.items'],
+        }
 
     def tearDown(self):
         del self.blacklist
+        del self.whitelist
 
     def test_user_is_blacklisted(self):
         '''
@@ -63,3 +68,25 @@ class ClientACLTestCase(TestCase):
 
         self.assertTrue(client_acl.cmd_is_blacklisted(['cmd.run', 'state.sls']))
         self.assertFalse(client_acl.cmd_is_blacklisted(['state.highstate', 'state.sls']))
+
+    def test_user_is_whitelisted(self):
+        '''
+        test user_is_whitelisted
+        '''
+        client_acl = acl.PublisherACL(self.whitelist)
+
+        self.assertTrue(client_acl.user_is_whitelisted('testuser'))
+        self.assertTrue(client_acl.user_is_whitelisted('saltuser'))
+        self.assertFalse(client_acl.user_is_whitelisted('three'))
+        self.assertFalse(client_acl.user_is_whitelisted('hans'))
+
+    def test_cmd_is_whitelisted(self):
+        '''
+        test cmd_is_whitelisted
+        '''
+        client_acl = acl.PublisherACL(self.whitelist)
+
+        self.assertTrue(client_acl.cmd_is_whitelisted('test.ping'))
+        self.assertTrue(client_acl.cmd_is_whitelisted('grains.items'))
+        self.assertFalse(client_acl.cmd_is_whitelisted('cmd.run'))
+        self.assertFalse(client_acl.cmd_is_whitelisted('test.version'))

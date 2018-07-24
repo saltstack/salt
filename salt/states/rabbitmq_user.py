@@ -126,7 +126,7 @@ def present(name,
             return ret
 
     if user and not any((force, perms, tags, passwd_reqs_update)):
-        log.debug(('RabbitMQ user \'%s\' exists, password is upto'
+        log.debug(('RabbitMQ user \'%s\' exists, password is up to'
                    ' date and force is not set.'), name)
         ret['comment'] = 'User \'{0}\' is already present.'.format(name)
         ret['result'] = True
