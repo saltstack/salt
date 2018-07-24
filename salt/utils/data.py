@@ -460,6 +460,7 @@ def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     return data
 
 
+@jinja_filter('traverse')
 def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
