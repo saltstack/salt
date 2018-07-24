@@ -671,6 +671,7 @@ def install(name=None,
             reinstall_requires=False,
             regex=False,
             pcre=False,
+            batch=False,
             **kwargs):
     '''
     Install package(s) from a repository
