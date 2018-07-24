@@ -171,7 +171,9 @@ def init(
         start=True,
         disk='default',
         saltenv='base',
-        enable_vnc=False):
+        enable_vnc=False,
+        seed_cmd='seed.apply',
+        enable_qcow=False):
     '''
     This routine is used to create a new virtual machine. This routines takes
     a number of options to determine what the newly created virtual machine
@@ -256,25 +258,29 @@ def init(
     )
     try:
         cmd_ret = client.cmd_iter(
-                host,
-                'virt.init',
-                [
-                    name,
-                    cpu,
-                    mem,
-                    image,
-                    nic,
-                    hypervisor,
-                    start,
-                    disk,
-                    saltenv,
-                    seed,
-                    install,
-                    pub_key,
-                    priv_key,
-                    enable_vnc,
-                ],
-                timeout=600)
+            host,
+            'virt.init',
+            [
+                name,
+                cpu,
+                mem
+            ],
+            timeout=600,
+            kwarg={
+                'image': image,
+                'nic': nic,
+                'hypervisor': hypervisor,
+                'start': start,
+                'disk': disk,
+                'saltenv': saltenv,
+                'seed': seed,
+                'install': install,
+                'pub_key': pub_key,
+                'priv_key': priv_key,
+                'seed_cmd': seed_cmd,
+                'enable_vnc': enable_vnc,
+                'enable_qcow': enable_qcow,
+            })
     except SaltClientError as client_error:
         # Fall through to ret error handling below
         print(client_error)
