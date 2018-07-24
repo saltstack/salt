@@ -473,6 +473,22 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['log_file'], minion_config)
         self.assertEqual(config['id'], 'hello_world')
 
+
+    @with_tempdir()
+    def test_minion_id_lowercase(self, tempdir):
+        minion_config = os.path.join(tempdir, 'minion')
+        log_file = os.path.join(tempdir, 'minion.log')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(
+                'id: HELLO_WORLD\n'
+                'minion_id_lowercase: True\n'
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(tempdir, log_file)
+            )
+        config = sconfig.minion_config(minion_config)           # Load the configuration
+        self.assertEqual(config['id'], 'hello_world')
+
+
     @with_tempdir()
     def test_backend_rename(self, tempdir):
         '''
