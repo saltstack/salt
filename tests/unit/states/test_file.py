@@ -64,7 +64,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             remove_dir = 'c:\\tmp\\etc'
         try:
-            salt.utils.rm_rf(remove_dir)
+            salt.utils.files.rm_rf(remove_dir)
         except OSError:
             pass
 
@@ -1215,7 +1215,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         {'file.directory_exists': mock_f,
                          'file.makedirs': mock_t,
                          'file.stats': mock_f,
-                         'file.touch': mock_t,
                          'cp.get_template': mock_f,
                          'file.search': mock_f,
                          'file.prepend': mock_t}):

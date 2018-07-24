@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.templates as templates
+import salt.utils.platform
 import salt.transport
 import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
@@ -132,6 +133,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         Test if push works with good posix path.
         '''
         filename = '/saltines/test.file'
+        if salt.utils.platform.is_windows():
+            filename = 'c:\\saltines\\test.file'
         with patch('salt.modules.cp.os.path',
                    MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path)), \
                 patch.multiple('salt.modules.cp',
