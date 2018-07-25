@@ -101,6 +101,7 @@ def cert(name,
          server=None,
          owner='root',
          group='root',
+         mode='0640',
          certname=None,
          preferred_challenges=None,
          tls_sni_01_port=None,
@@ -118,8 +119,9 @@ def cert(name,
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
-    :param owner: owner of private key
-    :param group: group of private key
+    :param owner: owner of the private key file
+    :param group: group of the private key file
+    :param mode: mode of the private key file
     :param certname: Name of the certificate to save
     :param preferred_challenges: A sorted, comma delimited list of the preferred
                                  challenge to use during authorization with the
@@ -201,27 +203,17 @@ def cert(name,
                            ''.format(name, res['stdout'], res['stderr'])}
 
     if 'no action taken' in res['stdout']:
-        return {'result': None,
-                'comment': 'No action taken on certificate {0}'.format(cert_file),
-                'not_after': expires(name)}
-
-    if renew:
+        comment = 'Certificate {0} unchanged'.format(cert_file)
+    elif renew:
         comment = 'Certificate {0} renewed'.format(name)
     else:
         comment = 'Certificate {0} obtained'.format(name)
-    ret = {'comment': comment, 'not_after': expires(name)}
 
-    res = __salt__['file.check_perms'](_cert_file(name, 'privkey'), {}, owner, group, '0600', follow_symlinks=True)
-
-    if res is None:
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed.'
-    elif not res[0].get('result', False):
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed with \n{0}'.format(res[0]['comment'])
-    else:
-        ret['result'] = True
-        ret['comment'] += '.'
+    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
+    ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
+                                          ret,
+                                          owner, group, mode,
+                                          follow_symlinks=True)
 
     return ret
 
