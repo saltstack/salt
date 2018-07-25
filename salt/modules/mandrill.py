@@ -24,6 +24,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.json
+import salt.utils.versions
 
 # import third party
 try:
@@ -142,7 +143,8 @@ def send(message,
          send_at=None,
          api_url=None,
          api_version=None,
-         api_key=None):
+         api_key=None,
+         **kwargs):
     '''
     Send out the email using the details from the ``message`` argument.
 
@@ -229,6 +231,11 @@ def send(message,
             result:
                 True
     '''
+    if 'async' in kwargs:  # Remove this in Sodium
+        salt.utils.versions.warn_until('Sodium', 'Parameter "async" is renamed to "asynchronous" '
+                                                 'and will be removed in Salt Sodium.')
+        asynchronous = bool(kwargs['async'])
+
     params = _get_api_params(api_url=api_url,
                              api_version=api_version,
                              api_key=api_key)
@@ -238,7 +245,7 @@ def send(message,
     data = {
         'key': params['api_key'],
         'message': message,
-        'asynchronous': asynchronous,
+        'async': asynchronous,
         'ip_pool': ip_pool,
         'send_at': send_at
     }
