@@ -74,6 +74,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         reline(destpath, destpath, force=True)
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
         reline(destpath, destpath, force=True)
+        sls = self.run_function('saltutil.sync_modules')
+        assert isinstance(sls, list)
 
     def test_show_highstate(self):
         '''
@@ -311,6 +313,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         '''
         testfile = os.path.join(TMP, 'issue-1876')
+
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '

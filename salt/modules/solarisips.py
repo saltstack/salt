@@ -39,6 +39,7 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
+import itertools
 
 
 # Import salt libs
@@ -47,6 +48,9 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+from functools import reduce
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -288,6 +292,7 @@ def version(*names, **kwargs):
     '''
     Common interface for obtaining the version of installed packages.
     Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
+    Partial FMRI is returned if the package is not installed.
 
     CLI Example:
 
@@ -298,39 +303,87 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version pkg://solaris/entire
 
     '''
-    if names:
-        cmd = ['/bin/pkg', 'list', '-Hv']
-        cmd.extend(names)
-        lines = __salt__['cmd.run_stdout'](cmd).splitlines()
-        ret = {}
-        for line in lines:
-            ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
-        if ret:
-            return ret
-    return ''
+    if len(names) == 0:
+        return ''
+
+    cmd = ['/bin/pkg', 'list', '-Hv']
+    cmd.extend(names)
+    lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
+    ret = {}
+    for line in lines:
+        ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
+
+    # Append package names which are not installed/found
+    unmatched = list([name for name in names if not reduce(lambda x, y: x or name in y, ret, False)])  # pylint: disable=W0640
+    ret.update(zip(unmatched, itertools.cycle(('',))))
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        try:
+            return next(six.itervalues(ret))
+        except StopIteration:
+            return ''
+
+    return ret
 
 
-def latest_version(name, **kwargs):
+def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository.
-    In case of multiple matches, it returns list of all matched packages.
-    Accepts full or partial FMRI.
+    The available version of packages in the repository.
+    Accepts full or partial FMRI. Partial FMRI is returned if the full FMRI
+    could not be resolved.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
     Please use pkg.latest_version as pkg.available_version is being deprecated.
+
+    .. versionchanged:: Fluorine
+        Support for multiple package names added.
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt '*' pkg.latest_version bash
         salt '*' pkg.latest_version pkg://solaris/entire
+        salt '*' pkg.latest_version postfix sendmail
     '''
-    cmd = ['/bin/pkg', 'list', '-Hnv', name]
-    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+
+    if len(names) == 0:
+        return ''
+
+    cmd = ['/bin/pkg', 'list', '-Hnv']
+    cmd.extend(names)
+    lines = __salt__['cmd.run_stdout'](cmd, ignore_retcode=True).splitlines()
     ret = {}
     for line in lines:
         ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
-    if ret:
-        return ret
-    return ''
+
+    installed = version(*names)
+
+    if len(names) == 1:
+        # Convert back our result in a dict if only one name is passed
+        installed = {list(ret)[0] if len(ret) > 0 else names[0]: installed}
+
+    for name in ret:
+        if name not in installed:
+            continue
+        if ret[name] == installed[name]:
+            ret[name] = ''
+
+    # Append package names which are not found
+    unmatched = list([name for name in names if not reduce(lambda x, y: x or name in y, ret, False)])
+    ret.update(zip(unmatched, itertools.cycle(('',))))
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        try:
+            return next(six.itervalues(ret))
+        except StopIteration:
+            return ''
+
+    return ret
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
@@ -466,7 +519,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     '''
     if not pkgs:
         if is_installed(name):
-            return 'Package already installed.'
+            return {}
 
     if refresh:
         refresh_db(full=True)

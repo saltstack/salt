@@ -557,3 +557,26 @@ def parse_function(s):
         return fname, args, kwargs
     else:
         return None, None, None
+
+
+def prepare_kwargs(all_kwargs, class_init_kwargs):
+    '''
+    Filter out the kwargs used for the init of the class and the kwargs used to
+    invoke the command required.
+
+    all_kwargs
+        All the kwargs the Execution Function has been invoked.
+
+    class_init_kwargs
+        The kwargs of the ``__init__`` of the class.
+    '''
+    fun_kwargs = {}
+    init_kwargs = {}
+    for karg, warg in six.iteritems(all_kwargs):
+        if karg not in class_init_kwargs:
+            if warg is not None:
+                fun_kwargs[karg] = warg
+            continue
+        if warg is not None:
+            init_kwargs[karg] = warg
+    return init_kwargs, fun_kwargs
