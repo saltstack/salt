@@ -488,7 +488,8 @@ def query(url,
             data = _urlencode(data)
 
         if verify_ssl:
-            req_kwargs['ca_certs'] = ca_bundle
+            # tornado requires a str, cannot be unicode str in py2
+            req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
@@ -496,9 +497,18 @@ def query(url,
         client_argspec = None
 
         proxy_host = opts.get('proxy_host', None)
+        if proxy_host:
+            # tornado requires a str for proxy_host, cannot be a unicode str in py2
+            proxy_host = salt.utils.stringutils.to_str(proxy_host)
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
+        if proxy_username:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_username = salt.utils.stringutils.to_str(proxy_username)
         proxy_password = opts.get('proxy_password', None)
+        if proxy_password:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_password = salt.utils.stringutils.to_str(proxy_password)
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
