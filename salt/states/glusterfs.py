@@ -108,8 +108,8 @@ def peered(name):
     return ret
 
 
-def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
-                   transport='tcp', start=False, force=False):
+def volume_present(name, bricks, stripe=False, replica=False, arbiter=False,
+                   device_vg=False, transport='tcp', start=False, force=False):
     '''
     Ensure that the volume exists
 
@@ -118,6 +118,12 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
 
     bricks
         list of brick paths
+
+    replica
+        replica count for volume
+
+    arbiter
+        use every third brick as arbiter (metadata only)
 
     start
         ensure that the volume is also started
@@ -137,6 +143,17 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
               - host1:/srv/gluster/drive2
               - host2:/srv/gluster/drive3
             - replica: 2
+            - start: True
+
+        Replicated Volume with arbiter brick:
+          glusterfs.volume_present:
+            - name: volume3
+            - bricks:
+              - host1:/srv/gluster/drive2
+              - host2:/srv/gluster/drive3
+              - host3:/srv/gluster/drive4
+            - replica: 3
+            - arbiter: True
             - start: True
     '''
     ret = {'name': name,
@@ -160,7 +177,7 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
 
         vol_created = __salt__['glusterfs.create_volume'](
             name, bricks, stripe,
-            replica, device_vg,
+            replica, arbiter, device_vg,
             transport, start, force)
 
         if not vol_created:
