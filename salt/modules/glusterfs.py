@@ -288,7 +288,7 @@ def create_volume(name, bricks, stripe=False, replica=False, arbiter=False,
                 'Brick syntax is <peer>:<path> got {0}'.format(brick))
 
     # Validate arbiter config
-    if arbiter and not replica == 3:
+    if arbiter and replica != 3:
         raise SaltInvocationError('Arbiter configuration only valid ' +
                                   'in replica 3 volume')
 
