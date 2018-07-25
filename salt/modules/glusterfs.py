@@ -217,8 +217,8 @@ def peer(name):
     return _gluster(cmd)
 
 
-def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
-           transport='tcp', start=False, force=False):
+def create_volume(name, bricks, stripe=False, replica=False, arbiter=False,
+        device_vg=False, transport='tcp', start=False, force=False):
     '''
     Create a glusterfs volume
 
@@ -237,6 +237,12 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     replica
         Replica count, the number of bricks should be a multiple of the \
         replica count for a distributed replicated volume
+
+    arbiter
+        If true, specifies volume should use arbiter brick(s). \
+        Valid configuration limited to "replica 3 arbiter 1" per \
+        Gluster documentation. Every third brick in the brick list \
+        is used as an arbiter brick.
 
     device_vg
         If true, specifies volume should use block backend instead of regular \
@@ -281,12 +287,19 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
             raise SaltInvocationError(
                 'Brick syntax is <peer>:<path> got {0}'.format(brick))
 
+    # Validate arbiter config
+    if arbiter and not replica == 3:
+        raise SaltInvocationError('Arbiter configuration only valid ' +
+                                  'in replica 3 volume')
+
     # Format creation call
     cmd = 'volume create {0} '.format(name)
     if stripe:
         cmd += 'stripe {0} '.format(stripe)
     if replica:
         cmd += 'replica {0} '.format(replica)
+    if arbiter:
+        cmd += 'arbiter 1 '
     if device_vg:
         cmd += 'device vg '
     if transport != 'tcp':
@@ -338,7 +351,7 @@ def status(name):
     root = _gluster_xml('volume status {0}'.format(name))
     if not _gluster_ok(root):
         # Most probably non-existing volume, the error output is logged
-        # Tiis return value is easy to test and intuitive
+        # This return value is easy to test and intuitive
         return None
 
     ret = {'bricks': {}, 'nfs': {}, 'healers': {}}
