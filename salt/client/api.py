@@ -120,7 +120,7 @@ class APIClient(object):
         '''
         cmd = dict(cmd)  # make copy
         client = 'minion'  # default to local minion client
-        mode = cmd.get('mode', 'asynchronous')  # default to 'asynchronous'
+        mode = cmd.get('mode', 'async')
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
         funparts = cmd.get('fun', '').split('.')
