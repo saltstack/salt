@@ -439,7 +439,7 @@ class ReactWrap(object):
                 log.error(
                     "Reactor '%s' failed  to execute %s '%s': "
                     "TaskPool queue is full!"
-                    " Consider tuning reactor_worker_threads and/or"
+                    "Consider tuning reactor_worker_threads and/or"
                     " reactor_worker_hwm",
                     low["__id__"],
                     low["state"],
@@ -461,13 +461,13 @@ class ReactWrap(object):
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
-        self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         """
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         """
-        self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         """
