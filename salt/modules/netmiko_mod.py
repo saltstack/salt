@@ -193,10 +193,8 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError
 try:
     from salt.utils.args import clean_kwargs
-    from salt.utils.files import mkstemp
 except ImportError:
     from salt.utils import clean_kwargs
-    from salt.utils import mkstemp
 
 # Import third party libs
 try:
@@ -477,15 +475,8 @@ def send_config(config_file=None,
                 config_commands=None,
                 template_engine='jinja',
                 commit=False,
-                source_hash=None,
-                source_hash_name=None,
-                user=None,
-                group=None,
-                mode=None,
-                attrs=None,
                 context=None,
                 defaults=None,
-                skip_verify=False,
                 saltenv='base',
                 **kwargs):
     '''
@@ -528,35 +519,11 @@ def send_config(config_file=None,
         option is by default disabled, as many platforms don't have this
         capability natively.
 
-    source_hash
-        The hash of the ``config_file``
-
-    source_hash_name
-        When ``source_hash`` refers to a remote file, this specifies the
-        filename to look for in that file.
-
-    user
-        Owner of the file.
-
-    group
-        Group owner of the file.
-
-    mode
-        Permissions of the file.
-
-    attrs
-        Attributes of the file.
-
     context
         Variables to add to the template context.
 
     defaults
         Default values of the context_dict.
-
-    skip_verify: ``False``
-        If ``True``, hash verification of remote file sources (``http://``,
-        ``https://``, ``ftp://``, etc.) will be skipped, and the ``source_hash``
-        argument will be ignored.
 
     exit_config_mode: ``True``
         Determines whether or not to exit config mode after complete.
@@ -580,38 +547,28 @@ def send_config(config_file=None,
 
     .. code-block:: bash
 
+        salt '*' netmiko.send_config config_commands="['interface GigabitEthernet3', 'no ip address']"
+        salt '*' netmiko.send_config config_commands="['snmp-server location {{ grains.location }}']"
         salt '*' netmiko.send_config config_file=salt://config.txt
         salt '*' netmiko.send_config config_file=https://bit.ly/2sgljCB device_type='cisco_ios' ip='1.2.3.4' username='example'
     '''
     if config_file:
-        if template_engine:
-            tmp_file = mkstemp()
-            file_mgd = __salt__['file.get_managed'](tmp_file,
-                                                    template_engine,
-                                                    config_file,
-                                                    source_hash,
-                                                    source_hash_name,
-                                                    user,
-                                                    group,
-                                                    mode,
-                                                    attrs,
-                                                    saltenv,
-                                                    context,
-                                                    defaults,
-                                                    skip_verify)
-            if not file_mgd[0]:
-                raise CommandExecutionError(file_mgd[2])
-            file_str = __salt__['file.read'](file_mgd[0])
-            __salt__['file.remove'](file_mgd[0])
-        else:
-            # If no template engine wanted, simply fetch the source file
-            file_str = __salt__['cp.get_file_str'](config_file,
-                                                   saltenv=saltenv)
-            if file_str is False:
-                raise CommandExecutionError('Source file {} not found'.format(config_file))
-        config_commands = file_str.splitlines()
-    if isinstance(config_commands, (six.string_types, six.text_type)):
-        config_commands = [config_commands]
+        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        if file_str is False:
+            raise CommandExecutionError('Source file {} not found'.format(config_file))
+    elif config_commands:
+        if isinstance(config_commands, (six.string_types, six.text_type)):
+            config_commands = [config_commands]
+        file_str = '\n'.join(config_commands)
+        # unify all the commands in a single file, to render them in a go
+    if template_engine:
+        file_str = __salt__['file.apply_template_on_contents'](file_str,
+                                                               template_engine,
+                                                               context,
+                                                               defaults,
+                                                               saltenv)
+    # whatever the source of the commands would be, split them line by line
+    config_commands = [line for line in file_str.splitlines() if line.strip()]
     kwargs = clean_kwargs(**kwargs)
     if 'netmiko.conn' in __proxy__:
         conn = __proxy__['netmiko.conn']()

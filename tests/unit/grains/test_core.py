@@ -933,3 +933,33 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         osdata = {'kernel': 'Linux', }
                         ret = core._virtual(osdata)
                         self.assertEqual(ret['virtual'], virt)
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/sysctl'))
+    def test_osx_memdata_with_comma(self):
+        '''
+        test osx memdata method when comma returns
+        '''
+        def _cmd_side_effect(cmd):
+            if 'hw.memsize' in cmd:
+                return '4294967296'
+            elif 'vm.swapusage' in cmd:
+                return 'total = 1024,00M  used = 160,75M  free = 863,25M  (encrypted)'
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._osx_memdata()
+            assert ret['swap_total'] == 1024
+            assert ret['mem_total'] == 4096
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/sysctl'))
+    def test_osx_memdata(self):
+        '''
+        test osx memdata
+        '''
+        def _cmd_side_effect(cmd):
+            if 'hw.memsize' in cmd:
+                return '4294967296'
+            elif 'vm.swapusage' in cmd:
+                return 'total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)'
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._osx_memdata()
+            assert ret['swap_total'] == 0
+            assert ret['mem_total'] == 4096

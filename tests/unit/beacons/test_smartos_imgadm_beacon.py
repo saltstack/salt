@@ -1,7 +1,7 @@
 # coding: utf-8
 
 # Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
@@ -63,11 +63,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
         '''
         We only have minimal validation so we test that here
         '''
-        config = {}
-
-        ret = imgadm.validate(config)
-
-        self.assertEqual(ret, (False, 'Configuration for imgadm beacon must be a list!'))
+        assert imgadm.validate({}) == (False, 'Configuration for imgadm beacon must be a list!')
 
     def test_imported_startup(self):
         '''
@@ -78,9 +74,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(imgadm.__salt__, {'imgadm.list': MagicMock(return_value=MOCK_IMAGE_ONE)}):
 
             config = [{'startup_import_event': True}]
-
-            ret = imgadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert imgadm.validate(config) == (True, 'Valid beacon configuration')
 
             ret = imgadm.beacon(config)
             res = [{'description': 'Example Image 1',
@@ -90,7 +84,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'source': 'https://images.joyent.com',
                     'tag': 'imported/00000000-0000-0000-0000-000000000001',
                     'version': '18.1.0'}]
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_imported_nostartup(self):
         '''
@@ -102,13 +96,8 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             config = []
 
-            ret = imgadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
-
-            ret = imgadm.beacon(config)
-            res = []
-
-            self.assertEqual(ret, res)
+            assert imgadm.validate(config) == (True, 'Valid beacon configuration')
+            assert imgadm.beacon(config) == []
 
     def test_imported(self):
         '''
@@ -119,12 +108,10 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(imgadm.__salt__, {'imgadm.list': MagicMock(side_effect=[MOCK_IMAGE_ONE, MOCK_IMAGE_TWO])}):
 
             config = []
+            assert imgadm.validate(config) == (True, 'Valid beacon configuration')
 
-            ret = imgadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
-
-            # Initial pass (Initialized state and do not yield imported imagesd at startup)
-            ret = imgadm.beacon(config)
+            # Initial pass (Initialized state and do not yield imported images at startup)
+            imgadm.beacon(config)
 
             # Second pass (After importing a new image)
             ret = imgadm.beacon(config)
@@ -136,7 +123,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'tag': 'imported/00000000-0000-0000-0000-000000000002',
                     'version': '18.2.0'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_deleted(self):
         '''
@@ -147,12 +134,10 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(imgadm.__salt__, {'imgadm.list': MagicMock(side_effect=[MOCK_IMAGE_TWO, MOCK_IMAGE_ONE])}):
 
             config = []
+            assert imgadm.validate(config) == (True, 'Valid beacon configuration')
 
-            ret = imgadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
-
-            # Initial pass (Initialized state and do not yield imported imagesd at startup)
-            ret = imgadm.beacon(config)
+            # Initial pass (Initialized state and do not yield imported images at startup)
+            imgadm.beacon(config)
 
             # Second pass (After deleting one image)
             ret = imgadm.beacon(config)
@@ -164,7 +149,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'tag': 'deleted/00000000-0000-0000-0000-000000000002',
                     'version': '18.2.0'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_complex(self):
         '''
@@ -175,12 +160,10 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(imgadm.__salt__, {'imgadm.list': MagicMock(side_effect=[MOCK_IMAGE_ONE, MOCK_IMAGE_NONE, MOCK_IMAGE_TWO])}):
 
             config = []
+            assert imgadm.validate(config), (True, 'Valid beacon configuration')
 
-            ret = imgadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
-
-            # Initial pass (Initialized state and do not yield imported imagesd at startup)
-            ret = imgadm.beacon(config)
+            # Initial pass (Initialized state and do not yield imported images at startup)
+            imgadm.beacon(config)
 
             # Second pass (After deleting one image)
             ret = imgadm.beacon(config)
@@ -191,8 +174,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'source': 'https://images.joyent.com',
                     'tag': 'deleted/00000000-0000-0000-0000-000000000001',
                     'version': '18.1.0'}]
-
-            self.assertEqual(ret, res)
+            assert ret == res
 
             # Third pass (After importing two images)
             ret = imgadm.beacon(config)
@@ -210,5 +192,6 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'source': 'https://images.joyent.com',
                     'tag': 'imported/00000000-0000-0000-0000-000000000002',
                     'version': '18.2.0'}]
-
-            self.assertEqual(ret, res)
+            assert len(ret) == 2
+            for item in ret:
+                assert item in res
