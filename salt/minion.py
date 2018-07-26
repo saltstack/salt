@@ -32,6 +32,7 @@ else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+import salt.defaults.exitcodes
 
 # pylint: enable=no-name-in-module,redefined-builtin
 import tornado
@@ -1640,9 +1641,9 @@ class Minion(MinionBase):
 
                 retcode = minion_instance.functions.pack['__context__'].get(
                     'retcode',
-                    0
+                    salt.defaults.exitcodes.EX_OK
                 )
-                if retcode == 0:
+                if retcode == salt.defaults.exitcodes.EX_OK:
                     # No nonzero retcode in __context__ dunder. Check if return
                     # is a dictionary with a "result" or "success" key.
                     try:
@@ -1652,10 +1653,10 @@ class Minion(MinionBase):
                         # return data is not a dict
                         func_result = True
                     if not func_result:
-                        retcode = 1
+                        retcode = salt.defaults.exitcodes.EX_GENERIC
 
                 ret['retcode'] = retcode
-                ret['success'] = retcode == 0
+                ret['success'] = retcode == salt.defaults.exitcodes.EX_OK
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found'.format(
                     function_name
@@ -1663,7 +1664,7 @@ class Minion(MinionBase):
                 log.debug(msg, exc_info=True)
                 ret['return'] = '{0}: {1}'.format(msg, exc)
                 ret['out'] = 'nested'
-                ret['retcode'] = 1
+                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except CommandExecutionError as exc:
                 log.error(
                     'A command in \'%s\' had a problem: %s',
@@ -1672,7 +1673,7 @@ class Minion(MinionBase):
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
                 ret['out'] = 'nested'
-                ret['retcode'] = 1
+                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except SaltInvocationError as exc:
                 log.error(
                     'Problem executing \'%s\': %s',
@@ -1683,7 +1684,7 @@ class Minion(MinionBase):
                     function_name, exc
                 )
                 ret['out'] = 'nested'
-                ret['retcode'] = 1
+                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except TypeError as exc:
                 msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
                     function_name, exc, func.__doc__ or ''
@@ -1691,14 +1692,14 @@ class Minion(MinionBase):
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
-                ret['retcode'] = 1
+                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
-                ret['retcode'] = 1
+                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
         else:
             docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
             if docs:
@@ -1712,7 +1713,7 @@ class Minion(MinionBase):
                         minion_instance.function_errors[mod_name]
                     )
             ret['success'] = False
-            ret['retcode'] = 254
+            ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             ret['out'] = 'nested'
 
         ret['jid'] = data['jid']
