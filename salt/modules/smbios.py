@@ -32,11 +32,15 @@ log = logging.getLogger(__name__)
 
 DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
 
+def _refresh_dmidecoder():
+    global DMIDECODER
+    DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
 
 def __virtual__():
     '''
     Only work when dmidecode is installed.
     '''
+    _refresh_dmidecoder()
     if DMIDECODER is None:
         log.debug('SMBIOS: neither dmidecode nor smbios found!')
         return (False, 'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
@@ -328,6 +332,7 @@ def _dmidecoder(args=None):
     '''
     Call DMIdecode
     '''
+    _refresh_dmidecoder()
     if DMIDECODER is None:
         raise CommandExecutionError('SMBIOS: neither dmidecode nor smbios found!')
 
