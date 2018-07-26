@@ -217,7 +217,7 @@ def peer(name):
     return _gluster(cmd)
 
 
-def create_volume(name, bricks, stripe=False, replica=False, device_vg=False, 
+def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
                   transport='tcp', start=False, force=False, arbiter=False):
     '''
     Create a glusterfs volume
