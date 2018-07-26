@@ -122,9 +122,10 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
     replica
         replica count for volume
 
-    .. versionadded:: Fluorine
     arbiter
         use every third brick as arbiter (metadata only)
+
+        .. versionadded:: Fluorine
 
     start
         ensure that the volume is also started
