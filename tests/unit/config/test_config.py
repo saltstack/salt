@@ -474,6 +474,26 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['id'], 'hello_world')
 
     @with_tempdir()
+    def test_minion_id_lowercase(self, tempdir):
+        '''
+        This tests that setting  `minion_id_lowercase: True`  does lower case the minion id.
+        Lowercase does not operate on a static `id: KING_BOB` setting, or a cached id.
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: KING_BOB
+                minion_id_caching: False
+                minion_id_lowercase: True
+            '''))
+        config = sconfig.minion_config(minion_config)               # Load the configuration
+        self.assertEqual(config['minion_id_caching'], False)        # Check the configuration
+        self.assertEqual(config['minion_id_lowercase'], True)       # Check the configuration
+        self.assertEqual(config['id'], 'king_bob')
+
+    @with_tempdir()
     def test_backend_rename(self, tempdir):
         '''
         This tests that we successfully rename git, hg, svn, and minion to
