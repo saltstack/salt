@@ -238,12 +238,13 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
         Replica count, the number of bricks should be a multiple of the \
         replica count for a distributed replicated volume
 
-    .. versionadded:: Fluorine
     arbiter
         If true, specifies volume should use arbiter brick(s). \
         Valid configuration limited to "replica 3 arbiter 1" per \
         Gluster documentation. Every third brick in the brick list \
         is used as an arbiter brick.
+
+        .. versionadded:: Fluorine
 
     device_vg
         If true, specifies volume should use block backend instead of regular \
