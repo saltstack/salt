@@ -4,6 +4,19 @@
 Salt Release Notes - Codename Fluorine
 ======================================
 
+Loadable Matchers
+=================
+
+Routines that enable Salt to target minions by differing methods (glob, pillar
+grains, etc.) are called ``Matchers``.  In previous releases these functions
+were entirely hardcoded.  As of this release, matchers can now be dynamically
+loaded much like standard execution modules.  Currently only existing matchers
+can have their functionality replaced or extended, the ability to add new
+matchers will be considered for a future release.
+
+Documentation on loadable matchers is available in :ref:`Loadable Matchers <matchers>`.
+
+
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
@@ -772,9 +785,9 @@ name collusion with the influxdb client configuration (``client_kwargs``)
 allowing management of users when authentication is enabled on the influxdb
 instance
 
-Old behavior:
+Old behavior for example user in influxdb:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
@@ -782,9 +795,9 @@ Old behavior:
       - user: admin
       - password: adminpassword
 
-New behavior:
+New behavior for example user in influxdb:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
