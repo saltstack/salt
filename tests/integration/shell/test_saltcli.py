@@ -76,69 +76,60 @@ class RetcodeTestCase(ShellCase):
     '''
     Tests to ensure that we set non-zero retcodes when execution fails
     '''
-    salt_error_status = 11
-    salt_call_error_status = 1
+    # Hard-coding these instead of substituting values from
+    # salt.defaults.exitcodes will give us a heads-up in the event that someone
+    # tries to do something daft like change these values.
+    error_status = 1  # i.e. EX_GENERIC
+    state_compiler_error = 1
+    state_failure = 2
 
-    def _run(self, command, salt_call=False):
-        return (self.run_call if salt_call else self.run_salt)(
-            '{0}{1}{2}'.format(
-                'minion ' if not salt_call else '',
-                '--retcode-passthrough ' if salt_call else '',
-                command
-            ),
-            with_retcode=True)[1]
+    def _salt(self, command):
+        cmdline = 'minion ' + command
+        return self.run_salt(cmdline, with_retcode=True)[1]
+
+    def _salt_call(self, command, retcode_passthrough=False):
+        cmdline = '--retcode-passthrough ' if retcode_passthrough else ''
+        cmdline += command
+        return self.run_call(cmdline, with_retcode=True)[1]
 
     def _test_error(self, salt_call=False):
         '''
         Tests retcode when various error conditions are triggered
         '''
-        error_status = self.salt_call_error_status \
-            if salt_call \
-            else self.salt_error_status
+        _run = self._salt_call if salt_call else self._salt
 
-        retcode = self._run('test.raise_exception TypeError', salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.raise_exception TypeError')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
-            'test.raise_exception salt.exceptions.CommandNotFoundError',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.raise_exception salt.exceptions.CommandNotFoundError')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
-            'test.raise_exception salt.exceptions.CommandExecutionError',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.raise_exception salt.exceptions.CommandExecutionError')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
-            'test.raise_exception salt.exceptions.SaltInvocationError',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.raise_exception salt.exceptions.SaltInvocationError')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
+        retcode = _run(
             'test.raise_exception '
-            'OSError 2 "No such file or directory" /tmp/foo.txt',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+            'OSError 2 "No such file or directory" /tmp/foo.txt')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
-            'test.echo "{foo: bar, result: False}"',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.echo "{foo: bar, result: False}"')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run(
-            'test.echo "{foo: bar, success: False}"',
-            salt_call=salt_call)
-        assert retcode == error_status, retcode
+        retcode = _run('test.echo "{foo: bar, success: False}"')
+        assert retcode == self.error_status, retcode
 
     def test_zero_exit_code(self):
         '''
         Test that a zero exit code is set when there are no errors and there is
         no explicit False result set in the return data.
         '''
-        retcode = self._run('test.ping')
+        retcode = self._salt('test.ping')
         assert retcode == 0, retcode
 
-        retcode = self._run('test.ping', salt_call=True)
+        retcode = self._salt_call('test.ping')
         assert retcode == 0, retcode
 
     def test_context_retcode(self):
@@ -146,17 +137,36 @@ class RetcodeTestCase(ShellCase):
         Test that a nonzero retcode set in the context dunder will cause the
         salt CLI to set a nonzero retcode.
         '''
-        retcode = self._run('test.retcode 0')
+        # test.retcode will set the retcode in the context dunder
+        retcode = self._salt('test.retcode 0')
         assert retcode == 0, retcode
+        retcode = self._salt('test.retcode 42')
+        assert retcode == self.error_status, retcode
 
-        retcode = self._run('test.retcode 42')
-        assert retcode == self.salt_error_status, retcode
-
-        retcode = self._run('test.retcode 0', salt_call=True)
+        # Test salt-call, making sure to also confirm the behavior of
+        # retcode_passthrough.
+        retcode = self._salt_call('test.retcode 0')
         assert retcode == 0, retcode
-
-        retcode = self._run('test.retcode 42', salt_call=True)
+        retcode = self._salt_call('test.retcode 42')
+        assert retcode == self.error_status, retcode
+        retcode = self._salt_call('test.retcode 42', retcode_passthrough=True)
         assert retcode == 42, retcode
+
+        # Test a state run that exits with one or more failures
+        retcode = self._salt_call('state.single test.fail_without_changes foo')
+        assert retcode == self.error_status, retcode
+        retcode = self._salt_call(
+            'state.single test.fail_without_changes foo',
+            retcode_passthrough=True)
+        assert retcode == self.state_failure, retcode
+
+        # Test a state compiler error
+        retcode = self._salt_call('state.apply thisslsfiledoesnotexist')
+        assert retcode == self.error_status, retcode
+        retcode = self._salt_call(
+            'state.apply thisslsfiledoesnotexist',
+            retcode_passthrough=True)
+        assert retcode == self.state_compiler_error, retcode
 
     def test_salt_error(self):
         '''
