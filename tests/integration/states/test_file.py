@@ -25,8 +25,10 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
+    destructiveTest,
     skip_if_not_root,
     with_system_user_and_group,
+    with_tempfile,
     Webserver,
     destructiveTest
 )
@@ -68,17 +70,16 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''
     DRY helper function to run the same test with a local or remote path
     '''
-    rel_path = 'grail/scene33'
-    name = os.path.join(TMP, os.path.basename(rel_path))
-    grail_fs_path = os.path.join(FILES, 'file', 'base', rel_path)
-    grail = 'salt://' + rel_path if not local else grail_fs_path
+    name = os.path.join(TMP, 'scene33')
+    grail_fs_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+    grail = 'salt://grail/scene33' if not local else grail_fs_path
 
     # Get the current mode so that we can put the file back the way we
     # found it when we're done.
-    grail_fs_mode = os.stat(grail_fs_path).st_mode
-    initial_mode = 504    # 0770 octal
-    new_mode_1 = 384      # 0600 octal
-    new_mode_2 = 420      # 0644 octal
+    grail_fs_mode = int(testcase.run_function('file.get_mode', [grail_fs_path]), 8)
+    initial_mode = 0o770
+    new_mode_1 = 0o600
+    new_mode_2 = 0o644
 
     # Set the initial mode, so we can be assured that when we set the mode
     # to "keep", we're actually changing the permissions of the file to the
@@ -134,6 +135,20 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+    def tearDown(self):
+        '''
+        remove files created in previous tests
+        '''
+        user = 'salt'
+        if user in str(self.run_function('user.list_users', [user])):
+            self.run_function('user.delete', [user])
+
+        for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
+            try:
+                os.remove(path)
+            except OSError as exc:
+                if exc.errno != os.errno.ENOENT:
+                    log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
         '''
@@ -569,6 +584,135 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists('/tmp/sudoers'):
                 os.remove('/tmp/sudoers')
 
+    def test_managed_local_source_with_source_hash(self):
+        '''
+        Make sure that we enforce the source_hash even with local files
+        '''
+        name = os.path.join(TMP, 'local_source_with_source_hash')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+        actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        # Reverse the actual hash
+        bad_hash = actual_hash[::-1]
+
+        def remove_file():
+            try:
+                os.remove(name)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+
+        def do_test(clean=False):
+            for proto in ('file://', ''):
+                source = proto + local_path
+                log.debug('Trying source %s', source)
+                try:
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(bad_hash))
+                    self.assertSaltFalseReturn(ret)
+                    ret = ret[next(iter(ret))]
+                    # Shouldn't be any changes
+                    self.assertFalse(ret['changes'])
+                    # Check that we identified a hash mismatch
+                    self.assertIn(
+                        'does not match actual checksum', ret['comment'])
+
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(actual_hash))
+                    self.assertSaltTrueReturn(ret)
+                finally:
+                    if clean:
+                        remove_file()
+
+        remove_file()
+        log.debug('Trying with nonexistant destination file')
+        do_test()
+        log.debug('Trying with destination file already present')
+        with salt.utils.fopen(name, 'w'):
+            pass
+        try:
+            do_test(clean=False)
+        finally:
+            remove_file()
+
+    def test_managed_local_source_does_not_exist(self):
+        '''
+        Make sure that we exit gracefully when a local source doesn't exist
+        '''
+        name = os.path.join(TMP, 'local_source_does_not_exist')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene99')
+
+        for proto in ('file://', ''):
+            source = proto + local_path
+            log.debug('Trying source %s', source)
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=source)
+            self.assertSaltFalseReturn(ret)
+            ret = ret[next(iter(ret))]
+            # Shouldn't be any changes
+            self.assertFalse(ret['changes'])
+            # Check that we identified a hash mismatch
+            self.assertIn(
+                'does not exist', ret['comment'])
+
+    def test_managed_source_hash_indifferent_case(self):
+        '''
+        Test passing a source_hash as an uppercase hash.
+
+        This is a regression test for Issue #38914 and Issue #48230 (test=true use).
+        '''
+        name = os.path.join(TMP, 'source_hash_indifferent_case')
+        state_name = 'file_|-{0}_|' \
+                     '-{0}_|-managed'.format(name)
+        local_path = os.path.join(FILES, 'file', 'base', 'hello_world.txt')
+        actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
+        uppercase_hash = actual_hash.upper()
+
+        try:
+            # Lay down tmp file to test against
+            self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=actual_hash
+            )
+
+            # Test uppercase source_hash: should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+            # Test uppercase source_hash using test=true
+            # Should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash,
+                test=True
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+        finally:
+            # Clean Up File
+            if os.path.exists(name):
+                os.remove(name)
+
     def test_directory(self):
         '''
         file.directory
@@ -586,19 +730,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             tmp_dir = os.path.join(TMP, 'pgdata')
             sym_dir = os.path.join(TMP, 'pg_data')
-            os.mkdir(tmp_dir, 0o700)
-            os.symlink(tmp_dir, sym_dir)
 
-            ret = self.run_state(
-                'file.directory', test=True, name=sym_dir, follow_symlinks=True,
-                mode=700
-            )
+            if IS_WINDOWS:
+                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
+            else:
+                os.mkdir(tmp_dir, 0o700)
+
+            self.run_function('file.symlink', [tmp_dir, sym_dir])
+
+            if IS_WINDOWS:
+                ret = self.run_state(
+                    'file.directory', test=True, name=sym_dir,
+                    follow_symlinks=True, win_owner='Administrators')
+            else:
+                ret = self.run_state(
+                    'file.directory', test=True, name=sym_dir,
+                    follow_symlinks=True, mode=700)
+
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(tmp_dir):
-                shutil.rmtree(tmp_dir)
+                self.run_function('file.remove', [tmp_dir])
             if os.path.islink(sym_dir):
-                os.unlink(sym_dir)
+                self.run_function('file.remove', [sym_dir])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
@@ -1593,25 +1747,24 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(TMP, fname)
-        try:
-            self.assertFalse(os.path.exists(name))
-        except AssertionError:
-            os.remove(name)
+
+        # Make sure the file is not there to begin with
+        if os.path.isfile(name):
+            self.run_function('file.remove', [name])
+
         try:
             # Non existing file get's touched
-            if os.path.isfile(name):
-                # left over
-                os.remove(name)
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
             )
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isfile(name):
-                os.remove(name)
+                self.run_function('file.remove', [name])
 
         # Nested directory and file get's touched
         name = os.path.join(TMP, 'issue_1864', fname)
+
         try:
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
@@ -1619,20 +1772,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isfile(name):
-                os.remove(name)
+                self.run_function('file.remove', [name])
 
+        # Parent directory exists but file does not and makedirs is False
         try:
-            # Parent directory exists but file does not and makedirs is False
             ret = self.run_state(
                 'file.append', name=name, text='cheese'
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(name))
         finally:
-            shutil.rmtree(
-                os.path.join(TMP, 'issue_1864'),
-                ignore_errors=True
-            )
+            self.run_function('file.remove', [os.path.join(TMP, 'issue_1864')])
 
     def test_prepend_issue_27401_makedirs(self):
         '''
@@ -1967,19 +2117,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function('state.sls', mods='issue-8343')
             for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
+
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
-            self.assertEqual(
-                ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
-                 'foo',
-                 '#-- end salt managed zonestart --',
-                 '#',
-                 '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
-                 'bar',
-                 '#-- end salt managed zoneend --',
-                 ''],
-                contents
-            )
+
+            expected = [
+                '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                'foo',
+                '#-- end salt managed zonestart --',
+                '#',
+                '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+                'bar',
+                '#-- end salt managed zoneend --',
+                '']
+
+            self.assertEqual(expected, contents)
         finally:
             if os.path.isdir(testcase_filedest):
                 os.unlink(testcase_filedest)
@@ -2383,6 +2535,27 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(source)
         os.remove(dest)
 
+    @destructiveTest
+    @with_tempfile
+    def test_file_copy_make_dirs(self, source):
+        '''
+        ensure make_dirs creates correct user perms
+        '''
+        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
+        dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
+
+        user = 'salt'
+        mode = '0644'
+        self.run_function('user.add', [user])
+        ret = self.run_state('file.copy', name=dest, source=source, user=user,
+                             makedirs=True, mode=mode)
+        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        for check in file_checks:
+            user_check = self.run_function('file.get_user', [check])
+            mode_check = self.run_function('file.get_mode', [check])
+            assert user_check == user
+            assert salt.utils.normalize_mode(mode_check) == mode
+
     def test_contents_pillar_with_pillar_list(self):
         '''
         This tests for any regressions for this issue:
@@ -2393,15 +2566,1237 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
 
-    def tearDown(self):
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_48336_file_managed_mode_setuid(self, user, group):
         '''
-        remove files created in previous tests
+        Ensure that mode is correct with changing of ownership and group
+        symlinks)
         '''
-        all_files = [FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT]
-        for file in all_files:
-            check_file = self.run_function('file.file_exists', [file])
-            if check_file:
-                self.run_function('file.remove', [file])
+        tempfile = os.path.join(TMP, 'temp_file_issue_48336')
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed', name=tempfile,
+            user=user, group=group, mode='4750',
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Check that the owner and group are correct, and
+        # the mode is what we expect
+        temp_file_stats = os.stat(tempfile)
+
+        # Normalize the mode
+        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = salt.utils.normalize_mode(temp_file_mode)
+
+        self.assertEqual(temp_file_mode, '4750')
+        self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
+
+
+class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
+    marker_start = '# start'
+    marker_end = '# end'
+    content = textwrap.dedent('''\
+        Line 1 of block
+        Line 2 of block
+        ''')
+    without_block = textwrap.dedent('''\
+        Hello world!
+
+        # comment here
+        ''')
+    with_non_matching_block = textwrap.dedent('''\
+        Hello world!
+
+        # start
+        No match here
+        # end
+        # comment here
+        ''')
+    with_non_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
+        Hello world!
+
+        # start
+        No match here# end
+        # comment here
+        ''')
+    with_matching_block = textwrap.dedent('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block
+        # end
+        # comment here
+        ''')
+    with_matching_block_and_extra_newline = textwrap.dedent('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block
+
+        # end
+        # comment here
+        ''')
+    with_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block# end
+        # comment here
+        ''')
+    content_explicit_posix_newlines = ('Line 1 of block\n'
+                                       'Line 2 of block\n')
+    content_explicit_windows_newlines = ('Line 1 of block\r\n'
+                                         'Line 2 of block\r\n')
+    without_block_explicit_posix_newlines = ('Hello world!\n\n'
+                                             '# comment here\n')
+    without_block_explicit_windows_newlines = ('Hello world!\r\n\r\n'
+                                               '# comment here\r\n')
+    with_block_prepended_explicit_posix_newlines = ('# start\n'
+                                                    'Line 1 of block\n'
+                                                    'Line 2 of block\n'
+                                                    '# end\n'
+                                                    'Hello world!\n\n'
+                                                    '# comment here\n')
+    with_block_prepended_explicit_windows_newlines = ('# start\r\n'
+                                                      'Line 1 of block\r\n'
+                                                      'Line 2 of block\r\n'
+                                                      '# end\r\n'
+                                                      'Hello world!\r\n\r\n'
+                                                      '# comment here\r\n')
+    with_block_appended_explicit_posix_newlines = ('Hello world!\n\n'
+                                                   '# comment here\n'
+                                                   '# start\n'
+                                                   'Line 1 of block\n'
+                                                   'Line 2 of block\n'
+                                                   '# end\n')
+    with_block_appended_explicit_windows_newlines = ('Hello world!\r\n\r\n'
+                                                     '# comment here\r\n'
+                                                     '# start\r\n'
+                                                     'Line 1 of block\r\n'
+                                                     'Line 2 of block\r\n'
+                                                     '# end\r\n')
+
+    @staticmethod
+    def _write(dest, content):
+        with salt.utils.fopen(dest, 'wb') as fp_:
+            fp_.write(salt.utils.to_bytes(content))
+
+    @staticmethod
+    def _read(src):
+        with salt.utils.fopen(src, 'rb') as fp_:
+            return salt.utils.to_unicode(fp_.read())
+
+    @with_tempfile
+    def test_prepend(self, name):
+        '''
+        Test blockreplace when prepend_if_not_found=True and block doesn't
+        exist in file.
+        '''
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
+
+        # Pass 1: content ends in newline
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_prepend_append_newline(self, name):
+        '''
+        Test blockreplace when prepend_if_not_found=True and block doesn't
+        exist in file. Test with append_newline explicitly set to True.
+        '''
+        # Pass 1: content ends in newline
+        expected = self.marker_start + os.linesep + self.content + \
+            os.linesep + self.marker_end + os.linesep + self.without_block
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_prepend_no_append_newline(self, name):
+        '''
+        Test blockreplace when prepend_if_not_found=True and block doesn't
+        exist in file. Test with append_newline explicitly set to False.
+        '''
+        # Pass 1: content ends in newline
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        expected = self.marker_start + os.linesep + \
+            self.content.rstrip('\r\n') + self.marker_end + os.linesep + \
+            self.without_block
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_append(self, name):
+        '''
+        Test blockreplace when append_if_not_found=True and block doesn't
+        exist in file.
+        '''
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
+
+        # Pass 1: content ends in newline
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_append_append_newline(self, name):
+        '''
+        Test blockreplace when append_if_not_found=True and block doesn't
+        exist in file. Test with append_newline explicitly set to True.
+        '''
+        # Pass 1: content ends in newline
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + os.linesep + self.marker_end + os.linesep
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_append_no_append_newline(self, name):
+        '''
+        Test blockreplace when append_if_not_found=True and block doesn't
+        exist in file. Test with append_newline explicitly set to False.
+        '''
+        # Pass 1: content ends in newline
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+        # Pass 2: content does not end in newline
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content.rstrip('\r\n') + self.marker_end + os.linesep
+        self._write(name, self.without_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), expected)
+
+    @with_tempfile
+    def test_prepend_auto_line_separator(self, name):
+        '''
+        This tests the line separator auto-detection when prepending the block
+        '''
+        # POSIX newlines to Windows newlines
+        self._write(name, self.without_block_explicit_windows_newlines)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_posix_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_prepended_explicit_windows_newlines)
+        # Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_posix_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_prepended_explicit_windows_newlines)
+
+        # Windows newlines to POSIX newlines
+        self._write(name, self.without_block_explicit_posix_newlines)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_windows_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_prepended_explicit_posix_newlines)
+        # Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_windows_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             prepend_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_prepended_explicit_posix_newlines)
+
+    @with_tempfile
+    def test_append_auto_line_separator(self, name):
+        '''
+        This tests the line separator auto-detection when appending the block
+        '''
+        # POSIX newlines to Windows newlines
+        self._write(name, self.without_block_explicit_windows_newlines)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_posix_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_appended_explicit_windows_newlines)
+        # Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_posix_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_appended_explicit_windows_newlines)
+
+        # Windows newlines to POSIX newlines
+        self._write(name, self.without_block_explicit_posix_newlines)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_windows_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_appended_explicit_posix_newlines)
+        # Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content_explicit_windows_newlines,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_if_not_found=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_block_appended_explicit_posix_newlines)
+
+    @with_tempfile
+    def test_non_matching_block(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a
+        match.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_non_matching_block_append_newline(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a
+        match. Test with append_newline explicitly set to True.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_non_matching_block_no_append_newline(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a
+        match. Test with append_newline explicitly set to False.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_non_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+
+    @with_tempfile
+    def test_non_matching_block_and_marker_not_after_newline(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a
+        match, and the marker_end is not directly preceded by a newline.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_non_matching_block_and_marker_not_after_newline_append_newline(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a match,
+        and the marker_end is not directly preceded by a newline. Test with
+        append_newline explicitly set to True.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_non_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
+        '''
+        Test blockreplace when block exists but its contents are not a match,
+        and the marker_end is not directly preceded by a newline. Test with
+        append_newline explicitly set to False.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_non_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+
+    @with_tempfile
+    def test_matching_block(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match. No
+        changes should be made.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_matching_block_append_newline(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match. Test
+        with append_newline explicitly set to True. This will result in an
+        extra newline when the content ends in a newline, and will not when the
+        content does not end in a newline.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_matching_block_no_append_newline(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match. Test
+        with append_newline explicitly set to False. This will result in the
+        marker_end not being directly preceded by a newline when the content
+        does not end in a newline.
+        '''
+        # Pass 1: content ends in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(name, self.with_matching_block)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+
+    @with_tempfile
+    def test_matching_block_and_marker_not_after_newline(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match, but
+        the marker_end is not directly preceded by a newline.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_matching_block_and_marker_not_after_newline_append_newline(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match, but
+        the marker_end is not directly preceded by a newline. Test with
+        append_newline explicitly set to True. This will result in an extra
+        newline when the content ends in a newline, and will not when the
+        content does not end in a newline.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_extra_newline)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=True)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+    @with_tempfile
+    def test_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
+        '''
+        Test blockreplace when block exists and its contents are a match, but
+        the marker_end is not directly preceded by a newline. Test with
+        append_newline explicitly set to False.
+        '''
+        # Pass 1: content ends in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+        # Pass 1a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content,
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(self._read(name), self.with_matching_block)
+
+        # Pass 2: content does not end in newline
+        self._write(
+            name,
+            self.with_matching_block_and_marker_end_not_after_newline)
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
+        # Pass 2a: Re-run state, no changes should be made
+        ret = self.run_state('file.blockreplace',
+                             name=name,
+                             content=self.content.rstrip('\r\n'),
+                             marker_start=self.marker_start,
+                             marker_end=self.marker_end,
+                             append_newline=False)
+        self.assertSaltTrueReturn(ret)
+        self.assertFalse(ret[next(iter(ret))]['changes'])
+        self.assertEqual(
+            self._read(name),
+            self.with_matching_block_and_marker_end_not_after_newline)
 
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):

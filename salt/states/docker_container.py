@@ -256,7 +256,7 @@ def running(name,
 
         .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
-            ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
+            ``shutdown_timeout`` to accommodate the ``stop_timeout`` container
             configuration setting.
 
     client_timeout : 60
@@ -1235,9 +1235,10 @@ def running(name,
         If ``True``, runs the exec process with extended privileges
 
         .. code-block:: yaml
+
             foo:
               docker_container.running:
-                - image: bar/baz:lates
+                - image: bar/baz:latest
                 - privileged: True
 
     publish_all_ports (or *publish_all*) : False
@@ -1445,14 +1446,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits: nofile=1024:1024,nproc=60
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits:
                   - nofile=1024:1024
@@ -1479,7 +1480,7 @@ def running(name,
                 - image: bar/baz:latest
                 - userns_mode: host
 
-    volumes (or *volume)
+    volumes (or *volume*)
         List of directories to expose as volumes. Can be expressed as a
         comma-separated list or a YAML list. The below two examples are
         equivalent:

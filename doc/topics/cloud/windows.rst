@@ -60,7 +60,7 @@ If supported by the cloud provider, a PowerShell script may be used to open up
 this port automatically, using the cloud provider's `userdata`. The following
 script would open up port 445, and apply the changes:
 
-.. code-block:: powershell
+.. code-block:: text
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
@@ -113,7 +113,7 @@ enabled in your userdata. By default EC2 Windows images only have insecure HTTP
 enabled. To enable HTTPS and basic authentication required by pywinrm consider
 the following userdata example:
 
-.. code-block:: powershell
+.. code-block:: text
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
@@ -127,24 +127,24 @@ the following userdata example:
     $SourceStoreScope = 'LocalMachine'
     $SourceStorename = 'Remote Desktop'
 
-    $SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+    $SourceStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $SourceStorename, $SourceStoreScope
     $SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
 
-    $cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+    $cert = $SourceStore.Certificates | Where-Object -FilterScript {
         $_.subject -like '*'
     }
 
     $DestStoreScope = 'LocalMachine'
     $DestStoreName = 'My'
 
-    $DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+    $DestStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $DestStoreName, $DestStoreScope
     $DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
     $DestStore.Add($cert)
 
     $SourceStore.Close()
     $DestStore.Close()
 
-    winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+    winrm create winrm/config/listener?Address=*+Transport=HTTPS `@`{CertificateThumbprint=`"($cert.Thumbprint)`"`}
 
     Restart-Service winrm
     </powershell>

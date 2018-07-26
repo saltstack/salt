@@ -70,6 +70,7 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
     log when making a connection using SSH, review the libssh2 details listed
@@ -103,8 +104,8 @@ RedHat Pygit2 Issues
 
 The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
 ``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
-pygit2_ and libgit2_ (which are from the EPEL repository and not managed
-directly by RedHat) need to be rebuilt against these updated dependencies.
+``pygit2`` and ``libgit2`` packages (which are from the EPEL repository) should
+be upgraded to the most recent versions, at least to ``0.24.2``.
 
 The below errors will show up in the master log if an incompatible
 ``python-pygit2`` package is installed:
@@ -123,30 +124,8 @@ package is installed:
 
     2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
 
-As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
-EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
-filed to get it rebuilt).
-
-In the meantime, you can work around this by downgrading ``http-parser``. To do
-this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
-the OS architecture you are using (x86_64, etc.). Then downgrade using the
-``rpm`` command. For example:
-
-.. code-block:: bash
-
-    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    Preparing...                          ################################# [100%]
-    Updating / installing...
-       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
-    Cleaning up / removing...
-       2:http-parser-2.7.1-3.el7          ################################# [100%]
-
-A restart of the salt-master daemon may be required to allow http(s)
-repositories to continue to be fetched.
-
-.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
-.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
+be required to allow http(s) repositories to continue to be fetched.
 
 
 GitPython
@@ -530,9 +509,8 @@ overrides all levels below it):
    .. code-block:: yaml
 
        gitfs_saltenv:
-         - saltenv:
-           - dev:
-             - mountpoint: salt://bar
+         - dev:
+           - mountpoint: salt://bar
 
 3. Per-remote configuration parameter
 
@@ -622,15 +600,24 @@ repository to be served up from the Salt fileserver path
 Mountpoints can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+Using gitfs in Masterless Mode
+==============================
+
+Since 2014.7.0, gitfs can be used in masterless mode. To do so, simply add the
+gitfs configuration parameters (and set :conf_master:`fileserver_backend`) in
+the _minion_ config file instead of the master config file.
+
+
 Using gitfs Alongside Other Backends
 ====================================
 
 Sometimes it may make sense to use multiple backends; for instance, if ``sls``
 files are stored in git but larger files are stored directly on the master.
 
-The cascading lookup logic used for multiple remotes is also used with
-multiple backends. If the ``fileserver_backend`` option contains
-multiple backends:
+The cascading lookup logic used for multiple remotes is also used with multiple
+backends. If the :conf_master:`fileserver_backend` option contains multiple
+backends:
 
 .. code-block:: yaml
 
@@ -641,7 +628,6 @@ multiple backends:
 Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
-
 
 Branches, Environments, and Top Files
 =====================================
@@ -915,7 +901,7 @@ If not, then the easiest way to add the key is to su to the user (usually
 ``root``) under which the salt-master runs and attempt to login to the
 server via SSH:
 
-.. code-block:: bash
+.. code-block:: text
 
     $ su -
     Password:

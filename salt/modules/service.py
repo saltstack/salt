@@ -35,6 +35,7 @@ def __virtual__():
         'Devuan',
         'Arch',
         'Arch ARM',
+        'Manjaro',
         'ALT',
         'SUSE  Enterprise Server',
         'SUSE',
@@ -45,7 +46,8 @@ def __virtual__():
         'Void',
         'Mint',
         'Raspbian',
-        'XenServer'
+        'XenServer',
+        'Cumulus'
     ))
     if __grains__.get('os', '') in disable:
         return (False, 'Your OS is on the disabled list')
@@ -103,7 +105,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    return __salt__['service.run'](name, 'start')
+    return run(name, 'start')
 
 
 def stop(name):
@@ -116,7 +118,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    return __salt__['service.run'](name, 'stop')
+    return run(name, 'stop')
 
 
 def restart(name):
@@ -129,7 +131,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    return __salt__['service.run'](name, 'restart')
+    return run(name, 'restart')
 
 
 def status(name, sig=None):
@@ -158,7 +160,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     '''
-    return __salt__['service.run'](name, 'reload')
+    return run(name, 'reload')
 
 
 def available(name):

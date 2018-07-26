@@ -63,9 +63,11 @@ class SaltCacheLoader(BaseLoader):
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
-        self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
+        self._file_client = None
+        # Instantiate the fileclient
+        self.file_client()
 
     def file_client(self):
         '''
@@ -637,11 +639,11 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+        regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
 
     will be rendered as::
 
-        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+        regex_escape = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
     ** Set Theory Filters **
 

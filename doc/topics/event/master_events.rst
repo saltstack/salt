@@ -7,6 +7,8 @@ Salt Master Events
 These events are fired on the Salt Master event bus. This list is **not**
 comprehensive.
 
+.. _event-master_auth:
+
 Authentication events
 =====================
 

@@ -4,10 +4,12 @@ Manage grains on the minion
 ===========================
 
 This state allows for grains to be set.
-Grains set or altered this way are stored in the 'grains'
-file on the minions, by default at: /etc/salt/grains
 
-Note: This does NOT override any grains set in the minion file.
+Grains set or altered with this module are stored in the 'grains'
+file on the minions, By default, this file is located at: ``/etc/salt/grains``
+
+.. note::
+   This does **NOT** override any grains set in the minion config file.
 '''
 
 # Import Python libs
@@ -94,7 +96,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
       with,a,custom,delimiter:
         grains.present:
           - value: yay
-          - delimiter: ,
+          - delimiter: ','
     '''
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
@@ -329,7 +331,7 @@ def absent(name,
     .. code-block:: yaml
 
       grain_name:
-        grains.absent: []
+        grains.absent
     '''
 
     _non_existent = object()

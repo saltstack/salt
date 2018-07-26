@@ -520,6 +520,29 @@ class TranslateInputTestCase(TestCase):
     '''
     maxDiff = None
 
+    @staticmethod
+    def normalize_ports(ret):
+        '''
+        When we translate exposed ports, we can end up with a mixture of ints
+        (representing TCP ports) and tuples (representing UDP ports). Python 2
+        will sort an iterable containing these mixed types, but Python 3 will
+        not. This helper is used to munge the ports in the return data so that
+        the resulting list is sorted in a way that can reliably be compared to
+        the expected results in the test.
+
+        This helper should only be needed for port_bindings and ports.
+        '''
+        if 'ports' in ret[0]:
+            tcp_ports = []
+            udp_ports = []
+            for item in ret[0]['ports']:
+                if isinstance(item, six.integer_types):
+                    tcp_ports.append(item)
+                else:
+                    udp_ports.append(item)
+            ret[0]['ports'] = sorted(tcp_ports) + sorted(udp_ports)
+        return ret
+
     def tearDown(self):
         '''
         Test skip_translate kwarg
@@ -1108,28 +1131,32 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6', 3334),
                 '5505/udp': ('10.7.8.9', 15505),
                 '5506/udp': ('10.7.8.9', 15506)},
-             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
+             'ports': [80, 3333, 4505, 4506,
+                       (81, 'udp'), (3334, 'udp'),
+                       (5505, 'udp'), (5506, 'udp')]
             },
             {}, []
         )
-        translated_input = docker_utils.translate_input(
+        translated_input = self.normalize_ports(docker_utils.translate_input(
             port_bindings='10.1.2.3:8080:80,10.1.2.3:8888:80,10.4.5.6:3333:3333,'
                           '10.7.8.9:14505-14506:4505-4506,10.1.2.3:8080:81/udp,'
                           '10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,'
                           '10.7.8.9:15505-15506:5505-5506/udp',
-        )
+        ))
         self.assertEqual(translated_input, expected)
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings=[
-                    '10.1.2.3:8080:80',
-                    '10.1.2.3:8888:80',
-                    '10.4.5.6:3333:3333',
-                    '10.7.8.9:14505-14506:4505-4506',
-                    '10.1.2.3:8080:81/udp',
-                    '10.1.2.3:8888:81/udp',
-                    '10.4.5.6:3334:3334/udp',
-                    '10.7.8.9:15505-15506:5505-5506/udp']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings=[
+                        '10.1.2.3:8080:80',
+                        '10.1.2.3:8888:80',
+                        '10.4.5.6:3333:3333',
+                        '10.7.8.9:14505-14506:4505-4506',
+                        '10.1.2.3:8080:81/udp',
+                        '10.1.2.3:8888:81/udp',
+                        '10.4.5.6:3334:3334/udp',
+                        '10.7.8.9:15505-15506:5505-5506/udp']
+                )
             ),
             expected
         )
@@ -1146,27 +1173,33 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6',),
                 '5505/udp': ('10.7.8.9',),
                 '5506/udp': ('10.7.8.9',)},
-             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
+             'ports': [80, 3333, 4505, 4506,
+                       (81, 'udp'), (3334, 'udp'),
+                       (5505, 'udp'), (5506, 'udp')]
             },
             {}, []
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='10.1.2.3::80,10.1.2.3::80,10.4.5.6::3333,10.7.8.9::4505-4506,10.1.2.3::81/udp,10.1.2.3::81/udp,10.4.5.6::3334/udp,10.7.8.9::5505-5506/udp',
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings='10.1.2.3::80,10.1.2.3::80,10.4.5.6::3333,10.7.8.9::4505-4506,10.1.2.3::81/udp,10.1.2.3::81/udp,10.4.5.6::3334/udp,10.7.8.9::5505-5506/udp',
+                )
             ),
             expected
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings=[
-                    '10.1.2.3::80',
-                    '10.1.2.3::80',
-                    '10.4.5.6::3333',
-                    '10.7.8.9::4505-4506',
-                    '10.1.2.3::81/udp',
-                    '10.1.2.3::81/udp',
-                    '10.4.5.6::3334/udp',
-                    '10.7.8.9::5505-5506/udp']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings=[
+                        '10.1.2.3::80',
+                        '10.1.2.3::80',
+                        '10.4.5.6::3333',
+                        '10.7.8.9::4505-4506',
+                        '10.1.2.3::81/udp',
+                        '10.1.2.3::81/udp',
+                        '10.4.5.6::3334/udp',
+                        '10.7.8.9::5505-5506/udp']
+                )
             ),
             expected
         )
@@ -1182,26 +1215,32 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': 3334,
                                '5505/udp': 15505,
                                '5506/udp': 15506},
-             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
+             'ports': [80, 3333, 4505, 4506,
+                       (81, 'udp'), (3334, 'udp'),
+                       (5505, 'udp'), (5506, 'udp')]
             },
             {}, []
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='8080:80,8888:80,3333:3333,14505-14506:4505-4506,8080:81/udp,8888:81/udp,3334:3334/udp,15505-15506:5505-5506/udp',
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings='8080:80,8888:80,3333:3333,14505-14506:4505-4506,8080:81/udp,8888:81/udp,3334:3334/udp,15505-15506:5505-5506/udp',
+                )
             ),
             expected
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings=['8080:80',
-                               '8888:80',
-                               '3333:3333',
-                               '14505-14506:4505-4506',
-                               '8080:81/udp',
-                               '8888:81/udp',
-                               '3334:3334/udp',
-                               '15505-15506:5505-5506/udp']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings=['8080:80',
+                                   '8888:80',
+                                   '3333:3333',
+                                   '14505-14506:4505-4506',
+                                   '8080:81/udp',
+                                   '8888:81/udp',
+                                   '3334:3334/udp',
+                                   '15505-15506:5505-5506/udp']
+                )
             ),
             expected
         )
@@ -1217,20 +1256,26 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': None,
                                '5505/udp': None,
                                '5506/udp': None},
-             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
+             'ports': [80, 3333, 4505, 4506,
+                       (81, 'udp'), (3334, 'udp'),
+                       (5505, 'udp'), (5506, 'udp')]
             },
             {}, []
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='80,3333,4505-4506,81/udp,3334/udp,5505-5506/udp',
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings='80,3333,4505-4506,81/udp,3334/udp,5505-5506/udp',
+                )
             ),
             expected
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings=['80', '3333', '4505-4506',
-                               '81/udp', '3334/udp', '5505-5506/udp']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings=['80', '3333', '4505-4506',
+                                   '81/udp', '3334/udp', '5505-5506/udp']
+                )
             ),
             expected
         )
@@ -1251,28 +1296,35 @@ class TranslateInputTestCase(TestCase):
                                '19999/udp': None,
                                '20000/udp': None,
                                '20001/udp': None},
-             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp',
-                       9999, 10000, 10001, '19999/udp', '20000/udp', '20001/udp']
+             'ports': [80, 3333, 4505, 4506, 9999, 10000, 10001,
+                       (81, 'udp'), (3334, 'udp'), (5505, 'udp'),
+                       (5506, 'udp'), (19999, 'udp'),
+                       (20000, 'udp'), (20001, 'udp')]
+
             },
             {}, []
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='10.1.2.3:8080:80,10.4.5.6::3333,14505-14506:4505-4506,9999-10001,10.1.2.3:8080:81/udp,10.4.5.6::3334/udp,15505-15506:5505-5506/udp,19999-20001/udp',
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings='10.1.2.3:8080:80,10.4.5.6::3333,14505-14506:4505-4506,9999-10001,10.1.2.3:8080:81/udp,10.4.5.6::3334/udp,15505-15506:5505-5506/udp,19999-20001/udp',
+                )
             ),
             expected
         )
         self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings=[
-                    '10.1.2.3:8080:80',
-                    '10.4.5.6::3333',
-                    '14505-14506:4505-4506',
-                    '9999-10001',
-                    '10.1.2.3:8080:81/udp',
-                    '10.4.5.6::3334/udp',
-                    '15505-15506:5505-5506/udp',
-                    '19999-20001/udp']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    port_bindings=[
+                        '10.1.2.3:8080:80',
+                        '10.4.5.6::3333',
+                        '14505-14506:4505-4506',
+                        '9999-10001',
+                        '10.1.2.3:8080:81/udp',
+                        '10.4.5.6::3334/udp',
+                        '15505-15506:5505-5506/udp',
+                        '19999-20001/udp']
+                )
             ),
             expected
         )
@@ -1439,24 +1491,32 @@ class TranslateInputTestCase(TestCase):
         the port numbers must end up as integers. None of the decorators will
         suffice so this one must be tested specially.
         '''
-        expected = ({'ports': [1111, 2222, (3333, 'udp'), 4505, 4506]}, {}, [])
+        expected = ({'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}, {}, [])
         # Comma-separated list
         self.assertEqual(
-            docker_utils.translate_input(ports='1111,2222/tcp,3333/udp,4505-4506'),
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    ports='1111,2222/tcp,3333/udp,4505-4506'
+                )
+            ),
             expected
         )
         # Python list
         self.assertEqual(
-            docker_utils.translate_input(
-                ports=[1111, '2222/tcp', '3333/udp', '4505-4506']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    ports=[1111, '2222/tcp', '3333/udp', '4505-4506']
+                )
             ),
             expected
         )
         # Same as above but with the first port as a string (it should be
         # converted to an integer).
         self.assertEqual(
-            docker_utils.translate_input(
-                ports=['1111', '2222/tcp', '3333/udp', '4505-4506']
+            self.normalize_ports(
+                docker_utils.translate_input(
+                    ports=['1111', '2222/tcp', '3333/udp', '4505-4506']
+                )
             ),
             expected
         )

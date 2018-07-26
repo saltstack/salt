@@ -68,7 +68,7 @@ and each event tag has a list of reactor SLS files to be run.
 Reactor SLS files are similar to State and Pillar SLS files. They are by
 default YAML + Jinja templates and are passed familiar context variables.
 Click :ref:`here <reactor-jinja-context>` for more detailed information on the
-variables availble in Jinja templating.
+variables available in Jinja templating.
 
 Here is the SLS for a simple reaction:
 
@@ -179,7 +179,7 @@ The below two examples are equivalent:
 |                                 |           fromrepo: updates |
 +---------------------------------+-----------------------------+
 
-This reaction would be equvalent to running the following Salt command:
+This reaction would be equivalent to running the following Salt command:
 
 .. code-block:: bash
 
@@ -230,7 +230,7 @@ The below two examples are equivalent:
 +-------------------------------------------------+-------------------------------------------------+
 
 Assuming that the event tag is ``foo``, and the data passed to the event is
-``{'bar': 'baz'}``, then this reaction is equvalent to running the following
+``{'bar': 'baz'}``, then this reaction is equivalent to running the following
 Salt command:
 
 .. code-block:: bash
@@ -295,7 +295,7 @@ The below two examples are equivalent:
 |         - name: /tmp/foo        |         - /tmp/foo        |
 +---------------------------------+---------------------------+
 
-This reaction is equvalent to running the following Salt command:
+This reaction is equivalent to running the following Salt command:
 
 .. code-block:: bash
 

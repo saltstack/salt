@@ -398,7 +398,7 @@ def create_hosted_zone(Name, VPCId=None, VPCName=None, VPCRegion=None, CallerRef
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to create hosted zone {0}: {1}'.format(Name, str(e)))
             return []
@@ -448,7 +448,7 @@ def update_hosted_zone_comment(Id=None, Name=None, Comment=None, PrivateZone=Non
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to update comment on hosted zone {0}: {1}'.format(
                       Name or Id, str(e)))
@@ -544,17 +544,21 @@ def associate_vpc_with_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             r = conn.associate_vpc_with_hosted_zone(**args)
             return _wait_for_sync(r['ChangeInfo']['Id'], conn)
         except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'ConflictingDomainExists':
+                log.debug('VPC Association already exists.')
+                # return True since the current state is the desired one
+                return True
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to associate VPC {0} with hosted zone {1}: {2}'.format(
                       VPCName or VPCId, Name or HostedZoneId, str(e)))
     return False
 
 
-def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
+def disassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
                                      VPCName=None, VPCRegion=None, Comment=None,
                                      region=None, key=None, keyid=None, profile=None):
     '''
@@ -636,10 +640,14 @@ def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             r = conn.disassociate_vpc_from_hosted_zone(**args)
             return _wait_for_sync(r['ChangeInfo']['Id'], conn)
         except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'VPCAssociationNotFound':
+                log.debug('No VPC Association exists.')
+                # return True since the current state is the desired one
+                return True
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to associate VPC {0} with hosted zone {1}: {2}'.format(
                       VPCName or VPCId, Name or HostedZoneId, str(e)))
@@ -787,9 +795,6 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                                 PrivateZone=None, ChangeBatch=None,
                                 region=None, key=None, keyid=None, profile=None):
     '''
-    Ugh!!!  Not gonna try to reproduce and validatethis mess in here - just pass what we get to AWS
-    and let it decide if it's valid or not...
-
     See the `AWS Route53 API docs`__ as well as the `Boto3 documentation`__ for all the details...
 
     .. __: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html
@@ -799,41 +804,42 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
     parameters and combinations thereof are quite varied, so perusal of the above linked docs is
     highly recommended for any non-trival configurations.
 
-    .. code-block:: json
-    ChangeBatch={
-        'Comment': 'string',
-        'Changes': [
-            {
-                'Action': 'CREATE'|'DELETE'|'UPSERT',
-                'ResourceRecordSet': {
-                    'Name': 'string',
-                    'Type': 'SOA'|'A'|'TXT'|'NS'|'CNAME'|'MX'|'NAPTR'|'PTR'|'SRV'|'SPF'|'AAAA',
-                    'SetIdentifier': 'string',
-                    'Weight': 123,
-                    'Region': 'us-east-1'|'us-east-2'|'us-west-1'|'us-west-2'|'ca-central-1'|'eu-west-1'|'eu-west-2'|'eu-central-1'|'ap-southeast-1'|'ap-southeast-2'|'ap-northeast-1'|'ap-northeast-2'|'sa-east-1'|'cn-north-1'|'ap-south-1',
-                    'GeoLocation': {
-                        'ContinentCode': 'string',
-                        'CountryCode': 'string',
-                        'SubdivisionCode': 'string'
-                    },
-                    'Failover': 'PRIMARY'|'SECONDARY',
-                    'TTL': 123,
-                    'ResourceRecords': [
-                        {
-                            'Value': 'string'
+    .. code-block:: text
+
+        {
+            "Comment": "string",
+            "Changes": [
+                {
+                    "Action": "CREATE"|"DELETE"|"UPSERT",
+                    "ResourceRecordSet": {
+                        "Name": "string",
+                        "Type": "SOA"|"A"|"TXT"|"NS"|"CNAME"|"MX"|"NAPTR"|"PTR"|"SRV"|"SPF"|"AAAA",
+                        "SetIdentifier": "string",
+                        "Weight": 123,
+                        "Region": "us-east-1"|"us-east-2"|"us-west-1"|"us-west-2"|"ca-central-1"|"eu-west-1"|"eu-west-2"|"eu-central-1"|"ap-southeast-1"|"ap-southeast-2"|"ap-northeast-1"|"ap-northeast-2"|"sa-east-1"|"cn-north-1"|"ap-south-1",
+                        "GeoLocation": {
+                            "ContinentCode": "string",
+                            "CountryCode": "string",
+                            "SubdivisionCode": "string"
                         },
-                    ],
-                    'AliasTarget': {
-                        'HostedZoneId': 'string',
-                        'DNSName': 'string',
-                        'EvaluateTargetHealth': True|False
-                    },
-                    'HealthCheckId': 'string',
-                    'TrafficPolicyInstanceId': 'string'
-                }
-            },
-        ]
-    }
+                        "Failover": "PRIMARY"|"SECONDARY",
+                        "TTL": 123,
+                        "ResourceRecords": [
+                            {
+                                "Value": "string"
+                            },
+                        ],
+                        "AliasTarget": {
+                            "HostedZoneId": "string",
+                            "DNSName": "string",
+                            "EvaluateTargetHealth": True|False
+                        },
+                        "HealthCheckId": "string",
+                        "TrafficPolicyInstanceId": "string"
+                    }
+                },
+            ]
+        }
 
     CLI Example:
 
@@ -877,7 +883,7 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to apply requested changes to the hosted zone {0}: {1}'.format(
                     Name or HostedZoneId, str(e)))

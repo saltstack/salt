@@ -79,7 +79,7 @@ def beacon(config):
     The second one will match disks from A:\ to Z:\ on a Windows system
 
     Note that if a regular expression are evaluated after static mount points,
-    which means that if a regular expression matches an other defined mount point,
+    which means that if a regular expression matches another defined mount point,
     it will override the previously defined threshold.
 
     '''

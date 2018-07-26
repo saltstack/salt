@@ -571,7 +571,7 @@ def add_resource(zone, resource_type, **kwargs):
         name of zone
     resource_type : string
         type of resource
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     CLI Example:
@@ -593,7 +593,7 @@ def update_resource(zone, resource_type, resource_selector, **kwargs):
         type of resource
     resource_selector : string
         unique resource identifier
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     .. note::

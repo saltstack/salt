@@ -66,7 +66,7 @@ def process(name):
            'data': {}}  # Data field for monitoring state
 
     data = __salt__['status.pid'](name)
-    if name not in data:
+    if not data:
         ret['result'] = False
         ret['comment'] += 'Process signature "{0}" not found '.format(
             name

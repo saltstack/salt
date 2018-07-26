@@ -334,6 +334,7 @@ import errno
 import random
 import yaml
 import copy
+import weakref
 
 # Import Salt libs
 import salt.config
@@ -381,7 +382,7 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None):
         '''
         Only create one instance of Schedule
         '''
@@ -391,20 +392,21 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             cls.instance = object.__new__(cls)
-            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, utils)
         else:
             log.debug('Re-using Schedule')
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.utils = utils
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -750,10 +752,11 @@ class Schedule(object):
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
+            utils = self.utils or salt.loader.utils(self.opts)
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts)
+                self.functions = salt.loader.runner(self.opts, utils=utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=utils)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
@@ -845,6 +848,48 @@ class Schedule(object):
                     if key is not 'kwargs':
                         kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid()
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
+
+            self.functions.pack['__context__']['retcode'] = 0
             ret['return'] = self.functions[func](*args, **kwargs)
 
             # runners do not provide retcode
@@ -896,11 +941,13 @@ class Schedule(object):
                 else:
                     # Send back to master so the job is included in the job list
                     mret = ret.copy()
-                    mret['jid'] = 'req'
-                    if data.get('return_job') == 'nocache':
-                        # overwrite 'req' to signal to master that
-                        # this job shouldn't be stored
-                        mret['jid'] = 'nocache'
+                    # No returners defined, so we're only sending back to the master
+                    if not data_returner and not self.schedule_returner:
+                        mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that
+                            # this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                     load = {'cmd': '_return', 'id': self.opts['id']}
                     for key, value in six.iteritems(mret):
                         load[key] = value
@@ -1244,8 +1291,27 @@ class Schedule(object):
 
             run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
             if seconds <= 0:
                 if '_seconds' in data:
                     run = True
@@ -1264,16 +1330,6 @@ class Schedule(object):
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
@@ -1342,6 +1398,8 @@ class Schedule(object):
                 self.functions = {}
                 returners = self.returners
                 self.returners = {}
+                utils = self.utils
+                self.utils = {}
             try:
                 if multiprocessing_enabled:
                     thread_cls = SignalHandlingMultiprocessingProcess
@@ -1367,6 +1425,7 @@ class Schedule(object):
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
+                self.utils = utils
 
 
 def clean_proc_dir(opts):

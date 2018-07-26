@@ -77,7 +77,7 @@ Other renderer combinations are possible:
 
 The following is a contrived example SLS file using the ``jinja | mako | yaml`` renderer:
 
-.. code-block:: python
+.. code-block:: text
 
     #!jinja|mako|yaml
 

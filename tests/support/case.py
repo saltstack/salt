@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     ====================================
@@ -30,12 +30,15 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import (
+    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
+)
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
+import salt.utils
 import salt.ext.six as six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -121,8 +124,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     data = '\n'.join(data)
                     self.assertIn('minion', data)
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        arg_str = '-c {0} -t {1} {2}'.format(self.get_config_dir(), timeout, arg_str)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
                 catch_stderr=False, wipe=False, raw=False):
@@ -210,8 +213,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
+
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
@@ -274,9 +279,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
         process = subprocess.Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
@@ -290,13 +292,23 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # Kill the process group since sending the term signal
                         # would only terminate the shell, not the command
                         # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                        if salt.utils.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                         term_sent = True
                         continue
 
                     try:
                         # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
                             # If errno is not "no such process", raise
@@ -439,7 +451,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         Execute salt
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} -t {1} {2}'.format(self.get_config_dir(), timeout, arg_str)
         return self.run_script('salt',
                                arg_str,
                                with_retcode=with_retcode,
@@ -549,11 +561,12 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=60)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         '''
         Execute salt-call.
         '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
         return self.run_script('salt-call',
                                arg_str,
                                with_retcode=with_retcode,
@@ -625,7 +638,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                      description: Formula for installing Apache
                      '''))
 
-    def _spm_config(self):
+    def _spm_config(self, assume_yes=True):
         self._tmp_spm = tempfile.mkdtemp()
         config = self.get_temp_config('minion', **{
             'spm_logfile': os.path.join(self._tmp_spm, 'log'),
@@ -638,10 +651,10 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_db': os.path.join(self._tmp_spm, 'packages.db'),
             'extension_modules': os.path.join(self._tmp_spm, 'modules'),
             'file_roots': {'base': [self._tmp_spm, ]},
-            'formula_path': os.path.join(self._tmp_spm, 'spm'),
+            'formula_path': os.path.join(self._tmp_spm, 'salt'),
             'pillar_path': os.path.join(self._tmp_spm, 'pillar'),
             'reactor_path': os.path.join(self._tmp_spm, 'reactor'),
-            'assume_yes': True,
+            'assume_yes': True if assume_yes else False,
             'force': False,
             'verbose': False,
             'cache': 'localfs',
@@ -649,6 +662,16 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_repo_dups': 'ignore',
             'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
         })
+
+        import salt.utils
+        import yaml
+
+        if not os.path.isdir(config['formula_path']):
+            os.makedirs(config['formula_path'])
+
+        with salt.utils.fopen(os.path.join(self._tmp_spm, 'spm'), 'w') as fp:
+            fp.write(yaml.dump(config))
+
         return config
 
     def _spm_create_update_repo(self, config):

@@ -114,7 +114,7 @@ targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
 Consequently this data can be used from within modules, renderers, State SLS
-files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
+files, and more via the shared pillar dictionary:
 
 .. code-block:: jinja
 
@@ -166,6 +166,28 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     which parses top files when :ref:`running states <running-highstate>`, so
     the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
     context.
+
+
+Dynamic Pillar Environments
+===========================
+
+If environment ``__env__`` is specified in :conf_master:`pillar_roots`, all
+environments that are not explicitly specified in :conf_master:`pillar_roots`
+will map to the directories from ``__env__``. This allows one to use dynamic
+git branch based environments for state/pillar files with the same file-based
+pillar applying to all environments. For example:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/pillar
+
+    ext_pillar:
+      - git:
+        - __env__ https://example.com/git-pillar.git
+
+.. versionadded:: 2017.7.5,2018.3.1
 
 
 Pillar Namespace Flattening
@@ -262,6 +284,8 @@ The resulting pillar dictionary will be:
 Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
+
+.. _pillar-include:
 
 Including Other Pillars
 =======================

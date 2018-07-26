@@ -5,7 +5,7 @@
 
     Salt Tests CLI access classes
 
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
@@ -33,6 +33,7 @@ from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
 import salt.ext.six as six
+import salt.utils
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -455,6 +456,7 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')

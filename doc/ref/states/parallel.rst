@@ -12,7 +12,7 @@ option to your state declaration:
       service.running:
         - parallel: True
 
-Now ``nginx`` will be started in a seperate process from the normal state run
+Now ``nginx`` will be started in a separate process from the normal state run
 and will therefore not block additional states.
 
 Parallel States and Requisites
@@ -51,7 +51,7 @@ actually speed things up.
 To run the above state much faster make sure that the ``sleep 5`` is evaluated
 before the ``nginx`` state
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     sleep 10:
       cmd.run:

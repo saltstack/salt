@@ -436,7 +436,7 @@ external resource, like a cloud virtual machine. This decorator is not normally
 used by developers outside of the Salt core team.
 
 `@destructiveTest` -- Marks a test as potentially destructive. It will not be run
-by the test runner unles the ``-run-destructive`` test is expressly passed.
+by the test runner unless the ``-run-destructive`` test is expressly passed.
 
 `@requires_network` -- Requires a network connection for the test to operate
 successfully. If a network connection is not detected, the test will not run.

@@ -12,37 +12,35 @@ Connection module for Amazon VPC
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
+    vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
-        vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.region: us-east-1
 
-        vpc.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        region: us-east-1
 
 .. versionchanged:: 2015.8.0
     All methods now return a dictionary. Create and delete methods return:
@@ -2302,10 +2300,10 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name, vpc_peering_connection_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
-                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+                                  'nat_gateway_subnet_id, nat_gateway_subnet_name or vpc_peering_connection_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2576,6 +2574,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                       'instance_id': 'Instance',
                       'interface_id': 'NetworkInterfaceId',
                       'nat_gateway_id': 'NatGatewayId',
+                      'vpc_peering_connection_id': 'VpcPeeringConnectionId',
                       }
         assoc_keys = {'id': 'RouteTableAssociationId',
                       'main': 'Main',
@@ -2633,7 +2632,7 @@ def _maybe_set_tags(tags, obj):
 def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_support:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
-        log.debug('DNS spport was set to: {0} on vpc {1}'.format(dns_support, vpcid))
+        log.debug('DNS support was set to: {0} on vpc {1}'.format(dns_support, vpcid))
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
@@ -2893,10 +2892,10 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
     :param conn_id: The ID to use. String type.
     :param name: The name of this VPC peering connection. String type.
     :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
+    :param key: The key to use for this connection. Type string.
+    :param keyid: The key id to use.
+    :param profile: The profile to use.
+    :param dry_run: The dry_run flag to set.
     :return: dict
 
     Warning: Please specify either the ``vpc_peering_connection_id`` or

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 NAPALM Network
-===============
+==============
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 from salt.ext import six
 import salt.utils.templates
 import salt.utils.napalm
+import salt.utils.versions
 from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -98,7 +99,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
 def _explicit_close(napalm_device):
     '''
-    Will explicitely close the config session with the network device,
+    Will explicily close the config session with the network device,
     when running in a now-always-alive proxy minion or regular minion.
     This helper must be used in configuration-related functions,
     as the session is preserved and not closed before making any changes.
@@ -136,7 +137,7 @@ def _config_logic(napalm_device,
     # then the decorator will make sure that
     # if not proxy (when the connection is always alive)
     # and the `inherit_napalm_device` is set,
-    # `napalm_device` will be overriden.
+    # `napalm_device` will be overridden.
     # See `salt.utils.napalm.proxy_napalm_wrap` decorator.
 
     loaded_result['already_configured'] = False
@@ -228,7 +229,7 @@ def _config_logic(napalm_device,
 
 
 @proxy_napalm_wrap
-def connected(**kwarvs):  # pylint: disable=unused-argument
+def connected(**kwargs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
 
@@ -585,12 +586,12 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns IP addresses configured on the device.
 
-
-    :return:   A dictionary with the IPv4 and IPv6 addresses of the interfaces.\
-    Returns all configured IP addresses on all interfaces as a dictionary of dictionaries.\
-    Keys of the main dictionary represent the name of the interface.\
-    Values of the main dictionary represent are dictionaries that may consist of two keys\
-    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries with the IP addresses as keys.\
+    :return:   A dictionary with the IPv4 and IPv6 addresses of the interfaces.
+        Returns all configured IP addresses on all interfaces as a dictionary
+        of dictionaries.  Keys of the main dictionary represent the name of the
+        interface.  Values of the main dictionary represent are dictionaries
+        that may consist of two keys 'ipv4' and 'ipv6' (one, both or none)
+        which are themselvs dictionaries with the IP addresses as keys.
 
     CLI Example:
 
@@ -645,8 +646,8 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns details of the interfaces on the device.
 
-    :return: Returns a dictionary of dictionaries. \
-    The keys for the first dictionary will be the interfaces in the devices.
+    :return: Returns a dictionary of dictionaries. The keys for the first
+        dictionary will be the interfaces in the devices.
 
     CLI Example:
 
@@ -693,8 +694,9 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
     Returns a detailed view of the LLDP neighbors.
 
     :param interface: interface name to filter on
-    :return:          A dictionary with the LLDL neighbors.\
-    The keys are the interfaces with LLDP activated on.
+
+    :return:          A dictionary with the LLDL neighbors. The keys are the
+        interfaces with LLDP activated on.
 
     CLI Example:
 
@@ -826,19 +828,18 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
 
-    Return the whole configuration of the network device.
-    By default, it will return all possible configuration
-    sources supported by the network device.
+    Return the whole configuration of the network device. By default, it will
+    return all possible configuration sources supported by the network device.
     At most, there will be:
 
     - running config
     - startup config
     - candidate config
 
-    To return only one of the configurations, you can use
-    the ``source`` argument.
+    To return only one of the configurations, you can use the ``source``
+    argument.
 
-    source (optional)
+    source
         Which configuration type you want to display, default is all of them.
 
         Options:
@@ -852,10 +853,10 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
 
         - running (string): Representation of the native running configuration.
         - candidate (string): Representation of the native candidate configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
         - startup (string): Representation of the native startup configuration.
-            If the device doesnt differentiate between running and startup
+            If the device doesn't differentiate between running and startup
             configuration this will an empty string.
 
     CLI Example:
@@ -932,6 +933,7 @@ def load_config(filename=None,
                 debug=False,
                 replace=False,
                 inherit_napalm_device=None,
+                saltenv='base',
                 **kwargs):  # pylint: disable=unused-argument
     '''
     Applies configuration changes on the device. It can be loaded from a file or from inline string.
@@ -947,10 +949,21 @@ def load_config(filename=None,
     To replace the config, set ``replace`` to ``True``.
 
     filename
-        Path to the file containing the desired configuration. By default is None.
+        Path to the file containing the desired configuration.
+        This can be specified using the absolute path to the file,
+        or using one of the following URL schemes:
+
+        - ``salt://``, to fetch the template from the Salt fileserver.
+        - ``http://`` or ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift://``
+
+        .. versionchanged:: 2017.7.3
 
     text
         String containing the desired configuration.
+        This argument is ignored when ``filename`` is specified.
 
     test: False
         Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``
@@ -969,6 +982,11 @@ def load_config(filename=None,
         Load and replace the configuration. Default: ``False``.
 
         .. versionadded:: 2016.11.2
+
+    saltenv: ``base``
+        Specifies the Salt environment name.
+
+        .. versionadded:: 2017.7.3
 
     :return: a dictionary having the following keys:
 
@@ -992,6 +1010,7 @@ def load_config(filename=None,
     Example output:
 
     .. code-block:: python
+
         {
             'comment': 'Configuration discarded.',
             'already_configured': False,
@@ -999,7 +1018,6 @@ def load_config(filename=None,
             'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
         }
     '''
-
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
@@ -1012,21 +1030,28 @@ def load_config(filename=None,
         # compare_config, discard / commit
         # which have to be over the same session
         napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
+    if filename:
+        text = __salt__['cp.get_file_str'](filename, saltenv=saltenv)
+        if text is False:
+            # When using salt:// or https://, if the resource is not available,
+            #   it will either raise an exception, or return False.
+            ret = {
+                'result': False,
+                'out': None
+            }
+            ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
+            log.error(ret['comment'])
+            return ret
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
         **{
-            'filename': filename,
             'config': text
         }
     )
     loaded_config = None
     if debug:
-        if filename:
-            with salt.utils.fopen(filename) as rfh:
-                loaded_config = rfh.read()
-        else:
-            loaded_config = text
+        loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
@@ -1072,6 +1097,10 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
+    .. warning::
+        The support for native NAPALM templates will be dropped in Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be removed.
+
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1107,6 +1136,9 @@ def load_template(template_name,
         E.g.: if ``template_name`` is specified as ``my_template.jinja``,
         in order to find the template, this argument must be provided:
         ``template_path: /absolute/path/to/``.
+
+        .. note::
+            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1183,26 +1215,26 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
-    **template_vars
+    template_vars
         Dictionary with the arguments/context to be used when the template is rendered.
 
         .. note::
 
-            Do not explicitly specify this argument.
-            This represents any other variable that will be sent
-            to the template rendering system.
+            Do not explicitly specify this argument. This represents any other
+            variable that will be sent to the template rendering system.
             Please see the examples below!
 
     :return: a dictionary having the following keys:
 
-    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
-    the ``already_configured`` flag (example below)
-    * comment (str): a message for the user
-    * already_configured (bool): flag to check if there were no changes applied
-    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
-    to be set as ``True``
-    * diff (str): returns the config changes applied
+    - result (bool): if the config was applied successfully. It is ``False``
+      only in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still ``True`` and so will be
+      the ``already_configured`` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - loaded_config (str): the configuration loaded on the device, after
+      rendering the template. Requires ``debug`` to be set as ``True``
+    - diff (str): returns the config changes applied
 
     The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
 
@@ -1274,7 +1306,11 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
@@ -1331,7 +1367,7 @@ def load_template(template_name,
                     # use the custom template path
                     saltenv = template_path if not salt_render else 'base'
             elif salt_render and not saltenv:
-                # if saltenv not overrided and path specified as salt:// or http:// etc.
+                # if saltenv not overridden and path specified as salt:// or http:// etc.
                 # will use the default environment, from the base
                 saltenv = template_path if template_path else 'base'
             if not saltenv:
@@ -1419,7 +1455,7 @@ def load_template(template_name,
             # after running the other features:
             # compare_config, discard / commit
             # which have to be over the same session
-            # so we'll set the CLOSE global explicitely as False
+            # so we'll set the CLOSE global explicitly as False
             napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable

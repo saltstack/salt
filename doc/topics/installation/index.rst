@@ -86,7 +86,7 @@ Dependencies
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
-* `Python 2.6`_ >= 2.6 <3.0
+* `Python 2.7`_ >= 2.7 <3.0
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
@@ -142,7 +142,7 @@ Optional Dependencies
   settings)
 * gcc - dynamic `Cython`_ module compiling
 
-.. _`Python 2.6`: http://python.org/download/
+.. _`Python 2.7`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/

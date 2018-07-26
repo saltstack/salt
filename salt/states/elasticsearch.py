@@ -175,7 +175,7 @@ def alias_present(name, index, definition=None):
                 if not old:
                     ret['comment'] = 'Alias {0} for index {1} does not exist and will be created'.format(name, index)
                 else:
-                    ret['comment'] = 'Alias {0} for index {1} exists with wrong configuration and will be overriden'.format(name, index)
+                    ret['comment'] = 'Alias {0} for index {1} exists with wrong configuration and will be overridden'.format(name, index)
 
                 ret['result'] = None
             else:
@@ -348,7 +348,7 @@ def pipeline_present(name, definition):
                 if not pipeline:
                     ret['comment'] = 'Pipeline {0} does not exist and will be created'.format(name)
                 else:
-                    ret['comment'] = 'Pipeline {0} exists with wrong configuration and will be overriden'.format(name)
+                    ret['comment'] = 'Pipeline {0} exists with wrong configuration and will be overridden'.format(name)
 
                 ret['result'] = None
             else:
@@ -439,7 +439,7 @@ def search_template_present(name, definition):
                 if not template:
                     ret['comment'] = 'Search template {0} does not exist and will be created'.format(name)
                 else:
-                    ret['comment'] = 'Search template {0} exists with wrong configuration and will be overriden'.format(name)
+                    ret['comment'] = 'Search template {0} exists with wrong configuration and will be overridden'.format(name)
 
                 ret['result'] = None
             else:

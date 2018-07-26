@@ -383,7 +383,7 @@ class TempSwaggerFile(object):
             self.swaggerdict['invalid_key'] = 'invalid'
             # remove one of the required keys 'schemes'
             self.swaggerdict.pop('schemes', None)
-            # set swagger version to an unsupported verison 3.0
+            # set swagger version to an unsupported version 3.0
             self.swaggerdict['swagger'] = '3.0'
             # missing info object
             self.swaggerdict.pop('info', None)

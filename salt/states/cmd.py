@@ -12,7 +12,7 @@ A simple example to execute a command:
 .. code-block:: yaml
 
     # Store the current date in a file
-    date > /tmp/salt-run:
+    'date > /tmp/salt-run':
       cmd.run
 
 Only run if another execution failed, in this case truncate syslog if there is
@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    > /var/log/messages:
+    '> /var/log/messages/:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -37,7 +37,7 @@ touch /tmp/foo if it does not exist:
 
 .. code-block:: yaml
 
-    echo 'foo' | tee /tmp/bar > /tmp/baz:
+    "echo 'foo' | tee /tmp/bar > /tmp/baz":
       cmd.run:
         - creates:
           - /tmp/bar
@@ -55,7 +55,7 @@ In situations like this try the following:
 
     run_installer:
       cmd.run:
-        - name: /tmp/installer.bin  > /dev/null 2>&1
+        - name: /tmp/installer.bin > /dev/null 2>&1
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -199,8 +199,7 @@ executed when the state it is watching changes. Example:
 ``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
-``cmd.wait`` will be deprecated in future due to the confusion it causes. The
-preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
+The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
 works on ``cmd.run`` as well as on any other state. The example would then look as follows:
 
 .. code-block:: yaml
@@ -469,7 +468,7 @@ def wait(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -603,7 +602,7 @@ def wait_script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -720,7 +719,7 @@ def run(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -966,7 +965,7 @@ def script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 

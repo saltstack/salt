@@ -369,13 +369,13 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
 
     CLI Example:
 
-    .. code-block:: base
+    .. code-block:: bash
 
         salt '*' match.search_by '{web: [node1, node2], db: [node2, node]}'
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set roles = salt.match.search_by({
             'web': ['G@os_family:Debian not nodeX'],

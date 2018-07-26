@@ -197,11 +197,12 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(
             self.run_function('service.disabled', [SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.disable', [SERVICE_NAME]))
         self.assertTrue(
             self.run_function('service.disabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.enable', [SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.disabled', ['spongebob']))
+        self.assertFalse(self.run_function('service.disabled', ['spongebob']))
 
     def test_get_all(self):
         '''

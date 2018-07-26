@@ -453,7 +453,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     '''
     if filetype:
         _validate_filetype(filetype)
-    re_spacer = '[ ]{2,}'
+    re_spacer = '[ ]+'
     cmd_kwargs = {'spacer': re_spacer,
                   'filespec': re.escape(name),
                   'sel_user': sel_user or '[^:]+',
@@ -466,11 +466,14 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     current_entry_text = __salt__['cmd.shell'](cmd, ignore_retcode=True)
     if current_entry_text == '':
         return None
-    ret = {}
-    current_entry_list = re.split(re_spacer, current_entry_text)
-    ret['filespec'] = current_entry_list[0]
-    ret['filetype'] = current_entry_list[1]
-    ret.update(_context_string_to_dict(current_entry_list[2]))
+
+    parts = re.match(r'^({filespec}) +([a-z ]+) (.*)$'.format(**{'filespec': re.escape(name)}), current_entry_text)
+    ret = {
+        'filespec': parts.group(1).strip(),
+        'filetype': parts.group(2).strip(),
+    }
+    ret.update(_context_string_to_dict(parts.group(3).strip()))
+
     return ret
 
 
@@ -514,7 +517,9 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
     cmd = 'semanage fcontext --{0}'.format(action)
-    if filetype is not None:
+    # "semanage --ftype a" isn't valid on Centos 6,
+    # don't pass --ftype since "a" is the default filetype.
+    if filetype is not None and filetype != 'a':
         _validate_filetype(filetype)
         cmd += ' --ftype {0}'.format(filetype)
     if sel_type is not None:
@@ -556,7 +561,7 @@ def fcontext_apply_policy(name, recursive=False):
     .. versionadded:: 2017.7.0
 
     Applies SElinux policies to filespec using `restorecon [-R]
-    filespec`. Returns dict with changes if succesful, the output of
+    filespec`. Returns dict with changes if successful, the output of
     the restorecon command otherwise.
 
     name

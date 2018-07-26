@@ -77,7 +77,7 @@ class RosterMatcher(object):
             if fnmatch.fnmatch(minion, self.tgt):
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_pcre_minions(self):
@@ -89,7 +89,7 @@ class RosterMatcher(object):
             if re.match(self.tgt, minion):
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_list_minions(self):
@@ -103,7 +103,7 @@ class RosterMatcher(object):
             if minion in self.tgt:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_nodegroup_minions(self):
@@ -119,7 +119,7 @@ class RosterMatcher(object):
             if minion in nodegroup:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_range_minions(self):
@@ -136,7 +136,7 @@ class RosterMatcher(object):
             if minion in range_hosts:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def get_data(self, minion):

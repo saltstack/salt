@@ -41,6 +41,7 @@ from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
+MAX_FILENAME_LENGTH = 255
 
 
 def get_file_client(opts, pillar=False):
@@ -138,22 +139,20 @@ class Client(object):
                                     saltenv,
                                     path)
         destdir = os.path.dirname(dest)
-        cumask = os.umask(63)
+        with salt.utils.files.set_umask(0o077):
+            # remove destdir if it is a regular file to avoid an OSError when
+            # running os.makedirs below
+            if os.path.isfile(destdir):
+                os.remove(destdir)
 
-        # remove destdir if it is a regular file to avoid an OSError when
-        # running os.makedirs below
-        if os.path.isfile(destdir):
-            os.remove(destdir)
+            # ensure destdir exists
+            try:
+                os.makedirs(destdir)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:  # ignore if it was there already
+                    raise
 
-        # ensure destdir exists
-        try:
-            os.makedirs(destdir)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:  # ignore if it was there already
-                raise
-
-        yield dest
-        os.umask(cumask)
+            yield dest
 
     def get_cachedir(self, cachedir=None):
         if cachedir is None:
@@ -801,6 +800,9 @@ class Client(object):
         else:
             file_name = url_data.path
 
+        if len(file_name) > MAX_FILENAME_LENGTH:
+            file_name = salt.utils.hashutils.sha256_digest(file_name)
+
         return salt.utils.path_join(
             cachedir,
             'extrn_files',
@@ -1241,7 +1243,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''

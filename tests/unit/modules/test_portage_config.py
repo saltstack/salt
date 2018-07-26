@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Ryan Lewis (ryansname@gmail.com)`
+    :codeauthor: Ryan Lewis (ryansname@gmail.com)
 
     tests.unit.modules.portage_flags
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

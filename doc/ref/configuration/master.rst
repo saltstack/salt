@@ -519,7 +519,7 @@ Default: ``0``
 
 Memcache is an additional cache layer that keeps a limited amount of data
 fetched from the minion data cache for a limited period of time in memory that
-makes cache operations faster. It doesn't make much sence for the ``localfs``
+makes cache operations faster. It doesn't make much sense for the ``localfs``
 cache driver but helps for more complex drivers like ``consul``.
 
 This option sets the memcache items expiration time. By default is set to ``0``
@@ -696,31 +696,6 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
-.. conf_master:: ping_on_rotate
-
-``ping_on_rotate``
-------------------
-
-.. versionadded:: 2014.7.0
-
-Default:  ``False``
-
-By default, the master AES key rotates every 24 hours. The next command
-following a key rotation will trigger a key refresh from the minion which may
-result in minions which do not respond to the first command after a key refresh.
-
-To tell the master to ping all minions immediately after an AES key refresh, set
-ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
-appear to initially respond after a key is rotated.
-
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
-
-.. code-black:: yaml
-
-    ping_on_rotate: False
-
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -840,8 +815,7 @@ Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
 ``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+what you are doing!
 
 .. code-block:: yaml
 
@@ -854,10 +828,10 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
 Default: ``{}``
 
-(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
-This setting has a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+(experimental) Starts multiple transports and overrides options for each
+transport with the provided dictionary This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!  The
+following example shows how to start a TCP transport alongside a ZMQ transport.
 
 .. code-block:: yaml
 
@@ -903,7 +877,7 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
-.. conf_master::
+.. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
 -----------------------
@@ -956,11 +930,60 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+----------------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
 
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration
 ======================
+
+.. conf_master:: roster_defaults
+
+``roster_defaults``
+-------------------
+
+.. versionadded:: 2017.7.0
+
+Default settings which will be inherited by all rosters.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
 
 .. conf_master:: roster_file
 
@@ -1555,10 +1578,10 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
-.. conf_master:: allow_minion_key_revoke
+.. conf_master:: preserve_minion_cache
 
-``allow_minion_key_revoke``
----------------------------
+``preserve_minion_cache``
+-------------------------
 
 Default: ``False``
 
@@ -1587,7 +1610,7 @@ the master will drop the request and the minion's key will remain accepted.
 
 .. code-block:: yaml
 
-    rotate_aes_key: True
+    allow_minion_key_revoke: False
 
 
 Master Large Scale Tuning Settings
@@ -3836,7 +3859,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <git_pillar-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml
@@ -3884,12 +3907,14 @@ The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 5 values:
 
 * ``none``:
-.. versionadded:: 2016.3.4
+
   It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
+
+  .. versionadded:: 2016.3.4
 
 * ``recurse``:
 
-  it will merge recursively mapping of data. For example, theses 2 sources:
+  It will recursively merge data. For example, theses 2 sources:
 
   .. code-block:: yaml
 
@@ -3996,6 +4021,25 @@ Recursively merge lists by aggregating them instead of replacing them.
 .. code-block:: yaml
 
     pillar_merge_lists: False
+
+.. conf_master:: pillar_includes_override_sls
+
+``pillar_includes_override_sls``
+********************************
+
+.. versionadded:: 2017.7.6,2018.3.1
+
+Default: ``False``
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+Set this option to ``True`` to return to the old behavior.
+
+.. code-block:: yaml
+
+    pillar_includes_override_sls: True
 
 .. _pillar-cache-opts:
 
@@ -4118,6 +4162,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_master:: reactor_worker_hwm
@@ -4820,11 +4865,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 
@@ -4967,7 +5011,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <winrepo-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml

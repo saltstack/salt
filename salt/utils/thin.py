@@ -14,6 +14,7 @@ import tarfile
 import zipfile
 import tempfile
 import subprocess
+import concurrent
 
 # Import third party libs
 import jinja2
@@ -43,9 +44,8 @@ except ImportError:
 
 try:
     import backports_abc
-    HAS_BACKPORTS_ABC = True
 except ImportError:
-    HAS_BACKPORTS_ABC = False
+    import salt.ext.backports_abc as backports_abc
 
 try:
     import markupsafe
@@ -107,7 +107,10 @@ def get_tops(extra_mods='', so_mods=''):
             os.path.dirname(msgpack.__file__),
             ]
 
+    if _six.PY2:
+        tops.append(os.path.dirname(concurrent.__file__))
     tops.append(_six.__file__.replace('.pyc', '.py'))
+    tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
@@ -117,9 +120,6 @@ def get_tops(extra_mods='', so_mods=''):
 
     if HAS_SINGLEDISPATCH_HELPERS:
         tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
-
-    if HAS_BACKPORTS_ABC:
-        tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
@@ -537,6 +537,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         'salt/modules/test.py',
         'salt/modules/selinux.py',
         'salt/modules/cmdmod.py',
+        'salt/modules/saltutil.py',
         'salt/minion.py',
         'salt/pillar',
         'salt/pillar/__init__.py',

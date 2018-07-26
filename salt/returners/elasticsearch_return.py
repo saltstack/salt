@@ -227,7 +227,7 @@ def returner(ret):
 
     if ret.get('return', None) is None:
         log.info('Won\'t push new data to Elasticsearch, job with jid={0} was '
-                 'not succesful'.format(job_id))
+                 'not successful'.format(job_id))
         return
 
     # Build the index name

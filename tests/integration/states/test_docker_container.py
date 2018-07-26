@@ -449,6 +449,50 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 self.run_function('docker.rm', [name], force=True)
 
     @with_random_name
+    def test_running_with_port_bindings(self, name):
+        '''
+        This tests that the ports which are being bound are also exposed, even
+        when not explicitly configured. This test will create a container with
+        only some of the ports exposed, including some which aren't even bound.
+        The resulting containers exposed ports should contain all of the ports
+        defined in the "ports" argument, as well as each of the ports which are
+        being bound.
+        '''
+        try:
+            # Create the container
+            ret = self.run_state(
+                'docker_container.running',
+                name=name,
+                image=self.image,
+                command='sleep 600',
+                shutdown_timeout=1,
+                port_bindings=[1234, '1235-1236', '2234/udp', '2235-2236/udp'],
+                ports=[1235, '2235/udp', 9999],
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Check the created container's port bindings and exposed ports.
+            # The port bindings should only contain the ports defined in the
+            # port_bindings argument, while the exposed ports should also
+            # contain the extra port (9999/tcp) which was included in the ports
+            # argument.
+
+            cinfo = self.run_function('docker.inspect_container', [name])
+            ports = ['1234/tcp', '1235/tcp', '1236/tcp',
+                     '2234/udp', '2235/udp', '2236/udp']
+            self.assertEqual(
+                sorted(cinfo['HostConfig']['PortBindings']),
+                ports
+            )
+            self.assertEqual(
+                sorted(cinfo['Config']['ExposedPorts']),
+                ports + ['9999/tcp']
+            )
+        finally:
+            if name in self.run_function('docker.list_containers', all=True):
+                self.run_function('docker.rm', [name], force=True)
+
+    @with_random_name
     def test_absent_with_stopped_container(self, name):
         '''
         This tests the docker_container.absent state on a stopped container

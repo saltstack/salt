@@ -7,22 +7,21 @@ Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: 2017.7.0
 
-As Redis provides a simple mechanism for very fast key-value store,
-in order to privde the necessary features for the Salt
-caching subsystem, the following conventions are used:
+As Redis provides a simple mechanism for very fast key-value store, in order to
+privde the necessary features for the Salt caching subsystem, the following
+conventions are used:
 
-- a Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
-``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
-and ``stuff`` is the key name.
-- as the caching subsystem is organised as a tree, we need to store the
-caching path and identify the bank and its offspring.
-At the same time, Redis is linear
-and we need to avoid doing ``keys <pattern>`` which is very inefficient
-as it goes through all the keys on the remote Redis server.
-Instead, each bank hierarchy has a Redis SET associated
-which stores the list of sub-banks. By default, these keys begin with ``$BANK_``.
-- in addition, each key name is stored in a separate SET
-of all the keys within a bank. By default, these SETs begin with ``$BANKEYS_``.
+- A Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
+  ``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
+  and ``stuff`` is the key name.
+- As the caching subsystem is organised as a tree, we need to store the caching
+  path and identify the bank and its offspring.  At the same time, Redis is
+  linear and we need to avoid doing ``keys <pattern>`` which is very
+  inefficient as it goes through all the keys on the remote Redis server.
+  Instead, each bank hierarchy has a Redis SET associated which stores the list
+  of sub-banks. By default, these keys begin with ``$BANK_``.
+- In addition, each key name is stored in a separate SET of all the keys within
+  a bank. By default, these SETs begin with ``$BANKEYS_``.
 
 For example, to store the key ``my-key`` under the bank ``root-bank/sub-bank/leaf-bank``,
 the following hierarchy will be built:
@@ -71,7 +70,6 @@ db: ``'0'``
     The database index.
 
     .. note::
-
         The database index must be specified as string not as integer value!
 
 password:
@@ -79,7 +77,7 @@ password:
 
 Configuration Example:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     cache.redis.host: localhost
     cache.redis.port: 6379
@@ -333,7 +331,7 @@ def flush(bank, key=None):
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitely allow Salt inject scripts in their Redis instance.
+    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     '''
     redis_server = _get_redis_server()
     redis_pipe = redis_server.pipeline()

@@ -4,6 +4,7 @@ Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html h
 After=network.target salt-master.service
 
 [Service]
+KillMode=process
 Type=notify
 NotifyAccess=all
 LimitNOFILE=8192

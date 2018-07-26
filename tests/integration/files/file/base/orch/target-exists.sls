@@ -8,7 +8,7 @@ test-state:
   salt.state:
     - tgt: '*'
     - sls:
-      - include-test
+      - orch.target-test
 
 cmd.run:
   salt.function:

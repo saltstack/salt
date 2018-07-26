@@ -100,7 +100,8 @@ def yamlify_arg(arg):
         return arg
 
     if arg.strip() == '':
-        # Because YAML loads empty strings as None, we return the original string
+        # Because YAML loads empty (or all whitespace) strings as None, we
+        # return the original string
         # >>> import yaml
         # >>> yaml.load('') is None
         # True
@@ -109,6 +110,9 @@ def yamlify_arg(arg):
         return arg
 
     elif '_' in arg and all([x in '0123456789_' for x in arg.strip()]):
+        # When the stripped string includes just digits and underscores, the
+        # underscores are ignored and the digits are combined together and
+        # loaded as an int. We don't want that, so return the original value.
         return arg
 
     try:
@@ -131,6 +135,14 @@ def yamlify_arg(arg):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
+                return original_arg
+            else:
+                return arg
+
+        elif isinstance(arg, list):
+            # lists must be wrapped in brackets
+            if (isinstance(original_arg, six.string_types) and
+                    not original_arg.startswith('[')):
                 return original_arg
             else:
                 return arg

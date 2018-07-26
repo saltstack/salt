@@ -580,7 +580,7 @@ def create(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    *vdevs : string
+    vdevs : string
         one or move devices
     force : boolean
         forces use of vdevs, even if they appear in use or specify a conflicting replication level.
@@ -691,11 +691,11 @@ def add(zpool, *vdevs, **kwargs):
     '''
     .. versionchanged:: 2016.3.0
 
-    Add the specified vdev\'s to the given storage pool
+    Add the specified vdevs to the given storage pool
 
     zpool : string
         name of storage pool
-    *vdevs : string
+    vdevs : string
         one or more devices
     force : boolean
         forces use of device
@@ -925,7 +925,7 @@ def create_file_vdev(size, *vdevs):
 
     Creates file based ``virtual devices`` for a zpool
 
-    ``*vdevs`` is a list of full paths for mkfile to create
+    ``vdevs`` is a list of full paths for mkfile to create
 
     CLI Example:
 
@@ -969,7 +969,7 @@ def export(*pools, **kwargs):
 
     Export storage pools
 
-    *pools : string
+    pools : string
         one or more storage pools to export
     force : boolean
         force export of storage pools
@@ -1118,7 +1118,7 @@ def online(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    *vdevs : string
+    vdevs : string
         one or more devices
     expand : boolean
         Expand the device to use all available space.
@@ -1180,7 +1180,7 @@ def offline(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    *vdevs : string
+    vdevs : string
         one or more devices
     temporary : boolean
         enable temporarily offline

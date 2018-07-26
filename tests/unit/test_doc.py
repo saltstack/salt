@@ -59,9 +59,11 @@ class DocTestCase(TestCase):
             key, val = regex.split(line, 1)
 
             # Don't test man pages, this file,
-            # the page that documents to not use ":doc:", or
-            # the doc/conf.py file
+            # the tox virtualenv files, the page
+            # that documents to not use ":doc:",
+            # or the doc/conf.py file
             if 'man' in key \
+                    or '.tox/' in key \
                     or key.endswith('test_doc.py') \
                     or key.endswith(os.sep.join(['doc', 'conf.py'])) \
                     or key.endswith(os.sep.join(['conventions', 'documentation.rst'])) \

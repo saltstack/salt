@@ -39,7 +39,7 @@ A more involved example involves pulling from a custom repository.
         - keyserver: keyserver.ubuntu.com
 
     logstash:
-      pkg.installed
+      pkg.installed:
         - fromrepo: ppa:wolfnet/logstash
 
 Multiple packages can also be installed with the use of the pkgs
@@ -92,7 +92,7 @@ from salt.exceptions import (
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
@@ -151,6 +151,16 @@ def __virtual__():
     assigned for this minion
     '''
     return 'pkg.install' in __salt__
+
+
+def _warn_virtual(virtual):
+    return [
+        'The following package(s) are "virtual package" names: {0}. These '
+        'will no longer be supported as of the Fluorine release. Please '
+        'update your SLS file(s) to use the actual package name.'.format(
+            ', '.join(virtual)
+        )
+    ]
 
 
 def _get_comparison_spec(pkgver):
@@ -529,9 +539,14 @@ def _find_install_targets(name=None,
         was_refreshed = True
         refresh = False
 
+    def _get_virtual(desired):
+        return [x for x in desired if cur_pkgs.get(x, []) == ['1']]
+
+    virtual_pkgs = []
+
     if any((pkgs, sources)):
         if pkgs:
-            desired = _repack_pkgs(pkgs)
+            desired = _repack_pkgs(pkgs, normalize=normalize)
         elif sources:
             desired = __salt__['pkg_resource.pack_sources'](
                 sources,
@@ -546,6 +561,8 @@ def _find_install_targets(name=None,
                     'comment': 'Invalidly formatted \'{0}\' parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
+
+        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.is_windows():
@@ -566,6 +583,7 @@ def _find_install_targets(name=None,
         else:
             desired = {name: version}
 
+        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
@@ -582,22 +600,28 @@ def _find_install_targets(name=None,
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed and is the correct version
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Version {0} of package \'{1}\' is already '
-                                   'installed'.format(version, name)}
+                ret = {'name': name,
+                       'changes': {},
+                       'result': True,
+                       'comment': 'Version {0} of package \'{1}\' is already '
+                                  'installed'.format(version, name)}
+                if virtual_pkgs:
+                    ret['warnings'] = _warn_virtual(virtual_pkgs)
+                return ret
 
             # if cver is not an empty string, the package is already installed
             elif cver and version is None \
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Package {0} is already '
-                                   'installed'.format(name)}
+                ret = {'name': name,
+                       'changes': {},
+                       'result': True,
+                       'comment': 'Package {0} is already '
+                                  'installed'.format(name)}
+                if virtual_pkgs:
+                    ret['warnings'] = _warn_virtual(virtual_pkgs)
+                return ret
 
     version_spec = False
     if not sources:
@@ -635,10 +659,13 @@ def _find_install_targets(name=None,
                     if comments:
                         if len(comments) > 1:
                             comments.append('')
-                        return {'name': name,
-                                'changes': {},
-                                'result': False,
-                                'comment': '. '.join(comments).rstrip()}
+                        ret = {'name': name,
+                               'changes': {},
+                               'result': False,
+                               'comment': '. '.join(comments).rstrip()}
+                        if virtual_pkgs:
+                            ret['warnings'] = _warn_virtual(virtual_pkgs)
+                        return ret
 
     # Resolve the latest package version for any packages with "latest" in the
     # package version
@@ -770,10 +797,13 @@ def _find_install_targets(name=None,
         problems.append(failed_verify)
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': ' '.join(problems)}
+        if virtual_pkgs:
+            ret['warnings'] = _warn_virtual(virtual_pkgs)
+        return ret
 
     if not any((targets, to_unpurge, to_reinstall)):
         # All specified packages are installed
@@ -788,6 +818,8 @@ def _find_install_targets(name=None,
                'comment': msg}
         if warnings:
             ret.setdefault('warnings', []).extend(warnings)
+        if virtual_pkgs:
+            ret.setdefault('warnings', []).extend(_warn_virtual(virtual_pkgs))
         return ret
 
     return (desired, targets, to_unpurge, to_reinstall, altered_files,
@@ -989,17 +1021,22 @@ def installed(
         **WILDCARD VERSIONS**
 
         As of the 2017.7.0 release, this state now supports wildcards in
-        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
-        Arch Linux, and their derivatives. Using wildcards can be useful for
-        packages where the release name is built into the version in some way,
-        such as for RHEL/CentOS which typically has version numbers like
-        ``1.2.34-5.el7``. An example of the usage for this would be:
+        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu,
+        RHEL/CentOS, Arch Linux, and their derivatives. Using wildcards can be
+        useful for packages where the release name is built into the version in
+        some way, such as for RHEL/CentOS which typically has version numbers
+        like ``1.2.34-5.el7``. An example of the usage for this would be:
 
         .. code-block:: yaml
 
             mypkg:
               pkg.installed:
                 - version: '1.2.34*'
+
+        Keep in mind that using wildcard versions will result in a slower state
+        run since Salt must gather the available versions of the specified
+        packages and figure out which of them match the specified wildcard
+        expression.
 
     :param bool refresh:
         This parameter controls whether or not the package repo database is
@@ -1613,14 +1650,10 @@ def installed(
     not_modified_hold = None
     failed_hold = None
     if targets or to_reinstall:
-        force = False
-        if salt.utils.is_freebsd():
-            force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name=None,
                                               refresh=refresh,
                                               version=version,
-                                              force=force,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
                                               pkgs=pkgs,
@@ -1718,6 +1751,25 @@ def installed(
                         if x not in targets
                         and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
+
+        # Check for virtual packages in list of desired packages
+        if not sources:
+            try:
+                virtual_pkgs = []
+                for pkgname in [next(iter(x)) for x in pkgs] if pkgs else [name]:
+                    cver = new_pkgs.get(pkgname, [])
+                    if '1' in cver:
+                        virtual_pkgs.append(pkgname)
+                if virtual_pkgs:
+                    warnings.extend(_warn_virtual(virtual_pkgs))
+            except Exception:
+                # This is just some temporary code to warn the user about using
+                # virtual packages. Don't let an exception break the entire
+                # state.
+                log.debug(
+                    'Failed to detect virtual packages after running '
+                    'pkg.install', exc_info=True
+                )
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
@@ -1957,7 +2009,7 @@ def downloaded(name,
         return ret
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
 
@@ -2130,7 +2182,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
                            'this platform'}
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
-    # as we're explicitely passing 'downloadonly=True' to execution module.
+    # as we're explicitly passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
     return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
@@ -2397,13 +2449,21 @@ def latest(
                     'result': None,
                     'comment': '\n'.join(comments)}
 
-        # Build updated list of pkgs to exclude non-targeted ones
-        targeted_pkgs = list(targets.keys()) if pkgs else None
+        if salt.utils.is_windows():
+            # pkg.install execution module on windows ensures the software
+            # package is installed when no version is specified, it does not
+            # upgrade the software to the latest. This is per the design.
+            # Build updated list of pkgs *with verion number*, exclude
+            # non-targeted ones
+            targeted_pkgs = [{x: targets[x]} for x in targets]
+        else:
+            # Build updated list of pkgs to exclude non-targeted ones
+            targeted_pkgs = list(targets)
 
+        # No need to refresh, if a refresh was necessary it would have been
+        # performed above when pkg.latest_version was run.
         try:
-            # No need to refresh, if a refresh was necessary it would have been
-            # performed above when pkg.latest_version was run.
-            changes = __salt__['pkg.install'](name,
+            changes = __salt__['pkg.install'](name=None,
                                               refresh=False,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
@@ -2609,7 +2669,7 @@ def removed(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.removed:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2715,7 +2775,7 @@ def purged(name,
             .. code-block:: yaml
 
                 vim-enhanced:
-                  pkg.installed:
+                  pkg.purged:
                     - version: 2:7.4.160-1.el7
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
@@ -2845,8 +2905,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
+            expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
+                        for pkgname, pkgver in six.iteritems(packages)}
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
+                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
@@ -2860,6 +2923,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'System update will be performed'
+        ret['changes'] = expected
         ret['result'] = None
         return ret
 
@@ -2876,8 +2940,17 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    ret['comment'] = 'Upgrade ran successfully'
-    ret['result'] = True
+    # If a package list was provided, ensure those packages were updated
+    missing = []
+    if isinstance(pkgs, list):
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+
+    if missing:
+        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Upgrade ran successfully'
+        ret['result'] = True
 
     return ret
 

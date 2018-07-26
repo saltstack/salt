@@ -36,3 +36,15 @@ class PublisherACL(object):
             if not salt.utils.check_whitelist_blacklist(fun, blacklist=self.blacklist.get('modules', [])):
                 return True
         return False
+
+    def user_is_whitelisted(self, user):
+        return salt.utils.check_whitelist_blacklist(user, whitelist=self.blacklist.get('users', []))
+
+    def cmd_is_whitelisted(self, cmd):
+        # If this is a regular command, it is a single function
+        if isinstance(cmd, str):
+            cmd = [cmd]
+        for fun in cmd:
+            if salt.utils.check_whitelist_blacklist(fun, whitelist=self.blacklist.get('modules', [])):
+                return True
+        return False

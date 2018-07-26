@@ -7,6 +7,8 @@ for managing outputters.
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+
+import io
 import re
 import os
 import sys
@@ -143,6 +145,17 @@ def get_printout(out, opts=None, **kwargs):
         # See Issue #29796 for more information.
         out = opts['output']
 
+    # Handle setting the output when --static is passed.
+    if not out and opts.get('static'):
+        if opts.get('output'):
+            out = opts['output']
+        elif opts.get('fun', '').split('.')[0] == 'state':
+            # --static doesn't have an output set at this point, but if we're
+            # running a state function and "out" hasn't already been set, we
+            # should set the out variable to "highstate". Otherwise state runs
+            # are set to "nested" below. See Issue #44556 for more information.
+            out = 'highstate'
+
     if out == 'text':
         out = 'txt'
     elif out is None or out == '':
@@ -158,7 +171,7 @@ def get_printout(out, opts=None, **kwargs):
             '''
             try:
                 fileno = sys.stdout.fileno()
-            except AttributeError:
+            except (AttributeError, io.UnsupportedOperation):
                 fileno = -1  # sys.stdout is StringIO or fake
             return not os.isatty(fileno)
 

@@ -69,10 +69,10 @@ Example arguments for `git checkout`:
   +------------+----------------------------------------------------------------------------+
   | v2016.11.1 | Tag signaling the commit that the 2016.11.1 release is based on.           |
   +------------+----------------------------------------------------------------------------+
-  
-Further reading on `release branch and develop branch 
+
+Further reading on `release branch and develop branch
 <https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch>`_.
-  
+
 Influence of the `git checkout` argument on `git describe`:
 
   +------------+----------------------------+-----------------------------------------------+

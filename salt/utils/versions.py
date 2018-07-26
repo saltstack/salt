@@ -14,8 +14,8 @@
 # Import python libs
 from __future__ import absolute_import
 # pylint: disable=blacklisted-module
-from distutils.version import StrictVersion as _StrictVersion
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import StrictVersion as _StrictVersion  # pylint: disable=no-name-in-module
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module
 # pylint: enable=blacklisted-module
 
 # Import 3rd-party libs
