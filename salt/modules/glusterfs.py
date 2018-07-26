@@ -217,8 +217,8 @@ def peer(name):
     return _gluster(cmd)
 
 
-def create_volume(name, bricks, stripe=False, replica=False, arbiter=False,
-        device_vg=False, transport='tcp', start=False, force=False):
+def create_volume(name, bricks, stripe=False, replica=False, device_vg=False, 
+                  transport='tcp', start=False, force=False, arbiter=False):
     '''
     Create a glusterfs volume
 
@@ -238,6 +238,7 @@ def create_volume(name, bricks, stripe=False, replica=False, arbiter=False,
         Replica count, the number of bricks should be a multiple of the \
         replica count for a distributed replicated volume
 
+    .. versionadded:: Fluorine
     arbiter
         If true, specifies volume should use arbiter brick(s). \
         Valid configuration limited to "replica 3 arbiter 1" per \
