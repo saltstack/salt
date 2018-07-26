@@ -108,8 +108,8 @@ def peered(name):
     return ret
 
 
-def volume_present(name, bricks, stripe=False, replica=False, arbiter=False,
-                   device_vg=False, transport='tcp', start=False, force=False):
+def volume_present(name, bricks, stripe=False, replica=False, device_vg=False, 
+                   transport='tcp', start=False, force=False, arbiter=False):
     '''
     Ensure that the volume exists
 
@@ -122,6 +122,7 @@ def volume_present(name, bricks, stripe=False, replica=False, arbiter=False,
     replica
         replica count for volume
 
+    .. versionadded:: Fluorine
     arbiter
         use every third brick as arbiter (metadata only)
 
@@ -155,6 +156,7 @@ def volume_present(name, bricks, stripe=False, replica=False, arbiter=False,
             - replica: 3
             - arbiter: True
             - start: True
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -177,8 +179,8 @@ def volume_present(name, bricks, stripe=False, replica=False, arbiter=False,
 
         vol_created = __salt__['glusterfs.create_volume'](
             name, bricks, stripe,
-            replica, arbiter, device_vg,
-            transport, start, force)
+            replica, device_vg,
+            transport, start, force, arbiter)
 
         if not vol_created:
             ret['comment'] = 'Creation of volume {0} failed'.format(name)
