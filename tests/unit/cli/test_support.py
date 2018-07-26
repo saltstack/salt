@@ -9,7 +9,9 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 from salt.cli.support.console import IndentOutput
+from salt.cli.support.collector import SupportDataCollector
 from salt.utils.color import get_colors
+import salt.exceptions
 
 try:
     import pytest
@@ -78,3 +80,39 @@ class SaltSupportIndentOutputTestCase(TestCase):
         for ident_key in sorted(list(conf)):
             assert str(self.device.write.call_args_list[step][0][0]) == str(self.colors[conf[ident_key]])
             step += 5
+
+
+@skipIf(not bool(pytest), 'Pytest needs to be installed')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class SaltSupportCollectorTestCase(TestCase):
+    '''
+    Collector tests.
+    '''
+    def setUp(self):
+        '''
+        Setup the test case
+        :return:
+        '''
+        self.archive_path = '/highway/to/hell'
+        self.output_device = MagicMock()
+        self.collector = SupportDataCollector(self.archive_path, self.output_device)
+
+    def tearDown(self):
+        '''
+        Tear down the test case elements
+        :return:
+        '''
+        del self.collector
+
+    @patch('salt.cli.support.collector.tarfile.TarFile', MagicMock())
+    def test_archive_open(self):
+        '''
+        Test archive is opened.
+
+        :return:
+        '''
+        self.collector.open()
+        assert self.collector.archive_path == self.archive_path
+        with pytest.raises(salt.exceptions.SaltException) as err:
+            self.collector.open()
+        assert 'Archive already opened' in str(err)
