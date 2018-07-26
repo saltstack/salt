@@ -116,3 +116,19 @@ class SaltSupportCollectorTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltException) as err:
             self.collector.open()
         assert 'Archive already opened' in str(err)
+
+    @patch('salt.cli.support.collector.tarfile.TarFile', MagicMock())
+    def test_archive_close(self):
+        '''
+        Test archive is opened.
+
+        :return:
+        '''
+        self.collector.open()
+        self.collector._flush_content = lambda: None
+        self.collector.close()
+        assert self.collector.archive_path == self.archive_path
+        with pytest.raises(salt.exceptions.SaltException) as err:
+            self.collector.close()
+        assert 'Archive already closed' in str(err)
+
