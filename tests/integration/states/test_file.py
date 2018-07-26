@@ -2473,6 +2473,8 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
 
+WIN_TEST_FILE = 'c:/testfile'
+
 
 @destructiveTest
 @skipIf(not salt.utils.is_windows(), 'windows test only')
@@ -2481,45 +2483,43 @@ class WinFileTest(ModuleCase):
     Test for the file state on Windows
     '''
     def setUp(self):
-        self.test = self.run_state('file.managed', name='c:/testfile', makedirs=True, contents='Only a test')
+        self.run_state('file.managed', name=WIN_TEST_FILE, makedirs=True, contents='Only a test')
 
     def tearDown(self):
-        del self.test
+        self.run_state('file.absent', name=WIN_TEST_FILE)
 
     def test_file_managed(self):
         '''
         Test file.managed on Windows
         '''
-        self.assertTrue(self.run_state('file.exists', name='c:/testfile'))
+        self.assertTrue(self.run_state('file.exists', name=WIN_TEST_FILE))
 
     def test_file_copy(self):
         '''
         Test file.copy on Windows
         '''
-        ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source='c:/testfile')
+        ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source=WIN_TEST_FILE)
         self.assertTrue(ret)
 
     def test_file_comment(self):
         '''
         Test file.comment on Windows
         '''
-        self.run_state('file.comment', name='c:/testfile', regex='^Only')
-        file = 'c:/testfile'
-        with salt.utils.fopen(file, 'r') as fp_:
+        self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
+        with salt.utils.fopen(WIN_TEST_FILE, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#Only'))
 
     def test_file_replace(self):
         '''
         Test file.replace on Windows
         '''
-        self.run_state('file.replace', name='c:/testfile', pattern='test', repl='testing')
-        file = 'c:/testfile'
-        with salt.utils.fopen(file, 'r') as fp_:
+        self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
+        with salt.utils.fopen(WIN_TEST_FILE, 'r') as fp_:
             self.assertIn('testing', fp_.read())
 
     def test_file_absent(self):
         '''
         Test file.absent on Windows
         '''
-        ret = self.run_state('file.absent', name='c:/testfile')
+        ret = self.run_state('file.absent', name=WIN_TEST_FILE)
         self.assertTrue(ret)
