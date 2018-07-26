@@ -151,6 +151,8 @@ class BaseCaller(object):
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+            elif ret['retcode'] != salt.defaults.exitcodes.EX_OK:
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -390,10 +392,12 @@ class RAETCaller(BaseCaller):
                     {'local': print_ret},
                     out=ret.get('out', 'nested'),
                     opts=self.opts,
-                    _retcode=ret.get('retcode', 0))
+                    _retcode=ret.get('retcode', salt.defaults.exitcodes.EX_OK))
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+            elif ret['retcode'] != salt.defaults.exitcodes.EX_OK:
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         except SaltInvocationError as err:
             raise SystemExit(err)
