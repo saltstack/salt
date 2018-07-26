@@ -19,6 +19,7 @@ import re
 
 # Import salt libs
 import salt.utils.path
+from salt.exceptions import CommandExecutionError
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -327,6 +328,9 @@ def _dmidecoder(args=None):
     '''
     Call DMIdecode
     '''
+    if DMIDECODER is None:
+        raise CommandExecutionError('SMBIOS: neither dmidecode nor smbios found!')
+
     if args is None:
         return salt.modules.cmdmod._run_quiet(DMIDECODER)
     else:
