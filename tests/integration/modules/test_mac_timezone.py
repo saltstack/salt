@@ -28,6 +28,7 @@ from salt.ext import six
 
 
 @skip_if_not_root
+@flaky
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacTimezoneModuleTest(ModuleCase):
