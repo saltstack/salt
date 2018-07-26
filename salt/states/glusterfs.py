@@ -108,7 +108,7 @@ def peered(name):
     return ret
 
 
-def volume_present(name, bricks, stripe=False, replica=False, device_vg=False, 
+def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
                    transport='tcp', start=False, force=False, arbiter=False):
     '''
     Ensure that the volume exists
