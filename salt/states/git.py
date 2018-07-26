@@ -664,6 +664,7 @@ def latest(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
@@ -2315,6 +2316,7 @@ def detached(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'Identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
