@@ -10,7 +10,7 @@ import logging
 import re
 
 try:
-    import tzlocal  # pylint: disable=import-error
+    import tzlocal  # pylint: disable=unused-import
     HAS_TZLOCAL = True
 except ImportError:
     HAS_TZLOCAL = False
