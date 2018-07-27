@@ -239,12 +239,12 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
-        if self.opts.get('__role') == 'master' and self.opts.get('__cli') == 'salt-run':
-            # Compiling pillar directly on the master, just return the master's
-            # ID as that is the only one that is available.
-            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
+        try:
+            os.makedirs(os.path.dirname(pki_cache_fn))
+        except OSError:
+            pass
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
