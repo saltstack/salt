@@ -1272,7 +1272,7 @@ def init(name,
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
 
-        See `libvirt documentation <https://libvirt.org/formatdomain.html#elementsDisks>`_
+        See `libvirt documentation on bus types <https://libvirt.org/formatdomain.html#elementsDisks>`_
         for the allowed bus types.
 
     image
@@ -1293,7 +1293,7 @@ def init(name,
         Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
         allowed as a libvirt graphics type (Default: ``None``)
 
-        See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
+        See `the libvirt documentation on graphic types <https://libvirt.org/formatdomain.html#elementsGraphics>`_
         for more details on the possible types
 
     port
@@ -4407,7 +4407,7 @@ def pool_define(name,
 
     :param name: Pool name
     :param ptype:
-        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
+        Pool type. See `libvirt documentation on pools <https://libvirt.org/storage.html>`_  for the
         possible values.
     :param target: Pool full path target
     :param permissions:
@@ -4474,7 +4474,7 @@ def pool_define(name,
         Identifier of name-based sources.
     :param source_format:
         String representing the source format. The possible values are depending on the
-        source type. See `libvirt documentation <https://libvirt.org/storage.html>`_ for
+        source type. See `libvirt documentation on storage <https://libvirt.org/storage.html>`_ for
         the possible values.
     :param start: Pool start (default True)
     :param transient:
