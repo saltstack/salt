@@ -32,9 +32,11 @@ log = logging.getLogger(__name__)
 
 DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
 
+
 def _refresh_dmidecoder():
     global DMIDECODER
     DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
+
 
 def __virtual__():
     '''
