@@ -164,7 +164,11 @@ def setenforce(mode):
             msg = 'Could not write SELinux enforce file: {0}'
             raise CommandExecutionError(msg.format(str(exc)))
 
-    config = '/etc/selinux/config'
+    if 'RedHat' == __grains__['os_family']:
+        config = '/etc/sysconfig/selinux'
+
+    elif 'Debian' == __grains__['os_family']:
+        config = '/etc/selinux/config'
     try:
         with salt.utils.fopen(config, 'r') as _cf:
             conf = _cf.read()
