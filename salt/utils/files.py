@@ -65,6 +65,34 @@ def __clean_tmp(tmp):
         pass
 
 
+def dynamic_buf_size(filepath=None, max_size=1048576, size=-1):
+    '''
+    Return the recommend buffering size for a file.
+    Allow the caller to set the `max_size` and also provide the
+    `size` of the file rather than this function determining it.
+    '''
+
+    if size < 0:
+        try:
+            if (not filepath or
+                    not isinstance(filepath, six.string_types) or
+                    not os.path.isfile(filepath)):
+                return -1
+            size = os.path.getsize(filepath)
+        except os.error:
+            return -1
+
+    if size < 32768:  # 32k Max 4 reads is 8k
+        iosize = 8192
+    elif size < 131072:  # 128k  Max 8 reads 16k
+        iosize = 16384
+    elif size < 1048576:  # 1024k  Max 16 reads 64k
+        iosize = 65536
+    else:
+        iosize = 1048576
+    return max_size if iosize > max_size else iosize
+
+
 def guess_archive_type(name):
     '''
     Guess an archive type (tar, zip, or rar) by its file extension
@@ -383,6 +411,16 @@ def fopen(*args, **kwargs):
 
     if six.PY3 and not binary and not kwargs.get('newline', None):
         kwargs['newline'] = ''
+
+    # capature the file name
+    if len(args) > 0:
+        filename = args[0]
+    else:
+        filename = kwargs.get('name', None)
+
+    # capture buffering size and set if missing
+    if len(args) < 3 and 'buffering' not in kwargs:
+        kwargs['buffering'] = dynamic_buf_size(filename)
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
