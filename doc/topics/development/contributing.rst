@@ -21,11 +21,21 @@ SaltStack has its own coding style guide that informs contributors on various co
 approaches. Please review the :ref:`Salt Coding Style <coding-style>` documentation
 for information about Salt's particular coding patterns.
 
-Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a section
-about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
-file on any files you are changing with your code contribution before submitting a
-pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`
-documentation for more information.
+Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a
+section about running Salt's ``.testing.pylintrc`` file. SaltStack recommends
+running the ``.testing.pylintrc`` file on any files you are changing with your
+code contribution before submitting a pull request to Salt's repository. Please
+see the :ref:`Linting<pylint-instructions>` documentation for more information.
+
+.. note::
+
+    There are two pylint files in the ``salt`` directory. One is the
+    ``.pylintrc`` file and the other is the ``.testing.pylintrc`` file. The
+    tests that run in Jenkins against GitHub Pull Requests use
+    ``.testing.pylintrc``. The ``testing.pylintrc`` file is a little less
+    strict than the ``.pylintrc`` and is used to make it easier for contributors
+    to submit changes. The ``.pylintrc`` file can be used for linting, but the
+    ``testing.pylintrc`` is the source of truth when submitting pull requests.
 
 
 .. _github-pull-request:
