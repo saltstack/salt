@@ -859,7 +859,7 @@ class RemoteFuncs(object):
         if not good:
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warning('Minion id %s is not who it says it is!', load['id'])
+            log.warning('Minion id %s does not have permission to run wheel module: %s', load['id'], load['fun'])
             return {}
         # Prepare the runner object
         opts = {}
