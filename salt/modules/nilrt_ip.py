@@ -368,7 +368,7 @@ def _get_static_info(interface):
     }
     hwaddr_section_number = ''.join(data['hwaddr'].split(':'))
     if os.path.exists(INTERFACES_CONFIG):
-        information = _load_config(hwaddr_section_number, ['IPv4', 'Nameservers'], file=INTERFACES_CONFIG)
+        information = _load_config(hwaddr_section_number, ['IPv4', 'Nameservers'], filename=INTERFACES_CONFIG)
         if information['IPv4'] != '':
             ipv4_information = information['IPv4'].split('/')
             data['ipv4']['address'] = ipv4_information[0]
