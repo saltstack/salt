@@ -3659,7 +3659,7 @@ WIN_TEST_FILE = 'c:/testfile'
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not IS_WINDOWS, 'windows test only')
 class WinFileTest(ModuleCase):
     '''
     Test for the file state on Windows
@@ -3688,7 +3688,7 @@ class WinFileTest(ModuleCase):
         Test file.comment on Windows
         '''
         self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
-        with salt.utils.fopen(WIN_TEST_FILE, 'r') as fp_:
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#Only'))
 
     def test_file_replace(self):
@@ -3696,7 +3696,7 @@ class WinFileTest(ModuleCase):
         Test file.replace on Windows
         '''
         self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
-        with salt.utils.fopen(WIN_TEST_FILE, 'r') as fp_:
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
             self.assertIn('testing', fp_.read())
 
     def test_file_absent(self):
