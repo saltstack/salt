@@ -32,6 +32,7 @@ from salt.ext.six.moves.urllib.request import (
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
