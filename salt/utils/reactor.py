@@ -433,7 +433,19 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error(
+                    "Reactor '%s' failed  to execute %s '%s': "
+                    "TaskPool queue is full!"
+                    " Consider tuning reactor_worker_threads and/or"
+                    " reactor_worker_hwm",
+                    low["__id__"],
+                    low["state"],
+                    low["fun"],
+                )
+
         except SystemExit:
             log.warning("Reactor '%s' attempted to exit. Ignored.", low["__id__"])
         except Exception:  # pylint: disable=broad-except
