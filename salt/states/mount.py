@@ -207,8 +207,9 @@ def mounted(name,
         opts = 'noowners'
 
     # Defaults is not a valid option on AIX
-    if __grains__['os'] in ['AIX'] and opts == 'defaults':
-        opts = ''
+    if __grains__['os'] in ['AIX']:
+        if opts == 'defaults':
+            opts = ''
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
@@ -738,7 +739,9 @@ def swap(name, persist=True, config='/etc/fstab'):
             ret['result'] = False
 
     if persist:
+        device_key_name = 'device'
         if 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
             if '/etc/fstab' == config:
                 # Override default for AIX
                 config = "/etc/filesystems"
@@ -754,7 +757,7 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and \
+            if fstab_data['none'][device_key_name] == name and \
                fstab_data['none']['fstype'] != 'swap':
                 return ret
 
@@ -861,11 +864,13 @@ def unmounted(name,
         cache_result = __salt__['mount.delete_mount_cache'](name)
 
     if persist:
+        device_key_name = 'device'
         # Override default for Mac OS
         if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
             config = "/etc/auto_salt"
             fstab_data = __salt__['mount.automaster'](config)
         elif 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
             if config == '/etc/fstab':
                 config = "/etc/filesystems"
             fstab_data = __salt__['mount.filesystems'](config)
@@ -876,7 +881,7 @@ def unmounted(name,
             ret['comment'] += '. fstab entry not found'
         else:
             if device:
-                if fstab_data[name]['device'] != device:
+                if fstab_data[name][device_key_name] != device:
                     ret['comment'] += '. fstab entry for device {0} not found'.format(device)
                     return ret
             if __opts__['test']:

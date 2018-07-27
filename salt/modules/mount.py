@@ -1209,8 +1209,9 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
 
     # use of fstype on AIX differs from typical Linux use of -t functionality
     # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-    if fstype and 'AIX' in __grains__['os']:
-        args += ' -v {0}'.format(fstype)
+    if 'AIX' in __grains__['os']:
+        if fstype:
+            args += ' -v {0}'.format(fstype)
     else:
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
@@ -1257,8 +1258,10 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
 
         # use of fstype on AIX differs from typical Linux use of -t functionality
         # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-        if fstype and 'AIX' in __grains__['os']:
-            args += ' -v {0}'.format(fstype)
+        if 'AIX' in __grains__['os']:
+            if fstype:
+                args += ' -v {0}'.format(fstype)
+            args += ' -o remount'
         else:
             args += ' -t {0}'.format(fstype)
 
@@ -1643,7 +1646,12 @@ def filesystems(config='/etc/filesystems'):
     if 'AIX' not in __grains__['kernel']:
         return ret
 
-    return _filesystems(config)
+    ret_dict = _filesystems(config)
+    if ret_dict:
+        ret_key = ret_dict.keys()[0]
+        ret = {ret_key: dict(ret_dict[ret_key])}
+
+    return ret
 
 
 def set_filesystems(
