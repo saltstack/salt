@@ -5,7 +5,6 @@ Salt module to manage Unix mounts and the fstab file
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from collections import OrderedDict
 import os
 import re
 import logging
@@ -18,6 +17,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.mount
 import salt.utils.stringutils
+from salt.utils.odict import OrderedDict
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
