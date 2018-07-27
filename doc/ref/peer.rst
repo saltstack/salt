@@ -108,6 +108,12 @@ Peer Wheel Communication
 
 .. versionadded: Fluorine
 
+.. warning::
+
+    Any of the below configurations allow the minion to be able to control the
+    master.  Any minion that has the ability to use these functions will be
+    **fully trusted** by the master.
+
 Configuration to allow minions to execute wheel functions from the master is
 done via the ``peer_wheel`` option on the master. The ``peer_wheel``
 configuration follows the same logic as the ``peer`` option. The only
@@ -120,11 +126,6 @@ To open up access to all minions to all wheel:
     peer_wheel:
       .*:
         - .*
-
-.. warning::
-
-    The above configuration allows all the minions to control the master,
-    including changing master configuration files.
 
 This configuration will allow minions with IDs ending in example.com access
 to the key wheel functions.

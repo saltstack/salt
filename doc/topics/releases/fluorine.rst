@@ -186,6 +186,11 @@ Wheel Peering Options
 A ``publish.wheel`` module has been added, allowing access to the wheel
 functions on the master.
 
+.. warning:
+
+    This can be used to gain full access of the master.  This should be used
+    sparingly and only when it cannot be avoided.
+
 The peer configuration can be found :ref:`here <peer-wheel>`.
 
 
