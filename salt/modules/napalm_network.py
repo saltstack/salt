@@ -32,6 +32,12 @@ import salt.utils.templates
 
 # Import 3rd-party libs
 from salt.ext import six
+try:
+    from salt.utils import fopen
+    from salt.utils import mkstemp
+except ImportError:
+    from salt.utils.files import fopen
+    from salt.utils.files import mkstemp
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -1855,5 +1861,385 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
             )
 
     return result, comment
+
+
+def save_config(source=None,
+                path=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Save the configuration to a file on the local file system.
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``,
+        ``startup``. Default: ``running``.
+
+    path
+        Absolute path to file where to save the configuration.
+        To push the files to the Master, use
+        :mod:`cp.push <salt.modules.cp.push>` Execution function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.save_config source=running
+    '''
+    if not source:
+        source = 'running'
+    if not path:
+        path = mkstemp()
+    running_config = __salt__['net.config'](source=source)
+    if not running_config or not running_config['result']:
+        log.error('Unable to retrieve the config')
+        return running_config
+    with fopen(path, 'w') as fh_:
+        fh_.write(running_config['out'][source])
+    return {
+        'result': True,
+        'out': path,
+        'comment': '{source} config saved to {path}'.format(source=source, path=path)
+    }
+
+
+def replace_pattern(pattern,
+                    repl,
+                    count=0,
+                    flags=8,
+                    bufsize=1,
+                    append_if_not_found=False,
+                    prepend_if_not_found=False,
+                    not_found_content=None,
+                    search_only=False,
+                    show_changes=True,
+                    backslash_literal=False,
+                    source=None,
+                    path=None,
+                    test=False,
+                    replace=True,
+                    debug=False,
+                    commit=True):
+    '''
+    .. versionadded:: Fluorine
+
+    Replace occurrences of a pattern in the configuration source. If
+    ``show_changes`` is ``True``, then a diff of what changed will be returned,
+    otherwise a ``True`` will be returned when changes are made, and ``False``
+    when no changes are made.
+    This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
+
+    pattern
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
+
+    repl
+        The replacement text.
+
+    count: ``0``
+        Maximum number of pattern occurrences to be replaced. If count is a
+        positive integer ``n``, only ``n`` occurrences will be replaced,
+        otherwise all occurrences will be replaced.
+
+    flags (list or int): ``8``
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
+        correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
+        'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
+        corresponding to the XOR (``|``) of all the desired flags. Defaults to
+        8 (which supports 'MULTILINE').
+
+    bufsize (int or str): ``1``
+        How much of the configuration to buffer into memory at once. The
+        default value ``1`` processes one line at a time. The special value
+        ``file`` may be specified which will read the entire file into memory
+        before processing.
+
+    append_if_not_found: ``False``
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
+
+    prepend_if_not_found: ``False``
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
+
+    not_found_content
+        Content to use for append/prepend if not found. If None (default), uses
+        ``repl``. Useful when ``repl`` uses references to group in pattern.
+
+    search_only: ``False``
+        If set to true, this no changes will be performed on the file, and this
+        function will simply return ``True`` if the pattern was matched, and
+        ``False`` if not.
+
+    show_changes: ``True``
+        If ``True``, return a diff of changes made. Otherwise, return ``True``
+        if changes were made, and ``False`` if not.
+
+    backslash_literal: ``False``
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``, or
+        ``startup``. Default: ``running``.
+
+    path
+        Save the temporary configuration to a specific path, then read from
+        there.
+
+    test: ``False``
+        Dry run? If set as ``True``, will apply the config, discard and return
+        the changes. Default: ``False`` and will commit the changes on the
+        device.
+
+    commit: ``True``
+        Commit the configuration changes? Default: ``True``.
+
+    debug: ``False``
+        Debug mode. Will insert a new key in the output dictionary, as
+        ``loaded_config`` containing the raw configuration loaded on the device.
+
+    replace: ``True``
+        Load and replace the configuration. Default: ``True``.
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' net.replace_pattern "bind-address\\s*=" "bind-address:"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.replace_pattern PREFIX-LIST_NAME new-prefix-list-name
+        salt '*' net.replace_pattern bgp-group-name new-bgp-group-name count=1
+    '''
+    config_saved = save_config(source=source, path=path)
+    if not config_saved or not config_saved['result']:
+        return config_saved
+    path = config_saved['out']
+    replace_pattern = __salt__['file.replace'](path,
+                                               pattern,
+                                               repl,
+                                               count=count,
+                                               flags=flags,
+                                               bufsize=bufsize,
+                                               append_if_not_found=append_if_not_found,
+                                               prepend_if_not_found=prepend_if_not_found,
+                                               not_found_content=not_found_content,
+                                               search_only=search_only,
+                                               show_changes=show_changes,
+                                               backslash_literal=backslash_literal)
+    with fopen(path, 'r') as fh_:
+        updated_config = fh_.read()
+    return __salt__['net.load_config'](text=updated_config,
+                                       test=test,
+                                       debug=debug,
+                                       replace=replace,
+                                       commit=commit)
+
+
+def blockreplace(marker_start,
+                 marker_end,
+                 content='',
+                 append_if_not_found=False,
+                 prepend_if_not_found=False,
+                 show_changes=True,
+                 append_newline=False,
+                 source='running',
+                 path=None,
+                 test=False,
+                 commit=True,
+                 debug=False,
+                 replace=True):
+    '''
+    .. versionadded:: Fluorine
+
+    Replace content of the configuration source, delimited by the line markers.
+
+    A block of content delimited by comments can help you manage several lines
+    without worrying about old entries removal.
+
+    marker_start
+        The line content identifying a line as the start of the content block.
+        Note that the whole line containing this marker will be considered,
+        so whitespace or extra content before or after the marker is included
+        in final output.
+
+    marker_end
+        The line content identifying a line as the end of the content block.
+        Note that the whole line containing this marker will be considered,
+        so whitespace or extra content before or after the marker is included
+        in final output.
+
+    content
+        The content to be used between the two lines identified by
+        ``marker_start`` and ``marker_stop``.
+
+    append_if_not_found: ``False``
+        If markers are not found and set to True then, the markers and content
+        will be appended to the file.
+
+    prepend_if_not_found: ``False``
+        If markers are not found and set to True then, the markers and content
+        will be prepended to the file.
+
+    append_newline: ``False``
+        Controls whether or not a newline is appended to the content block.
+        If the value of this argument is ``True`` then a newline will be added
+        to the content block. If it is ``False``, then a newline will not be
+        added to the content block. If it is ``None`` then a newline will only
+        be added to the content block if it does not already end in a newline.
+
+    show_changes: ``True``
+        Controls how changes are presented. If ``True``, this function will
+        return the of the changes made.
+        If ``False``, then it will return a boolean (``True`` if any changes
+        were made, otherwise False).
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``, or
+        ``startup``. Default: ``running``.
+
+    path: ``None``
+        Save the temporary configuration to a specific path, then read from
+        there. This argument is optional, can be used when you prefers a
+        particular location of the temporary file.
+
+    test: ``False``
+        Dry run? If set as ``True``, will apply the config, discard and return
+        the changes. Default: ``False`` and will commit the changes on the
+        device.
+
+    commit: ``True``
+        Commit the configuration changes? Default: ``True``.
+
+    debug: ``False``
+        Debug mode. Will insert a new key in the output dictionary, as
+        ``loaded_config`` containing the raw configuration loaded on the device.
+
+    replace: ``True``
+        Load and replace the configuration. Default: ``True``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.blockreplace 'ntp' 'interface' ''
+    '''
+    config_saved = save_config(source=source, path=path)
+    if not config_saved or not config_saved['result']:
+        return config_saved
+    path = config_saved['out']
+    replace_pattern = __salt__['file.blockreplace'](path,
+                                                    marker_start=marker_start,
+                                                    marker_end=marker_end,
+                                                    content=content,
+                                                    append_if_not_found=append_if_not_found,
+                                                    prepend_if_not_found=prepend_if_not_found,
+                                                    show_changes=show_changes,
+                                                    append_newline=append_newline)
+    with fopen(path, 'r') as fh_:
+        updated_config = fh_.read()
+    return __salt__['net.load_config'](text=updated_config,
+                                       test=test,
+                                       debug=debug,
+                                       replace=replace,
+                                       commit=commit)
+
+
+def patch(patchfile,
+          options='',
+          saltenv='base',
+          source_hash=None,
+          show_changes=True,
+          source='running',
+          path=None,
+          test=False,
+          commit=True,
+          debug=False,
+          replace=True):
+    '''
+    .. versionadded:: Fluorine
+
+    Apply a patch to the configuration source, and load the result into the
+    running config of the device.
+
+    patchfile
+        A patch file to apply to the configuration source.
+
+    options
+        Options to pass to patch.
+
+    source_hash
+        If the patch file (specified via the ``patchfile`` argument)  is an
+        HTTP(S) or FTP URL and the file exists in the minion's file cache, this
+        option can be passed to keep the minion from re-downloading the file if
+        the cached copy matches the specified hash.
+
+    show_changes: ``True``
+        Controls how changes are presented. If ``True``, this function will
+        return the of the changes made.
+        If ``False``, then it will return a boolean (``True`` if any changes
+        were made, otherwise False).
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``, or
+        ``startup``. Default: ``running``.
+
+    path: ``None``
+        Save the temporary configuration to a specific path, then read from
+        there. This argument is optional, can the user prefers a particular
+        location of the temporary file.
+
+    test: ``False``
+        Dry run? If set as ``True``, will apply the config, discard and return
+        the changes. Default: ``False`` and will commit the changes on the
+        device.
+
+    commit: ``True``
+        Commit the configuration changes? Default: ``True``.
+
+    debug: ``False``
+        Debug mode. Will insert a new key in the output dictionary, as
+        ``loaded_config`` containing the raw configuration loaded on the device.
+
+    replace: ``True``
+        Load and replace the configuration. Default: ``True``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.patch https://example.com/running_config.patch
+    '''
+    config_saved = save_config(source=source, path=path)
+    if not config_saved or not config_saved['result']:
+        return config_saved
+    path = config_saved['out']
+    patchfile_cache = __salt__['cp.cache_file'](patchfile)
+    if patchfile_cache is False:
+        return {
+            'out': None,
+            'result': False,
+            'comment': 'The file "{}" does not exist.'.format(patchfile)
+        }
+    replace_pattern = __salt__['file.patch'](path,
+                                             patchfile_cache,
+                                             options=options)
+    with fopen(path, 'r') as fh_:
+        updated_config = fh_.read()
+    return __salt__['net.load_config'](text=updated_config,
+                                       test=test,
+                                       debug=debug,
+                                       replace=replace,
+                                       commit=commit)
+
 
 # <---- Configuration specific functions -------------------------------------------------------------------------------
