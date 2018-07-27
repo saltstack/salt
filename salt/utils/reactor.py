@@ -422,7 +422,7 @@ class ReactWrap(object):
             if ret is False:
                 log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
                             'TaskPool queue is full!'
-                            'Consider tuning reactor_worker_threads and/or'
+                            ' Consider tuning reactor_worker_threads and/or'
                             ' reactor_worker_hwm',
                             low['__id__'], low['state'], low['fun']
                 )
