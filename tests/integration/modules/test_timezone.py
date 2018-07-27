@@ -9,7 +9,7 @@ Linux and Solaris are supported
 from __future__ import absolute_import
 
 try:
-    import tzlocal
+    import tzlocal  # pylint: disable=unused-import
     HAS_TZLOCAL = True
 except ImportError:
     HAS_TZLOCAL = False
