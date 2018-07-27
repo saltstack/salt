@@ -102,7 +102,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                          ret)
 
                     umount1 = ("Forced unmount because devices don't match. "
-                               "Wanted: {0}, current: {1}, {1}".format(os.path.realpath('/dev/sdb6'), device))
+                               "Wanted: {0}, current: {1}, {1}"
+                               .format(os.path.realpath('/dev/sdb6'), device))
                     comt = ('Unable to unmount')
                     ret.update({'comment': comt, 'result': None,
                                 'changes': {'umount': umount1}})
@@ -135,7 +136,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__opts__, {'test': True}), \
                             patch('os.path.exists', MagicMock(return_value=False)):
                         comt = ('{0} does not exist and would neither be created nor mounted. '
-                                '{0} needs to be written to the fstab in order to be made persistent.'.format(name))
+                                '{0} needs to be written to the fstab in order to be made persistent.'
+                                .format(name))
                         ret.update({'comment': comt, 'result': None})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
@@ -286,13 +288,15 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(mount.swap(name), ret)
 
                 with patch.dict(mount.__opts__, {'test': False}):
-                    comt = ('Swap {0} already active. swap not present in /etc/filesystems on AIX.'.format(name))
+                    comt = ('Swap {0} already active. swap not present'
+                            ' in /etc/filesystems on AIX.'.format(name))
                     ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(mount.swap(name), ret)
 
                     with patch.dict(mount.__salt__, {'mount.filesystems': mock_emt,
                                                      'mount.set_filesystems': mock}):
-                        comt = ('Swap {0} already active. swap not present in /etc/filesystems on AIX.'.format(name))
+                        comt = ('Swap {0} already active. swap not present'
+                                ' in /etc/filesystems on AIX.'.format(name))
                         ret.update({'comment': comt, 'result': False})
                         self.assertDictEqual(mount.swap(name), ret)
 
@@ -315,13 +319,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_dev = MagicMock(return_value={name: {'device': device}})
         mock_fs = MagicMock(return_value={name: {'device': name}})
         mock_mnt = MagicMock(side_effect=[{name: {}}, {}, {}, {}])
-        
+
         name3 = os.path.realpath('/mnt/jfs2')
         device3 = '/dev/hd1'
         fstype3 = 'jfs2'
         opts3 = ['']
         mock_mnta = MagicMock(return_value={name3: {'device': device3, 'opts': opts3}})
         mock_aixfs = MagicMock(return_value={name: {'dev': name3, 'fstype': fstype3}})
+        mock_delete_cache = MagicMock(return_value=True)
 
         comt3 = ('Mount point /mnt/sdb is unmounted but needs to be purged '
                  'from /etc/auto_salt to be made persistent')
@@ -371,14 +376,16 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                     {'mount.filesystems': mock_dev}):
                         comt = ('Mount point {0} is mounted but should not '
                                 'be'.format(name3))
-                        ret.update({'comment': comt, 'result': None, 'name':name3})
+                        ret.update({'comment': comt, 'result': None, 'name': name3})
                         self.assertDictEqual(mount.unmounted(name3, device3,
                                                              persist=True), ret)
-###### HERE DGM
-                    with patch.dict(mount.__opts__, {'test': False}), \
-                        patch.dict(mount.__salt__, { 'mount.umount': mock_t}):
-                            comt = ('Target was already unmounted')
-                            ret.update({'comment': comt, 'result': True, 'name': name3})
+
+                        with patch.dict(mount.__opts__, {'test': False}), \
+                                patch.dict(mount.__salt__, {'mount.umount': mock_t,
+                                'mount.delete_mount_cache': mock_delete_cache}):
+                            comt = ('Target was successfully unmounted')
+                            ret.update({'comment': comt, 'result': True,
+                                        'name': name3, 'changes': {'umount': True}})
                             self.assertDictEqual(mount.unmounted(name3, device3), ret)
 
     # 'mod_watch' function tests: 1

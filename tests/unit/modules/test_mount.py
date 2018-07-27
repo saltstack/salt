@@ -84,7 +84,6 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mount, '_active_mounts_aix', mock):
                 self.assertEqual(mount.active(), {})
 
-
     def test_fstab(self):
         '''
         List the content of the fstab
@@ -143,9 +142,9 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             ''')
         mock = MagicMock(return_value=True)
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
-            patch.object(os.path, 'isfile', mock), \
-            patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
-                self.assertEqual(mount.filesystems(), {})
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertEqual(mount.filesystems(), {})
 
         file_data = textwrap.dedent('''\
             #
@@ -165,15 +164,15 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(os.path, 'isfile', mock), \
                 patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
             fsyst = mount.filesystems()
-            test_fsyst = { '/home': {'dev': '/dev/hd1',
-                             'vfs': 'jfs2',
-                             'log': '/dev/hd8',
-                             'mount': 'true',
-                             'check': 'true',
-                             'vol': '/home',
-                             'free': 'false',
-                             'quota': 'no'} }
-            self.assertEqual( test_fsyst, fsyst)
+            test_fsyst = {'/home': {'dev': '/dev/hd1',
+                            'vfs': 'jfs2',
+                            'log': '/dev/hd8',
+                            'mount': 'true',
+                            'check': 'true',
+                            'vol': '/home',
+                            'free': 'false',
+                            'quota': 'no'}}
+            self.assertEqual(test_fsyst, fsyst)
 
     def test_rm_fstab(self):
         '''
@@ -238,7 +237,6 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertDictEqual(mount.automaster(), {})
 
-
     def test_rm_filesystems(self):
         '''
         Remove the mount point from the filesystems
@@ -249,9 +247,9 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             ''')
         mock = MagicMock(return_value=True)
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
-            patch.object(os.path, 'isfile', mock), \
-            patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
-                self.assertFalse(mount.rm_filesystems('name', 'device'))
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertFalse(mount.rm_filesystems('name', 'device'))
 
         file_data = textwrap.dedent('''\
             #
@@ -260,13 +258,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     vol             = /name
 
             ''')
-        
+
         mock = MagicMock(return_value=True)
         mock_fsyst = MagicMock(return_value=True)
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
-            patch.object(os.path, 'isfile', mock), \
-            patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
-                self.assertTrue(mount.rm_filesystems('/name', 'device'))
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertTrue(mount.rm_filesystems('/name', 'device'))
 
     def test_set_filesystems(self):
         '''
@@ -275,7 +273,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         if it is not present.
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}) :
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
             with patch.object(os.path, 'isfile', mock):
                 self.assertRaises(CommandExecutionError,
                               mount.set_filesystems, 'A', 'B', 'C')
@@ -444,7 +442,6 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     'used': 11264}
             }, swaps
 
-
     def test_swapon(self):
         '''
         Activate a swap disk
@@ -544,10 +541,10 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={})
         with patch.object(mount, 'active', mock), \
-            patch.dict(mount.__grains__, {'kernel': ''}):
-                self.assertFalse(mount.is_mounted('name'))
+                patch.dict(mount.__grains__, {'kernel': ''}):
+            self.assertFalse(mount.is_mounted('name'))
 
         mock = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'active', mock), \
-            patch.dict(mount.__grains__, {'kernel': ''}):
-                self.assertTrue(mount.is_mounted('name'))
+                patch.dict(mount.__grains__, {'kernel': ''}):
+            self.assertTrue(mount.is_mounted('name'))
