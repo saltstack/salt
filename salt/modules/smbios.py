@@ -19,6 +19,7 @@ import re
 
 # Import salt libs
 import salt.utils.path
+from salt.exceptions import CommandExecutionError
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -32,10 +33,16 @@ log = logging.getLogger(__name__)
 DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
 
 
+def _refresh_dmidecoder():
+    global DMIDECODER
+    DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
+
+
 def __virtual__():
     '''
     Only work when dmidecode is installed.
     '''
+    _refresh_dmidecoder()
     if DMIDECODER is None:
         log.debug('SMBIOS: neither dmidecode nor smbios found!')
         return (False, 'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
@@ -327,6 +334,10 @@ def _dmidecoder(args=None):
     '''
     Call DMIdecode
     '''
+    _refresh_dmidecoder()
+    if DMIDECODER is None:
+        raise CommandExecutionError('SMBIOS: neither dmidecode nor smbios found!')
+
     if args is None:
         return salt.modules.cmdmod._run_quiet(DMIDECODER)
     else:
