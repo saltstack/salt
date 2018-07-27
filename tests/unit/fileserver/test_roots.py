@@ -12,7 +12,7 @@ import tempfile
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import FILES, TMP, TMP_STATE_TREE
+from tests.support.paths import BASE_FILES, TMP, TMP_STATE_TREE
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
@@ -20,6 +20,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 import salt.fileserver.roots as roots
 import salt.fileclient
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.platform
 
 try:
@@ -63,7 +64,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         else:
             cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=TMP)
-        full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
+        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
         with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
             with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
@@ -95,7 +96,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.find_file('testfile')
         self.assertEqual('testfile', ret['rel'])
 
-        full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
+        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
         self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
@@ -108,34 +109,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                    'rel': 'testfile'}
             ret = roots.serve_file(load, fnd)
 
-            data = b'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ' \
-                   b'ARTHUR:  And this enchanter of whom you speak, he ' \
-                   b'has seen the grail?\n  OLD MAN:  Ha ha he he he ' \
-                   b'he!\n  ARTHUR:  Where does he live?  Old man, where ' \
-                   b'does he live?\n  OLD MAN:  He knows of a cave, a ' \
-                   b'cave which no man has entered.\n  ARTHUR:  And the ' \
-                   b'Grail... The Grail is there?\n  OLD MAN:  Very much ' \
-                   b'danger, for beyond the cave lies the Gorge\n      ' \
-                   b'of Eternal Peril, which no man has ever crossed.\n  ' \
-                   b'ARTHUR:  But the Grail!  Where is the Grail!?\n  ' \
-                   b'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  ' \
-                   b'The Bridge of Death, which leads to the Grail?\n  ' \
-                   b'OLD MAN:  Hee hee ha ha!\n\n'
-            if salt.utils.platform.is_windows():
-                data = b'Scene 24\r\n\r\n \r\n  OLD MAN:  Ah, hee he he ' \
-                       b'ha!\r\n  ARTHUR:  And this enchanter of whom you ' \
-                       b'speak, he has seen the grail?\r\n  OLD MAN:  Ha ha ' \
-                       b'he he he he!\r\n  ARTHUR:  Where does he live?  Old ' \
-                       b'man, where does he live?\r\n  OLD MAN:  He knows of ' \
-                       b'a cave, a cave which no man has entered.\r\n  ' \
-                       b'ARTHUR:  And the Grail... The Grail is there?\r\n  ' \
-                       b'OLD MAN:  Very much danger, for beyond the cave lies ' \
-                       b'the Gorge\r\n      of Eternal Peril, which no man ' \
-                       b'has ever crossed.\r\n  ARTHUR:  But the Grail!  ' \
-                       b'Where is the Grail!?\r\n  OLD MAN:  Seek you the ' \
-                       b'Bridge of Death.\r\n  ARTHUR:  The Bridge of Death, ' \
-                       b'which leads to the Grail?\r\n  OLD MAN:  Hee hee ha ' \
-                       b'ha!\r\n\r\n'
+            with salt.utils.files.fopen(
+                    os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+                data = fp_.read()
 
             self.assertDictEqual(
                 ret,
@@ -163,9 +139,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
         # Hashes are different in Windows. May be how git translates line
         # endings
-        hsum = 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df'
-        if salt.utils.platform.is_windows():
-            hsum = '754aa260e1f3e70f43aaf92149c7d1bad37f708c53304c37660e628d7553f687'
+        with salt.utils.files.fopen(
+                os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+            hsum = salt.utils.hashutils.sha256_digest(fp_.read())
 
         self.assertDictEqual(
             ret,
