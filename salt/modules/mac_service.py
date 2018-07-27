@@ -557,7 +557,6 @@ def disabled(name, runas=None, domain='system'):
     disabled = launchctl('print-disabled',
                          domain,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
     for service in disabled.split("\n"):
         if name in service:

@@ -236,6 +236,9 @@ Server configuration values and their defaults:
     # Use TLS when connecting
     auth.ldap.tls: False
 
+    # Use STARTTLS when connecting
+    auth.ldap.starttls: False
+
     # LDAP scope level, almost always 2
     auth.ldap.scope: 2
 

@@ -68,10 +68,10 @@ if USE_IMPORTLIB:
     SUFFIXES = []
     for suffix in importlib.machinery.EXTENSION_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_EXTENSION))
-    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
-        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     for suffix in importlib.machinery.SOURCE_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_SOURCE))
+    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
+        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     MODULE_KIND_MAP = {
         MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
         MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
