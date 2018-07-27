@@ -576,6 +576,11 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         return {'result': False,
                 'data': trb}
 
+def clear_template_cache():
+    '''
+    Clear list of cached template files so they can be re-fetched from the master.
+    '''
+    salt.utils.jinja.SaltCacheLoader.clear_cache()
 
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)

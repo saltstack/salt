@@ -53,6 +53,8 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
+from salt.utils.templates import clear_template_cache
+
 # Import third party libs
 import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -754,6 +756,8 @@ class State(object):
         self.instance_id = six.text_type(id(self))
         self.inject_globals = {}
         self.mocked = mocked
+
+        clear_template_cache() # Nuke list of cached template files, so they can be re-fetched from master
 
     def _gather_pillar(self):
         '''
