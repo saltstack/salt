@@ -521,6 +521,12 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
+Minion Configuration Deprecations
+---------------------------------
+
+The :conf_minion:`master_shuffle` configuration option is deprecated as of the
+``Fluorine`` release. Please use the :conf_minion:`random_master` option instead.
+
 Module Deprecations
 -------------------
 
