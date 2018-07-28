@@ -20,6 +20,7 @@ import platform
 import logging
 import locale
 import uuid
+import zlib
 from errno import EACCES, EPERM
 import datetime
 
@@ -2656,30 +2657,11 @@ def get_server_id():
     #   server_id
 
     if salt.utils.platform.is_proxy():
-        return {}
-    id_ = __opts__.get('id', '')
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__['cmd.run'](
-            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
-            env={'PYTHONHASHSEED': '0'}
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                'Failed to hash the ID to get the server_id grain. Result of '
-                'hash command: %s', id_hash
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
+        server_id = {}
+    else:
+        server_id = {'server_id': zlib.adler32(__opts__.get('id', '').encode())}
 
-    return {'server_id': abs(id_hash % (2 ** 31))}
+    return server_id
 
 
 def get_master():
