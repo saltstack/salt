@@ -83,13 +83,10 @@ def get(string, clean=True):
 
     # Cleanup possible comments in strings.
     val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
+    if clean or val.startswith('/dev/mem') or not _dmi_isclean(string, val):
+        val = None
 
-    # handle missing /dev/mem
-    if val.startswith('/dev/mem'):
-        return None
-
-    if not clean or _dmi_isclean(string, val):
-        return val
+    return val
 
 
 def records(rec_type=None, fields=None, clean=True):
