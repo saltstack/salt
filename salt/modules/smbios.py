@@ -83,7 +83,7 @@ def get(string, clean=True):
 
     # Cleanup possible comments in strings.
     val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
-    if clean or val.startswith('/dev/mem') or not _dmi_isclean(string, val):
+    if val.startswith('/dev/mem') or clean and not _dmi_isclean(string, val):
         val = None
 
     return val
