@@ -29,18 +29,13 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 log = logging.getLogger(__name__)
 
-DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
-
 
 def __virtual__():
     '''
     Only work when dmidecode is installed.
     '''
-    if DMIDECODER is None:
-        log.debug('SMBIOS: neither dmidecode nor smbios found!')
-        return (False, 'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
-    else:
-        return True
+    return (bool(salt.utils.path.which_bin(['dmidecode', 'smbios'])),
+            'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
 
 
 def get(string, clean=True):
