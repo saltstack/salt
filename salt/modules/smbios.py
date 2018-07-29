@@ -327,7 +327,11 @@ def _dmidecoder(args=None):
     '''
     Call DMIdecode
     '''
-    if args is None:
-        return salt.modules.cmdmod._run_quiet(DMIDECODER)
+    dmidecoder = salt.utils.path.which_bin(['dmidecode', 'smbios'])
+
+    if not args:
+        out = salt.modules.cmdmod._run_quiet(dmidecoder)
     else:
-        return salt.modules.cmdmod._run_quiet('{0} {1}'.format(DMIDECODER, args))
+        out = salt.modules.cmdmod._run_quiet('{0} {1}'.format(dmidecoder, args))
+
+    return out
