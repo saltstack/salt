@@ -1679,18 +1679,9 @@ def absent(name,
     return ret
 
 
-# Helper to match a given name against one or more pre-compiled regular
-# expressions
-def _matches(name, reprogs=[]):
-    for prog in reprogs:
-        if prog.match(name):
-            return True
-    return False
-
-
 def tidied(name,
            age=0,
-           matches=['.*'],
+           matches=None,
            rmdirs=False,
            size=0,
            **kwargs):
@@ -1709,7 +1700,7 @@ def tidied(name,
         Maximum age in days after which files are considered for removal
 
     matches
-        Array of regular expressions to restrict what gets removed
+        List of regular expressions to restrict what gets removed.  Default: ['.*']
 
     rmdirs
         Whether or not it's allowed to remove directories
@@ -1737,8 +1728,6 @@ def tidied(name,
            'comment': ''}
 
     # Check preconditions
-    if not name:
-        return _error(ret, 'Must provide name to file.tidied')
     if not os.path.isabs(name):
         return _error(ret, 'Specified file {0} is not an absolute path'.format(name))
     if not os.path.isdir(name):
@@ -1749,9 +1738,19 @@ def tidied(name,
     today = date.today()
 
     # Compile regular expressions
+    if matches is None:
+        matches = ['.*']
     progs = []
     for regex in matches:
         progs.append(re.compile(regex))
+
+    # Helper to match a given name against one or more pre-compiled regular
+    # expressions
+    def _matches(name):
+        for prog in progs:
+            if prog.match(name):
+                return True
+        return False
 
     # Iterate over given directory tree, depth-first
     for root, dirs, files in os.walk(top=name, topdown=False):
@@ -1764,7 +1763,7 @@ def tidied(name,
             if os.path.islink(path):
                 # Get age of symlink (not symlinked file)
                 myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
-            elif os.path.isdir(path):
+            elif elem in dirs:
                 # Get age of directory, check if directories should be deleted at all
                 myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
                 deleteme = rmdirs
@@ -1773,21 +1772,19 @@ def tidied(name,
                 myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
                 mysize = os.path.getsize(path)
             # Verify against given criteria, collect all elements that should be removed
-            if (mysize >= size or myage.days >= age) and _matches(name=elem, reprogs=progs) and deleteme:
+            if (mysize >= size or myage.days >= age) and _matches(name=elem) and deleteme:
                 todelete.append(path)
 
     # Now delete the stuff
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = '{0} is set for tidy'.format(name)
-        return ret
-    try:
-        # Need to remove something?
-        if len(todelete) > 0:
-            ret['pchanges']['tidied'] = name
-            ret['changes']['removed'] = []
-            count = 0
-            # Iterate over collected items
+    if todelete:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = '{0} is set for tidy'.format(name)
+            ret['changes'] = {'removed': todelete}
+            return ret
+        ret['changes']['removed'] = []
+        # Iterate over collected items
+        try:
             for path in todelete:
                 if salt.utils.platform.is_windows():
                     __salt__['file.remove'](path, force=True)
@@ -1795,15 +1792,13 @@ def tidied(name,
                     __salt__['file.remove'](path)
                 # Remember what we've removed, will appear in the summary
                 ret['changes']['removed'].append(path)
-                count += 1
-            if count == len(todelete):
-                # Set comment for the summary
-                ret['comment'] = 'Removed {0} files or directories from directory {1}'.format(count, name)
-        else:
-            # Set comment in case there was nothing to remove
-            ret['comment'] = 'Nothing to remove from directory {0}'.format(name)
-    except CommandExecutionError as exc:
-        return _error(ret, '{0}'.format(exc))
+        except CommandExecutionError as exc:
+            return _error(ret, '{0}'.format(exc))
+        # Set comment for the summary
+        ret['comment'] = 'Removed {0} files or directories from directory {1}'.format(len(todelete), name)
+    else:
+        # Set comment in case there was nothing to remove
+        ret['comment'] = 'Nothing to remove from directory {0}'.format(name)
     return ret
 
 
