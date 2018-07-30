@@ -951,12 +951,12 @@ def refresh_pillar():
 pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
-def refresh_modules(asynchronous=True):
+def refresh_modules(**kwargs):
     '''
     Signal the minion to refresh the module and grain data
 
     The default is to refresh module asynchronously. To block
-    until the module refresh is complete, set the 'asynchronous' flag
+    until the module refresh is complete, set the 'async' flag
     to False.
 
     CLI Example:
@@ -965,6 +965,7 @@ def refresh_modules(asynchronous=True):
 
         salt '*' saltutil.refresh_modules
     '''
+    asynchronous = bool(kwargs.get('async', True))
     try:
         if asynchronous:
             #  If we're going to block, first setup a listener
