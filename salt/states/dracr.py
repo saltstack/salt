@@ -54,7 +54,7 @@ def property(
     }
 
     if host is None:
-        output = __salt__["cmd.run_all"]("ipmitool lan print", python_shell=True)
+        output = __salt__["cmd.run_all"]("ipmitool lan print")
         stdout = output["stdout"]
         reg = re.compile(r"\s*IP Address\s*:\s*(\d+.\d+.\d+.\d+)\s*")
         for line in stdout:
