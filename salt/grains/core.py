@@ -90,6 +90,10 @@ if salt.utils.platform.is_windows():
             'will be missing'
         )
 
+HAS_UNAME = True
+if not hasattr(os, 'uname'):
+    HAS_UNAME = False
+
 _INTERFACES = {}
 
 
@@ -693,7 +697,7 @@ def _virtual(osdata):
 
     # Quick backout for BrandZ (Solaris LX Branded zones)
     # Don't waste time trying other commands to detect the virtual grain
-    if osdata['kernel'] == 'Linux' and 'BrandZ virtual linux' in os.uname():
+    if HAS_UNAME and osdata['kernel'] == 'Linux' and 'BrandZ virtual linux' in os.uname():
         grains['virtual'] = 'zone'
         return grains
 
@@ -1846,7 +1850,10 @@ def os_data():
     elif grains['kernel'] == 'SunOS':
         if salt.utils.platform.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            if HAS_UNAME:
+                uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            else:
+                uname_v = os.name
             uname_v = uname_v[uname_v.index('_')+1:]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             # store a parsed version of YYYY.MM.DD as osrelease
@@ -1875,7 +1882,10 @@ def os_data():
                 else:
                     if development is not None:
                         osname = ' '.join((osname, development))
-                    uname_v = os.uname()[3]
+                    if HAS_UNAME:
+                        uname_v = os.uname()[3]
+                    else:
+                        uname_v = os.name
                     grains['os'] = grains['osfullname'] = osname
                     if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
                         # Oracla Solars 11 and up have minor version in uname
