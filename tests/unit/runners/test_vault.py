@@ -52,9 +52,26 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                         },
                         'mixedcase': 'UP-low-UP'
                       }
+        self.pillar = {
+                        'id': 'test-minion',
+                        'roles': ['web', 'database'],
+                        'aux': ['foo', 'bar'],
+                        'deep': {
+                            'foo': {
+                                'bar': {
+                                    'baz': [
+                                        'hello',
+                                        'world'
+                                    ]
+                                }
+                            }
+                        },
+                        'mixedcase': 'UP-low-UP'
+                      }
 
     def tearDown(self):
         del self.grains
+        del self.pillar
 
     def test_pattern_list_expander(self):
         '''
@@ -66,7 +83,14 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     'no-tokens-to-replace': ['no-tokens-to-replace'],
                     'single-dict:{minion}': ['single-dict:{minion}'],
                     'single-list:{grains[roles]}': ['single-list:web', 'single-list:database'],
+                    'single-list:{pillar[roles]}': ['single-list:web', 'single-list:database'],
                     'multiple-lists:{grains[roles]}+{grains[aux]}': [
+                       'multiple-lists:web+foo',
+                       'multiple-lists:web+bar',
+                       'multiple-lists:database+foo',
+                       'multiple-lists:database+bar',
+                    ],
+                    'multiple-lists:{pillar[roles]}+{pillar[aux]}': [
                        'multiple-lists:web+foo',
                        'multiple-lists:web+bar',
                        'multiple-lists:database+foo',
@@ -76,14 +100,22 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                         'single-list-with-dicts:{grains[id]}+web+{grains[id]}',
                         'single-list-with-dicts:{grains[id]}+database+{grains[id]}'
                     ],
+                    'single-list-with-dicts:{pillar[id]}+{pillar[roles]}+{pillar[id]}': [
+                        'single-list-with-dicts:{pillar[id]}+web+{pillar[id]}',
+                        'single-list-with-dicts:{pillar[id]}+database+{pillar[id]}'
+                    ],
                     'deeply-nested-list:{grains[deep][foo][bar][baz]}': [
+                        'deeply-nested-list:hello',
+                        'deeply-nested-list:world'
+                    ],
+                    'deeply-nested-list:{pillar[deep][foo][bar][baz]}': [
                         'deeply-nested-list:hello',
                         'deeply-nested-list:world'
                     ]
                 }
 
         # The mappings dict is assembled in _get_policies, so emulate here
-        mappings = {'minion': self.grains['id'], 'grains': self.grains}
+        mappings = {'minion': self.grains['id'], 'grains': self.grains, 'pillar': self.pillar}
         for case, correct_output in six.iteritems(cases):
             output = vault._expand_pattern_lists(case, **mappings)  # pylint: disable=protected-access
             diff = set(output).symmetric_difference(set(correct_output))
@@ -95,11 +127,12 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
 
     def test_get_policies_for_nonexisting_minions(self):
         minion_id = 'salt_master'
-        # For non-existing minions, or the master-minion, grains will be None
+        # For non-existing minions, or the master-minion, grains and pillar will be None
         cases = {
                     'no-tokens-to-replace': ['no-tokens-to-replace'],
                     'single-dict:{minion}': ['single-dict:{0}'.format(minion_id)],
-                    'single-list:{grains[roles]}': []
+                    'single-list:{grains[roles]}': [],
+                    'single-list:{pillar[roles]}': []
         }
         with patch('salt.utils.minions.get_minion_data',
                    MagicMock(return_value=(None, None, None))):
@@ -122,7 +155,14 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     'no-tokens-to-replace': ['no-tokens-to-replace'],
                     'single-dict:{minion}': ['single-dict:test-minion'],
                     'single-list:{grains[roles]}': ['single-list:web', 'single-list:database'],
+                    'single-list:{pillar[roles]}': ['single-list:web', 'single-list:database'],
                     'multiple-lists:{grains[roles]}+{grains[aux]}': [
+                       'multiple-lists:web+foo',
+                       'multiple-lists:web+bar',
+                       'multiple-lists:database+foo',
+                       'multiple-lists:database+bar',
+                    ],
+                    'multiple-lists:{pillar[roles]}+{pillar[aux]}': [
                        'multiple-lists:web+foo',
                        'multiple-lists:web+bar',
                        'multiple-lists:database+foo',
@@ -132,18 +172,29 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                         'single-list-with-dicts:test-minion+web+test-minion',
                         'single-list-with-dicts:test-minion+database+test-minion'
                     ],
+                    'single-list-with-dicts:{pillar[id]}+{pillar[roles]}+{pillar[id]}': [
+                        'single-list-with-dicts:test-minion+web+test-minion',
+                        'single-list-with-dicts:test-minion+database+test-minion'
+                    ],
                     'deeply-nested-list:{grains[deep][foo][bar][baz]}': [
+                        'deeply-nested-list:hello',
+                        'deeply-nested-list:world'
+                    ],
+                    'deeply-nested-list:{pillar[deep][foo][bar][baz]}': [
                         'deeply-nested-list:hello',
                         'deeply-nested-list:world'
                     ],
                     'should-not-cause-an-exception,but-result-empty:{foo}': [],
                     'Case-Should-Be-Lowered:{grains[mixedcase]}': [
                         'case-should-be-lowered:up-low-up'
+                    ],
+                    'Case-Should-Be-Lowered:{pillar[mixedcase]}': [
+                        'case-should-be-lowered:up-low-up'
                     ]
                 }
 
         with patch('salt.utils.minions.get_minion_data',
-                   MagicMock(return_value=(None, self.grains, None))):
+                   MagicMock(return_value=(None, self.grains, self.pillar))):
             for case, correct_output in six.iteritems(cases):
                 test_config = {'policies': [case]}
                 output = vault._get_policies('test-minion', test_config)  # pylint: disable=protected-access
