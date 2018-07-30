@@ -2360,7 +2360,7 @@ def alias_function(fun, name, doc=None):
         orig_name = fun.__name__
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
-        alias_fun.__doc__ = alias_msg + fun.__doc__
+        alias_fun.__doc__ = alias_msg + (fun.__doc__ or '')
 
     return alias_fun
 

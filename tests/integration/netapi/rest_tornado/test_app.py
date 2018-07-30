@@ -86,6 +86,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.code, 302)
         self.assertEqual(response.headers['Location'], '/login')
 
+    @flaky
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -125,6 +126,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
+    @flaky
     def test_simple_local_post_only_dictionary_request(self):
         '''
         Test a basic API of /
@@ -258,6 +260,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
+    @flaky
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         '''
         Test a basic API of /
@@ -266,6 +269,10 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 'tgt': '*',
                 'fun': 'test.ping',
               }
+
+        self.application.opts['order_masters'] = True
+        self.application.opts['syndic_wait'] = 5
+
         response = self.fetch('/',
                               method='POST',
                               body=salt.utils.json.dumps(low),

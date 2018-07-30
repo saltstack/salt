@@ -520,9 +520,17 @@ class AsyncAuth(object):
                     error = SaltClientError('Detect mode is on')
                     break
                 if self.opts.get('caller'):
-                    print('Minion failed to authenticate with the master, '
-                          'has the minion key been accepted?')
-                    sys.exit(2)
+                    # We have a list of masters, so we should break
+                    # and try the next one in the list.
+                    if self.opts.get('local_masters', None):
+                        error = SaltClientError('Minion failed to authenticate'
+                                                ' with the master, has the '
+                                                'minion key been accepted?')
+                        break
+                    else:
+                        print('Minion failed to authenticate with the master, '
+                              'has the minion key been accepted?')
+                        sys.exit(2)
                 if acceptance_wait_time:
                     log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
                     yield tornado.gen.sleep(acceptance_wait_time)
