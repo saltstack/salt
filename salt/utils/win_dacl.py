@@ -133,22 +133,38 @@ import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
-from salt.ext import six
+import salt.utils.platform
+import salt.utils.win_functions
 
 # Import 3rd-party libs
+from salt.ext.six.moves import range
+from salt.ext import six
 HAS_WIN32 = False
 try:
     import win32security
     import win32con
     import win32api
     import pywintypes
-    import salt.utils.win_functions
     HAS_WIN32 = True
 except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'dacl'
+
+
+def __virtual__():
+    '''
+    Only load if Win32 Libraries are installed
+    '''
+    if not salt.utils.platform.is_windows():
+        return False, 'win_dacl: Requires Windows'
+
+    if not HAS_WIN32:
+        return False, 'win_dacl: Requires pywin32'
+
+    return __virtualname__
 
 
 def flags(instantiated=True):
@@ -156,9 +172,11 @@ def flags(instantiated=True):
     Helper function for instantiating a Flags object
 
     Args:
-        instantiated (bool): True to return an instantiated object, False to
-            return the object definition. Use False if inherited by another
-            class. Default is True.
+
+        instantiated (bool):
+            True to return an instantiated object, False to return the object
+            definition. Use False if inherited by another class. Default is
+            True.
 
     Returns:
         object: An instance of the Flags object or its definition
@@ -334,6 +352,16 @@ def flags(instantiated=True):
             }
         }
 
+        # These denote inheritance
+        # 0x0000 : Not inherited, I don't know the enumeration for this
+        # 0x0010 : win32security.INHERITED_ACE
+
+        # All the values in the dice below are combinations of the following
+        # enumerations or'ed together
+        # 0x0001 : win32security.OBJECT_INHERIT_ACE
+        # 0x0002 : win32security.CONTAINER_INHERIT_ACE
+        # 0x0004 : win32security.NO_PROPAGATE_INHERIT_ACE
+        # 0x0008 : win32security.INHERIT_ONLY_ACE
         ace_prop = {
             'file': {
                 # for report
@@ -412,9 +440,13 @@ def dacl(obj_name=None, obj_type='file'):
     Helper function for instantiating a Dacl class.
 
     Args:
-        obj_name (str): The full path to the object. If None, a blank DACL will
-            be created. Default is None.
-        obj_type (str): The type of object. Default is 'File'
+
+        obj_name (str):
+            The full path to the object. If None, a blank DACL will be created.
+            Default is None.
+
+        obj_type (str):
+            The type of object. Default is 'File'
 
     Returns:
         object: An instantiated Dacl object
@@ -433,10 +465,13 @@ def dacl(obj_name=None, obj_type='file'):
             If `obj_name` is not passed, an empty DACL is created.
 
             Args:
-                obj_name (str): The full path to the object. If None, a blank
-                DACL will be created
 
-                obj_type (Optional[str]): The type of object.
+                obj_name (str):
+                    The full path to the object. If None, a blank DACL will be
+                    created
+
+                obj_type (Optional[str]):
+                    The type of object.
 
             Returns:
                 obj: A DACL object
@@ -476,26 +511,27 @@ def dacl(obj_name=None, obj_type='file'):
 
             Args:
 
-                obj_name (str): The full path to the registry key including the
-                hive, eg: ``HKLM\\SOFTWARE\\salt``. Valid options for the hive
-                are:
+                obj_name (str):
+                    The full path to the registry key including the hive, eg:
+                    ``HKLM\\SOFTWARE\\salt``. Valid options for the hive are:
 
-                - HKEY_LOCAL_MACHINE
-                - MACHINE
-                - HKLM
-                - HKEY_USERS
-                - USERS
-                - HKU
-                - HKEY_CURRENT_USER
-                - CURRENT_USER
-                - HKCU
-                - HKEY_CLASSES_ROOT
-                - CLASSES_ROOT
-                - HKCR
+                    - HKEY_LOCAL_MACHINE
+                    - MACHINE
+                    - HKLM
+                    - HKEY_USERS
+                    - USERS
+                    - HKU
+                    - HKEY_CURRENT_USER
+                    - CURRENT_USER
+                    - HKCU
+                    - HKEY_CLASSES_ROOT
+                    - CLASSES_ROOT
+                    - HKCR
 
             Returns:
-                str: The full path to the registry key in the format expected by
-                the Windows API
+                str:
+                    The full path to the registry key in the format expected by
+                    the Windows API
 
             Usage:
 
@@ -533,6 +569,7 @@ def dacl(obj_name=None, obj_type='file'):
             try:
                 valid_hive = hives[passed_hive.upper()]
             except KeyError:
+                log.exception('Invalid Registry Hive: %s', passed_hive)
                 raise CommandExecutionError(
                     'Invalid Registry Hive: {0}'.format(passed_hive))
 
@@ -546,17 +583,20 @@ def dacl(obj_name=None, obj_type='file'):
 
             Args:
 
-                principal (str): The sid of the user/group to for the ACE
+                principal (str):
+                    The sid of the user/group to for the ACE
 
-                access_mode (str): Determines the type of ACE to add. Must be
-                either ``grant`` or ``deny``.
+                access_mode (str):
+                    Determines the type of ACE to add. Must be either ``grant``
+                    or ``deny``.
 
-                permissions (str, list): The type of permissions to grant/deny
-                the user. Can be one of the basic permissions, or a list of
-                advanced permissions.
+                permissions (str, list):
+                    The type of permissions to grant/deny the user. Can be one
+                    of the basic permissions, or a list of advanced permissions.
 
-                applies_to (str): The objects to which these permissions will
-                apply. Not all these options apply to all object types.
+                applies_to (str):
+                    The objects to which these permissions will apply. Not all
+                    these options apply to all object types.
 
             Returns:
                 bool: True if successful, otherwise False
@@ -566,7 +606,7 @@ def dacl(obj_name=None, obj_type='file'):
             .. code-block:: python
 
                 dacl = Dacl(obj_type=obj_type)
-                dacl.add_ace(sid, access_mode, applies_to, permission)
+                dacl.add_ace(sid, access_mode, permission, applies_to)
                 dacl.save(obj_name, protected)
             '''
             sid = get_sid(principal)
@@ -589,16 +629,19 @@ def dacl(obj_name=None, obj_type='file'):
                 if access_mode.lower() == 'grant':
                     self.dacl.AddAccessAllowedAceEx(
                         win32security.ACL_REVISION_DS,
-                        self.ace_prop[self.dacl_type][applies_to],
+                        # Some types don't support propagation
+                        # May need to use 0x0000 instead of None
+                        self.ace_prop.get(self.dacl_type, {}).get(applies_to),
                         perm_flag,
                         sid)
                 elif access_mode.lower() == 'deny':
                     self.dacl.AddAccessDeniedAceEx(
                         win32security.ACL_REVISION_DS,
-                        self.ace_prop[self.dacl_type][applies_to],
+                        self.ace_prop.get(self.dacl_type, {}).get(applies_to),
                         perm_flag,
                         sid)
                 else:
+                    log.exception('Invalid access mode: %s', access_mode)
                     raise SaltInvocationError(
                         'Invalid access mode: {0}'.format(access_mode))
             except Exception as exc:
@@ -751,11 +794,13 @@ def dacl(obj_name=None, obj_type='file'):
 
             Args:
 
-                principal (str): The name of the user or group for which to get
-                the ace. Can also be a SID.
+                principal (str):
+                    The name of the user or group for which to get the ace. Can
+                    also be a SID.
 
-                return_obj (bool): Return the ACE object instead of a dict. Will
-                return the first ACE that matches the principal.
+                return_obj (bool):
+                    Return the ACE object instead of a dict. Will return the
+                    first ACE that matches the principal.
 
             Returns:
                 dict: A dictionary containing the ACEs found for the principal
@@ -927,11 +972,12 @@ def dacl(obj_name=None, obj_type='file'):
 
             Args:
 
-                principal (str): The user whose ACE to remove. Can be the user
-                name or a SID.
+                principal (str):
+                    The user whose ACE to remove. Can be the user name or a SID.
 
-                ace_type (str): The type of ACE to remove. If not specified, all
-                ACEs will be removed. Default is 'all'. Valid options are:
+                ace_type (str):
+                    The type of ACE to remove. If not specified, all ACEs will
+                    be removed. Default is 'all'. Valid options are:
 
                     - 'grant'
                     - 'deny'
@@ -969,15 +1015,19 @@ def dacl(obj_name=None, obj_type='file'):
             '''
             Save the DACL
 
-            obj_name (str): The object for which to set permissions. This can be
-            the path to a file or folder, a registry key, printer, etc. For more
-            information about how to format the name see:
+            Args:
 
-            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+                obj_name (str):
+                    The object for which to set permissions. This can be the
+                    path to a file or folder, a registry key, printer, etc. For
+                    more information about how to format the name see:
 
-            protected (Optional[bool]): True will disable inheritance for the
-            object. False will enable inheritance. None will make no change.
-            Default is None.
+                    https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+
+                protected (Optional[bool]):
+                    True will disable inheritance for the object. False will
+                    enable inheritance. None will make no change. Default is
+                    ``None``.
 
             Returns:
                 bool: True if successful, Otherwise raises an exception
@@ -1008,7 +1058,8 @@ def dacl(obj_name=None, obj_type='file'):
                     None, None, self.dacl, None)
             except pywintypes.error as exc:
                 raise CommandExecutionError(
-                    'Failed to set permissions: {0}'.format(exc.strerror))
+                    'Failed to set permissions: {0}'.format(obj_name),
+                    exc.strerror)
 
             return True
 
@@ -1022,8 +1073,8 @@ def get_sid(principal):
 
     Args:
 
-        principal(str): The principal to lookup the sid. Can be a sid or a
-        username.
+        principal(str):
+            The principal to lookup the sid. Can be a sid or a username.
 
     Returns:
         PySID Object: A sid
@@ -1052,6 +1103,7 @@ def get_sid(principal):
     try:
         sid = win32security.ConvertStringSidToSid(sid)
     except pywintypes.error:
+        log.exception('Invalid user/group or sid: %s', principal)
         raise CommandExecutionError(
             'Invalid user/group or sid: {0}'.format(principal))
     except TypeError:
@@ -1066,10 +1118,11 @@ def get_sid_string(principal):
 
     Args:
 
-        principal(str): The principal to lookup the sid. Must be a PySID object.
+        principal(str):
+            The principal to lookup the sid. Must be a PySID object.
 
     Returns:
-        str: A sid
+        str: A string sid
 
     Usage:
 
@@ -1094,6 +1147,7 @@ def get_sid_string(principal):
     try:
         return win32security.ConvertSidToStringSid(principal)
     except pywintypes.error:
+        log.exception('Invalid principal %s', principal)
         raise CommandExecutionError('Invalid principal {0}'.format(principal))
 
 
@@ -1102,6 +1156,7 @@ def get_name(principal):
     Gets the name from the specified principal.
 
     Args:
+
         principal (str):
             Find the Normalized name based on this. Can be a PySID object, a SID
             string, or a user name in any capitalization.
@@ -1149,15 +1204,49 @@ def get_name(principal):
         if type(exc) == pywintypes.error:
             win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
             message = '{0}: {1}'.format(message, win_error)
-        raise CommandExecutionError(message)
+        log.exception(message)
+        raise CommandExecutionError(message, exc)
 
 
-def get_owner(obj_name):
-    '''
+def get_owner(obj_name, obj_type='file'):
+    r'''
     Gets the owner of the passed object
 
     Args:
-        obj_name (str): The path for which to obtain owner information
+
+        obj_name (str):
+            The path for which to obtain owner information. The format of this
+            parameter is different depending on the ``obj_type``
+
+        obj_type (str):
+            The type of object to query. This value changes the format of the
+            ``obj_name`` parameter as follows:
+
+            - file: indicates a file or directory
+                - a relative path, such as ``FileName.txt`` or ``..\FileName``
+                - an absolute path, such as ``C:\DirName\FileName.txt``
+                - A UNC name, such as ``\\ServerName\ShareName\FileName.txt``
+            - service: indicates the name of a Windows service
+            - printer: indicates the name of a printer
+            - registry: indicates a registry key
+                - Uses the following literal strings to denote the hive:
+                    - HKEY_LOCAL_MACHINE
+                    - MACHINE
+                    - HKLM
+                    - HKEY_USERS
+                    - USERS
+                    - HKU
+                    - HKEY_CURRENT_USER
+                    - CURRENT_USER
+                    - HKCU
+                    - HKEY_CLASSES_ROOT
+                    - CLASSES_ROOT
+                    - HKCR
+                - Should be in the format of ``HIVE\Path\To\Key``. For example,
+                    ``HKLM\SOFTWARE\Windows``
+            - registry32: indicates a registry key under WOW64. Formatting is
+                the same as it is for ``registry``
+            - share: indicates a network share
 
     Returns:
         str: The owner (group or user)
@@ -1172,9 +1261,19 @@ def get_owner(obj_name):
     # For instance, some mounted SAMBA shares, or VirtualBox shared folders. If
     # we can't load a file descriptor for the file, we default to "None"
     # http://support.microsoft.com/kb/243330
+
     try:
-        security_descriptor = win32security.GetFileSecurity(
-            obj_name, win32security.OWNER_SECURITY_INFORMATION)
+        obj_type_flag = flags().obj_type[obj_type.lower()]
+    except KeyError:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    if obj_type in ['registry', 'registry32']:
+        obj_name = dacl().get_reg_name(obj_name)
+
+    try:
+        security_descriptor = win32security.GetNamedSecurityInfo(
+            obj_name, obj_type_flag, win32security.OWNER_SECURITY_INFORMATION)
         owner_sid = security_descriptor.GetSecurityDescriptorOwner()
 
     except MemoryError:
@@ -1186,18 +1285,51 @@ def get_owner(obj_name):
         if exc.winerror == 1 or exc.winerror == 50:
             owner_sid = 'S-1-0-0'
         else:
+            log.exception('Failed to get the owner: %s', obj_name)
             raise CommandExecutionError(
-                'Failed to get owner: {0}'.format(exc.strerror))
+                'Failed to get owner: {0}'.format(obj_name), exc.strerror)
 
     return get_name(owner_sid)
 
 
-def get_primary_group(obj_name):
+def get_primary_group(obj_name, obj_type='file'):
     '''
     Gets the primary group of the passed object
 
     Args:
-        obj_name (str): The path for which to obtain primary group information
+
+        obj_name (str):
+            The path for which to obtain primary group information
+
+        obj_type (str):
+            The type of object to query. This value changes the format of the
+            ``obj_name`` parameter as follows:
+
+            - file: indicates a file or directory
+                - a relative path, such as ``FileName.txt`` or ``..\FileName``
+                - an absolute path, such as ``C:\DirName\FileName.txt``
+                - A UNC name, such as ``\\ServerName\ShareName\FileName.txt``
+            - service: indicates the name of a Windows service
+            - printer: indicates the name of a printer
+            - registry: indicates a registry key
+                - Uses the following literal strings to denote the hive:
+                    - HKEY_LOCAL_MACHINE
+                    - MACHINE
+                    - HKLM
+                    - HKEY_USERS
+                    - USERS
+                    - HKU
+                    - HKEY_CURRENT_USER
+                    - CURRENT_USER
+                    - HKCU
+                    - HKEY_CLASSES_ROOT
+                    - CLASSES_ROOT
+                    - HKCR
+                - Should be in the format of ``HIVE\Path\To\Key``. For example,
+                    ``HKLM\SOFTWARE\Windows``
+            - registry32: indicates a registry key under WOW64. Formatting is
+                the same as it is for ``registry``
+            - share: indicates a network share
 
     Returns:
         str: The primary group for the object
@@ -1212,9 +1344,24 @@ def get_primary_group(obj_name):
     # For instance, some mounted SAMBA shares, or VirtualBox shared folders. If
     # we can't load a file descriptor for the file, we default to "Everyone"
     # http://support.microsoft.com/kb/243330
+
+    # Validate obj_type
     try:
-        security_descriptor = win32security.GetFileSecurity(
-            obj_name, win32security.GROUP_SECURITY_INFORMATION)
+        obj_type_flag = flags().obj_type[obj_type.lower()]
+    except KeyError:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    if obj_type in ['registry', 'registry32']:
+        obj_name = dacl().get_reg_name(obj_name)
+
+    if 'registry' in obj_type.lower():
+        obj_name = dacl().get_reg_name(obj_name)
+        log.debug('Name converted to: %s', obj_name)
+
+    try:
+        security_descriptor = win32security.GetNamedSecurityInfo(
+            obj_name, obj_type_flag, win32security.GROUP_SECURITY_INFORMATION)
         primary_group_gid = security_descriptor.GetSecurityDescriptorGroup()
 
     except MemoryError:
@@ -1226,8 +1373,10 @@ def get_primary_group(obj_name):
         if exc.winerror == 1 or exc.winerror == 50:
             primary_group_gid = 'S-1-0-0'
         else:
+            log.exception('Failed to get the primary group: %s', obj_name)
             raise CommandExecutionError(
-                'Failed to set permissions: {0}'.format(exc.strerror))
+                'Failed to get primary group: {0}'.format(obj_name),
+                exc.strerror)
 
     return get_name(win32security.ConvertSidToStringSid(primary_group_gid))
 
@@ -1239,16 +1388,19 @@ def set_owner(obj_name, principal, obj_type='file'):
 
     Args:
 
-        obj_name (str): The object for which to set owner. This can be the path
-        to a file or folder, a registry key, printer, etc. For more information
-        about how to format the name see:
+        obj_name (str):
+            The object for which to set owner. This can be the path to a file or
+            folder, a registry key, printer, etc. For more information about how
+            to format the name see:
 
-        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
-        principal (str): The name of the user or group to make owner of the
-        object. Can also pass a SID.
+        principal (str):
+            The name of the user or group to make owner of the object. Can also
+            pass a SID.
 
-        obj_type (Optional[str]): The type of object for which to set the owner.
+        obj_type (Optional[str]):
+            The type of object for which to set the owner. Default is ``file``
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1262,6 +1414,14 @@ def set_owner(obj_name, principal, obj_type='file'):
     sid = get_sid(principal)
 
     obj_flags = flags()
+
+    # Validate obj_type
+    if obj_type.lower() not in obj_flags.obj_type:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    if obj_type in ['registry', 'registry32']:
+        obj_name = dacl().get_reg_name(obj_name)
 
     # To set the owner to something other than the logged in user requires
     # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
@@ -1286,13 +1446,14 @@ def set_owner(obj_name, principal, obj_type='file'):
     try:
         win32security.SetNamedSecurityInfo(
             obj_name,
-            obj_flags.obj_type[obj_type],
+            obj_flags.obj_type[obj_type.lower()],
             obj_flags.element['owner'],
             sid,
             None, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make %s the owner: %s', principal, exc)
-        raise CommandExecutionError('Failed to set owner: {0}'.format(exc))
+        log.exception('Failed to make %s the owner: %s', principal, exc)
+        raise CommandExecutionError(
+            'Failed to set owner: {0}'.format(obj_name), exc.strerror)
 
     return True
 
@@ -1309,7 +1470,7 @@ def set_primary_group(obj_name, principal, obj_type='file'):
             file or folder, a registry key, printer, etc. For more information
             about how to format the name see:
 
-        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
         principal (str):
             The name of the group to make primary for the object. Can also pass
@@ -1336,6 +1497,14 @@ def set_primary_group(obj_name, principal, obj_type='file'):
 
     obj_flags = flags()
 
+    # Validate obj_type
+    if obj_type.lower() not in obj_flags.obj_type:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    if obj_type in ['registry', 'registry32']:
+        obj_name = dacl().get_reg_name(obj_name)
+
     # To set the owner to something other than the logged in user requires
     # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
     # Enable them for the logged in user
@@ -1359,12 +1528,13 @@ def set_primary_group(obj_name, principal, obj_type='file'):
     try:
         win32security.SetNamedSecurityInfo(
             obj_name,
-            obj_flags.obj_type[obj_type],
+            obj_flags.obj_type[obj_type.lower()],
             obj_flags.element['group'],
             None, gid, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make %s the primary group: %s', principal, exc)
-        raise CommandExecutionError('Failed to set primary group: {0}'.format(exc))
+        log.exception('Failed to make %s the primary group: %s', principal, exc)
+        raise CommandExecutionError(
+            'Failed to set primary group: {0}'.format(obj_name), exc.strerror)
 
     return True
 
@@ -1383,38 +1553,42 @@ def set_permissions(obj_name,
 
     Args:
 
-        obj_name (str): The object for which to set permissions. This can be the
-        path to a file or folder, a registry key, printer, etc. For more
-        information about how to format the name see:
+        obj_name (str):
+            The object for which to set permissions. This can be the path to a
+            file or folder, a registry key, printer, etc. For more information
+            about how to format the name see:
 
-        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
+        principal (str):
+            The name of the user or group for which to set permissions. Can also
+            pass a SID.
 
-        principal (str): The name of the user or group for which to set
-        permissions. Can also pass a SID.
+        permissions (str, list):
+            The type of permissions to grant/deny the user. Can be one of the
+            basic permissions, or a list of advanced permissions.
 
-        permissions (str, list): The type of permissions to grant/deny the user.
-        Can be one of the basic permissions, or a list of advanced permissions.
-
-        access_mode (Optional[str]): Whether to grant or deny user the access.
-        Valid options are:
+        access_mode (Optional[str]):
+            Whether to grant or deny user the access. Valid options are:
 
             - grant (default): Grants the user access
             - deny: Denies the user access
 
-        applies_to (Optional[str]): The objects to which these permissions will
-        apply. Not all these options apply to all object types. Defaults to
-        'this_folder_subfolders_files'
+        applies_to (Optional[str]):
+            The objects to which these permissions will apply. Not all these
+            options apply to all object types. Defaults to
+            'this_folder_subfolders_files'
 
-        obj_type (Optional[str]): The type of object for which to set
-        permissions. Default is 'file'
+        obj_type (Optional[str]):
+            The type of object for which to set permissions. Default is 'file'
 
-        reset_perms (Optional[bool]): True will overwrite the permissions on the
-        specified object. False will append the permissions. Default is False
+        reset_perms (Optional[bool]):
+            True will overwrite the permissions on the specified object. False
+            will append the permissions. Default is False
 
-        protected (Optional[bool]): True will disable inheritance for the
-        object. False will enable inheritance. None will make no change. Default
-        is None.
+        protected (Optional[bool]):
+            True will disable inheritance for the object. False will enable
+            inheritance. None will make no change. Default is None.
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1453,21 +1627,23 @@ def rm_permissions(obj_name,
 
     Args:
 
-        obj_name (str): The object from which to remove the ace. This can be the
-        path to a file or folder, a registry key, printer, etc. For more
-        information about how to format the name see:
+        obj_name (str):
+            The object from which to remove the ace. This can be the
+            path to a file or folder, a registry key, printer, etc. For more
+            information about how to format the name see:
 
-        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
-        principal (str): The name of the user or group for which to set
-        permissions. Can also pass a SID.
+        principal (str):
+            The name of the user or group for which to set permissions. Can also
+            pass a SID.
 
-        ace_type(Optional[str]): The type of ace to remove. There are two types
-        of ACEs, 'grant' and 'deny'. 'all' will remove all ACEs for the user.
-        Default is 'all'
+        ace_type (Optional[str]):
+            The type of ace to remove. There are two types of ACEs, 'grant' and
+            'deny'. 'all' will remove all ACEs for the user. Default is 'all'
 
-        obj_type (Optional[str]): The type of object for which to set
-        permissions. Default is 'file'
+        obj_type (Optional[str]):
+            The type of object for which to set permissions. Default is 'file'
 
     Returns:
         bool: True if successful, raises an error otherwise
@@ -1496,14 +1672,16 @@ def get_permissions(obj_name, principal=None, obj_type='file'):
 
     Args:
 
-        obj_name (str): The name of or path to the object.
+        obj_name (str):
+            The name of or path to the object.
 
-        principal (Optional[str]): The name of the user or group for which to
-        get permissions. Can also pass a SID. If None, all ACEs defined on the
-        object will be returned. Default is None
+        principal (Optional[str]):
+            The name of the user or group for which to get permissions. Can also
+            pass a SID. If None, all ACEs defined on the object will be
+            returned. Default is None
 
-        obj_type (Optional[str]): The type of object for which to get
-        permissions.
+        obj_type (Optional[str]):
+            The type of object for which to get permissions.
 
     Returns:
         dict: A dictionary representing the object permissions
@@ -1533,25 +1711,29 @@ def has_permission(obj_name,
 
     Args:
 
-        obj_name (str): The name of or path to the object.
+        obj_name (str):
+            The name of or path to the object.
 
-        principal (str): The name of the user or group for which to get
-        permissions. Can also pass a SID.
+        principal (str):
+            The name of the user or group for which to get permissions. Can also
+            pass a SID.
 
-        permission (str): The permission to verify. Valid options depend on the
-        obj_type.
+        permission (str):
+            The permission to verify. Valid options depend on the obj_type.
 
-        access_mode (Optional[str]): The access mode to check. Is the user
-        granted or denied the permission. Default is 'grant'. Valid options are:
+        access_mode (Optional[str]):
+            The access mode to check. Is the user granted or denied the
+            permission. Default is 'grant'. Valid options are:
 
             - grant
             - deny
 
-        obj_type (Optional[str]): The type of object for which to check
-        permissions. Default is 'file'
+        obj_type (Optional[str]):
+            The type of object for which to check permissions. Default is 'file'
 
-        exact (Optional[bool]): True for an exact match, otherwise check to see
-        if the permission is included in the ACE. Default is True
+        exact (Optional[bool]):
+            True for an exact match, otherwise check to see if the permission is
+            included in the ACE. Default is True
 
     Returns:
         bool: True if the object has the permission, otherwise False
@@ -1601,9 +1783,20 @@ def has_permission(obj_name,
     if not cur_flag:
         return False
 
-    # Check for the exact permission in the ACE
-    if exact:
-        return chk_flag == cur_flag
+    if 'test_inheritance_perms_reset' in obj_name:
+        log.debug('*' * 68)
+        log.debug(obj_name)
+        log.debug(principal)
+        log.debug(permission)
+        log.debug('*' * 68)
+        log.debug(chk_flag)
+        log.debug('-' * 68)
+        log.debug(cur_flag)
+        log.debug('-' * 68)
+        log.debug(chk_flag == cur_flag)
+        log.debug('-' * 68)
+        log.debug(cur_flag & chk_flag == chk_flag)
+        log.debug('*' * 68)
 
     # Check if the ACE contains the permission
     return cur_flag & chk_flag == chk_flag
@@ -1615,19 +1808,23 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
 
     Args:
 
-        obj_name (str): The name of the object
+        obj_name (str):
+            The name of the object
 
-        enabled (bool): True to enable inheritance, False to disable
+        enabled (bool):
+            True to enable inheritance, False to disable
 
-        obj_type (Optional[str]): The type of object. Only three objects allow
-        inheritance. Valid objects are:
+        obj_type (Optional[str]):
+            The type of object. Only three objects allow inheritance. Valid
+            objects are:
 
             - file (default): This is a file or directory
             - registry
             - registry32 (for WOW64)
 
-        clear (Optional[bool]): True to clear existing ACEs, False to keep
-        existing ACEs. Default is False
+        clear (Optional[bool]):
+            True to clear existing ACEs, False to keep existing ACEs.
+            Default is False
 
     Returns:
         bool: True if successful, otherwise an Error
@@ -1656,10 +1853,12 @@ def get_inheritance(obj_name, obj_type='file'):
 
     Args:
 
-        obj_name (str): The name of the object
+        obj_name (str):
+            The name of the object
 
-        obj_type (Optional[str]): The type of object. Only three object types
-        allow inheritance. Valid objects are:
+        obj_type (Optional[str]):
+            The type of object. Only three object types allow inheritance. Valid
+            objects are:
 
             - file (default): This is a file or directory
             - registry
@@ -1680,7 +1879,7 @@ def get_inheritance(obj_name, obj_type='file'):
 
         salt.utils.win_dacl.get_inheritance('HKLM\\SOFTWARE\\salt', 'registry')
     '''
-    obj_dacl = dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name=obj_name, obj_type=obj_type)
     inherited = win32security.INHERITED_ACE
 
     for i in range(0, obj_dacl.dacl.GetAceCount()):
@@ -1689,3 +1888,561 @@ def get_inheritance(obj_name, obj_type='file'):
             return True
 
     return False
+
+
+def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
+    '''
+    Helper function used by ``check_perms`` for checking and setting Grant and
+    Deny permissions.
+
+    Args:
+
+        obj_name (str):
+            The name or full path to the object
+
+        obj_type (Optional[str]):
+            The type of object for which to check permissions. Default is 'file'
+
+        new_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            check/grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+
+        cur_perms (dict):
+            A dictionary containing the user/group permissions as they currently
+            exists on the target object.
+
+        access_mode (str):
+            The access mode to set. Either ``grant`` or ``deny``
+
+        ret (dict):
+            A dictionary to append changes to and return. If not passed, will
+            create a new dictionary to return.
+
+    Returns:
+        dict: A dictionary of return data as expected by the state system
+    '''
+    changes = {}
+    for user in new_perms:
+        applies_to_text = ''
+        # Check that user exists:
+        try:
+            user_name = get_name(principal=user)
+        except CommandExecutionError:
+            ret['comment'].append(
+                '{0} Perms: User "{1}" missing from Target System'
+                ''.format(access_mode.capitalize(), user))
+            continue
+
+        # Get the proper applies_to text
+        if 'applies_to' in new_perms[user]:
+            applies_to = new_perms[user]['applies_to']
+            at_flag = flags().ace_prop['file'][applies_to]
+            applies_to_text = flags().ace_prop['file'][at_flag]
+
+        else:
+            applies_to = None
+
+        if user_name not in cur_perms:
+            changes[user] = {'perms': new_perms[user]['perms']}
+            if applies_to:
+                changes[user]['applies_to'] = applies_to
+        else:
+            # Check Perms for basic perms
+            if isinstance(new_perms[user]['perms'], six.string_types):
+                if not has_permission(obj_name=obj_name,
+                                      principal=user,
+                                      permission=new_perms[user]['perms'],
+                                      access_mode=access_mode,
+                                      obj_type=obj_type,
+                                      exact=False):
+                    changes[user] = {'perms': new_perms[user]['perms']}
+            # Check Perms for advanced perms
+            else:
+                for perm in new_perms[user]['perms']:
+                    if not has_permission(obj_name=obj_name,
+                                          principal=user,
+                                          permission=perm,
+                                          access_mode=access_mode,
+                                          obj_type=obj_type,
+                                          exact=False):
+                        if user not in changes:
+                            changes[user] = {'perms': []}
+                        changes[user]['perms'].append(perm)
+
+            # Check if applies_to was passed
+            if applies_to:
+                # Is there a deny/grant permission set
+                if access_mode in cur_perms[user_name]:
+                    # If the applies to settings are different, use the new one
+                    if not cur_perms[user_name][access_mode]['applies to'] == applies_to_text:
+                        if user not in changes:
+                            changes[user] = {}
+                        changes[user]['applies_to'] = applies_to
+
+    if changes:
+        ret['pchanges']['perms'] = {}
+        ret['changes']['perms'] = {}
+        for user in changes:
+            user_name = get_name(principal=user)
+
+            if __opts__['test'] is True:
+                ret['pchanges']['perms'][user] = changes[user]
+            else:
+                # Get applies_to
+                applies_to = None
+                if 'applies_to' not in changes[user]:
+                    # Get current "applies to" settings from the file
+                    if user_name in cur_perms and access_mode in cur_perms[user_name]:
+                        for flag in flags().ace_prop[obj_type]:
+                            if flags().ace_prop[obj_type][flag] == cur_perms[user_name][access_mode]['applies to']:
+                                at_flag = flag
+                                for flag1 in flags().ace_prop[obj_type]:
+                                    if salt.utils.win_dacl.flags().ace_prop[obj_type][flag1] == at_flag:
+                                        applies_to = flag1
+                    if not applies_to:
+                        if obj_type.lower() in ['registry', 'registry32']:
+                            applies_to = 'this_key_subkeys'
+                        else:
+                            applies_to = 'this_folder_subfolders_files'
+                else:
+                    applies_to = changes[user]['applies_to']
+
+                perms = []
+                if 'perms' not in changes[user]:
+                    # Get current perms
+                    # Check for basic perms
+                    for perm in cur_perms[user_name][access_mode]['permissions']:
+                        for flag in flags().ace_perms[obj_type]['basic']:
+                            if flags().ace_perms[obj_type]['basic'][flag] == perm:
+                                perm_flag = flag
+                                for flag1 in flags().ace_perms[obj_type]['basic']:
+                                    if flags().ace_perms[obj_type]['basic'][flag1] == perm_flag:
+                                        perms = flag1
+                    # Make a list of advanced perms
+                    if not perms:
+                        for perm in cur_perms[user_name][access_mode]['permissions']:
+                            for flag in flags().ace_perms[obj_type]['advanced']:
+                                if flags().ace_perms[obj_type]['advanced'][flag] == perm:
+                                    perm_flag = flag
+                                    for flag1 in flags().ace_perms[obj_type]['advanced']:
+                                        if flags().ace_perms[obj_type]['advanced'][flag1] == perm_flag:
+                                            perms.append(flag1)
+                else:
+                    perms = changes[user]['perms']
+
+                try:
+                    set_permissions(
+                        obj_name=obj_name,
+                        principal=user,
+                        permissions=perms,
+                        access_mode=access_mode,
+                        applies_to=applies_to,
+                        obj_type=obj_type)
+                    ret['changes']['perms'][user] = changes[user]
+                except CommandExecutionError:
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change {0} permissions for "{1}" to {2}'
+                        ''.format(access_mode, user, changes[user]))
+
+    return ret
+
+
+def check_perms(obj_name,
+                obj_type='file',
+                ret=None,
+                owner=None,
+                grant_perms=None,
+                deny_perms=None,
+                inheritance=True,
+                reset=False):
+    '''
+    Check owner and permissions for the passed directory. This function checks
+    the permissions and sets them, returning the changes made.
+
+    .. versionadded:: Fluorine
+
+    Args:
+
+        obj_name (str):
+            The name or full path to the object
+
+        obj_type (Optional[str]):
+            The type of object for which to check permissions. Default is 'file'
+
+        ret (dict):
+            A dictionary to append changes to and return. If not passed, will
+            create a new dictionary to return.
+
+        owner (str):
+            The owner to set for the directory.
+
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            check/grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
+            Default is ``None``.
+
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to
+            check/deny. Default is ``None``.
+
+        inheritance (bool):
+            ``True will check if inheritance is enabled and enable it. ``False``
+            will check if inheritance is disabled and disable it. Default is
+            ``True``.
+
+        reset (bool):
+            ``True`` will show what permissions will be removed by resetting the
+            DACL. ``False`` will do nothing. Default is ``False``.
+
+    Returns:
+        dict: A dictionary of changes that have been made
+
+    Usage:
+
+    .. code-block:: bash
+
+        # You have to use __utils__ inorder for __opts__ to be available
+
+        # To see changes to ``C:\\Temp`` if the 'Users' group is given 'read & execute' permissions.
+        __utils__['dacl.check_perms'](obj_name='C:\\Temp',
+                                      obj_type='file',
+                                      owner='Administrators',
+                                      grant_perms={
+                                          'Users': {
+                                              'perms': 'read_execute'
+                                          }
+                                      })
+
+        # Specify advanced attributes with a list
+        __utils__['dacl.check_perms'](obj_name='C:\\Temp',
+                                      obj_type='file',
+                                      owner='Administrators',
+                                      grant_perms={
+                                          'jsnuffy': {
+                                              'perms': [
+                                                  'read_attributes',
+                                                  'read_ea'
+                                              ],
+                                              'applies_to': 'files_only'
+                                          }
+                                      })
+    '''
+    # Validate obj_type
+    if obj_type.lower() not in flags().obj_type:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    obj_type = obj_type.lower()
+
+    if not ret:
+        ret = {'name': obj_name,
+               'changes': {},
+               'pchanges': {},
+               'comment': [],
+               'result': True}
+        orig_comment = ''
+    else:
+        orig_comment = ret['comment']
+        ret['comment'] = []
+
+    # Check owner
+    if owner:
+        owner = get_name(principal=owner)
+        current_owner = get_owner(obj_name=obj_name, obj_type=obj_type)
+        if owner != current_owner:
+            if __opts__['test'] is True:
+                ret['pchanges']['owner'] = owner
+            else:
+                try:
+                    set_owner(obj_name=obj_name,
+                              principal=owner,
+                              obj_type=obj_type)
+                    ret['changes']['owner'] = owner
+                except CommandExecutionError:
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to change owner to "{0}"'.format(owner))
+
+    # Check inheritance
+    if inheritance is not None:
+        if not inheritance == get_inheritance(obj_name=obj_name,
+                                              obj_type=obj_type):
+            if __opts__['test'] is True:
+                ret['pchanges']['inheritance'] = inheritance
+            else:
+                try:
+                    set_inheritance(
+                        obj_name=obj_name,
+                        enabled=inheritance,
+                        obj_type=obj_type)
+                    ret['changes']['inheritance'] = inheritance
+                except CommandExecutionError:
+                    ret['result'] = False
+                    ret['comment'].append(
+                        'Failed to set inheritance for "{0}" to {1}'
+                        ''.format(obj_name, inheritance))
+
+    # Check permissions
+    cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
+
+    # Verify Deny Permissions
+    if deny_perms is not None:
+        ret = _check_perms(obj_name=obj_name,
+                           obj_type=obj_type,
+                           new_perms=deny_perms,
+                           cur_perms=cur_perms,
+                           access_mode='deny',
+                           ret=ret)
+
+    # Verify Grant Permissions
+    if grant_perms is not None:
+        ret = _check_perms(obj_name=obj_name,
+                           obj_type=obj_type,
+                           new_perms=grant_perms,
+                           cur_perms=cur_perms,
+                           access_mode='grant',
+                           ret=ret)
+
+    # Check reset
+    # If reset=True, which users will be removed as a result
+    if reset:
+        for user_name in cur_perms:
+            # case insensitive dictionary search
+            if user_name.lower() not in set(k.lower() for k in grant_perms):
+                if 'grant' in cur_perms[user_name] and not cur_perms[user_name]['grant']['inherited']:
+                    if __opts__['test'] is True:
+                        if 'remove_perms' not in ret['pchanges']:
+                            ret['pchanges']['remove_perms'] = {}
+                        ret['pchanges']['remove_perms'].update(
+                            {user_name: cur_perms[user_name]})
+                    else:
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        rm_permissions(
+                            obj_name=obj_name,
+                            principal=user_name,
+                            ace_type='grant',
+                            obj_type=obj_type)
+                        ret['changes']['remove_perms'].update(
+                            {user_name: cur_perms[user_name]})
+            # case insensitive dictionary search
+            if user_name.lower() not in set(k.lower() for k in deny_perms):
+                if 'deny' in cur_perms[user_name] and not cur_perms[user_name]['deny']['inherited']:
+                    if __opts__['test'] is True:
+                        if 'remove_perms' not in ret['pchanges']:
+                            ret['pchanges']['remove_perms'] = {}
+                        ret['pchanges']['remove_perms'].update(
+                            {user_name: cur_perms[user_name]})
+                    else:
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        rm_permissions(
+                            obj_name=obj_name,
+                            principal=user_name,
+                            ace_type='deny',
+                            obj_type=obj_type)
+                        ret['changes']['remove_perms'].update(
+                            {user_name: cur_perms[user_name]})
+
+    # Re-add the Original Comment if defined
+    if isinstance(orig_comment, six.string_types):
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
+    else:
+        if orig_comment:
+            ret['comment'] = orig_comment.extend(ret['comment'])
+
+    ret['comment'] = '\n'.join(ret['comment'])
+
+    # Set result for test = True
+    if __opts__['test'] and (ret['changes'] or ret['pchanges']):
+        ret['result'] = None
+
+    return ret
+
+
+def _set_perms(obj_dacl, obj_type, new_perms, cur_perms, access_mode):
+    obj_type = obj_type.lower()
+    ret = {}
+    for user in new_perms:
+        # Check that user exists:
+        try:
+            user_name = get_name(user)
+        except CommandExecutionError:
+            log.debug('%s Perms: User "%s" missing from Target System',
+                      access_mode.capitalize(), user)
+            continue
+
+        # Get applies_to
+        applies_to = None
+        # Propagation only applies to file and registry object types
+        if obj_type in ['file', 'registry', 'registry32']:
+            if 'applies_to' not in new_perms[user]:
+                # Get current "applies to" settings from the object
+                if user_name in cur_perms and 'deny' in cur_perms[user_name]:
+                    for flag in flags().ace_prop[obj_type]:
+                        if flags().ace_prop[obj_type][flag] == cur_perms[user_name]['deny']['applies to']:
+                            at_flag = flag
+                            for flag1 in flags().ace_prop[obj_type]:
+                                if flags().ace_prop[obj_type][flag1] == at_flag:
+                                    applies_to = flag1
+                if not applies_to:
+                    # Propagation only applies to file and registry object types
+                    if obj_type == 'file':
+                        applies_to = 'this_folder_subfolders_files'
+                    elif 'registry' in obj_type:
+                        applies_to = 'this_key_subkeys'
+            else:
+                applies_to = new_perms[user]['applies_to']
+
+        # Set permissions
+        if obj_dacl.add_ace(principal=user,
+                            access_mode=access_mode,
+                            permissions=new_perms[user]['perms'],
+                            applies_to=applies_to):
+            ret[user] = new_perms[user]
+
+    return ret
+
+
+def set_perms(obj_name,
+              obj_type='file',
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=True,
+              reset=False):
+    '''
+    Set permissions for the given path
+
+    .. versionadded:: Fluorine
+
+    Args:
+
+        obj_name (str):
+            The name or full path to the object
+
+        obj_type (Optional[str]):
+            The type of object for which to check permissions. Default is 'file'
+
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default for ``applise_to``
+            is ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
+
+            .. code-block:: yaml
+
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+
+            To set advanced permissions use a list for the ``perms`` parameter,
+            ie:
+
+            .. code-block:: yaml
+
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+
+            To see a list of available attributes and applies to settings see
+            the documentation for salt.utils.win_dacl.
+
+            A value of ``None`` will make no changes to the ``grant`` portion of
+            the DACL. Default is ``None``.
+
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
+
+            A value of ``None`` will make no changes to the ``deny`` portion of
+            the DACL. Default is ``None``.
+
+        inheritance (bool):
+            If ``True`` the object will inherit permissions from the parent, if
+            ``False``, inheritance will be disabled. Inheritance setting will
+            not apply to parent directories if they must be created. Default is
+            ``False``.
+
+        reset (bool):
+            If ``True`` the existing DCL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``.
+
+    Returns:
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
+
+    Usage:
+
+    .. code-block:: bash
+
+        import salt.utils.win_dacl
+
+        # To grant the 'Users' group 'read & execute' permissions.
+        salt.utils.win_dacl.set_perms(obj_name='C:\\Temp',
+                                      obj_type='file',
+                                      grant_perms={
+                                          'Users': {
+                                              'perms': 'read_execute'
+                                          }
+                                      })
+
+        # Specify advanced attributes with a list
+        salt.utils.win_dacl.set_perms(obj_name='C:\\Temp',
+                                      obj_type='file',
+                                      grant_perms={
+                                          'jsnuffy': {
+                                              'perms': [
+                                                  'read_attributes',
+                                                  'read_ea'
+                                              ],
+                                              'applies_to': 'this_folder_only'
+                                          }
+                                      }"
+    '''
+    ret = {}
+
+    if reset:
+        # Get an empty DACL
+        obj_dacl = dacl(obj_type=obj_type)
+
+        # Get an empty perms dict
+        cur_perms = {}
+
+    else:
+        # Get the DACL for the directory
+        obj_dacl = dacl(obj_name, obj_type=obj_type)
+
+        # Get current file/folder permissions
+        cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
+
+    # Set 'deny' perms if any
+    if deny_perms is not None:
+        ret['deny'] = _set_perms(obj_dacl=obj_dacl,
+                                 obj_type=obj_type,
+                                 new_perms=deny_perms,
+                                 cur_perms=cur_perms,
+                                 access_mode='deny')
+
+    # Set 'grant' perms if any
+    if grant_perms is not None:
+        ret['grant'] = _set_perms(obj_dacl=obj_dacl,
+                                  obj_type=obj_type,
+                                  new_perms=deny_perms,
+                                  cur_perms=cur_perms,
+                                  access_mode='grant')
+
+    # Order the ACL
+    obj_dacl.order_acl()
+
+    # Save the DACL, setting the inheritance
+    # you have to invert inheritance because dacl.save is looking for
+    # protected. protected True means Inherited False...
+
+    if obj_dacl.save(obj_name, not inheritance):
+        return ret
+
+    return {}
