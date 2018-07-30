@@ -380,6 +380,9 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, asynchron
     :type  statement_arguments: list[str]
     :param asynchronous:          Run this query in asynchronous mode
     :type  asynchronous:          bool
+    :param async:                 Run this query in asynchronous mode (an alias to 'asynchronous')
+                                  NOTE: currently it overrides 'asynchronous' and it will be dropped in version Sodium!
+    :type  asynchronous:          bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
