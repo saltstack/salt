@@ -93,6 +93,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils.versions
 
 SSL_VERSION = 'ssl_version'
 
@@ -362,8 +363,8 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
 
 
 def cql_query_with_prepare(query, statement_name, statement_arguments, asynchronous=False,
-                           callback_errors=None,
-                           contact_points=None, port=None, cql_user=None, cql_pass=None):
+                           callback_errors=None, contact_points=None, port=None, cql_user=None, cql_pass=None,
+                           **kwargs):
     '''
     Run a query on a Cassandra cluster and return a dictionary.
 
@@ -407,6 +408,13 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, asynchron
         salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
             statement_arguments=['John']
     '''
+    # Backward-compatibility. This should be removed in Sodium version
+    if 'async' in kwargs:
+        asynchronous = bool(kwargs['async'])
+        msg = 'Use of "async" parameter detected. The "asynchronous" parameter should be used instead.'
+        log.warning(msg)
+        salt.utils.versions.warn_until('Sodium', msg)
+
     try:
         cluster, session = _connect(contact_points=contact_points, port=port,
                                     cql_user=cql_user, cql_pass=cql_pass)
