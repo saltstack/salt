@@ -788,7 +788,7 @@ def dacl(obj_name=None, obj_type='file'):
             # Set the new dacl
             self.dacl = new_dacl.dacl
 
-        def get_ace(self, principal, return_obj=False):
+        def get_ace(self, principal):
             '''
             Get the ACE for a specific principal.
 
@@ -797,10 +797,6 @@ def dacl(obj_name=None, obj_type='file'):
                 principal (str):
                     The name of the user or group for which to get the ace. Can
                     also be a SID.
-
-                return_obj (bool):
-                    Return the ACE object instead of a dict. Will return the
-                    first ACE that matches the principal.
 
             Returns:
                 dict: A dictionary containing the ACEs found for the principal
@@ -812,40 +808,14 @@ def dacl(obj_name=None, obj_type='file'):
                 dacl = Dacl(obj_type=obj_type)
                 dacl.get_ace()
             '''
-            sid = get_sid(principal)
+            principal = get_name(principal)
+            aces = self.list_aces()
 
+            # Filter for the principal
             ret = {}
-
-            for i in range(0, self.dacl.GetAceCount()):
-                ace = self.dacl.GetAce(i)
-
-                # Parse the ACE to text if it matches the passed SID or if
-                if ace[2] == sid:
-                    # Return the ACE if it matches the passed SID
-                    if return_obj:
-                        return ace
-                    user, a_type, a_prop, a_perms, inh = \
-                        self._ace_to_dict(ace)
-                    if user in ret:
-                        if a_type in ret[user]:
-                            if a_prop and a_prop not in ret[user][a_type]['applies to']:
-                                if ret[user][a_type]['applies to'] == 'Not Inherited':
-                                    ret[user][a_type]['applies to'] = a_prop
-                                else:
-                                    a_prop = ':{0}'.format(a_prop)
-                                    ret[user][a_type]['applies to'] += a_prop
-                            for perm in a_perms:
-                                if perm and perm not in ret[user][a_type]['permissions']:
-                                    ret[user][a_type]['permissions'].extend(a_perms)
-                    else:
-                        ret.update(
-                            {user: {
-                                a_type: {
-                                    'applies to': a_prop,
-                                    'inherited': inh,
-                                    'permissions': a_perms,
-                                }}}
-                        )
+            for inheritance in aces:
+                if principal in aces[inheritance]:
+                    ret[inheritance] = {principal: aces[inheritance][principal]}
 
             return ret
 
@@ -863,46 +833,27 @@ def dacl(obj_name=None, obj_type='file'):
                 dacl = Dacl('C:\\Temp')
                 dacl.list_aces()
             '''
-            ret = {}
+            ret = {'Inherited': {},
+                   'Not Inherited': {}}
 
             # loop through each ACE in the DACL
             for i in range(0, self.dacl.GetAceCount()):
                 ace = self.dacl.GetAce(i)
 
                 # Get ACE Elements
-                user, a_type, a_prop, a_perms, inh = self._ace_to_dict(ace)
+                user, a_type, a_prop, a_perms, inheritance = self._ace_to_dict(ace)
 
-                # Check for existing entries in the return
-                if user in ret and a_type in ret[user]:
-
-                    # Check for an existing applies to entry
-                    if a_prop and a_prop not in ret[user][a_type]['applies to']:
-                        if ret[user][a_type]['applies to'] == 'Not Inherited':
-                            ret[user][a_type]['applies to'] = a_prop
-                        else:
-                            a_prop = ':{0}'.format(a_prop)
-                            ret[user][a_type]['applies to'] += a_prop
-
-                    # Go through each permission
-                    for perm in a_perms:
-                        # If the permission is not in the ret, add it
-                        if perm and perm not in ret[user][a_type]['permissions']:
-                            ret[user][a_type]['permissions'].extend(a_perms)
-
-                    # Set inherited bit
-                    if inh and not ret[user][a_type]['inherited']:
-                        ret[user][a_type]['inherited'] = inh
-
+                if user in ret[inheritance]:
+                    ret[inheritance][user][a_type] = {
+                        'applies to': a_prop,
+                        'permissions': a_perms,
+                    }
                 else:
-                    # First time through
-                    ret.update(
-                        {user: {
-                            a_type: {
-                                'applies to': a_prop,
-                                'inherited': inh,
-                                'permissions': a_perms,
-                            }}}
-                    )
+                    ret[inheritance][user] = {
+                        a_type: {
+                            'applies to': a_prop,
+                            'permissions': a_perms,
+                        }}
 
             return ret
 
@@ -964,7 +915,8 @@ def dacl(obj_name=None, obj_type='file'):
             if not ace_perms:
                 ace_perms = ['Undefined Permission: {0}'.format(ace[1])]
 
-            return principal, ace_type, ace_prop, ace_perms, inherited
+            return principal, ace_type, ace_prop, ace_perms, \
+                   'Inherited' if inherited else 'Not Inherited'
 
         def rm_ace(self, principal, ace_type='all'):
             '''
@@ -997,14 +949,19 @@ def dacl(obj_name=None, obj_type='file'):
             sid = get_sid(principal)
             offset = 0
             ret = []
+
             for i in range(0, self.dacl.GetAceCount()):
                 ace = self.dacl.GetAce(i - offset)
-                if ace[2] == sid:
-                    if self.ace_type[ace[0][0]] == ace_type.lower() or \
-                            ace_type == 'all':
-                        self.dacl.DeleteAce(i - offset)
-                        ret.append(self._ace_to_dict(ace))
-                        offset += 1
+
+                # Is the inherited ace flag present
+                inherited = ace[0][1] & win32security.INHERITED_ACE == 16
+
+                if ace[2] == sid and not inherited:
+                        if self.ace_type[ace[0][0]] == ace_type.lower() or \
+                                ace_type == 'all':
+                            self.dacl.DeleteAce(i - offset)
+                            ret.append(self._ace_to_dict(ace))
+                            offset += 1
 
             if not ret:
                 ret = ['ACE not found for {0}'.format(principal)]
@@ -1942,7 +1899,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
         else:
             applies_to = None
 
-        if user_name not in cur_perms:
+        if user_name not in cur_perms['Not Inherited']:
             changes[user] = {'perms': new_perms[user]['perms']}
             if applies_to:
                 changes[user]['applies_to'] = applies_to
@@ -1972,9 +1929,9 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             # Check if applies_to was passed
             if applies_to:
                 # Is there a deny/grant permission set
-                if access_mode in cur_perms[user_name]:
+                if access_mode in cur_perms['Not Inherited'][user_name]:
                     # If the applies to settings are different, use the new one
-                    if not cur_perms[user_name][access_mode]['applies to'] == applies_to_text:
+                    if not cur_perms['Not Inherited'][user_name][access_mode]['applies to'] == applies_to_text:
                         if user not in changes:
                             changes[user] = {}
                         changes[user]['applies_to'] = applies_to
@@ -1992,9 +1949,10 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                 applies_to = None
                 if 'applies_to' not in changes[user]:
                     # Get current "applies to" settings from the file
-                    if user_name in cur_perms and access_mode in cur_perms[user_name]:
+                    if user_name in cur_perms['Not Inherited'] and \
+                            access_mode in cur_perms['Not Inherited'][user_name]:
                         for flag in flags().ace_prop[obj_type]:
-                            if flags().ace_prop[obj_type][flag] == cur_perms[user_name][access_mode]['applies to']:
+                            if flags().ace_prop[obj_type][flag] == cur_perms['Not Inherited'][user_name][access_mode]['applies to']:
                                 at_flag = flag
                                 for flag1 in flags().ace_prop[obj_type]:
                                     if salt.utils.win_dacl.flags().ace_prop[obj_type][flag1] == at_flag:
@@ -2011,7 +1969,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                 if 'perms' not in changes[user]:
                     # Get current perms
                     # Check for basic perms
-                    for perm in cur_perms[user_name][access_mode]['permissions']:
+                    for perm in cur_perms['Not Inherited'][user_name][access_mode]['permissions']:
                         for flag in flags().ace_perms[obj_type]['basic']:
                             if flags().ace_perms[obj_type]['basic'][flag] == perm:
                                 perm_flag = flag
@@ -2020,7 +1978,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                                         perms = flag1
                     # Make a list of advanced perms
                     if not perms:
-                        for perm in cur_perms[user_name][access_mode]['permissions']:
+                        for perm in cur_perms['Not Inherited'][user_name][access_mode]['permissions']:
                             for flag in flags().ace_perms[obj_type]['advanced']:
                                 if flags().ace_perms[obj_type]['advanced'][flag] == perm:
                                     perm_flag = flag
@@ -2158,6 +2116,7 @@ def check_perms(obj_name,
                     set_owner(obj_name=obj_name,
                               principal=owner,
                               obj_type=obj_type)
+                    log.debug('Owner set to %s' % owner)
                     ret['changes']['owner'] = owner
                 except CommandExecutionError:
                     ret['result'] = False
@@ -2176,6 +2135,7 @@ def check_perms(obj_name,
                         obj_name=obj_name,
                         enabled=inheritance,
                         obj_type=obj_type)
+                    log.debug('%s inheritance' % 'Enabling' if inheritance else 'Disabling')
                     ret['changes']['inheritance'] = inheritance
                 except CommandExecutionError:
                     ret['result'] = False
@@ -2184,6 +2144,7 @@ def check_perms(obj_name,
                         ''.format(obj_name, inheritance))
 
     # Check permissions
+    log.debug('Getting current permissions for %s' % obj_name)
     cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
 
     # Verify Deny Permissions
@@ -2207,15 +2168,17 @@ def check_perms(obj_name,
     # Check reset
     # If reset=True, which users will be removed as a result
     if reset:
-        for user_name in cur_perms:
+        log.debug('Resetting permissions for %s' % obj_name)
+        cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
+        for user_name in cur_perms['Not Inherited']:
             # case insensitive dictionary search
             if user_name.lower() not in set(k.lower() for k in grant_perms):
-                if 'grant' in cur_perms[user_name] and not cur_perms[user_name]['grant']['inherited']:
+                if 'grant' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
                         ret['pchanges']['remove_perms'].update(
-                            {user_name: cur_perms[user_name]})
+                            {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
                             ret['changes']['remove_perms'] = {}
@@ -2225,15 +2188,15 @@ def check_perms(obj_name,
                             ace_type='grant',
                             obj_type=obj_type)
                         ret['changes']['remove_perms'].update(
-                            {user_name: cur_perms[user_name]})
+                            {user_name: cur_perms['Not Inherited'][user_name]})
             # case insensitive dictionary search
             if user_name.lower() not in set(k.lower() for k in deny_perms):
-                if 'deny' in cur_perms[user_name] and not cur_perms[user_name]['deny']['inherited']:
+                if 'deny' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
                         ret['pchanges']['remove_perms'].update(
-                            {user_name: cur_perms[user_name]})
+                            {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
                             ret['changes']['remove_perms'] = {}
@@ -2243,7 +2206,7 @@ def check_perms(obj_name,
                             ace_type='deny',
                             obj_type=obj_type)
                         ret['changes']['remove_perms'].update(
-                            {user_name: cur_perms[user_name]})
+                            {user_name: cur_perms['Not Inherited'][user_name]})
 
     # Re-add the Original Comment if defined
     if isinstance(orig_comment, six.string_types):
@@ -2280,9 +2243,10 @@ def _set_perms(obj_dacl, obj_type, new_perms, cur_perms, access_mode):
         if obj_type in ['file', 'registry', 'registry32']:
             if 'applies_to' not in new_perms[user]:
                 # Get current "applies to" settings from the object
-                if user_name in cur_perms and 'deny' in cur_perms[user_name]:
+                if user_name in cur_perms['Not Inherited'] and \
+                        'deny' in cur_perms['Not Inherited'][user_name]:
                     for flag in flags().ace_prop[obj_type]:
-                        if flags().ace_prop[obj_type][flag] == cur_perms[user_name]['deny']['applies to']:
+                        if flags().ace_prop[obj_type][flag] == cur_perms['Not Inherited'][user_name]['deny']['applies to']:
                             at_flag = flag
                             for flag1 in flags().ace_prop[obj_type]:
                                 if flags().ace_prop[obj_type][flag1] == at_flag:
