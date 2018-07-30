@@ -1,26 +1,84 @@
 # -*- coding: utf-8 -*-
 '''
-An engine that reads messages from Slack and can act on them.
-
-It has two major uses.
-
-1. When the ``control`` parameter is set to ``True`` and a message is prefaced
-   with the ``trigger`` (which defaults to ``!``) then the engine will
-   validate that the user has permission, and if so will run the command
-
-2. In addition, when the parameter ``fire_all`` is set (defaults to False),
-   all other messages (the messages that aren't control messages) will be
-   fired off to the salt event bus with the tag prefixed by the string
-   provided by the ``tag`` config option (defaults to ``salt/engines/slack``).
-
-This allows for configuration to be gotten from either the engine config, or from
-the saltmaster's minion pillar.
+An engine that reads messages from Slack and can act on them
 
 .. versionadded: 2016.3.0
 
-:configuration: Example configuration using only a 'default' group. The default
-    group is not special.  In addition, other groups are being loaded from
-    pillars.
+:depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
+
+.. important::
+    This engine requires a bot user. To create a bot user, first go to the
+    **Custom Integrations** page in your Slack Workspace. Copy and paste the
+    following URL, and replace ``myworkspace`` with the proper value for your
+    workspace:
+
+    ``https://myworkspace.slack.com/apps/manage/custom-integrations``
+
+    Next, click on the ``Bots`` integration and request installation. Once
+    approved by an admin, you will be able to proceed with adding the bot user.
+    Once the bot user has been added, you can configure it by adding an avatar,
+    setting the display name, etc. You will also at this time have access to
+    your API token, which will be needed to configure this engine.
+
+    Finally, add this bot user to a channel by switching to the channel and
+    using ``/invite @mybotuser``. Keep in mind that this engine will process
+    messages from each channel in which the bot is a member, so it is
+    recommended to narrowly define the commands which can be executed, and the
+    Slack users which are allowed to run commands.
+
+
+This engine has two boolean configuration parameters that toggle specific
+features (both default to ``False``):
+
+1. ``control`` - If set to ``True``, then any message which starts with the
+   trigger string (which defaults to ``!`` and can be overridden by setting the
+   ``trigger`` option in the engine configuration) will be interpreted as a
+   Salt CLI command and the engine will attempt to run it. The permissions
+   defined in the various ``groups`` will determine if the Slack user is
+   allowed to run the command. The ``targets`` and ``default_target`` options
+   can be used to set targets for a given command, but the engine can also read
+   the following two keyword arguments:
+
+   - ``target`` - The target expression to use for the command
+
+   - ``tgt_type`` - The match type, can be one of ``glob``, ``list``,
+     ``pcre``, ``grain``, ``grain_pcre``, ``pillar``, ``nodegroup``, ``range``,
+     ``ipcidr``, or ``compound``. The default value is ``glob``.
+
+   Here are a few examples:
+
+   .. code-block:: text
+
+       !test.ping target=*
+       !state.apply foo target=os:CentOS tgt_type=grain
+       !pkg.version mypkg target=role:database tgt_type=pillar
+
+2. ``fire_all`` - If set to ``True``, all messages which are not prefixed with
+   the trigger string will fired as events onto Salt's ref:`event bus
+   <event-system>`. The tag for these veents will be prefixed with the string
+   specified by the ``tag`` config option (default: ``salt/engines/slack``).
+
+
+The ``groups_pillar_name`` config option can be used to pull group
+configuration from the specified pillar key.
+
+.. note::
+    In order to use ``groups_pillar_name``, the engine must be running as a
+    minion running on the master, so that the ``Caller`` client can be used to
+    retrieve that minions pillar data, because the master process does not have
+    pillar data.
+
+
+Configuration Examples
+======================
+
+.. versionchanged:: 2017.7.0
+    Access control group support added
+
+This example uses a single group called ``default``. In addition, other groups
+are being loaded from pillar data. The group names do not have any
+significance, it is the users and commands defined within them that are used to
+determine whether the Slack user has permission to run the desired command.
 
 .. code-block:: text
 
@@ -33,7 +91,7 @@ the saltmaster's minion pillar.
           groups:
             default:
               users:
-                - *
+                - '*'
               commands:
                 - test.ping
                 - cmd.run
@@ -55,12 +113,9 @@ the saltmaster's minion pillar.
                   target: saltmaster
                   tgt_type: list
 
-:configuration: Example configuration using the 'default' group and a
-    non-default group and a pillar that will be merged in If the user is '*'
-    (without the quotes) then the group's users or commands will match all
-    users as appropriate
-
-.. versionadded: 2017.7.0
+This example shows multiple groups applying to different users, with all users
+having access to run test.ping. Keep in mind that when using ``*``, the value
+must be quoted, or else PyYAML will fail to load the configuration.
 
 .. code-block:: text
 
@@ -74,9 +129,9 @@ the saltmaster's minion pillar.
           groups_pillar_name: 'slack_engine:groups_pillar'
           groups:
             default:
-              valid_users:
-                - *
-              valid_commands:
+              users:
+                - '*'
+              commands:
                 - test.ping
               aliases:
                 list_jobs:
@@ -87,16 +142,7 @@ the saltmaster's minion pillar.
               users:
                 - garethgreenaway
               commands:
-                - *
-
-:depends: slackclient
-
-
-.. note:: groups_pillar_name
-
-    In order to use this, the engine must be running as a minion running on
-    the master, so that the ``Caller`` client can be used to retrieve that
-    minions pillar data, because the master process does not have pillars.
+                - '*'
 
 '''
 
@@ -129,8 +175,7 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
-import salt.output.highstate
-import salt.output.yaml_out
+import salt.output
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -197,9 +242,9 @@ class SlackClient(object):
             'default': {
                 'users': set(),
                 'commands': set(),
-                'aliases': dict(),
-                'default_target': dict(),
-                'targets': dict()
+                'aliases': {},
+                'default_target': {},
+                'targets': {}
             }
         }
 
@@ -225,7 +270,8 @@ class SlackClient(object):
         for name, config in groups_gen:
             log.info('Trying to get %s and %s to be useful', name, config)
             ret_groups.setdefault(name, {
-                'users': set(), 'commands': set(), 'aliases': dict(), 'default_target': dict(), 'targets': dict()
+                'users': set(), 'commands': set(), 'aliases': {},
+                'default_target': {}, 'targets': {}
             })
             try:
                 ret_groups[name]['users'].update(set(config.get('users', [])))
@@ -333,7 +379,6 @@ class SlackClient(object):
                 cmdlist.append(cmditem)
         return cmdlist
 
-# m_data -> m_data, _text -> test, all_slack_users -> all_slack_users,
     def control_message_target(self, slack_user_name, text, loaded_groups, trigger_string):
         '''Returns a tuple of (target, cmdline,) for the response
 
@@ -585,26 +630,20 @@ class SlackClient(object):
                 return checked
         return null_target
 
-
-# emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
-# obviously pass in
-
     def format_return_text(self, data, function, **kwargs):  # pylint: disable=unused-argument
         '''
         Print out YAML using the block mode
         '''
         try:
-            # Format results from state runs with highstate output
-            if function.startswith('state'):
-                salt.output.highstate.__opts__ = __opts__
-                # Disable colors
-                salt.output.highstate.__opts__.update({"color": False})
-                return salt.output.highstate.output(data)
-            # Format results from everything else with yaml output
-            else:
-                salt.output.yaml_out.__opts__ = __opts__
-                return salt.output.yaml_out.output(data)
-        # pylint: disable=broad-except
+            try:
+                outputter = data[next(iter(data))].get('out')
+            except (StopIteration, AttributeError):
+                outputter = None
+            return salt.output.string_format(
+                {x: y['return'] for x, y in six.iteritems(data)},
+                out=outputter,
+                opts=__opts__,
+            )
         except Exception as exc:
             import pprint
             log.exception(
@@ -634,22 +673,22 @@ class SlackClient(object):
 
     def get_jobs_from_runner(self, outstanding_jids):
         '''
-        Given a list of job_ids, return a dictionary of those job_ids that have completed and their results.
+        Given a list of job_ids, return a dictionary of those job_ids that have
+        completed and their results.
 
-        Query the salt event bus via the jobs runner.  jobs.list_job will show a job in progress,
-        jobs.lookup_jid will return a job that has completed.
+        Query the salt event bus via the jobs runner. jobs.list_job will show
+        a job in progress, jobs.lookup_jid will return a job that has
+        completed.
 
         returns a dictionary of job id: result
         '''
         # Can't use the runner because of https://github.com/saltstack/salt/issues/40671
         runner = salt.runner.RunnerClient(__opts__)
-        # log.debug("Getting job IDs %s will run via runner jobs.lookup_jid", outstanding_jids)
-        #mm = salt.minion.MasterMinion(__opts__)
         source = __opts__.get('ext_job_cache')
         if not source:
             source = __opts__.get('master_job_cache')
 
-        results = dict()
+        results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
             if self.master_minion.returners['{}.get_jid'.format(source)](jid):
@@ -657,12 +696,10 @@ class SlackClient(object):
                 jid_result = job_result.get('Result', {})
                 jid_function = job_result.get('Function', {})
                 # emulate lookup_jid's return, which is just minion:return
-                # pylint is tripping
-                # pylint: disable=missing-whitespace-after-comma
-                job_data = salt.utils.json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = {}
-                results[jid]['data'] = salt.utils.yaml.safe_load(job_data)
-                results[jid]['function'] = jid_function
+                results[jid] = {
+                    'data': salt.utils.json.loads(salt.utils.json.dumps(jid_result)),
+                    'function': jid_function
+                }
 
         return results
 
@@ -673,7 +710,7 @@ class SlackClient(object):
         the values of fire_all and command
         '''
 
-        outstanding = dict()  # set of job_id that we need to check for
+        outstanding = {}  # set of job_id that we need to check for
 
         while True:
             log.trace('Sleeping for interval of %s', interval)

@@ -117,6 +117,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
                 _expected = [{'PID': 6216,
+                              'action': 'login',
                               'line': 'pts/14',
                               'session': 0,
                               'time': 0,
@@ -150,6 +151,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
                     _expected = [{'PID': 6216,
+                                  'action': 'login',
                                   'line': 'pts/14',
                                   'session': 0,
                                   'time': 0,
@@ -193,6 +195,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                              (True, 'Valid beacon configuration'))
 
                             _expected = [{'PID': 6216,
+                                          'action': 'login',
                                           'line': 'pts/14',
                                           'session': 0,
                                           'time': 0,
