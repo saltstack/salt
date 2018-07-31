@@ -921,6 +921,7 @@ def parse_cookie_header(header):
         for item in list(cookie):
             if item in attribs:
                 continue
+            name = item
             value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch
