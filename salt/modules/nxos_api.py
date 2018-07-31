@@ -317,15 +317,8 @@ def show(commands,
 def config(commands=None,
            config_file=None,
            template_engine='jinja',
-           source_hash=None,
-           source_hash_name=None,
-           user=None,
-           group=None,
-           mode=None,
-           attrs=None,
            context=None,
            defaults=None,
-           skip_verify=False,
            saltenv='base',
            **kwargs):
     '''
@@ -370,35 +363,11 @@ def config(commands=None,
         ``jinja``. To simply fetch the file without attempting to render, set
         this argument to ``None``.
 
-    source_hash
-        The hash of the ``config_file``
-
-    source_hash_name
-        When ``source_hash`` refers to a remote file, this specifies the
-        filename to look for in that file.
-
-    user
-        Owner of the file.
-
-    group
-        Group owner of the file.
-
-    mode
-        Permissions of the file.
-
-    attrs
-        Attributes of the file.
-
     context
         Variables to add to the template context.
 
     defaults
         Default values of the context_dict.
-
-    skip_verify: ``False``
-        If ``True``, hash verification of remote file sources (``http://``,
-        ``https://``, ``ftp://``, etc.) will be skipped, and the ``source_hash``
-        argument will be ignored.
 
     transport: ``https``
         Specifies the type of connection transport to use. Valid values for the
@@ -436,28 +405,22 @@ def config(commands=None,
     '''
     initial_config = show('show running-config', **kwargs)[0]
     if config_file:
-        if template_engine:
-            file_str = __salt__['template.render'](source=config_file,
-                                                   template_engine=template_engine,
-                                                   source_hash=source_hash,
-                                                   source_hash_name=source_hash_name,
-                                                   user=user,
-                                                   group=group,
-                                                   mode=mode,
-                                                   attrs=attrs,
-                                                   saltenv=saltenv,
-                                                   context=context,
-                                                   defaults=defaults,
-                                                   skip_verify=skip_verify)
-        else:
-            # If no template engine wanted, simply fetch the source file
-            file_str = __salt__['cp.get_file_str'](config_file,
-                                                   saltenv=saltenv)
-            if file_str is False:
-                raise CommandExecutionError('Source file {} not found'.format(config_file))
-        commands = file_str.splitlines()
-    if isinstance(commands, (six.string_types, six.text_type)):
-        commands = [commands]
+        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        if file_str is False:
+            raise CommandExecutionError('Source file {} not found'.format(config_file))
+    elif commands:
+        if isinstance(commands, (six.string_types, six.text_type)):
+            commands = [commands]
+        file_str = '\n'.join(commands)
+        # unify all the commands in a single file, to render them in a go
+    if template_engine:
+        file_str = __salt__['file.apply_template_on_contents'](file_str,
+                                                               template_engine,
+                                                               context,
+                                                               defaults,
+                                                               saltenv)
+    # whatever the source of the commands would be, split them line by line
+    commands = [line for line in file_str.splitlines() if line.strip()]
     ret = _cli_command(commands, **kwargs)
     current_config = show('show running-config', **kwargs)[0]
     diff = difflib.unified_diff(initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:])

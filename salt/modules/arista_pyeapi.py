@@ -92,9 +92,11 @@ outside a ``pyeapi`` Proxy, e.g.:
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
+import difflib
 import logging
 
 # Import Salt libs
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 try:
     from salt.utils.args import clean_kwargs
@@ -394,15 +396,8 @@ def run_commands(*commands, **kwargs):
 def config(commands=None,
            config_file=None,
            template_engine='jinja',
-           source_hash=None,
-           source_hash_name=None,
-           user=None,
-           group=None,
-           mode=None,
-           attrs=None,
            context=None,
            defaults=None,
-           skip_verify=False,
            saltenv='base',
            **kwargs):
     '''
@@ -411,6 +406,8 @@ def config(commands=None,
     This method is used to send configuration commands to the node.  It
     will take either a string or a list and prepend the necessary commands
     to put the session into config mode.
+
+    Returns the diff after the configuration commands are loaded.
 
     config_file
         The source file with the configuration commands to be sent to the
@@ -443,35 +440,11 @@ def config(commands=None,
         ``jinja``. To simply fetch the file without attempting to render, set
         this argument to ``None``.
 
-    source_hash
-        The hash of the ``config_file``
-
-    source_hash_name
-        When ``source_hash`` refers to a remote file, this specifies the
-        filename to look for in that file.
-
-    user
-        Owner of the file.
-
-    group
-        Group owner of the file.
-
-    mode
-        Permissions of the file.
-
-    attrs
-        Attributes of the file.
-
     context
         Variables to add to the template context.
 
     defaults
         Default values of the ``context`` dict.
-
-    skip_verify: ``False``
-        If ``True``, hash verification of remote file sources (``http://``,
-        ``https://``, ``ftp://``, etc.) will be skipped, and the ``source_hash``
-        argument will be ignored.
 
     transport: ``https``
         Specifies the type of connection transport to use. Valid values for the
@@ -532,28 +505,33 @@ def config(commands=None,
         salt '*' pyeapi.config config_file=salt://config.txt
         salt '*' pyeapi.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
     '''
+    initial_config = get_config(as_string=True, **kwargs)
     if config_file:
-        if template_engine:
-            file_str = __salt__['template.render'](source=config_file,
-                                                   template_engine=template_engine,
-                                                   source_hash=source_hash,
-                                                   source_hash_name=source_hash_name,
-                                                   user=user,
-                                                   group=group,
-                                                   mode=mode,
-                                                   attrs=attrs,
-                                                   saltenv=saltenv,
-                                                   context=context,
-                                                   defaults=defaults,
-                                                   skip_verify=skip_verify)
-        else:
-            # If no template engine wanted, simply fetch the source file
-            file_str = __salt__['cp.get_file_str'](config_file,
-                                                   saltenv=saltenv)
-            if file_str is False:
-                raise CommandExecutionError('Source file {} not found'.format(config_file))
-        commands = file_str.splitlines()
-    return call('config', commands, **kwargs)
+        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        if file_str is False:
+            raise CommandExecutionError('Source file {} not found'.format(config_file))
+        log.debug('Fetched from %s', config_file)
+        log.debug(file_str)
+    elif commands:
+        if isinstance(commands, (six.string_types, six.text_type)):
+            commands = [commands]
+        file_str = '\n'.join(commands)
+        # unify all the commands in a single file, to render them in a go
+    if template_engine:
+        file_str = __salt__['file.apply_template_on_contents'](file_str,
+                                                               template_engine,
+                                                               context,
+                                                               defaults,
+                                                               saltenv)
+        log.debug('Rendered:')
+        log.debug(file_str)
+    # whatever the source of the commands would be, split them line by line
+    commands = [line for line in file_str.splitlines() if line.strip()]
+    # push the commands one by one, removing empty lines
+    configured = call('config', commands, **kwargs)
+    current_config = get_config(as_string=True, **kwargs)
+    diff = difflib.unified_diff(initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:])
+    return ''.join([x.replace('\r', '') for x in diff])
 
 
 def get_config(config='running-config',
