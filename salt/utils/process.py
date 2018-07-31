@@ -299,6 +299,12 @@ class ThreadPool(object):
 
         self._workers = []
 
+        # keep stats on overflows, puts, tasks_done
+        self._stats = {'overflows': 0,
+                       'puts': 0,
+                       'tasks_done': 0
+                      }
+
         # create worker threads
         for _ in range(num_threads):
             thread = threading.Thread(target=self._thread_target)
@@ -316,8 +322,10 @@ class ThreadPool(object):
             kwargs = {}
         try:
             self._job_queue.put_nowait((func, args, kwargs))
+            self._stats['puts'] = self._stats['puts'] + 1
             return True
         except queue.Full:
+            self._stats['overflows'] = self._stats['overflows'] + 1
             return False
 
     def _thread_target(self):
@@ -327,6 +335,7 @@ class ThreadPool(object):
                 try:
                     func, args, kwargs = self._job_queue.get(timeout=1)
                     self._job_queue.task_done()  # Mark the task as done once we get it
+                    self._stats['tasks_done'] = self._stats['tasks_done'] + 1
                 except queue.Empty:
                     continue
             except AttributeError:
