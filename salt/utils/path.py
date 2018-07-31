@@ -406,5 +406,8 @@ def os_walk(top, *args, **kwargs):
     This is a helper than ensures that all paths returned from os.walk are
     unicode.
     '''
-    for item in os.walk(salt.utils.stringutils.to_str(top), *args, **kwargs):
+    top_query = salt.utils.stringutils.to_str(top)
+    if salt.utils.platform.is_windows() and six.PY2:
+        top_query = top
+    for item in os.walk(top_query, *args, **kwargs):
         yield salt.utils.data.decode(item, preserve_tuples=True)
