@@ -549,11 +549,9 @@ class RemoteFuncs(object):
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
 
-        _ret_dict = False
         if isinstance(load['fun'], six.string_types):
             functions = list(set(load['fun'].split(',')))
-            if len(functions) > 1:
-                _ret_dict = True
+            _ret_dict = len(functions) > 1
         elif isinstance(load['fun'], list):
             functions = load['fun']
             _ret_dict = True

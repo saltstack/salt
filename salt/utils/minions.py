@@ -1157,11 +1157,9 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     minions = _res['minions']
     cache = salt.cache.factory(opts)
 
-    _ret_dict = False
     if isinstance(fun, six.string_types):
         functions = list(set(fun.split(',')))
-        if len(functions) > 1:
-            _ret_dict = True
+        _ret_dict = len(functions) > 1
     elif isinstance(fun, list):
         functions = fun
         _ret_dict = True
@@ -1174,7 +1172,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
         if not isinstance(mdata, dict):
             continue
 
-        if not _ret_dict and functions[0] in mdata:
+        if not _ret_dict and functions and functions[0] in mdata:
             ret[minion] = mdata.get(functions)
         elif _ret_dict:
             for fun in functions:

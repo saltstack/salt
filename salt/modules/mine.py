@@ -304,19 +304,16 @@ def get(tgt,
             data = __salt__['data.get']('mine_cache')
 
             if isinstance(data, dict):
-                _ret_dict = False
-
                 if isinstance(fun, six.string_types):
                     functions = list(set(fun.split(',')))
-                    if len(functions) > 1:
-                        _ret_dict = True
+                    _ret_dict = len(functions) > 1
                 elif isinstance(fun, list):
                     functions = fun
                     _ret_dict = True
                 else:
                     return {}
 
-                if not _ret_dict and functions[0] in data:
+                if not _ret_dict and functions and functions[0] in data:
                     ret[__opts__['id']] = data.get(functions)
                 elif _ret_dict:
                     for fun in functions:
