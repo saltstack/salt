@@ -356,7 +356,7 @@ def flags(instantiated=True):
         # 0x0000 : Not inherited, I don't know the enumeration for this
         # 0x0010 : win32security.INHERITED_ACE
 
-        # All the values in the dice below are combinations of the following
+        # All the values in the dict below are combinations of the following
         # enumerations or'ed together
         # 0x0001 : win32security.OBJECT_INHERIT_ACE
         # 0x0002 : win32security.CONTAINER_INHERIT_ACE
@@ -1309,9 +1309,6 @@ def get_primary_group(obj_name, obj_type='file'):
         raise SaltInvocationError(
             'Invalid "obj_type" passed: {0}'.format(obj_type))
 
-    if obj_type in ['registry', 'registry32']:
-        obj_name = dacl().get_reg_name(obj_name)
-
     if 'registry' in obj_type.lower():
         obj_name = dacl().get_reg_name(obj_name)
         log.debug('Name converted to: %s', obj_name)
@@ -1377,7 +1374,7 @@ def set_owner(obj_name, principal, obj_type='file'):
         raise SaltInvocationError(
             'Invalid "obj_type" passed: {0}'.format(obj_type))
 
-    if obj_type in ['registry', 'registry32']:
+    if 'registry' in obj_type.lower():
         obj_name = dacl().get_reg_name(obj_name)
 
     # To set the owner to something other than the logged in user requires
@@ -1459,7 +1456,7 @@ def set_primary_group(obj_name, principal, obj_type='file'):
         raise SaltInvocationError(
             'Invalid "obj_type" passed: {0}'.format(obj_type))
 
-    if obj_type in ['registry', 'registry32']:
+    if 'registry' in obj_type.lower():
         obj_name = dacl().get_reg_name(obj_name)
 
     # To set the owner to something other than the logged in user requires
@@ -1739,21 +1736,6 @@ def has_permission(obj_name,
     # If the ace is empty, return false
     if not cur_flag:
         return False
-
-    if 'test_inheritance_perms_reset' in obj_name:
-        log.debug('*' * 68)
-        log.debug(obj_name)
-        log.debug(principal)
-        log.debug(permission)
-        log.debug('*' * 68)
-        log.debug(chk_flag)
-        log.debug('-' * 68)
-        log.debug(cur_flag)
-        log.debug('-' * 68)
-        log.debug(chk_flag == cur_flag)
-        log.debug('-' * 68)
-        log.debug(cur_flag & chk_flag == chk_flag)
-        log.debug('*' * 68)
 
     # Check if the ACE contains the permission
     return cur_flag & chk_flag == chk_flag
@@ -2045,13 +2027,14 @@ def check_perms(obj_name,
             check/deny. Default is ``None``.
 
         inheritance (bool):
-            ``True will check if inheritance is enabled and enable it. ``False``
-            will check if inheritance is disabled and disable it. Default is
-            ``True``.
+            ``True`` will enable inheritance from the parent object. ``False``
+            will disable inheritance. Default is ``True``.
 
         reset (bool):
-            ``True`` will show what permissions will be removed by resetting the
-            DACL. ``False`` will do nothing. Default is ``False``.
+            ``True`` will clear the DACL and set only the permissions defined
+             in ``grant_perms`` and ``deny_perms``. ``False`` append permissions
+             to the existing DACL. Default is ``False``. This does NOT affect
+            inherited permissions.
 
     Returns:
         dict: A dictionary of changes that have been made
