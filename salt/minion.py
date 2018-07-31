@@ -507,12 +507,12 @@ class MinionBase(object):
                             log.warning('master_type = distributed needs more than 1 master.')
 
                     if opts['master_shuffle']:
-                        if opts['master_failback']:
-                            secondary_masters = opts['master'][1:]
-                            shuffle(secondary_masters)
-                            opts['master'][1:] = secondary_masters
-                        else:
-                            shuffle(opts['master'])
+                        log.warning(
+                            'Use of \'master_shuffle\' detected. \'master_shuffle\' is deprecated in favor '
+                            'of \'random_master\'. Please update your minion config file.'
+                        )
+                        opts['random_master'] = opts['master_shuffle']
+
                     opts['auth_tries'] = 0
                     if opts['master_failback'] and opts['master_failback_interval'] == 0:
                         opts['master_failback_interval'] = opts['master_alive_interval']
@@ -578,12 +578,19 @@ class MinionBase(object):
         # happy with the first one that allows us to connect
         if isinstance(opts['master'], list):
             conn = False
-            # shuffle the masters and then loop through them
-            opts['local_masters'] = copy.copy(opts['master'])
-            if opts['random_master']:
-                shuffle(opts['local_masters'])
             last_exc = None
-            opts['master_uri_list'] = list()
+            opts['master_uri_list'] = []
+            opts['local_masters'] = copy.copy(opts['master'])
+
+            # shuffle the masters and then loop through them
+            if opts['random_master']:
+                # master_failback is only used when master_type is set to failover
+                if opts['master_type'] == 'failover' and opts['master_failback']:
+                    secondary_masters = opts['local_masters'][1:]
+                    shuffle(secondary_masters)
+                    opts['local_masters'][1:] = secondary_masters
+                else:
+                    shuffle(opts['local_masters'])
 
             # This sits outside of the connection loop below because it needs to set
             # up a list of master URIs regardless of which masters are available

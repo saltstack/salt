@@ -27,6 +27,7 @@ class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {syslog: {}}
 
+    @skipIf(not syslog.HAS_SYSLOG, 'Skip when syslog not installed')
     def test_syslog_returner_unicode(self):
         '''
         test syslog returner with unicode

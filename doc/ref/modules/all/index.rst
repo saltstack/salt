@@ -194,6 +194,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -431,7 +432,6 @@ execution modules
     system
     system_profiler
     systemd
-    template
     telegram
     telemetry
     temp
