@@ -31,16 +31,16 @@ def policy_present(name, rules):
 
     .. code-block:: yaml
 
-    demo-policy:
-      vault.policy_present:
-        - name: foo/bar
-        - rules: |
-            path "secret/top-secret/*" {
-              policy = "deny"
-            }
-            path "secret/not-very-secret/*" {
-              policy = "write"
-            }
+        demo-policy:
+        vault.policy_present:
+            - name: foo/bar
+            - rules: |
+                path "secret/top-secret/*" {
+                policy = "deny"
+                }
+                path "secret/not-very-secret/*" {
+                policy = "write"
+                }
 
     '''
     url = "v1/sys/policy/{0}".format(name)
@@ -121,4 +121,3 @@ def _handle_existing_policy(name, new_rules, existing_rules):
     ret['comment'] = 'Policy was updated'
 
     return ret
-    
