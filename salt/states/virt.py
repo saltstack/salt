@@ -250,6 +250,7 @@ def running(name,
             install=True,
             pub_key=None,
             priv_key=None,
+            update=False,
             connection=None,
             username=None,
             password=None):
@@ -313,6 +314,9 @@ def running(name,
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: Fluorine
+    :param update: set to ``True`` to update a defined module. (Default: ``False``)
+
+        .. versionadded:: Fluorine
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: Fluorine
@@ -374,11 +378,47 @@ def running(name,
         try:
             __salt__['virt.vm_state'](name)
             if __salt__['virt.vm_state'](name) != 'running':
+                action_msg = 'started'
+                if update:
+                    status = __salt__['virt.update'](name,
+                                                     cpu=cpu,
+                                                     mem=mem,
+                                                     disk_profile=disk_profile,
+                                                     disks=disks,
+                                                     nic_profile=nic_profile,
+                                                     interfaces=interfaces,
+                                                     graphics=graphics,
+                                                     live=False,
+                                                     connection=connection,
+                                                     username=username,
+                                                     password=password)
+                    if status['definition']:
+                        action_msg = 'updated and started'
                 __salt__['virt.start'](name)
-                ret['changes'][name] = 'Domain started'
-                ret['comment'] = 'Domain {0} started'.format(name)
+                ret['changes'][name] = 'Domain {0}'.format(action_msg)
+                ret['comment'] = 'Domain {0} {1}'.format(name, action_msg)
             else:
-                ret['comment'] = 'Domain {0} exists and is running'.format(name)
+                if update:
+                    status = __salt__['virt.update'](name,
+                                                     cpu=cpu,
+                                                     mem=mem,
+                                                     disk_profile=disk_profile,
+                                                     disks=disks,
+                                                     nic_profile=nic_profile,
+                                                     interfaces=interfaces,
+                                                     graphics=graphics,
+                                                     connection=connection,
+                                                     username=username,
+                                                     password=password)
+                    ret['changes'][name] = status
+                    if status.get('errors', None):
+                        ret['comment'] = 'Domain {0} updated, but some live update(s) failed'.format(name)
+                    elif not status['definition']:
+                        ret['comment'] = 'Domain {0} exists and is running'.format(name)
+                    else:
+                        ret['comment'] = 'Domain {0} updated, restart to fully apply the changes'.format(name)
+                else:
+                    ret['comment'] = 'Domain {0} exists and is running'.format(name)
         except CommandExecutionError:
             if image:
                 salt.utils.versions.warn_until(
@@ -406,7 +446,7 @@ def running(name,
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
-        # Something bad happened when starting the VM, report it
+        # Something bad happened when starting / updating the VM, report it
         ret['comment'] = six.text_type(err)
         ret['result'] = False
 

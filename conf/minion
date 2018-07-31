@@ -26,14 +26,14 @@
 #no_proxy: []
 
 # If multiple masters are specified in the 'master' setting, the default behavior
-# is to always try to connect to them in the order they are listed. If random_master is
-# set to True, the order will be randomized instead. This can be helpful in distributing
-# the load of many minions executing salt-call requests, for example, from a cron job.
-# If only one master is listed, this setting is ignored and a warning will be logged.
-# NOTE: If master_type is set to failover, use master_shuffle instead.
+# is to always try to connect to them in the order they are listed. If random_master
+# is set to True, the order will be randomized upon Minion startup instead. This can
+# be helpful in distributing the load of many minions executing salt-call requests,
+# for example, from a cron job. If only one master is listed, this setting is ignored
+# and a warning will be logged.
 #random_master: False
 
-# Use if master_type is set to failover.
+# NOTE: Deprecated in Salt Fluorine. Use 'random_master' instead.
 #master_shuffle: False
 
 # Minions can connect to multiple masters simultaneously (all masters

@@ -134,7 +134,8 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Selects a random master when starting a minion up in multi-master mode
+    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
     # When in multi-master mode, temporarily remove a master from the list if a conenction
@@ -967,6 +968,8 @@ VALID_OPTS = {
     # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
 
+    # Selects a random master when starting a minion up in multi-master mode or
+    # when starting a minion with salt-call. ``master`` must be a list.
     'random_master': bool,
 
     # An upper bound for the amount of time for a minion to sleep before attempting to

@@ -2016,3 +2016,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = os.path.join(TMP, 'test.txt')
         if os.path.isfile(state_file):
             os.remove(state_file)
+
+    def test_state_sls_integer_name(self):
+        '''
+        This tests the case where the state file is named
+        only with integers
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='12345'
+        )
+
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])
