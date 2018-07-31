@@ -10,6 +10,7 @@ proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    arista_pyeapi
     cimc
     chronos
     cimc
@@ -22,6 +23,7 @@ proxy modules
     napalm
     netmiko_px
     nxos
+    nxos_api
     panos
     philips_hue
     rest_sample
