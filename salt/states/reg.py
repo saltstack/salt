@@ -183,17 +183,24 @@ def present(name,
             The owner of the registry key. If this is not passed, the account
             under which Salt is running will be used.
 
+            .. note::
+                Owner is set for the key that contains the value/data pair. You
+                cannot set ownership on value/data pairs themselves.
+
             .. versionadded:: Fluorine
 
         win_perms (dict):
             A dictionary containing permissions to grant and their propagation.
             If not passed the 'Grant` permissions will not be modified.
 
+            .. note::
+                Permissions are set for the key that contains the value/data
+                pair. You cannot set permissions on value/data pairs themselves.
+
             For each user specify the account name, with a sub dict for the
             permissions to grant and the 'Applies to' setting. For example:
             ``{'Administrators': {'perms': 'full_control', 'applies_to':
-            'this_key_subkeys'}}``. ``perms`` must be specified. Permissions are
-            not applied to data/value pairs.
+            'this_key_subkeys'}}``. ``perms`` must be specified.
 
             Registry permissions are specified using the ``perms`` key. You can
             specify a single basic permission or a list of advanced perms. The
@@ -231,6 +238,10 @@ def present(name,
             A dictionary containing permissions to deny and their propagation.
             If not passed the `Deny` permissions will not be modified.
 
+            .. note::
+                Permissions are set for the key that contains the value/data
+                pair. You cannot set permissions on value/data pairs themselves.
+
             Valid options are the same as those specified in ``win_perms``
 
             .. note::
@@ -243,12 +254,20 @@ def present(name,
             ``True`` to inherit permissions from the parent key. ``False`` to
             disable inheritance. Default is ``True``.
 
+            .. note::
+                Inheritance is set for the key that contains the value/data
+                pair. You cannot set inheritance on value/data pairs themselves.
+
             .. versionadded:: Fluorine
 
         win_perms_reset (bool):
             If ``True`` the existing DACL will be cleared and replaced with the
             settings defined in this function. If ``False``, new entries will be
             appended to the existing DACL. Default is ``False``
+
+            .. note::
+                Perms are reset for the key that contains the value/data pair.
+                You cannot set permissions on value/data pairs themselves.
 
             .. versionadded:: Fluorine
 
