@@ -233,7 +233,7 @@ def send(message,
     '''
     if 'async' in kwargs:  # Remove this in Sodium
         salt.utils.versions.warn_until('Sodium', 'Parameter "async" is renamed to "asynchronous" '
-                                                 'and will be removed in Salt Sodium.')
+                                                 'and will be removed in version {version}.')
         asynchronous = bool(kwargs['async'])
 
     params = _get_api_params(api_url=api_url,
