@@ -7,7 +7,7 @@ NOTE: These functions are converted to methods on the Matcher class during maste
 This is why they all take `self` but are not defined inside a `class:` declaration.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-
+import os
 import logging
 from salt.defaults import DEFAULT_TARGET_DELIM  # pylint: disable=3rd-party-module-not-gated
 
@@ -85,4 +85,3 @@ def mmatch(self,
         minions = list(minions)
     return {'minions': minions,
             'missing': []}
-

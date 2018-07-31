@@ -15,5 +15,3 @@ def match(self, tgt):
     Returns true if the passed pcre regex matches
     '''
     return bool(re.match(tgt, self.opts['id']))
-
-
