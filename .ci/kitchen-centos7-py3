@@ -1,5 +1,9 @@
 pipeline {
     agent { label 'kitchen-slave' }
+    options {
+        timestamps()
+        ansiColor('xterm')
+    }
     environment {
         SALT_KITCHEN_PLATFORMS = "/var/jenkins/workspace/platforms.yml"
         SALT_KITCHEN_DRIVER = "/var/jenkins/workspace/driver.yml"
@@ -7,6 +11,7 @@ pipeline {
         RBENV_VERSION = "2.4.2"
         TEST_SUITE = "py3"
         TEST_PLATFORM = "centos-7"
+        PY_COLORS = 1
     }
     stages {
         stage('github-pending') {

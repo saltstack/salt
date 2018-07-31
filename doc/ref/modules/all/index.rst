@@ -431,7 +431,6 @@ execution modules
     system
     system_profiler
     systemd
-    template
     telegram
     telemetry
     temp
