@@ -434,7 +434,7 @@ class _vfstab_entry(object):
         return True
 
 
-class _filesystems_entry(object):
+class _FileSystemsEntry(object):
     '''
     Utility class for manipulating filesystem entries. Primarily we're parsing,
     formatting, and comparing lines. Parsing emits dicts expected from
@@ -459,7 +459,7 @@ class _filesystems_entry(object):
             raise ValueError('Invalid number of lines: {0}'.format(lines))
         if not keys:
             # if empty force default filesystems_keys
-            keys = _filesystems_entry.filesystems_keys
+            keys = _FileSystemsEntry.filesystems_keys
         elif len(keys) < 6:
             raise ValueError('Invalid key name array: {0}'.format(keys))
 
@@ -491,7 +491,7 @@ class _filesystems_entry(object):
                 # ignore unknown or local scope keys
                 if key.startswith('__'):
                     continue
-                if key in _filesystems_entry.compatibility_keys:
+                if key in _FileSystemsEntry.compatibility_keys:
                     cmdln_dict[key] = value
 
         return cmdln_dict
@@ -1573,19 +1573,17 @@ def delete_mount_cache(real_name):
 
 def _filesystems(config='/etc/filesystems', leading_key=True):
     '''
-    .. versionadded:: 2018.3.3
-
-    List the contents of the filesystems
+    Return the contents of the filesystems in an OrderedDict
 
     config
         File containing filesystem infomation
 
     leading_key
-        True    return dictionary keyed by 'name' value and dictionary with other keys, values
-                { '/dir' : { 'dev': '/dev/hd8', .... }}
+        True    return dictionary keyed by 'name' and value as dictionary with other keys, values (name excluded)
+                OrderedDict({ '/dir' : OrderedDict({'dev': '/dev/hd8', .... }}))
 
-        False   return dictionary  keyed by 'name' value and dictionary with all keys, values
-                { '/dir' : { 'name' : '/dir', 'dev': '/dev/hd8', .... }}
+        False   return dictionary  keyed by 'name' and value as dictionary with all keys, values (name included)
+                OrderedDict({ '/dir' : OrderedDict({'name': '/dir', 'dev': '/dev/hd8', ... })})
     '''
     ret = OrderedDict()
     lines = []
@@ -1608,9 +1606,9 @@ def _filesystems(config='/etc/filesystems', leading_key=True):
             elif not line.split():
                 parsing_block = False
                 try:
-                    entry = _filesystems_entry.dict_from_lines(
+                    entry = _FileSystemsEntry.dict_from_lines(
                         lines,
-                        _filesystems_entry.compatibility_keys)
+                        _FileSystemsEntry.compatibility_keys)
                     lines = []
                     if 'opts' in entry:
                         entry['opts'] = entry['opts'].split(',')
@@ -1622,7 +1620,7 @@ def _filesystems(config='/etc/filesystems', leading_key=True):
                     else:
                         ret[entry['name']] = entry
 
-                except _filesystems_entry.ParseError:
+                except _FileSystemsEntry.ParseError:
                     pass
             else:
                 lines.append(line)
@@ -1709,8 +1707,7 @@ def set_filesystems(
     if isinstance(match_on, list):
         pass
     elif not isinstance(match_on, six.string_types):
-        msg = 'match_on must be a string or list of strings'
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError('match_on must be a string or list of strings')
     elif match_on == 'auto':
         # Try to guess right criteria for auto....
         # added IBM types from sys/vmount.h after btrfs
@@ -1751,16 +1748,14 @@ def set_filesystems(
         match_on = [match_on]
 
     # generate entry and criteria objects, handle invalid keys in match_on
-    entry_ip = _filesystems_entry.from_line(entry_args, kwargs)
+    entry_ip = _FileSystemsEntry.from_line(entry_args, kwargs)
     try:
         criteria = entry_ip.pick(match_on)
 
     except KeyError:
-        filterFn = lambda key: key not in _filesystems_entry.compatibility_keys
+        filterFn = lambda key: key not in _FileSystemsEntry.compatibility_keys
         invalid_keys = filter(filterFn, match_on)
-
-        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError('Unrecognized keys in match_on: "{0}"'.format(invalid_keys))
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
@@ -1782,8 +1777,7 @@ def set_filesystems(
                 view_lines.append(fsys_view)
 
     except (IOError, OSError) as exc:
-        msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, exc))
+        raise CommandExecutionError('Couldn\'t read from {0}: {1}'.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
@@ -1797,11 +1791,10 @@ def set_filesystems(
                 # The line was changed, commit it!
                 for fsys_view in view_lines:
                     entry = fsys_view[1]
-                    mystrg = _filesystems_entry.dict_to_lines(entry)
+                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
                     ofile.writelines(salt.utils.data.encode(mystrg))
         except (IOError, OSError):
-            msg = 'File not writable {0}'
-            raise CommandExecutionError(msg.format(config))
+            raise CommandExecutionError('File not writable {0}'.format(config))
 
     return ret
 
@@ -1824,7 +1817,7 @@ def rm_filesystems(name, device, config='/etc/filesystems'):
     if 'AIX' not in __grains__['kernel']:
         return modified
 
-    criteria = _filesystems_entry(name=name, dev=device)
+    criteria = _FileSystemsEntry(name=name, dev=device)
     try:
         fsys_filedict = _filesystems(config, False)
         for fsys_view in six.viewitems(fsys_filedict):
@@ -1834,22 +1827,20 @@ def rm_filesystems(name, device, config='/etc/filesystems'):
                 else:
                     view_lines.append(fsys_view)
 
-            except _filesystems_entry.ParseError:
+            except _FileSystemsEntry.ParseError:
                 view_lines.append(fsys_view)
 
     except (IOError, OSError) as exc:
-        msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, exc))
+        raise CommandExecutionError("Couldn't read from {0}: {1}".format(config, exc))
 
     if modified:
         try:
             with salt.utils.files.fopen(config, 'wb') as ofile:
                 for fsys_view in view_lines:
                     entry = fsys_view[1]
-                    mystrg = _filesystems_entry.dict_to_lines(entry)
+                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
                     ofile.writelines(salt.utils.data.encode(mystrg))
         except (IOError, OSError) as exc:
-            msg = "Couldn't write to {0}: {1}"
-            raise CommandExecutionError(msg.format(config, exc))
+            raise CommandExecutionError("Couldn't write to {0}: {1}".format(config, exc))
 
     return modified
