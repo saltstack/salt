@@ -311,7 +311,7 @@ def _get_adapter_mode_info(interface):
     '''
     return adaptermode for given interface
     '''
-    mode = _load_config(interface, ['mode'])['mode']
+    mode = _load_config(interface, ['mode'])['mode'].lower()
     return mode if mode in ['disabled', 'ethercat'] else 'tcpip'
 
 
@@ -659,7 +659,7 @@ def set_dhcp_linklocal_all(interface):
     Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
-    :return: True if the settings ware applied, otherwise an exception will be thrown.
+    :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
     CLI Example:
@@ -703,7 +703,7 @@ def set_dhcp_only_all(interface):
     Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
-    :return: True if the settings ware applied, otherwise an exception will be thrown.
+    :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
     CLI Example:
@@ -732,7 +732,7 @@ def set_linklocal_only_all(interface):
     Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
 
     :param str interface: interface label
-    :return: True if the settings ware applied, otherwise an exception will be thrown.
+    :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
     CLI Example:
