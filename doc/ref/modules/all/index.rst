@@ -11,6 +11,8 @@ execution modules
         salt.modules.group
         salt.modules.kernelpkg
         salt.modules.pkg
+        salt.modules.service
+        salt.modules.shadow
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -29,6 +31,7 @@ execution modules
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
@@ -84,6 +87,7 @@ execution modules
     chocolatey
     chronos
     cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -96,7 +100,6 @@ execution modules
     cron
     csf
     cyg
-    cytest
     daemontools
     data
     datadog_api
@@ -191,6 +194,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -268,9 +272,9 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -282,6 +286,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -295,6 +300,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -371,6 +377,7 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule
@@ -485,7 +492,6 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
     x509
@@ -502,5 +508,6 @@ execution modules
     znc
     zoneadm
     zonecfg
+    zookeeper
     zpool
     zypper

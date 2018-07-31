@@ -923,7 +923,7 @@ def hold(tag, *snapshot, **kwargs):
 
     tag : string
         name of tag
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         specifies that a hold with the given tag is applied recursively to
@@ -991,7 +991,7 @@ def release(tag, *snapshot, **kwargs):
 
     tag : string
         name of tag
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of
@@ -1050,7 +1050,7 @@ def snapshot(*snapshot, **kwargs):
     '''
     Creates snapshots with the given names.
 
-    *snapshot : string
+    snapshot : string
         name of snapshot(s)
     recursive : boolean
         recursively create snapshots of all descendent datasets.
@@ -1104,9 +1104,9 @@ def set(*dataset, **kwargs):
     '''
     Sets the property or list of properties to the given value(s) for each dataset.
 
-    *dataset : string
+    dataset : string
         name of snapshot(s), filesystem(s), or volume(s)
-    *properties : string
+    properties : string
         additional zfs properties pairs
 
     .. note::
@@ -1159,7 +1159,7 @@ def get(*dataset, **kwargs):
     '''
     Displays properties for the given datasets.
 
-    *dataset : string
+    dataset : string
         name of snapshot(s), filesystem(s), or volume(s)
     properties : string
         comma-separated list of properties to list, defaults to all
@@ -1180,7 +1180,6 @@ def get(*dataset, **kwargs):
         .. versionadded:: 2018.3.0
 
     .. note::
-
         If no datasets are specified, then the command displays properties
         for all datasets on the system.
 

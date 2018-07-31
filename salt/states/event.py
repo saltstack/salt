@@ -27,8 +27,8 @@ def send(name,
     <salt.modules.event.send>` execution module of the same name,
     with the additional argument:
 
-    :param show_changed: state will show as changed with the data
-    argument as the change value. If false, shows as unchanged.
+    :param show_changed: If ``True``, state will show as changed with the data
+        argument as the change value. If ``False``, shows as unchanged.
 
     Example:
 
@@ -74,7 +74,7 @@ def wait(name, sfun=None):
 
     Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Stand up a new web server.
         apache:

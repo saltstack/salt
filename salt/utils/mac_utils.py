@@ -11,7 +11,11 @@ import subprocess
 import os
 import plistlib
 import time
-import pwd
+try:
+    import pwd
+except ImportError:
+    # The pwd module is not available on all platforms
+    pass
 
 # Import Salt Libs
 import salt.modules.cmdmod
@@ -118,6 +122,18 @@ def _run_all(cmd):
     ret['stderr'] = err
 
     return ret
+
+
+def _check_launchctl_stderr(ret):
+    '''
+    helper class to check the launchctl stderr.
+    launchctl does not always return bad exit code
+    if there is a failure
+    '''
+    err = ret['stderr'].lower()
+    if 'service is disabled' in err:
+        return True
+    return False
 
 
 def execute_return_success(cmd):
@@ -275,9 +291,10 @@ def launchctl(sub_cmd, *args, **kwargs):
     kwargs['python_shell'] = False
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     ret = __salt__['cmd.run_all'](cmd, **kwargs)
+    error = _check_launchctl_stderr(ret)
 
     # Raise an error or return successful result
-    if ret['retcode']:
+    if ret['retcode'] or error:
         out = 'Failed to {0} service:\n'.format(sub_cmd)
         out += 'stdout: {0}\n'.format(ret['stdout'])
         out += 'stderr: {0}\n'.format(ret['stderr'])

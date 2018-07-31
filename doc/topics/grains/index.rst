@@ -41,6 +41,11 @@ Grains data can be listed by using the 'grains.items' module:
 
 .. _static-custom-grains:
 
+Using grains in a state
+=======================
+
+To use a grain in a state you can access it via `{{ grains['key'] }}`.
+
 Grains in the Minion Config
 ===========================
 
@@ -124,9 +129,9 @@ Writing Grains
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
-functions in a grains module must return a Python :ref:`dict
-<python2:typesmapping>`, where the dictionary keys are the names of grains, and
-each key's value is that value for that grain.
+functions in a grains module must return a :ref:`Python dictionary
+<typesmapping>`, where the dictionary keys are the names of grains, and each
+key's value is that value for that grain.
 
 Custom grains modules should be placed in a subdirectory named ``_grains``
 located under the :conf_master:`file_roots` specified by the master config

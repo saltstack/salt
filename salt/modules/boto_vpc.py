@@ -12,37 +12,35 @@ Connection module for Amazon VPC
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
+    vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
-        vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    vpc.region: us-east-1
 
-        vpc.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        region: us-east-1
 
 .. versionchanged:: 2015.8.0
     All methods now return a dictionary. Create and delete methods return:
@@ -2905,10 +2903,10 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
     :param conn_id: The ID to use. String type.
     :param name: The name of this VPC peering connection. String type.
     :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
+    :param key: The key to use for this connection. Type string.
+    :param keyid: The key id to use.
+    :param profile: The profile to use.
+    :param dry_run: The dry_run flag to set.
     :return: dict
 
     Warning: Please specify either the ``vpc_peering_connection_id`` or

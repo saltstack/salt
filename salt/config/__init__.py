@@ -134,7 +134,8 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Selects a random master when starting a minion up in multi-master mode
+    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
     # When in multi-master mode, temporarily remove a master from the list if a conenction
@@ -967,6 +968,8 @@ VALID_OPTS = {
     # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
 
+    # Selects a random master when starting a minion up in multi-master mode or
+    # when starting a minion with salt-call. ``master`` must be a list.
     'random_master': bool,
 
     # An upper bound for the amount of time for a minion to sleep before attempting to
@@ -1091,6 +1094,8 @@ VALID_OPTS = {
     'proxy_username': six.string_types,
     'proxy_password': six.string_types,
     'proxy_port': int,
+    # Exclude list of hostnames from proxy
+    'no_proxy': list,
 
     # Minion de-dup jid cache max size
     'minion_jid_queue_hwm': int,
@@ -1775,6 +1780,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_jid_forward_cache_hwm': 100,
     'regen_thin': False,
     'ssh_passwd': '',
+    'ssh_priv_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
     'ssh_sudo_user': '',
@@ -2785,6 +2791,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # prepend root_dir
     prepend_root_dirs = ['cachedir']
+    if 'log_file' in opts and urlparse(opts['log_file']).scheme == '':
+        prepend_root_dirs.append(opts['log_file'])
     prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options
@@ -3345,7 +3353,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     return value
 
 
-def is_provider_configured(opts, provider, required_keys=(), log_message=True):
+def is_provider_configured(opts, provider, required_keys=(), log_message=True, aliases=()):
     '''
     Check and return the first matching and fully configured cloud provider
     configuration.
@@ -3373,7 +3381,7 @@ def is_provider_configured(opts, provider, required_keys=(), log_message=True):
 
     for alias, drivers in six.iteritems(opts['providers']):
         for driver, provider_details in six.iteritems(drivers):
-            if driver != provider:
+            if driver != provider and driver not in aliases:
                 continue
 
             # If we reached this far, we have a matching provider, let's see if

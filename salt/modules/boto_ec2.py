@@ -7,37 +7,35 @@ Connection module for Amazon EC2
 :configuration: This module accepts explicit EC2 credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    ec2.keyid: GKTADJGHEIQSXMKKRBJ08H
+    ec2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        ec2.keyid: GKTADJGHEIQSXMKKRBJ08H
-        ec2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    ec2.region: us-east-1
 
-        ec2.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid, and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid, and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-          keyid: GKTADJGHEIQSXMKKRBJ08H
-          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-          region: us-east-1
+    myprofile:
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 :depends: boto
 
@@ -918,8 +916,11 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         data structure describing the EBS volumes associated with the Image.
         (string) - A string representation of a BlockDeviceMapping structure
         (dict) - A dict describing a BlockDeviceMapping structure
+
         YAML example:
+
         .. code-block:: yaml
+
             device-maps:
                 /dev/sdb:
                     ephemeral_name: ephemeral0
@@ -932,6 +933,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 /dev/sdf:
                     size: 20
                     volume_type: gp2
+
     disable_api_termination
         (bool) – If True, the instances will be locked and will not be able to
         be terminated via the API.
@@ -1704,28 +1706,31 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
         associated with those in the list will be returned.
     filters
         (dict) - Additional constraints on which volumes to return.  Valid filters are:
-            attachment.attach-time - The time stamp when the attachment initiated.
-            attachment.delete-on-termination - Whether the volume is deleted on instance termination.
-            attachment.device - The device name that is exposed to the instance (for example, /dev/sda1).
-            attachment.instance-id - The ID of the instance the volume is attached to.
-            attachment.status - The attachment state (attaching | attached | detaching | detached).
-            availability-zone - The Availability Zone in which the volume was created.
-            create-time - The time stamp when the volume was created.
-            encrypted - The encryption status of the volume.
-            size - The size of the volume, in GiB.
-            snapshot-id - The snapshot from which the volume was created.
-            status - The status of the volume (creating | available | in-use | deleting | deleted | error).
-            tag:key=value - The key/value combination of a tag assigned to the resource.
-            volume-id - The volume ID.
-            volume-type - The Amazon EBS volume type. This can be gp2 for General Purpose SSD, io1 for
-                          Provisioned IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or
-                          standard for Magnetic volumes.
+
+    - attachment.attach-time - The time stamp when the attachment initiated.
+    - attachment.delete-on-termination - Whether the volume is deleted on instance termination.
+    - attachment.device - The device name that is exposed to the instance (for example, /dev/sda1).
+    - attachment.instance-id - The ID of the instance the volume is attached to.
+    - attachment.status - The attachment state (attaching | attached | detaching | detached).
+    - availability-zone - The Availability Zone in which the volume was created.
+    - create-time - The time stamp when the volume was created.
+    - encrypted - The encryption status of the volume.
+    - size - The size of the volume, in GiB.
+    - snapshot-id - The snapshot from which the volume was created.
+    - status - The status of the volume (creating | available | in-use | deleting | deleted | error).
+    - tag:key=value - The key/value combination of a tag assigned to the resource.
+    - volume-id - The volume ID.
+    - volume-type - The Amazon EBS volume type. This can be ``gp2`` for General
+      Purpose SSD, ``io1`` for Provisioned IOPS SSD, ``st1`` for Throughput
+      Optimized HDD, ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes.
+
     return_objs
-        (bool) - Changes the return type from list of volume IDs to list of boto.ec2.volume.Volume objects
+        (bool) - Changes the return type from list of volume IDs to list of
+        boto.ec2.volume.Volume objects
 
     returns
-        (list) - A list of the requested values:  Either the volume IDs; or, if return_objs is true,
-                 boto.ec2.volume.Volume objects.
+        (list) - A list of the requested values: Either the volume IDs or, if
+        return_objs is ``True``, boto.ec2.volume.Volume objects.
 
     CLI Example:
 

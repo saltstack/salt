@@ -297,8 +297,9 @@ def fs_create(name, size=None, proto='NFS', nfs_rules='*(rw,no_root_squash)', sn
     snapshot: boolean
         (Optional) Are snapshots enabled on the filesystem. Default is False
     nfs_rules : string
-        (Optional) export rules for NFS. If not specified default is *(rw,no_root_squash)
-        Refer to Pure Storage documentation for formatting rules.
+        (Optional) export rules for NFS. If not specified default is
+        ``*(rw,no_root_squash)``. Refer to Pure Storage documentation for
+        formatting rules.
     size : string
         if specified capacity of filesystem. If not specified default to 32G.
         Refer to Pure Storage documentation for formatting rules.

@@ -33,8 +33,23 @@
                     <model type='{{ nic.model }}'/>
                 </interface>
                 {% endfor %}
-                {% if enable_vnc %}
-                <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
+                {% if graphics %}
+                <graphics type='{{ graphics.type }}'
+                          {% if graphics.listen.address %}
+                          listen='{{ graphics.listen.address }}'
+                          {% endif %}
+                          {% if graphics.port %}
+                          port='{{ graphics.port }}'
+                          {% endif %}
+                          {% if graphics.type == 'spice' and graphics.tls_port %}
+                          tlsPort='{{ graphics.tls_port }}'
+                          {% endif %}
+                          autoport='{{ 'no' if graphics.port or graphics.tls_port else 'yes' }}'>
+                    <listen type='{{ graphics.listen.type }}'
+                            {% if graphics.listen.address %}
+                            address='{{ graphics.listen.address }}'
+                            {% endif %}/>
+                </graphics>
                 {% endif %}
                 {% if serial_type == 'pty' %}
                 <serial type='pty'>

@@ -960,7 +960,7 @@ class Pillar(object):
                         )
                     )
                     log.error(
-                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        'Exception caught loading ext_pillar \'%s\':\n%s',
                         key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
@@ -1029,6 +1029,11 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault('_errors', []).extend(decrypt_errors)
+
+        # Reset the file_roots for the renderers
+        for mod_name in sys.modules:
+            if mod_name.startswith('salt.loaded.int.render.'):
+                sys.modules[mod_name].__opts__['file_roots'] = self.actual_file_roots
         return pillar
 
     def decrypt_pillar(self, pillar):

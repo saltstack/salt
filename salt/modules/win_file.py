@@ -53,13 +53,14 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
         __clean_tmp, check_file_meta, _binary_replace,
         _splitlines_preserving_trailing_newline, restore_backup,
-        access, copy, readdir, rmdir, truncate, replace, delete_backup,
+        access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir, _assert_occurrence, _starts_till)
+        _set_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol, _get_eol,
+        _insert_line_after, _insert_line_before)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils.functools import namespaced_function as _namespaced_function
@@ -110,14 +111,15 @@ def __virtual__():
             global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, line, _get_flags, extract_hash, comment_line
-            global access, copy, readdir, rmdir, truncate, replace, search
+            global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _get_line_indent, dirname, basename
+            global _regex_to_static, _set_line_indent, dirname, basename
             global list_backups_dir, normpath_, _assert_occurrence, _starts_till
+            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -156,6 +158,7 @@ def __virtual__():
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
+            read = _namespaced_function(read, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())
@@ -172,7 +175,11 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
             _regex_to_static = _namespaced_function(_regex_to_static, globals())
-            _get_line_indent = _namespaced_function(_get_line_indent, globals())
+            _set_line_indent = _namespaced_function(_set_line_indent, globals())
+            _set_line_eol = _namespaced_function(_set_line_eol, globals())
+            _get_eol = _namespaced_function(_get_eol, globals())
+            _insert_line_after = _namespaced_function(_insert_line_after, globals())
+            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())

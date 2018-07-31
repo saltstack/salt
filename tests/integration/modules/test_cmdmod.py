@@ -12,7 +12,8 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     skip_if_binaries_missing,
-    skip_if_not_root
+    skip_if_not_root,
+    this_user,
 )
 from tests.support.paths import TMP
 from tests.support.unit import skipIf
@@ -280,12 +281,7 @@ class CMDModuleTest(ModuleCase):
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
-        try:
-            runas = os.getlogin()
-        except:  # pylint: disable=W0702
-            # On some distros (notably Gentoo) os.getlogin() fails
-            import pwd
-            runas = pwd.getpwuid(os.getuid())[0]
+        runas = this_user()
 
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
@@ -373,3 +369,13 @@ class CMDModuleTest(ModuleCase):
             hide_output=True)
         self.assertEqual(out['stdout'], '')
         self.assertEqual(out['stderr'], '')
+
+    def test_cmd_run_whoami(self):
+        '''
+        test return of whoami
+        '''
+        cmd = self.run_function('cmd.run', ['whoami'])
+        if salt.utils.platform.is_windows():
+            self.assertIn('administrator', cmd)
+        else:
+            self.assertEqual('root', cmd)

@@ -176,7 +176,7 @@ following on the event bus:
 
 .. code-block:: json
 
-    salt/beacon/larry/inotify//etc/important_file	{
+    {
      "_stamp": "2015-09-09T15:59:37.972753",
      "data": {
          "change": "IN_IGNORED",

@@ -3,8 +3,6 @@ r'''
 Manage Vagrant VMs
 ==================
 
-.. index:: Vagrant state function
-
 Manange execution of Vagrant virtual machines on Salt minions.
 
 Vagrant_ is a tool for building and managing virtual machine environments.

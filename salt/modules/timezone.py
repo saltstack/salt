@@ -98,7 +98,7 @@ def _get_zone_sysconfig():
 
 
 def _get_zone_etc_localtime():
-    tzfile = '/etc/localtime'
+    tzfile = _get_localtime_path()
     tzdir = '/usr/share/zoneinfo/'
     tzdir_len = len(tzdir)
     try:
@@ -281,8 +281,9 @@ def set_zone(timezone):
     if not os.path.exists(zonepath) and 'AIX' not in __grains__['os_family']:
         return 'Zone does not exist: {0}'.format(zonepath)
 
-    if os.path.exists('/etc/localtime'):
-        os.unlink('/etc/localtime')
+    tzfile = _get_localtime_path()
+    if os.path.exists(tzfile):
+        os.unlink(tzfile)
 
     if 'Solaris' in __grains__['os_family']:
         __salt__['file.sed'](
@@ -300,7 +301,7 @@ def set_zone(timezone):
         __salt__['cmd.retcode'](cmd, python_shell=False)
         return False
     else:
-        os.symlink(zonepath, '/etc/localtime')
+        os.symlink(zonepath, tzfile)
 
     if 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
@@ -345,10 +346,10 @@ def zone_compare(timezone):
         return timezone == get_zone()
 
     if 'FreeBSD' in __grains__['os_family']:
-        if not os.path.isfile(_get_etc_localtime_path()):
+        if not os.path.isfile(_get_localtime_path()):
             return timezone == get_zone()
 
-    tzfile = _get_etc_localtime_path()
+    tzfile = _get_localtime_path()
     zonepath = _get_zone_file(timezone)
     try:
         return filecmp.cmp(tzfile, zonepath, shallow=False)
@@ -364,7 +365,9 @@ def zone_compare(timezone):
         raise
 
 
-def _get_etc_localtime_path():
+def _get_localtime_path():
+    if 'NILinuxRT' in __grains__['os_family'] and 'nilrt' in __grains__['lsb_distrib_id']:
+        return '/etc/natinst/share/localtime'
     return '/etc/localtime'
 
 
@@ -495,61 +498,66 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
-    os_family = __grains__['os_family']
-    if os_family in ('AIX', 'NILinuxRT'):
-        if clock.lower() != 'utc':
-            raise SaltInvocationError(
-                'UTC is the only permitted value'
-            )
-        return True
-
-    timezone = get_zone()
-
-    if 'Solaris' in __grains__['os_family']:
-        if clock.lower() not in ('localtime', 'utc'):
-            raise SaltInvocationError(
-                'localtime and UTC are the only permitted values'
-            )
-        if 'sparc' in __grains__['cpuarch']:
-            raise SaltInvocationError(
-                'UTC is the only choice for SPARC architecture'
-            )
-        cmd = ['rtc', '-z', 'GMT' if clock.lower() == 'utc' else timezone]
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
-
-    zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
-
-    if not os.path.exists(zonepath):
-        raise CommandExecutionError(
-            'Zone \'{0}\' does not exist'.format(zonepath)
-        )
-
-    os.unlink('/etc/localtime')
-    os.symlink(zonepath, '/etc/localtime')
-
-    if 'Arch' in __grains__['os_family']:
-        cmd = ['timezonectl', 'set-local-rtc',
+    if salt.utils.path.which('timedatectl'):
+        cmd = ['timedatectl', 'set-local-rtc',
                'true' if clock == 'localtime' else 'false']
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
-    elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
-    elif 'Suse' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
-    elif 'Debian' in __grains__['os_family']:
-        if clock == 'UTC':
-            __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
-        elif clock == 'localtime':
-            __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
-    elif 'Gentoo' in __grains__['os_family']:
-        if clock not in ('UTC', 'localtime'):
-            raise SaltInvocationError(
-                'Only \'UTC\' and \'localtime\' are allowed'
+    else:
+        os_family = __grains__['os_family']
+        if os_family in ('AIX', 'NILinuxRT'):
+            if clock.lower() != 'utc':
+                raise SaltInvocationError(
+                    'UTC is the only permitted value'
+                )
+            return True
+
+        timezone = get_zone()
+
+        if 'Solaris' in __grains__['os_family']:
+            if clock.lower() not in ('localtime', 'utc'):
+                raise SaltInvocationError(
+                    'localtime and UTC are the only permitted values'
+                )
+            if 'sparc' in __grains__['cpuarch']:
+                raise SaltInvocationError(
+                    'UTC is the only choice for SPARC architecture'
+                )
+            cmd = ['rtc', '-z', 'GMT' if clock.lower() == 'utc' else timezone]
+            return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+
+        zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
+        if not os.path.exists(zonepath):
+            raise CommandExecutionError(
+                'Zone \'{0}\' does not exist'.format(zonepath)
             )
-        if clock == 'localtime':
-            clock = 'local'
-        __salt__['file.sed'](
-            '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
+
+        os.unlink('/etc/localtime')
+        os.symlink(zonepath, '/etc/localtime')
+
+        if 'Arch' in __grains__['os_family']:
+            cmd = ['timezonectl', 'set-local-rtc',
+                   'true' if clock == 'localtime' else 'false']
+            return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        elif 'RedHat' in __grains__['os_family']:
+            __salt__['file.sed'](
+                '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+        elif 'Suse' in __grains__['os_family']:
+            __salt__['file.sed'](
+                '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
+        elif 'Debian' in __grains__['os_family']:
+            if clock == 'UTC':
+                __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
+            elif clock == 'localtime':
+                __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
+        elif 'Gentoo' in __grains__['os_family']:
+            if clock not in ('UTC', 'localtime'):
+                raise SaltInvocationError(
+                    'Only \'UTC\' and \'localtime\' are allowed'
+                )
+            if clock == 'localtime':
+                clock = 'local'
+            __salt__['file.sed'](
+                '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 
     return True

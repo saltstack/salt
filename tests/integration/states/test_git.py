@@ -84,15 +84,16 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the git state
     '''
     def setUp(self):
-        self.__domain = 'github.com'
+        domain = 'github.com'
+        self.test_repo = 'https://{0}/saltstack/salt-test-repo.git'.format(domain)
         try:
             if hasattr(socket, 'setdefaulttimeout'):
                 # 10 second dns timeout
                 socket.setdefaulttimeout(10)
-            socket.gethostbyname(self.__domain)
+            socket.gethostbyname(domain)
         except socket.error:
             msg = 'error resolving {0}, possible network issue?'
-            self.skipTest(msg.format(self.__domain))
+            self.skipTest(msg.format(domain))
 
     def tearDown(self):
         # Reset the dns timeout after the test is over
@@ -105,7 +106,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             target=target
         )
         self.assertSaltTrueReturn(ret)
@@ -118,7 +119,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev='develop',
             target=target,
             submodules=True
@@ -148,7 +149,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev='develop',
             target=target,
             submodules=True
@@ -164,7 +165,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev='develop',
             target=target,
             unless='test -e {0}'.format(target),
@@ -180,7 +181,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev=0.11,
             target=target,
             submodules=True,
@@ -198,7 +199,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Clone repo
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             target=target
         )
         self.assertSaltTrueReturn(ret)
@@ -214,7 +215,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Re-run state with force_reset=False
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             target=target,
             force_reset=False
         )
@@ -229,7 +230,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Now run the state with force_reset=True
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             target=target,
             force_reset=True
         )
@@ -250,12 +251,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         def _head(cwd):
             return self.run_function('git.rev_parse', [cwd, 'HEAD'])
 
-        repo_url = 'https://{0}/saltstack/salt-test-repo.git'.format(self.__domain)
         mirror_url = 'file://' + mirror_dir
 
         # Mirror the repo
         self.run_function(
-            'git.clone', [mirror_dir], url=repo_url, opts='--mirror')
+            'git.clone', [mirror_dir], url=self.test_repo, opts='--mirror')
 
         # Make sure the directory for the mirror now exists
         self.assertTrue(os.path.exists(mirror_dir))
@@ -303,7 +303,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Clone repo
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev=rev,
             target=target
         )
@@ -324,7 +324,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # comment field.
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev=rev,
             target=target
         )
@@ -413,7 +413,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev='HEAD',
             target=target,
             depth=1
@@ -427,13 +427,242 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_state(
             'git.latest',
-            name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+            name=self.test_repo,
             rev='non-default-branch',
             target=target,
             depth=1
         )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+
+    @with_tempdir(create=False)
+    def test_cloned(self, target):
+        '''
+        Test git.cloned state
+        '''
+        # Test mode
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            test=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is None
+        assert ret['changes'] == {
+            'new': '{0} => {1}'.format(self.test_repo, target)
+        }
+        assert ret['comment'] == '{0} would be cloned to {1}'.format(
+            self.test_repo,
+            target
+        )
+
+        # Now actually run the state
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert ret['changes'] == {
+            'new': '{0} => {1}'.format(self.test_repo, target)
+        }
+        assert ret['comment'] == '{0} cloned to {1}'.format(self.test_repo, target)
+
+        # Run the state again to test idempotence
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert not ret['changes']
+        assert ret['comment'] == 'Repository already exists at {0}'.format(target)
+
+        # Run the state again to test idempotence (test mode)
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            test=True)
+        ret = ret[next(iter(ret))]
+        assert not ret['changes']
+        assert ret['result'] is True
+        assert ret['comment'] == 'Repository already exists at {0}'.format(target)
+
+    @with_tempdir(create=False)
+    def test_cloned_with_branch(self, target):
+        '''
+        Test git.cloned state with branch provided
+        '''
+        old_branch = 'master'
+        new_branch = 'develop'
+        bad_branch = 'thisbranchdoesnotexist'
+
+        # Test mode
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=old_branch,
+            test=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is None
+        assert ret['changes'] == {
+            'new': '{0} => {1}'.format(self.test_repo, target)
+        }
+        assert ret['comment'] == (
+            '{0} would be cloned to {1} with branch \'{2}\''.format(
+                self.test_repo,
+                target,
+                old_branch
+            )
+        )
+
+        # Now actually run the state
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=old_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert ret['changes'] == {
+            'new': '{0} => {1}'.format(self.test_repo, target)
+        }
+        assert ret['comment'] == (
+            '{0} cloned to {1} with branch \'{2}\''.format(
+                self.test_repo,
+                target,
+                old_branch
+            )
+        )
+
+        # Run the state again to test idempotence
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=old_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert not ret['changes']
+        assert ret['comment'] == (
+            'Repository already exists at {0} '
+            'and is checked out to branch \'{1}\''.format(target, old_branch)
+        )
+
+        # Run the state again to test idempotence (test mode)
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            test=True,
+            branch=old_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert not ret['changes']
+        assert ret['comment'] == (
+            'Repository already exists at {0} '
+            'and is checked out to branch \'{1}\''.format(target, old_branch)
+        )
+
+        # Change branch (test mode)
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=new_branch,
+            test=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is None
+        assert ret['changes'] == {
+            'branch': {'old': old_branch, 'new': new_branch}
+        }
+        assert ret['comment'] == 'Branch would be changed to \'{0}\''.format(
+            new_branch
+        )
+
+        # Now really change the branch
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=new_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert ret['changes'] == {
+            'branch': {'old': old_branch, 'new': new_branch}
+        }
+        assert ret['comment'] == 'Branch changed to \'{0}\''.format(
+            new_branch
+        )
+
+        # Change back to original branch. This tests that we don't attempt to
+        # checkout a new branch (i.e. git checkout -b) for a branch that exists
+        # locally, as that would fail.
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=old_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+        assert ret['changes'] == {
+            'branch': {'old': new_branch, 'new': old_branch}
+        }
+        assert ret['comment'] == 'Branch changed to \'{0}\''.format(
+            old_branch
+        )
+
+        # Test switching to a nonexistant branch. This should fail.
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=bad_branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is False
+        assert not ret['changes']
+        assert ret['comment'].startswith(
+            'Failed to change branch to \'{0}\':'.format(bad_branch)
+        )
+
+    @with_tempdir(create=False)
+    def test_cloned_with_nonexistant_branch(self, target):
+        '''
+        Test git.cloned state with a nonexistant branch provided
+        '''
+        branch = 'thisbranchdoesnotexist'
+
+        # Test mode
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=branch,
+            test=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is None
+        assert ret['changes']
+        assert ret['comment'] == (
+            '{0} would be cloned to {1} with branch \'{2}\''.format(
+                self.test_repo,
+                target,
+                branch
+            )
+        )
+
+        # Now actually run the state
+        ret = self.run_state(
+            'git.cloned',
+            name=self.test_repo,
+            target=target,
+            branch=branch)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is False
+        assert not ret['changes']
+        assert ret['comment'].startswith('Clone failed:')
+        assert 'not found in upstream origin' in ret['comment']
 
     @with_tempdir(create=False)
     def test_present(self, name):

@@ -507,12 +507,12 @@ class MinionBase(object):
                             log.warning('master_type = distributed needs more than 1 master.')
 
                     if opts['master_shuffle']:
-                        if opts['master_failback']:
-                            secondary_masters = opts['master'][1:]
-                            shuffle(secondary_masters)
-                            opts['master'][1:] = secondary_masters
-                        else:
-                            shuffle(opts['master'])
+                        log.warning(
+                            'Use of \'master_shuffle\' detected. \'master_shuffle\' is deprecated in favor '
+                            'of \'random_master\'. Please update your minion config file.'
+                        )
+                        opts['random_master'] = opts['master_shuffle']
+
                     opts['auth_tries'] = 0
                     if opts['master_failback'] and opts['master_failback_interval'] == 0:
                         opts['master_failback_interval'] = opts['master_alive_interval']
@@ -578,12 +578,19 @@ class MinionBase(object):
         # happy with the first one that allows us to connect
         if isinstance(opts['master'], list):
             conn = False
-            # shuffle the masters and then loop through them
-            opts['local_masters'] = copy.copy(opts['master'])
-            if opts['random_master']:
-                shuffle(opts['local_masters'])
             last_exc = None
-            opts['master_uri_list'] = list()
+            opts['master_uri_list'] = []
+            opts['local_masters'] = copy.copy(opts['master'])
+
+            # shuffle the masters and then loop through them
+            if opts['random_master']:
+                # master_failback is only used when master_type is set to failover
+                if opts['master_type'] == 'failover' and opts['master_failback']:
+                    secondary_masters = opts['local_masters'][1:]
+                    shuffle(secondary_masters)
+                    opts['local_masters'][1:] = secondary_masters
+                else:
+                    shuffle(opts['local_masters'])
 
             # This sits outside of the connection loop below because it needs to set
             # up a list of master URIs regardless of which masters are available
@@ -1073,7 +1080,7 @@ class Minion(MinionBase):
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
-        self.jid_queue = jid_queue or []
+        self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
 
         if io_loop is None:
@@ -1172,10 +1179,11 @@ class Minion(MinionBase):
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
-        future_exception = self._connect_master_future.exception()
-        if future_exception:
-            # This needs to be re-raised to preserve restart_on_error behavior.
-            raise six.reraise(*future_exception)
+        if self._connect_master_future.done():
+            future_exception = self._connect_master_future.exception()
+            if future_exception:
+                # This needs to be re-raised to preserve restart_on_error behavior.
+                raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
 
@@ -1454,7 +1462,7 @@ class Minion(MinionBase):
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
-                log.warn("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+                log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
                 yield tornado.gen.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
@@ -1565,7 +1573,15 @@ class Minion(MinionBase):
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
-        if function_name in minion_instance.functions:
+        executors = data.get('module_executors') or \
+                    getattr(minion_instance, 'module_executors', []) or \
+                    opts.get('module_executors', ['direct_call'])
+        allow_missing_funcs = any([
+            minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
+            for executor in executors
+            if '{0}.allow_missing_func' in minion_instance.executors
+        ])
+        if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
                 minion_blackout_violation = False
                 if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
@@ -1583,14 +1599,17 @@ class Minion(MinionBase):
                                              'to False in pillar or grains to resume operations. Only '
                                              'saltutil.refresh_pillar allowed in blackout mode.')
 
-                func = minion_instance.functions[function_name]
-                args, kwargs = load_args_and_kwargs(
-                    func,
-                    data['arg'],
-                    data)
+                if function_name in minion_instance.functions:
+                    func = minion_instance.functions[function_name]
+                    args, kwargs = load_args_and_kwargs(
+                        func,
+                        data['arg'],
+                        data)
+                else:
+                    # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
+                    func = function_name
+                    args, kwargs = data['arg'], data
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-
-                executors = data.get('module_executors') or opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
@@ -1656,7 +1675,9 @@ class Minion(MinionBase):
                 )
                 ret['out'] = 'nested'
             except TypeError as exc:
-                msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(function_name, exc, func.__doc__)
+                msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
+                    function_name, exc, func.__doc__ or ''
+                )
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
@@ -3597,6 +3618,7 @@ class ProxyMinion(Minion):
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)
 
+        self.module_executors = self.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
         proxy_init_fn = self.proxy[fq_proxyname + '.init']
         proxy_init_fn(self.opts)
 
@@ -3747,6 +3769,9 @@ class ProxyMinion(Minion):
                 minion_instance.proxy.reload_modules()
 
                 fq_proxyname = opts['proxy']['proxytype']
+
+                minion_instance.module_executors = minion_instance.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
+
                 proxy_init_fn = minion_instance.proxy[fq_proxyname + '.init']
                 proxy_init_fn(opts)
             if not hasattr(minion_instance, 'serial'):

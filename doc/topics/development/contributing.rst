@@ -154,7 +154,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
             nothing to commit, working tree clean
 
         Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
-        ``--force`` to the end of the ``git push`` command to get the changes
+        ``--force-with-lease`` to the end of the ``git push`` command to get the changes
         pushed to your fork. Pulling or merging, while they will resolve the
         non-fast-forward issue, will likely add extra commits to the pull
         request which were not part of your changes.

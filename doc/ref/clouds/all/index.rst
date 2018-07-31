@@ -23,6 +23,7 @@ cloud modules
     lxc
     msazure
     nova
+    oneandone
     opennebula
     openstack
     parallels

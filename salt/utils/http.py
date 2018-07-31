@@ -61,7 +61,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
@@ -488,7 +488,8 @@ def query(url,
             data = _urlencode(data)
 
         if verify_ssl:
-            req_kwargs['ca_certs'] = ca_bundle
+            # tornado requires a str, cannot be unicode str in py2
+            req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
@@ -497,9 +498,25 @@ def query(url,
         client_argspec = None
 
         proxy_host = opts.get('proxy_host', None)
+        if proxy_host:
+            # tornado requires a str for proxy_host, cannot be a unicode str in py2
+            proxy_host = salt.utils.stringutils.to_str(proxy_host)
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
+        if proxy_username:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_username = salt.utils.stringutils.to_str(proxy_username)
         proxy_password = opts.get('proxy_password', None)
+        if proxy_password:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_password = salt.utils.stringutils.to_str(proxy_password)
+        no_proxy = opts.get('no_proxy', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:

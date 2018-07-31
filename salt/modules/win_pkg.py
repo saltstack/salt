@@ -29,11 +29,11 @@ suppress refreshes when the metadata is less than a given number of seconds
 old.
 
 .. note::
-    Version numbers can be `version number string`, `latest` and `Not Found`.
-    Where `Not Found` means this module was not able to determine the version of
-    the software installed, it can also be used as the version number in sls
-    definitions file in these cases. Versions numbers are sorted in order of
-    0,`Not Found`,`order version numbers`,...,`latest`.
+    Version numbers can be ``version number string``, ``latest`` and ``Not
+    Found``, where ``Not Found`` means this module was not able to determine
+    the version of the software installed, it can also be used as the version
+    number in sls definitions file in these cases. Versions numbers are sorted
+    in order of 0, ``Not Found``, ``order version numbers``, ..., ``latest``.
 
 '''
 
@@ -367,12 +367,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed
 
-    Args:
-        version_as_list (bool): Returns the versions as a list
-
-    Kwargs:
-        saltenv (str): The salt environment to use. Default ``base``.
-        refresh (bool): Refresh package metadata. Default ``False`.
+    version_as_list (bool): Returns the versions as a list
+    saltenv (str): The salt environment to use. Default ``base``.
+    refresh (bool): Refresh package metadata. Default ``False``.
 
     Returns:
         dict: A dictionary of installed software with versions installed
@@ -614,8 +611,10 @@ def refresh_db(**kwargs):
         There is no need to call `pkg.refresh_db` every time you work with the
         pkg module. Automatic refresh will occur based on the following minion
         configuration settings:
-            - `winrepo_cache_expire_min`
-            - `winrepo_cache_expire_max`
+
+        - `winrepo_cache_expire_min`
+        - `winrepo_cache_expire_max`
+
         However, if the package definition files have changed, as would be the
         case if you are developing a new package definition, this function
         should be called to ensure the minion has the latest information about
@@ -630,19 +629,19 @@ def refresh_db(**kwargs):
     For more information see
     :ref:`Windows Software Repository <windows-package-manager>`
 
-    Kwargs:
+    Arguments:
 
-        saltenv (str): Salt environment. Default: ``base``
+    saltenv (str): Salt environment. Default: ``base``
 
-        verbose (bool):
-            Return a verbose data structure which includes 'success_list', a
-            list of all sls files and the package names contained within.
-            Default is 'False'
+    verbose (bool):
+        Return a verbose data structure which includes 'success_list', a
+        list of all sls files and the package names contained within.
+        Default is 'False'
 
-        failhard (bool):
-            If ``True``, an error will be raised if any repo SLS files fails to
-            process. If ``False``, no error will be raised, and a dictionary
-            containing the full results will be returned.
+    failhard (bool):
+        If ``True``, an error will be raised if any repo SLS files fails to
+        process. If ``False``, no error will be raised, and a dictionary
+        containing the full results will be returned.
 
     Returns:
         dict: A dictionary containing the results of the database refresh.
@@ -954,7 +953,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
         else:
             ret.setdefault('repo', {}).update(config)
             ret.setdefault('name_map', {}).update(revmap)
-            successful_verbose[short_path_name] = config.keys()
+            successful_verbose[short_path_name] = list(config.keys())
     elif config:
         return _failed_compile('Compiled contents', 'not a dictionary/hash')
     else:

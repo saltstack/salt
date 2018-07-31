@@ -35,7 +35,7 @@ Current known limitations
   - lxml
   - uuid
   - struct
-  - salt.modules.reg
+  - salt.utils.win_reg
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -98,7 +98,7 @@ try:
     import lxml
     import struct
     from lxml import etree
-    from salt.modules.reg import Registry as Registry
+    from salt.utils.win_reg import Registry
     HAS_WINDOWS_MODULES = True
     TRUE_VALUE_XPATH = etree.XPath('.//*[local-name() = "trueValue"]')
     FALSE_VALUE_XPATH = etree.XPath('.//*[local-name() = "falseValue"]')
@@ -3345,9 +3345,11 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.platform.is_windows() and HAS_WINDOWS_MODULES:
-        return __virtualname__
-    return False
+    if not salt.utils.platform.is_windows():
+        return False, 'win_lgpo: Not a Windows System'
+    if not HAS_WINDOWS_MODULES:
+        return False, 'win_lgpo: Required modules failed to load'
+    return __virtualname__
 
 
 def _updateNamespace(item, new_namespace):
@@ -6045,7 +6047,7 @@ def set_(computer_policy=None, user_policy=None,
                         else:
                             raise SaltInvocationError(msg)
                         if policy_namespace and policy_name in _admTemplateData[policy_namespace] and the_policy is not None:
-                            log.debug('setting == %s', _admTemplateData[policy_namespace][policy_name].lower())
+                            log.debug('setting == %s', six.text_type(_admTemplateData[policy_namespace][policy_name]).lower())
                             log.debug(six.text_type(_admTemplateData[policy_namespace][policy_name]).lower())
                             if six.text_type(_admTemplateData[policy_namespace][policy_name]).lower() != 'disabled' \
                                     and six.text_type(_admTemplateData[policy_namespace][policy_name]).lower() != 'not configured':

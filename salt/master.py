@@ -349,8 +349,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     A process from which to update any dynamic fileserver backends
     '''
-    def __init__(self, opts, log_queue=None):
-        super(FileserverUpdate, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(FileserverUpdate, self).__init__(**kwargs)
         self.opts = opts
         self.update_threads = {}
         # Avoid circular import
@@ -363,11 +363,15 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+        )
 
     def __getstate__(self):
         return {'opts': self.opts,
-                'log_queue': self.log_queue}
+                'log_queue': self.log_queue,
+        }
 
     def fill_buckets(self):
         '''
@@ -591,11 +595,19 @@ class Master(SMaster):
                 pass
 
         if self.opts.get('git_pillar_verify_config', True):
-            git_pillars = [
-                x for x in self.opts.get('ext_pillar', [])
-                if 'git' in x
-                and not isinstance(x['git'], six.string_types)
-            ]
+            try:
+                git_pillars = [
+                    x for x in self.opts.get('ext_pillar', [])
+                    if 'git' in x
+                    and not isinstance(x['git'], six.string_types)
+                ]
+            except TypeError:
+                git_pillars = []
+                critical_errors.append(
+                    'Invalid ext_pillar configuration. It is likely that the '
+                    'external pillar type was not specified for one or more '
+                    'external pillars.'
+                )
             if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
@@ -2073,6 +2085,8 @@ class ClearFuncs(object):
 
             if not authorized:
                 # Authorization error occurred. Do not continue.
+                if auth_type == 'eauth' and not auth_list and 'username' in extra and 'eauth' in extra:
+                    log.debug('Auth configuration for eauth "%s" and user "%s" is empty', extra['eauth'], extra['username'])
                 log.warning(err_msg)
                 return {'error': {'name': 'AuthorizationError',
                                   'message': 'Authorization error occurred.'}}

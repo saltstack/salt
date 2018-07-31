@@ -205,11 +205,14 @@ def map_run(path=None, **kwargs):
     Execute a salt cloud map file
 
     Cloud Map data can be retrieved from several sources:
-      - a local file (provide the path to the file to the 'path' argument)
-      - a JSON-formatted map directly (provide the appropriately formatted to using the 'map_data' argument)
-      - the Salt Pillar (provide the map name of under 'pillar:cloud:maps' to the 'map_pillar' argument)
-      Note: Only one of these sources can be read at a time. The options are listed in their order of precedence.
 
+    - a local file (provide the path to the file to the 'path' argument)
+    - a JSON-formatted map directly (provide the appropriately formatted to using the 'map_data' argument)
+    - the Salt Pillar (provide the map name of under 'pillar:cloud:maps' to the 'map_pillar' argument)
+
+    .. note::
+        Only one of these sources can be read at a time. The options are listed
+        in their order of precedence.
 
     CLI Examples:
 
