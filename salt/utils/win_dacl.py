@@ -496,11 +496,19 @@ def dacl(obj_name=None, obj_type='file'):
             if obj_name is None:
                 self.dacl = win32security.ACL()
             else:
-                if self.dacl_type in ['registry', 'registry32']:
+                if 'registry' in self.dacl_type:
                     obj_name = self.get_reg_name(obj_name)
 
-                sd = win32security.GetNamedSecurityInfo(
-                    obj_name, self.obj_type[self.dacl_type], self.element['dacl'])
+                try:
+                    sd = win32security.GetNamedSecurityInfo(
+                        obj_name, self.obj_type[self.dacl_type], self.element['dacl'])
+                except pywintypes.error as exc:
+                    if 'The system cannot find' in exc.strerror:
+                        msg = 'System cannot find %s' % obj_name
+                        log.exception(msg)
+                        raise CommandExecutionError(msg)
+                    raise
+
                 self.dacl = sd.GetSecurityDescriptorDacl()
                 if self.dacl is None:
                     self.dacl = win32security.ACL()
@@ -622,6 +630,9 @@ def dacl(obj_name=None, obj_type='file'):
             else:
                 for perm in permissions:
                     perm_flag |= self.ace_perms[self.dacl_type]['advanced'][perm]
+
+            if access_mode.lower() not in ['grant', 'deny']:
+                raise SaltInvocationError('Invalid Access Mode: %s' % access_mode)
 
             # Add ACE to the DACL
             # Grant or Deny
@@ -1497,7 +1508,7 @@ def set_permissions(obj_name,
                     principal,
                     permissions,
                     access_mode='grant',
-                    applies_to='this_folder_subfolders_files',
+                    applies_to=None,
                     obj_type='file',
                     reset_perms=False,
                     protected=None):
@@ -1554,6 +1565,13 @@ def set_permissions(obj_name,
         salt.utils.win_dacl.set_permissions(
             'C:\\Temp', 'jsnuffy', 'full_control', 'grant')
     '''
+    # Set up applies_to defaults used by registry and file types
+    if applies_to is None:
+        if 'registry' in obj_type.lower():
+            applies_to = 'this_key_subkeys'
+        elif obj_type.lower() == 'file':
+            applies_to = 'this_folder_subfolders_files'
+
     # If you don't pass `obj_name` it will create a blank DACL
     # Otherwise, it will grab the existing DACL and add to it
     if reset_perms:
