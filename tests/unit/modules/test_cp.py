@@ -156,6 +156,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                     cmd='_file_recv',
                     tok='token',
                     path=['saltines', 'test.file'],
+                    size=10,
                     data=b'',  # data is empty here because load['data'] is overwritten
                     id='abc'
                 )
