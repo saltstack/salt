@@ -3250,7 +3250,6 @@ class Matcher(object):
             if not getattr(cls, function_name, False):
                 setattr(cls, function_name, matcher_functions[meth])
 
-
     def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
