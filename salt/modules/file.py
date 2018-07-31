@@ -2477,10 +2477,10 @@ def blockreplace(path,
         final output
 
     marker_end
-        The line content identifying a line as the end of the content block.
-        Note that the whole line containing this marker will be considered, so
-        whitespace or extra content before or after the marker is included in
-        final output
+        The line content identifying the end of the content block. As of
+        versions 2017.7.5 and 2018.3.1, everything up to the text matching the
+        marker will be replaced, so it's important to ensure that your marker
+        includes the beginning of the text you wish to replace.
 
     content
         The content to be used between the two lines identified by marker_start
