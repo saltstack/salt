@@ -51,7 +51,7 @@ def property_present(properties, admin_username='root', admin_password='calvin',
     if host is None:
         output = __salt__['cmd.run_all']('ipmitool lan print')
         stdout = output['stdout']
-        reg = re.compile('\s*IP Address\s*:\s*(\d+.\d+.\d+.\d+)\s*')
+        reg = re.compile(r'\s*IP Address\s*:\s*(\d+.\d+.\d+.\d+)\s*')
         for line in stdout:
             result = reg.match(line)
             if result is not None:
