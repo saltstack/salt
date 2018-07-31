@@ -263,38 +263,52 @@ def present(name,
                                               vname=vname,
                                               use_32bit_registry=use_32bit_registry)
 
+    # Check if the key already exists
     if vdata == reg_current['vdata'] and reg_current['success']:
         ret['comment'] = '{0} in {1} is already present' \
                          ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',
                                    salt.utils.stringutils.to_unicode(name, 'utf-8'))
+        return __utils__['dacl.check_perms'](
+            obj_name='\\'.join([hive, key]),
+            obj_type='registry32' if use_32bit_registry else 'registry',
+            ret=ret,
+            owner=win_owner,
+            grant_perms=win_perms,
+            deny_perms=win_deny_perms,
+            inheritance=win_inheritance,
+            reset=win_perms_reset)
+
+    # Cast the vdata according to the vtype
+    vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
+
+    add_change = {'Key': r'{0}\{1}'.format(hive, key),
+                  'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
+                  'Value': vdata_decoded,
+                  'Owner': win_owner,
+                  'Perms': {'Grant': win_perms,
+                            'Deny': win_deny_perms},
+                  'Inheritance': win_inheritance}
+
+    # Check for test option
+    if __opts__['test']:
+        ret['result'] = None
+        ret['changes'] = {'reg': {'Will add': add_change}}
+        return ret
+
+    # Configure the value
+    ret['result'] = __utils__['reg.set_value'](hive=hive,
+                                               key=key,
+                                               vname=vname,
+                                               vdata=vdata,
+                                               vtype=vtype,
+                                               use_32bit_registry=use_32bit_registry)
+
+    if not ret['result']:
+        ret['changes'] = {}
+        ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(name, hive, key)
     else:
-
-        vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
-
-        add_change = {'Key': r'{0}\{1}'.format(hive, key),
-                      'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
-                      'Value': vdata_decoded}
-
-        # Check for test option
-        if __opts__['test']:
-            ret['result'] = None
-            ret['changes'] = {'reg': {'Will add': add_change}}
-            return ret
-
-        # Configure the value
-        ret['result'] = __utils__['reg.set_value'](hive=hive,
-                                                   key=key,
-                                                   vname=vname,
-                                                   vdata=vdata,
-                                                   vtype=vtype,
-                                                   use_32bit_registry=use_32bit_registry)
-
-        if not ret['result']:
-            ret['changes'] = {}
-            ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(name, hive, key)
-        else:
-            ret['changes'] = {'reg': {'Added': add_change}}
-            ret['comment'] = r'Added {0} to {1}\{2}'.format(name, hive, key)
+        ret['changes'] = {'reg': {'Added': add_change}}
+        ret['comment'] = r'Added {0} to {1}\{2}'.format(name, hive, key)
 
     if ret['result']:
         ret = __utils__['dacl.check_perms'](
