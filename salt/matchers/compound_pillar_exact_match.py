@@ -11,9 +11,6 @@ This is why they all take `self` but are not defined inside a `class:` declarati
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
-from salt.defaults import DEFAULT_TARGET_DELIM  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
 
 log = logging.getLogger(__name__)
 

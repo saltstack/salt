@@ -14,7 +14,7 @@ import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
 
 HAS_RANGE = False
 try:
-    import seco.range
+    import seco.range  # pylint: disable=unused-import
     HAS_RANGE = True
 except ImportError:
     pass
