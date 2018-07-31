@@ -9,7 +9,7 @@ from tests.support.unit import skipIf
 from tests.support.helpers import TestsLoggingHandler
 
 import logging
-import six
+import salt.ext.six as six
 
 
 @skipIf(six.PY3, 'Runtest Log Hander Disabled for PY3, #41836')
