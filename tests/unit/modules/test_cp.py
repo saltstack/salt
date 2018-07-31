@@ -137,6 +137,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
             filename = 'c:\\saltines\\test.file'
         with patch('salt.modules.cp.os.path',
                    MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path)), \
+                patch('salt.modules.cp.os.path',
+                      MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path)), \
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
