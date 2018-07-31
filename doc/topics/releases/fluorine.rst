@@ -683,6 +683,11 @@ State Deprecations
 Utils Deprecations
 ------------------
 
+The ``cloud`` utils module had the following changes:
+
+- Support for the ``cache_nodes_ip`` function in :mod:`salt utils module <salt.utils.cloud>`
+  has been removed. The function was incomplete and non-functional.
+
 The ``vault`` utils module had the following changes:
 
 - Support for specifying Vault connection data within a 'profile' has been removed.
