@@ -661,7 +661,7 @@ class RemoteFuncs(object):
             log.error('Invalid file pointer: load[loc] < 0')
             return False
 
-        if 'size' in load and load['size'] > file_recv_max_size:
+        if load.get('size', 0) > file_recv_max_size:
             log.error(
                 'Exceeding file_recv_max_size limit: %s',
                 file_recv_max_size
