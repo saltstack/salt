@@ -521,6 +521,12 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
+Minion Configuration Deprecations
+---------------------------------
+
+The :conf_minion:`master_shuffle` configuration option is deprecated as of the
+``Fluorine`` release. Please use the :conf_minion:`random_master` option instead.
+
 Module Deprecations
 -------------------
 
@@ -676,6 +682,11 @@ State Deprecations
 
 Utils Deprecations
 ------------------
+
+The ``cloud`` utils module had the following changes:
+
+- Support for the ``cache_nodes_ip`` function in :mod:`salt utils module <salt.utils.cloud>`
+  has been removed. The function was incomplete and non-functional.
 
 The ``vault`` utils module had the following changes:
 

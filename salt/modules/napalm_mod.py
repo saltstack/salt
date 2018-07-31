@@ -20,6 +20,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 
 # Import Salt modules
 from salt.ext import six
+from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
 try:
     from netmiko import BaseConnection
@@ -38,6 +39,12 @@ try:
     HAS_JXMLEASE = True
 except ImportError:
     HAS_JXMLEASE = False
+
+try:
+    import ciscoconfparse  # pylint: disable=unused-import
+    HAS_CISCOCONFPARSE = True
+except ImportError:
+    HAS_CISCOCONFPARSE = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -1286,3 +1293,156 @@ def rpc(command, **kwargs):
     napalm_map.update(default_map)
     fun = napalm_map.get(__grains__['os'], 'napalm.netmiko_commands')
     return __salt__[fun](command, **kwargs)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_find_lines(regex, source='running'):
+    r'''
+    .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``regex`` argument. The configuration is read from the network device
+    interrogated.
+
+    regex
+        The regular expression to match the configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_find_lines '^interface Ethernet1\d'
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines'](config=config_txt,
+                                                 regex=regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_lines_w_child(parent_regex, child_regex, source='running'):
+    r'''
+     .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``parent_regex`` argument, having child lines matching ``child_regex``.
+    The configuration is read from the network device interrogated.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_lines_w_child '^interface' 'ip address'
+        salt '*' napalm.config_lines_w_child '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines_w_child'](config=config_txt,
+                                                         parent_regex=parent_regex,
+                                                         child_regex=child_regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_lines_wo_child(parent_regex, child_regex, source='running'):
+    '''
+      .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``parent_regex`` argument, having the child lines *not* matching
+    ``child_regex``.
+    The configuration is read from the network device interrogated.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_lines_wo_child '^interface' 'ip address'
+        salt '*' napalm.config_lines_wo_child '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines_wo_child'](config=config_txt,
+                                                          parent_regex=parent_regex,
+                                                          child_regex=child_regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_filter_lines(parent_regex, child_regex, source='running'):
+    r'''
+    .. versionadded:: Fluorine
+
+    Return a list of detailed matches, for the configuration blocks (parent-child
+    relationship) whose parent respects the regular expressions configured via
+    the ``parent_regex`` argument, and the child matches the ``child_regex``
+    regular expression. The result is a list of dictionaries with the following
+    keys:
+
+    - ``match``: a boolean value that tells whether ``child_regex`` matched any
+      children lines.
+    - ``parent``: the parent line (as text).
+    - ``child``: the child line (as text). If no child line matched, this field
+      will be ``None``.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_filter_lines '^interface' 'ip address'
+        salt '*' napalm.config_filter_lines '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.filter_lines'](config=config_txt,
+                                                   parent_regex=parent_regex,
+                                                   child_regex=child_regex)

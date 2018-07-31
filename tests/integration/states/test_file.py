@@ -710,8 +710,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         This is a regression test for Issue #38914 and Issue #48230 (test=true use).
         '''
         name = os.path.join(TMP, 'source_hash_indifferent_case')
-        state_name = 'file_|-/tmp/salt-tests-tmpdir/source_hash_indifferent_case_|' \
-                     '-/tmp/salt-tests-tmpdir/source_hash_indifferent_case_|-managed'
+        state_name = 'file_|-{0}_|' \
+                     '-{0}_|-managed'.format(name)
         local_path = os.path.join(FILES, 'file', 'base', 'hello_world.txt')
         actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
         uppercase_hash = actual_hash.upper()
