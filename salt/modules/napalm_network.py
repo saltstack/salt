@@ -44,7 +44,8 @@ except ImportError:
 # ----------------------------------------------------------------------------------------------------------------------
 
 __virtualname__ = 'net'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
+__virtual_aliases__ = ('napalm_net',)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
