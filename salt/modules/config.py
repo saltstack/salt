@@ -462,6 +462,7 @@ def gather_bootstrap_script(bootstrap=None):
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
 
+
 def items():
     '''
     Return the complete config from the currently running minion process.
