@@ -975,8 +975,8 @@ def installed(
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed.
 
@@ -2674,8 +2674,8 @@ def removed(name,
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed. If **ignore_epoch** was not set
             to ``True``, and instead of ``2:7.4.160-1.el7`` a version of
@@ -2780,8 +2780,8 @@ def purged(name,
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed. If **ignore_epoch** was not set
             to ``True``, and instead of ``2:7.4.160-1.el7`` a version of
