@@ -623,7 +623,7 @@ class RemoteFuncsTestCase(TestCase):
                    MagicMock(return_value=(dict(
                        minions=['webserver'],
                        missing=[])))):
-            ret= self.funcs._mine_get(
+            ret = self.funcs._mine_get(
                 {
                     'id': 'requester_minion',
                     'tgt': 'G@roles:web',
@@ -631,7 +631,7 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(ret, dict(ip_addr = dict(webserver='2001:db8::1:3'), ip4_addr = dict(webserver='127.0.0.1')))
+        self.assertDictEqual(ret, dict(ip_addr = dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
 
     def test_mine_get_dict_list(self, tgt_type_key='tgt_type'):
         '''
@@ -649,7 +649,7 @@ class RemoteFuncsTestCase(TestCase):
                    MagicMock(return_value=(dict(
                        minions=['webserver'],
                        missing=[])))):
-            ret= self.funcs._mine_get(
+            ret = self.funcs._mine_get(
                 {
                     'id': 'requester_minion',
                     'tgt': 'G@roles:web',
@@ -657,4 +657,4 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(ret, dict(ip_addr = dict(webserver='2001:db8::1:3'), ip4_addr = dict(webserver='127.0.0.1')))
+        self.assertDictEqual(ret, dict(ip_addr = dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
