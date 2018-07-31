@@ -32,14 +32,14 @@ def policy_present(name, rules):
     .. code-block:: yaml
 
         demo-policy:
-        vault.policy_present:
+          vault.policy_present:
             - name: foo/bar
             - rules: |
                 path "secret/top-secret/*" {
-                policy = "deny"
+                  policy = "deny"
                 }
                 path "secret/not-very-secret/*" {
-                policy = "write"
+                  policy = "write"
                 }
 
     '''
