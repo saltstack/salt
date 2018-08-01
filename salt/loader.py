@@ -15,12 +15,14 @@ import inspect
 import tempfile
 import functools
 import threading
+import traceback
 import types
 from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.context
 import salt.utils.files
@@ -1462,6 +1464,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         except SystemExit as error:
+            try:
+                fn_, _, caller, _ = traceback.extract_tb(sys.exc_info()[2])[-1]
+            except Exception:
+                pass
+            else:
+                tgt_fn = os.path.join('salt', 'utils', 'process.py')
+                if fn_.endswith(tgt_fn) and '_handle_signals' in caller:
+                    # Race conditon, SIGTERM or SIGINT received while loader
+                    # was in process of loading a module. Call sys.exit to
+                    # ensure that the process is killed.
+                    sys.exit(salt.defaults.exitcodes.EX_OK)
             log.error(
                 'Failed to import {0} {1} as the module called exit()\n'.format(
                     self.tag, name
