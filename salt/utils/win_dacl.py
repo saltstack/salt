@@ -504,7 +504,7 @@ def dacl(obj_name=None, obj_type='file'):
                         obj_name, self.obj_type[self.dacl_type], self.element['dacl'])
                 except pywintypes.error as exc:
                     if 'The system cannot find' in exc.strerror:
-                        msg = 'System cannot find %s' % obj_name
+                        msg = 'System cannot find {0}'.format(obj_name)
                         log.exception(msg)
                         raise CommandExecutionError(msg)
                     raise
@@ -629,7 +629,7 @@ def dacl(obj_name=None, obj_type='file'):
                 try:
                     perm_flag = self.ace_perms[self.dacl_type]['basic'][permissions]
                 except KeyError as exc:
-                    msg = 'Invalid permission specified: %s' % permissions
+                    msg = 'Invalid permission specified: {0}'.format(permissions)
                     log.exception(msg)
                     raise CommandExecutionError(msg, exc)
             else:
@@ -637,12 +637,12 @@ def dacl(obj_name=None, obj_type='file'):
                     for perm in permissions:
                         perm_flag |= self.ace_perms[self.dacl_type]['advanced'][perm]
                 except KeyError as exc:
-                    msg = 'Invalid permission specified: %s' % perm
+                    msg = 'Invalid permission specified: {0}'.format(perm)
                     log.exception(msg)
                     raise CommandExecutionError(msg, exc)
 
             if access_mode.lower() not in ['grant', 'deny']:
-                raise SaltInvocationError('Invalid Access Mode: %s' % access_mode)
+                raise SaltInvocationError('Invalid Access Mode: {0}'.format(access_mode))
 
             # Add ACE to the DACL
             # Grant or Deny
@@ -2162,7 +2162,7 @@ def check_perms(obj_name,
                         obj_name=obj_name,
                         enabled=inheritance,
                         obj_type=obj_type)
-                    log.debug('%s inheritance' % 'Enabling' if inheritance else 'Disabling')
+                    log.debug('%s inheritance', 'Enabling' if inheritance else 'Disabling')
                     ret['changes']['inheritance'] = inheritance
                 except CommandExecutionError:
                     ret['result'] = False
