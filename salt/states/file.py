@@ -1123,8 +1123,7 @@ def _get_template_texts(source_list=None,
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
-                if six.PY3:
-                    tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = tmplines.decode(__salt_system_encoding__)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
