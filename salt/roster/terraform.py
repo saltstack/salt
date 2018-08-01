@@ -50,10 +50,6 @@ import json
 import os.path
 import salt.utils
 from salt.roster.flat import RosterMatcher
-# pylint: disable=import-error
-# pylint: disable=redefined-builtin
-from salt.ext.six.moves import range
-# pylint: enable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
