@@ -166,7 +166,7 @@ def get_sam_name(username):
     return '\\'.join([domain, username])
 
 
-def escape_argument(arg):
+def escape_argument(arg, escape=True):
     '''
     Escape the argument for the cmd.exe shell.
     See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
@@ -183,6 +183,8 @@ def escape_argument(arg):
     if not arg or re.search(r'(["\s])', arg):
         arg = '"' + arg.replace('"', r'\"') + '"'
 
+    if not escape:
+        return arg
     return escape_for_cmd_exe(arg)
 
 
