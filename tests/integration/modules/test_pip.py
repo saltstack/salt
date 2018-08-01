@@ -42,6 +42,10 @@ class PipModuleTest(ModuleCase):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
+    def tearDown(self):
+        if 'PIP_SOURCE_DIR' in os.environ:
+            os.environ.pop('PIP_SOURCE_DIR')
+
     def _check_download_error(self, ret):
         '''
         Checks to see if a download error looks transitory
