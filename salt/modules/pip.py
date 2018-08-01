@@ -619,12 +619,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 

@@ -3787,3 +3787,92 @@ class ProxyMinion(Minion):
                 Minion._thread_multi_return(minion_instance, opts, data)
             else:
                 Minion._thread_return(minion_instance, opts, data)
+
+
+class SProxyMinion(SMinion):
+    '''
+    Create an object that has loaded all of the minion module functions,
+    grains, modules, returners etc.  The SProxyMinion allows developers to
+    generate all of the salt minion functions and present them with these
+    functions for general use.
+    '''
+    def gen_modules(self, initial_load=False):
+        '''
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
+        '''
+        self.opts['grains'] = salt.loader.grains(self.opts)
+        self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            saltenv=self.opts['saltenv'],
+            pillarenv=self.opts.get('pillarenv'),
+        ).compile_pillar()
+
+        if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
+            errmsg = (
+                'No "proxy" configuration key found in pillar or opts '
+                'dictionaries for id {id}. Check your pillar/options '
+                'configuration and contents. Salt-proxy aborted.'
+            ).format(id=self.opts['id'])
+            log.error(errmsg)
+            self._running = False
+            raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
+
+        if 'proxy' not in self.opts:
+            self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        # Then load the proxy module
+        self.proxy = salt.loader.proxy(self.opts)
+
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=False, proxy=self.proxy)
+        self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
+        self.matcher = Matcher(self.opts, self.functions)
+        self.functions['sys.reload_modules'] = self.gen_modules
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
+
+        fq_proxyname = self.opts['proxy']['proxytype']
+
+        # we can then sync any proxymodules down from the master
+        # we do a sync_all here in case proxy code was installed by
+        # SPM or was manually placed in /srv/salt/_modules etc.
+        self.functions['saltutil.sync_all'](saltenv=self.opts['saltenv'])
+
+        self.functions.pack['__proxy__'] = self.proxy
+        self.proxy.pack['__salt__'] = self.functions
+        self.proxy.pack['__ret__'] = self.returners
+        self.proxy.pack['__pillar__'] = self.opts['pillar']
+
+        # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+        self.proxy.pack['__utils__'] = self.utils
+
+        # Reload all modules so all dunder variables are injected
+        self.proxy.reload_modules()
+
+        if ('{0}.init'.format(fq_proxyname) not in self.proxy
+                or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
+            errmsg = 'Proxymodule {0} is missing an init() or a shutdown() or both. '.format(fq_proxyname) + \
+                     'Check your proxymodule.  Salt-proxy aborted.'
+            log.error(errmsg)
+            self._running = False
+            raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
+
+        self.module_executors = self.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
+        proxy_init_fn = self.proxy[fq_proxyname + '.init']
+        proxy_init_fn(self.opts)
+
+        self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
+
+        #  Sync the grains here so the proxy can communicate them to the master
+        self.functions['saltutil.sync_grains'](saltenv='base')
+        self.grains_cache = self.opts['grains']
+        self.ready = True
