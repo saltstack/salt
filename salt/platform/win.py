@@ -896,7 +896,7 @@ def lsa_logon_user(auth_info, local_groups=None, origin_name=py_origin_name,
                 ctypes.byref(profile_buffer_length), ctypes.byref(logonid),
                 ctypes.byref(htoken), ctypes.byref(quotas),
                 ctypes.byref(substatus))
-        except WindowsError as e:  # pylint: disable=undefined-variable
+        except WindowsError:  # pylint: disable=undefined-variable
             if substatus.value:
                 raise ctypes.WinError(substatus.to_error())
             raise
@@ -1169,3 +1169,28 @@ def make_inheritable(token):
         1,
         win32con.DUPLICATE_SAME_ACCESS
     )
+
+
+def CreateProcessWithLogonW(username=None, domain=None, password=None,
+        logonflags=0, applicationname=None, commandline=None, creationflags=0,
+        environment=None, currentdirectory=None, startupinfo=None):
+    creationflags |= win32con.CREATE_UNICODE_ENVIRONMENT
+    if commandline is not None:
+        commandline = ctypes.create_unicode_buffer(commandline)
+    if startupinfo is None:
+        startupinfo = STARTUPINFO()
+    process_info = PROCESS_INFORMATION()
+    advapi32.CreateProcessWithLogonW(
+        username,
+        domain,
+        password,
+        logonflags,
+        applicationname,
+        commandline,
+        creationflags,
+        environment,
+        currentdirectory,
+        ctypes.byref(startupinfo),
+        ctypes.byref(process_info),
+    )
+    return process_info
