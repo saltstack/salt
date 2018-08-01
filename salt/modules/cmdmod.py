@@ -2173,7 +2173,7 @@ def retcode(cmd,
     '''
     python_shell = _python_shell_default(python_shell,
                                          kwargs.get('__pub_jid', ''))
-    
+
     ret = _run(cmd,
                runas=runas,
                group=group,
