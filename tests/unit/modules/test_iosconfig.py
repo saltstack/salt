@@ -6,7 +6,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import textwrap
-from collections import OrderedDict
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -14,6 +13,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt modules
+from salt.utils.odict import OrderedDict
 import salt.modules.iosconfig as iosconfig
 
 
