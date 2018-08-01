@@ -25,6 +25,9 @@ The Azure cloud module is used to control access to Microsoft Azure
     * ``client_id``
     * ``secret``
 
+    if using MSI-style authentication:
+    * ``subscription_id``
+
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
@@ -48,6 +51,10 @@ Example ``/etc/salt/cloud.providers`` or
       For example, this creates a service principal with 'owner' role for the whole subscription:
       az ad sp create-for-rbac -n "http://mysaltapp" --role owner --scopes /subscriptions/3287abc8-f98a-c678-3bde-326766fd3617
       *Note: review the details of Service Principals. Owner role is more than you normally need, and you can restrict scope to a resource group or individual resources.
+
+    Or my-azure-config with MSI-style authentication:
+      driver: azure
+      subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
 '''
 # pylint: disable=E0102
 
