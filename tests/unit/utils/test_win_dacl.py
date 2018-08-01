@@ -16,13 +16,18 @@ import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
 
-import pywintypes
-import win32security
+try:
+    import pywintypes
+    import win32security
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_WIN32, 'Requires pywin32')
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinDaclTestCase(TestCase):
     '''
@@ -78,6 +83,7 @@ class WinDaclTestCase(TestCase):
         self.assertEqual(win_dacl.get_name(sid_obj), 'Administrators')
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_WIN32, 'Requires pywin32')
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = 'HKLM\\' + FAKE_KEY
@@ -379,6 +385,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_WIN32, 'Requires pywin32')
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = ''
