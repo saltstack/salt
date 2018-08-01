@@ -1996,6 +1996,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
 
+    def test_state_sls_unicode_characters_cmd_output(self):
+        '''
+        test the output from running and echo command with non-ascii
+        characters.
+        '''
+        ret = self.run_function('state.sls', ['issue-46672-a'])
+        key = list(ret.keys())[0]
+        log.debug('== ret %s ==', type(ret))
+        _expected = 'This is Æ test!'
+        if salt.utils.platform.is_windows():
+            # Windows cmd.exe will mangle the output using cmd's codepage.
+            _expected = "'This is ’ test!'"
+        self.assertEqual(_expected, ret[key]['changes']['stdout'])
+
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
