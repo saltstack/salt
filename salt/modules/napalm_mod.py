@@ -46,6 +46,12 @@ try:
 except ImportError:
     HAS_CISCOCONFPARSE = False
 
+try:
+    import scp  # pylint: disable=unused-import
+    HAS_SCP = True
+except ImportError:
+    HAS_SCP = False
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1765,3 +1771,187 @@ def config_diff_text(source1='candidate',
                                            candidate_path=candidate_path,
                                            running_config=running_cfg,
                                            running_path=running_path)
+
+
+@depends(HAS_SCP)
+def scp_get(remote_path,
+            local_path='',
+            recursive=False,
+            preserve_times=False,
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Transfer files and directories from remote network device to the localhost
+    of the Minion.
+
+    .. note::
+        This function is only available only when the underlying library
+        `scp <https://github.com/jbardin/scp.py>`_
+        is installed. See
+        :mod:`scp module <salt.modules.scp_mod>` for
+        more details.
+
+    remote_path
+        Path to retrieve from remote host. Since this is evaluated by scp on the
+        remote host, shell wildcards and environment variables may be used.
+
+    recursive: ``False``
+        Transfer files and directories recursively.
+
+    preserve_times: ``False``
+        Preserve ``mtime`` and ``atime`` of transferred files and directories.
+
+    passphrase
+        Used for decrypting private keys.
+
+    pkey
+        An optional private key to use for authentication.
+
+    key_filename
+        The filename, or list of filenames, of optional private key(s) and/or
+        certificates to try for authentication.
+
+    timeout
+        An optional timeout (in seconds) for the TCP connect.
+
+    socket_timeout: ``10``
+        The channel socket timeout in seconds.
+
+    buff_size: ``16384``
+        The size of the SCP send buffer.
+
+    allow_agent: ``True``
+        Set to ``False`` to disable connecting to the SSH agent.
+
+    look_for_keys: ``True``
+        Set to ``False`` to disable searching for discoverable private key
+        files in ``~/.ssh/``
+
+    banner_timeout
+        An optional timeout (in seconds) to wait for the SSH banner to be
+        presented.
+
+    auth_timeout
+        An optional timeout (in seconds) to wait for an authentication
+        response.
+
+    auto_add_policy: ``False``
+        Automatically add the host to the ``known_hosts``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.scp_get /var/tmp/file /tmp/file auto_add_policy=True
+    '''
+    conn_args = netmiko_args(**kwargs)
+    conn_args['hostname'] = conn_args['host']
+    kwargs.update(conn_args)
+    return __salt__['scp.get'](remote_path,
+                               local_path=local_path,
+                               recursive=recursive,
+                               preserve_times=preserve_times,
+                               **kwargs)
+
+
+@depends(HAS_SCP)
+def scp_put(files,
+            remote_path=None,
+            recursive=False,
+            preserve_times=False,
+            saltenv='base',
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Transfer files and directories to remote network device.
+
+    .. note::
+        This function is only available only when the underlying library
+        `scp <https://github.com/jbardin/scp.py>`_
+        is installed. See
+        :mod:`scp module <salt.modules.scp_mod>` for
+        more details.
+
+    files
+        A single path or a list of paths to be transferred.
+
+    remote_path
+        The path on the remote device where to store the files.
+
+    recursive: ``True``
+        Transfer files and directories recursively.
+
+    preserve_times: ``False``
+        Preserve ``mtime`` and ``atime`` of transferred files and directories.
+
+    saltenv: ``base``
+        The name of the Salt environment. Ignored when ``files`` is not a
+        ``salt://`` URL.
+
+    hostname
+        The hostname of the remote device.
+
+    port: ``22``
+        The port of the remote device.
+
+    username
+        The username required for SSH authentication on the device.
+
+    password
+        Used for password authentication. It is also used for private key
+        decryption if ``passphrase`` is not given.
+
+    passphrase
+        Used for decrypting private keys.
+
+    pkey
+        An optional private key to use for authentication.
+
+    key_filename
+        The filename, or list of filenames, of optional private key(s) and/or
+        certificates to try for authentication.
+
+    timeout
+        An optional timeout (in seconds) for the TCP connect.
+
+    socket_timeout: ``10``
+        The channel socket timeout in seconds.
+
+    buff_size: ``16384``
+        The size of the SCP send buffer.
+
+    allow_agent: ``True``
+        Set to ``False`` to disable connecting to the SSH agent.
+
+    look_for_keys: ``True``
+        Set to ``False`` to disable searching for discoverable private key
+        files in ``~/.ssh/``
+
+    banner_timeout
+        An optional timeout (in seconds) to wait for the SSH banner to be
+        presented.
+
+    auth_timeout
+        An optional timeout (in seconds) to wait for an authentication
+        response.
+
+    auto_add_policy: ``False``
+        Automatically add the host to the ``known_hosts``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.scp_put /path/to/file /var/tmp/file auto_add_policy=True
+    '''
+    conn_args = netmiko_args(**kwargs)
+    conn_args['hostname'] = conn_args['host']
+    kwargs.update(conn_args)
+    return __salt__['scp.put'](files,
+                               remote_path=remote_path,
+                               recursive=recursive,
+                               preserve_times=preserve_times,
+                               saltenv=saltenv,
+                               **kwargs)
