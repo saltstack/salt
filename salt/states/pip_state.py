@@ -594,13 +594,6 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
-
     if pip_bin and not bin_env:
         bin_env = pip_bin
 

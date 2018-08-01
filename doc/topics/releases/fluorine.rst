@@ -538,6 +538,11 @@ Module Deprecations
       function. This is because support for NAPALM native templates has been
       dropped.
 
+- The :py:mod:`pip <salt.modules.pip>` module has been changed as follows:
+
+    - Support for the ``no_chown`` option has been removed from
+      :py:func:`pip.install <salt.modules.pip.install>` function.
+
 - The :py:mod:`trafficserver <salt.modules.trafficserver>` module has been
   changed as follows:
 
@@ -673,9 +678,16 @@ State Deprecations
   <salt.states.netconfig.managed` state has been removed. This is because
   support for NAPALM native templates has been dropped.
 
+- Support for the ``no_chown`` option in the
+  :py:func:`pip.insalled <salt.states.pip.installed>` state has been removed.
+
 - The :py:func:`trafficserver.set_var <salt.states.trafficserver.set_var>`
   state has been removed. Please use :py:func:`trafficserver.config
   <salt.states.trafficserver.config>` instead.
+
+- Support for the ``no_chown`` option in the
+  :py:func`virtualenv.managed <salt.states.virtualenv.managed>` function has
+  been removed.
 
 - The ``win_update`` state module has been removed. It has been replaced by
   :py:mod:`win_wua <salt.states.win_wua>`.
