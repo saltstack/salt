@@ -384,6 +384,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
