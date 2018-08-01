@@ -55,6 +55,12 @@ def split_username(username):
 
 
 def runas(cmdLine, username, password=None, cwd=None, elevated=True):
+    access = (
+        win32security.TOKEN_QUERY |
+        win32security.TOKEN_ADJUST_PRIVILEGES
+    )
+    th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+    salt.platform.win.elevate_token(th)
 
     impersonation_token = salt.platform.win.impersonate_sid(
         salt.platform.win.SYSTEM_SID,
