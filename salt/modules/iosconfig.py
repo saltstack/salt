@@ -13,12 +13,12 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python stdlib
 import difflib
-from collections import OrderedDict
 
 # Import Salt modules
 from salt.ext import six
 import salt.utils.dictupdate
 import salt.utils.dictdiffer
+from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltException
 
 # ------------------------------------------------------------------------------
