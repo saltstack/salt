@@ -43,6 +43,14 @@ class PipModuleTest(ModuleCase):
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
     def tearDown(self):
+        super(PipModuleTest, self).tearDown()
+        if os.path.isdir(self.venv_test_dir):
+            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
+        if os.path.isdir(self.pip_temp):
+            shutil.rmtree(self.pip_temp, ignore_errors=True)
+        del self.venv_dir
+        del self.venv_test_dir
+        del self.pip_temp
         if 'PIP_SOURCE_DIR' in os.environ:
             os.environ.pop('PIP_SOURCE_DIR')
 
@@ -444,13 +452,3 @@ class PipModuleTest(ModuleCase):
         ret2 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
         assert 'lazyimport==0.0.1' in ret1
         assert ret2 == ''
-
-    def tearDown(self):
-        super(PipModuleTest, self).tearDown()
-        if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp, ignore_errors=True)
-        del self.venv_dir
-        del self.venv_test_dir
-        del self.pip_temp
