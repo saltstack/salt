@@ -692,6 +692,9 @@ State Deprecations
 - The ``win_update`` state module has been removed. It has been replaced by
   :py:mod:`win_wua <salt.states.win_wua>`.
 
+- Support for virtual packages has been removed from the
+  py:mod:`pkg state <salt.states.pkg>`.
+
 Utils Deprecations
 ------------------
 
