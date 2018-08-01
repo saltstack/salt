@@ -1098,7 +1098,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         else:
             return salt.utils.data.decode_list(ret, to_str=True)
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_delete_line_in_empty_file(self):
         '''
@@ -1140,7 +1140,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
                     self.assertFalse(filemod.line('foo', content='foo', match=match, mode=mode))
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_modecheck_failure(self):
         '''
@@ -1153,7 +1153,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 filemod.line('foo', mode=mode)
             self.assertIn(err_msg, six.text_type(cmd_err))
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_no_content(self):
         '''
@@ -1166,7 +1166,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             self.assertIn('Content can only be empty if mode is "delete"',
                           six.text_type(cmd_err))
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
     def test_line_insert_no_location_no_before_no_after(self):
@@ -1297,10 +1297,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         See issue #48113
         :return:
         '''
-        file_content = 'This is a line\nThis is another line'
-        file_modified = salt.utils.stringutils.to_str('This is a line\n'
-                                                      'This is another line\n'
-                                                      'This is a line with unicode Ŷ')
+        file_content = 'This is a line{}This is another line'.format(os.linesep)
+        file_modified = salt.utils.stringutils.to_str('This is a line{}'
+                                                      'This is another line{}'
+                                                      'This is a line with unicode Ŷ'.format(
+                                                           os.linesep, os.linesep
+                                                           )
+                                                      )
         cfg_content = "This is a line with unicode Ŷ"
         isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         for after_line in ['This is another line']:
@@ -1367,7 +1370,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 expected = self._get_body(file_modified)
                 assert writelines_content[0] == expected, (writelines_content[0], expected)
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
     def test_line_assert_exception_pattern(self):
@@ -1701,7 +1704,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 # No changes should have been made
                 assert result is False
 
-    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
     def test_line_insert_ensure_beforeafter_rangelines(self):
@@ -1711,8 +1714,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         '''
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
         # pylint: disable=W1401
-        file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"\nSETGID_HOME=no\nADD_EXTRA_GROUPS=1\n' \
-                       'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'
+        file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"{}SETGID_HOME=no{}ADD_EXTRA_GROUPS=1{}' \
+                       'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'.format(
+                           os.linesep, os.linesep, os.linesep
+                       )
         # pylint: enable=W1401
         after, before = file_content.split(os.linesep)[0], file_content.split(os.linesep)[-1]
         for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
