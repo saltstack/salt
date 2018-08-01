@@ -1755,6 +1755,10 @@ def has_permission(obj_name,
     if not cur_flag:
         return False
 
+    # Check if the ACE contains the exact flag
+    if exact:
+        return cur_flag == chk_flag
+
     # Check if the ACE contains the permission
     return cur_flag & chk_flag == chk_flag
 
