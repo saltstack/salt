@@ -1647,7 +1647,6 @@ def check_perms(path,
                                          reset=reset)
 
 
-
 def set_perms(path,
               grant_perms=None,
               deny_perms=None,
