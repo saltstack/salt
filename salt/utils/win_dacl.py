@@ -626,10 +626,20 @@ def dacl(obj_name=None, obj_type='file'):
             # Get the permission flag
             perm_flag = 0
             if isinstance(permissions, six.string_types):
-                perm_flag = self.ace_perms[self.dacl_type]['basic'][permissions]
+                try:
+                    perm_flag = self.ace_perms[self.dacl_type]['basic'][permissions]
+                except KeyError as exc:
+                    msg = 'Invalid permission specified: %s' % permissions
+                    log.exception(msg)
+                    raise CommandExecutionError(msg, exc)
             else:
-                for perm in permissions:
-                    perm_flag |= self.ace_perms[self.dacl_type]['advanced'][perm]
+                try:
+                    for perm in permissions:
+                        perm_flag |= self.ace_perms[self.dacl_type]['advanced'][perm]
+                except KeyError as exc:
+                    msg = 'Invalid permission specified: %s' % perm
+                    log.exception(msg)
+                    raise CommandExecutionError(msg, exc)
 
             if access_mode.lower() not in ['grant', 'deny']:
                 raise SaltInvocationError('Invalid Access Mode: %s' % access_mode)
@@ -909,10 +919,10 @@ def dacl(obj_name=None, obj_type='file'):
 
             # Get the ace permissions
             # Check basic permissions first
-            ace_perms = [self.ace_perms[obj_type]['basic'].get(ace[1], [])]
+            ace_perms = self.ace_perms[obj_type]['basic'].get(ace[1], [])
 
             # If it didn't find basic perms, check advanced permissions
-            if not ace_perms[0]:
+            if not ace_perms:
                 ace_perms = []
                 for perm in self.ace_perms[obj_type]['advanced']:
                     # Don't match against the string perms
@@ -1882,6 +1892,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
     Returns:
         dict: A dictionary of return data as expected by the state system
     '''
+    access_mode = access_mode.lower()
     changes = {}
     for user in new_perms:
         applies_to_text = ''
@@ -1904,7 +1915,9 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             applies_to = None
 
         if user_name not in cur_perms['Not Inherited']:
-            changes[user] = {'perms': new_perms[user]['perms']}
+            if user not in changes:
+                changes[user] = {}
+            changes[user][access_mode] = new_perms[user]['perms']
             if applies_to:
                 changes[user]['applies_to'] = applies_to
         else:
@@ -1916,7 +1929,10 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                                       access_mode=access_mode,
                                       obj_type=obj_type,
                                       exact=False):
-                    changes[user] = {'perms': new_perms[user]['perms']}
+
+                    if user not in changes:
+                        changes[user] = {}
+                    changes[user][access_mode] = new_perms[user]['perms']
             # Check Perms for advanced perms
             else:
                 for perm in new_perms[user]['perms']:
@@ -1927,8 +1943,8 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                                           obj_type=obj_type,
                                           exact=False):
                         if user not in changes:
-                            changes[user] = {'perms': []}
-                        changes[user]['perms'].append(perm)
+                            changes[user] = {access_mode: []}
+                        changes[user][access_mode].append(perm)
 
             # Check if applies_to was passed
             if applies_to:
@@ -1941,13 +1957,17 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                         changes[user]['applies_to'] = applies_to
 
     if changes:
-        ret['pchanges']['perms'] = {}
-        ret['changes']['perms'] = {}
+        if 'perms' not in ret['pchanges']:
+            ret['pchanges']['perms'] = {}
+        if 'perms' not in ret['changes']:
+            ret['changes']['perms'] = {}
         for user in changes:
             user_name = get_name(principal=user)
 
             if __opts__['test'] is True:
-                ret['pchanges']['perms'][user] = changes[user]
+                if user not in ret['pchanges']['perms']:
+                    ret['pchanges']['perms'][user] = {}
+                ret['pchanges']['perms'][user][access_mode] = changes[user][access_mode]
             else:
                 # Get applies_to
                 applies_to = None
@@ -1970,7 +1990,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                     applies_to = changes[user]['applies_to']
 
                 perms = []
-                if 'perms' not in changes[user]:
+                if access_mode not in changes[user]:
                     # Get current perms
                     # Check for basic perms
                     for perm in cur_perms['Not Inherited'][user_name][access_mode]['permissions']:
@@ -1990,7 +2010,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                                         if flags().ace_perms[obj_type]['advanced'][flag1] == perm_flag:
                                             perms.append(flag1)
                 else:
-                    perms = changes[user]['perms']
+                    perms = changes[user][access_mode]
 
                 try:
                     set_permissions(
@@ -2000,12 +2020,14 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                         access_mode=access_mode,
                         applies_to=applies_to,
                         obj_type=obj_type)
-                    ret['changes']['perms'][user] = changes[user]
-                except CommandExecutionError:
+                    if user not in ret['changes']['perms']:
+                        ret['changes']['perms'][user] = {}
+                    ret['changes']['perms'][user][access_mode] = changes[user][access_mode]
+                except CommandExecutionError as exc:
                     ret['result'] = False
                     ret['comment'].append(
-                        'Failed to change {0} permissions for "{1}" to {2}'
-                        ''.format(access_mode, user, changes[user]))
+                        'Failed to change {0} permissions for "{1}" to {2}\n'
+                        'Error: {3}'.format(access_mode, user, changes[user], exc.strerror))
 
     return ret
 
@@ -2065,7 +2087,7 @@ def check_perms(obj_name,
 
     .. code-block:: bash
 
-        # You have to use __utils__ inorder for __opts__ to be available
+        # You have to use __utils__ in order for __opts__ to be available
 
         # To see changes to ``C:\\Temp`` if the 'Users' group is given 'read & execute' permissions.
         __utils__['dacl.check_perms'](obj_name='C:\\Temp',
@@ -2400,7 +2422,7 @@ def set_perms(obj_name,
     if grant_perms is not None:
         ret['grant'] = _set_perms(obj_dacl=obj_dacl,
                                   obj_type=obj_type,
-                                  new_perms=deny_perms,
+                                  new_perms=grant_perms,
                                   cur_perms=cur_perms,
                                   access_mode='grant')
 
