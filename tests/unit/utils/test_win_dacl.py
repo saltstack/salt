@@ -53,7 +53,7 @@ class WinDaclTestCase(TestCase):
         self.assertEqual(win32security.LookupAccountSid(None, sid_obj)[0],
                          'Administrators')
 
-    def test_get_sid_string(self):
+    def test_get_sid_string_name(self):
         '''
         Validate getting a pysid object from a SID string
         '''
@@ -81,6 +81,7 @@ class WinDaclTestCase(TestCase):
         sid_obj = win_dacl.get_sid('Administrators')
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_name(sid_obj), 'Administrators')
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_WIN32, 'Requires pywin32')

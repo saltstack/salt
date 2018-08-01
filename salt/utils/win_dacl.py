@@ -978,11 +978,11 @@ def dacl(obj_name=None, obj_type='file'):
                 inherited = ace[0][1] & win32security.INHERITED_ACE == 16
 
                 if ace[2] == sid and not inherited:
-                        if self.ace_type[ace[0][0]] == ace_type.lower() or \
-                                ace_type == 'all':
-                            self.dacl.DeleteAce(i - offset)
-                            ret.append(self._ace_to_dict(ace))
-                            offset += 1
+                    if self.ace_type[ace[0][0]] == ace_type.lower() or \
+                            ace_type == 'all':
+                        self.dacl.DeleteAce(i - offset)
+                        ret.append(self._ace_to_dict(ace))
+                        offset += 1
 
             if not ret:
                 ret = ['ACE not found for {0}'.format(principal)]
@@ -1271,7 +1271,7 @@ def get_owner(obj_name, obj_type='file'):
 
 
 def get_primary_group(obj_name, obj_type='file'):
-    '''
+    r'''
     Gets the primary group of the passed object
 
     Args:
@@ -2143,7 +2143,7 @@ def check_perms(obj_name,
                     set_owner(obj_name=obj_name,
                               principal=owner,
                               obj_type=obj_type)
-                    log.debug('Owner set to %s' % owner)
+                    log.debug('Owner set to {0}'.format(owner))
                     ret['changes']['owner'] = owner
                 except CommandExecutionError:
                     ret['result'] = False
@@ -2171,7 +2171,7 @@ def check_perms(obj_name,
                         ''.format(obj_name, inheritance))
 
     # Check permissions
-    log.debug('Getting current permissions for %s' % obj_name)
+    log.debug('Getting current permissions for {0}'.format(obj_name))
     cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
 
     # Verify Deny Permissions
@@ -2195,7 +2195,7 @@ def check_perms(obj_name,
     # Check reset
     # If reset=True, which users will be removed as a result
     if reset:
-        log.debug('Resetting permissions for %s' % obj_name)
+        log.debug('Resetting permissions for {0}'.format(obj_name))
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms['Not Inherited']:
             # case insensitive dictionary search
