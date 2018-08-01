@@ -2128,11 +2128,11 @@ def script(source,
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
 
     if salt.utils.is_windows() and shell.lower() != 'powershell':
-        path = _cmd_quote(path, escape=False)
+        cmd_path = _cmd_quote(path, escape=False)
     else:
-        path = _cmd_quote(path)
+        cmd_path = _cmd_quote(path)
 
-    ret = _run(path + ' ' + str(args) if args else path,
+    ret = _run(cmd_path + ' ' + str(args) if args else cmd_path,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
