@@ -23,6 +23,16 @@ eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 Most parameters will fall back to cli.ini defaults if None is given.
 
+DNS plugins
+-----------
+
+This module currently supports the CloudFlare certbot DNS plugin.  The DNS
+plugin credentials file needs to be passed in using the
+``dns_plugin_credentials`` argument.
+
+Make sure the appropriate certbot plugin for the wanted DNS provider is
+installed before using this module.
+
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
