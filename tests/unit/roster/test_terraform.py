@@ -26,7 +26,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
     def test_default_output(self):
         '''
         Test the output of a fixture tfstate file wich contains libvirt
-        and AWS resources.
+        resources.
         '''
         tfstate = os.path.join(os.path.dirname(__file__), 'terraform.data', 'terraform.tfstate')
         pki_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'terraform.data'))
@@ -65,7 +65,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
     def test_default_matching(self):
         '''
         Test the output of a fixture tfstate file wich contains libvirt
-        and AWS resources using matching
+        resources using matching
         '''
         tfstate = os.path.join(os.path.dirname(__file__), 'terraform.data', 'terraform.tfstate')
         pki_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'terraform.data'))
