@@ -55,7 +55,16 @@ def split_username(username):
     return username, domain
 
 
-def runas(cmdLine, username, password=None, cwd=None, elevated=True):
+def runas(cmdLine, username, password=None, cwd=None):
+    '''
+    Run a command as another user. It the proccess is running as an admin or
+    system account this method does not require a password. Other non
+    priviledged accounts need to provide a password for the user to runas.
+    Commands are run in with the highest level priviledges possible for the
+    account provided.
+    '''
+
+    # Elevate the token from the current process
     access = (
         win32security.TOKEN_QUERY |
         win32security.TOKEN_ADJUST_PRIVILEGES
@@ -63,6 +72,9 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
     salt.platform.win.elevate_token(th)
 
+    # Try to impersonate the SYSTEM user. This process needs to be runnung as a
+    # user who as been granted the SeImpersonatePrivilege, Administrator
+    # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
             salt.platform.win.SYSTEM_SID,
@@ -72,13 +84,19 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     except WindowsError:  # pylint: disable=undefined-variable
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
+
+    # Impersonation of the SYSTEM user failed. Fallback to an un-priviledged
+    # runas.
     if not impersonation_token:
         log.debug("No impersonation token, using unprivileged runas")
         return runas_unpriv(cmdLine, username, password, cwd)
 
     username, domain = split_username(username)
+    # Validate the domain and sid exist for the username
     sid, domain, sidType = win32security.LookupAccountName(domain, username)
     if domain == 'NT AUTHORITY':
+        # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
+        # SERVICE.
         logonType = win32con.LOGON32_LOGON_SERVICE
         user_token = win32security.LogonUser(
             username,
@@ -88,6 +106,7 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     elif password:
+        # Login with a password.
         user_token = win32security.LogonUser(
             username,
             domain,
@@ -96,8 +115,10 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     else:
+        # Login without a password. This always returns an elevated token.
         user_token = salt.platform.win.logon_msv1_s4u(username).Token
 
+    # Get a linked user token to elevate if needed
     elevation_type = win32security.GetTokenInformation(
         user_token, win32security.TokenElevationType
     )
@@ -106,11 +127,17 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
             user_token,
             win32security.TokenLinkedToken
         )
-        salt.platform.win.elevate_token(user_token)
 
+    # Elevate the user token
+    salt.platform.win.elevate_token(user_token)
+
+    # Make sure the user's profile is loaded.
     handle_reg = win32profile.LoadUserProfile(user_token, {'UserName': username})
+
+    # Make sure the user's token has access to a windows station and desktop
     salt.platform.win.grant_winsta_and_desktop(user_token)
 
+    # Create pipes for standard in, out and error streams
     security_attributes = win32security.SECURITY_ATTRIBUTES()
     security_attributes.bInheritHandle = 1
 
@@ -123,6 +150,7 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     stderr_read, stderr_write = win32pipe.CreatePipe(security_attributes, 0)
     stderr_write = salt.platform.win.make_inheritable(stderr_write)
 
+    # Run the process without showing a window.
     creationflags = (
         win32process.CREATE_NO_WINDOW |
         win32process.CREATE_NEW_CONSOLE |
@@ -136,8 +164,10 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
         hStdError=stderr_write.handle,
     )
 
+    # Create the environment for the user
     env = win32profile.CreateEnvironmentBlock(user_token, False)
 
+    # Start the process in a suspended state.
     process_info = salt.platform.win.CreateProcessWithTokenW(
         int(user_token),
         logonflags=1,
@@ -159,17 +189,21 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
     salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
 
     ret = {'pid': dwProcessId}
+    # Resume the process
     psutil.Process(dwProcessId).resume()
 
+    # Wait for the process to exit and get it's return code.
     if win32event.WaitForSingleObject(hProcess, win32event.INFINITE) == win32con.WAIT_OBJECT_0:
         exitcode = win32process.GetExitCodeProcess(hProcess)
         ret['retcode'] = exitcode
 
+    # Read standard out
     fd_out = msvcrt.open_osfhandle(stdout_read.handle, os.O_RDONLY | os.O_TEXT)
     with os.fdopen(fd_out, 'r') as f_out:
         stdout = f_out.read()
         ret['stdout'] = stdout
 
+    # Read standard error
     fd_err = msvcrt.open_osfhandle(stderr_read.handle, os.O_RDONLY | os.O_TEXT)
     with os.fdopen(fd_err, 'r') as f_err:
         stderr = f_err.read()
@@ -187,6 +221,9 @@ def runas(cmdLine, username, password=None, cwd=None, elevated=True):
 
 
 def runas_unpriv(cmd, username, password, cwd=None):
+    '''
+    Runas that works for non-priviledged users
+    '''
 
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
@@ -211,15 +248,7 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdError=errwrite,
     )
 
-    # Build command
-    # cmd = 'cmd /c {0}'.format(cmd)
-
-    # Check for a domain
-    domain = None
-    if '@' in username:
-        username, domain = username.split('@')
-    if '\\' in username:
-        domain, username = username.split('\\')
+    username, domain = split_username(username)
 
     # Run command and return process info structure
     process_info = salt.platform.win.CreateProcessWithLogonW(

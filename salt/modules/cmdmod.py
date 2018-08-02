@@ -397,10 +397,6 @@ def _run(cmd,
         log.info(log_callback(msg))
 
     if runas and salt.utils.platform.is_windows():
-        if not password:
-            msg = 'password is a required argument for runas on Windows'
-            raise CommandExecutionError(msg)
-
         if not HAS_WIN_RUNAS:
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
