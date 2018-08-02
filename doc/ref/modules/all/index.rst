@@ -187,6 +187,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -325,6 +326,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    peeringdb
     pf
     philips_hue
     pillar
