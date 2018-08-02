@@ -732,17 +732,17 @@ def msi_conformant_version():
             To prevent overflow of ivMINOR, Bugfix must be <= 20.
             If Bugifx exceeds 20, the installer will not uninstall the previous version.
             The develop branch has bugfix 0
-        ivBUILD = git commit count (noc)
+        ivBUILD = git commit count 
             noc on develop and a branch count independently.
             noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
     Examples:
-      Branch/Tag             Display version            Internal version
-      develop (branch)       2016.11.0-742-g5ca4d20     16.200.742
-      2016.11 (branch)       2016.11.2-78-gce1f01f      16.202.78
-      2016.11 (branch)       2016.11.9-88-g3e844ed1df   16.209.88
-      v2016.11.0 (tag)       2016.11.0                  16.200.65535
-      v2016.11.2 (tag)       2016.11.2                  16.202.65535
+      git checkout    Display version            Internal version
+      develop         2016.11.0-742-g5ca4d20     16.200.742
+      2016.11         2016.11.2-78-gce1f01f      16.202.78
+      2016.11         2016.11.9-88-g3e844ed1df   16.209.88
+      v2016.11.0      2016.11.0                  16.200.65535
+      v2016.11.2      2016.11.2                  16.202.65535
 
     '''
     short_year = int(six.text_type(__saltstack_version__.major)[2:])
