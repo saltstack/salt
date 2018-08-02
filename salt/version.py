@@ -721,21 +721,38 @@ def versions_report(include_salt_cloud=False):
 
 def msi_conformant_version():
     '''
-    An msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
-    Therefore, the year must be represented as 'short year'.
+    An msi installer uninstalls/replaces a lower "internal version" of itself.
+    "internal version" is the 3-tuple ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
+    Using the build nr allows for continuous integration of the installer.
+    "Display version" is indipendent and free format, e.g. 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.
+    We must compress Month and Bugfix into the second field to free the third field for the build number
+    Calculation of the internal version fields:
+        ivMAJOR = 'short year' (2 digits).
+        ivMINOR = 20*(month-1) + Bugfix
+            To prevent overflow of ivMINOR, Bugfix must be <= 20.
+            If Bugifx exceeds 20, the installer will not uninstall the previous version.
+            The develop branch has bugfix 0
+        ivBUILD = git commit count (noc)
+            noc on develop and a branch count independently.
+            noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
-    Examples (depend on git checkout):
-      develop                2016.11.0-742-g5ca4d20     16.11.0.742
-      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
-      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
+    Examples:
+      Branch/Tag             Display version            Internal version
+      develop (branch)       2016.11.0-742-g5ca4d20     16.200.742
+      20166.11 (branch)      2016.11.2-78-gce1f01f      16.202.78
+      v20166.11.0 (tag)      2016.11.0                  16.200.65535
+      v20166.11.2 (tag)      2016.11.2                  16.202.65535
 
-    Note that the commit count for tags is 0(zero)
     '''
-    year2 = int(six.text_type(__saltstack_version__.major)[2:])
+    short_year = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
-    minor = __saltstack_version__.bugfix
-    commi = __saltstack_version__.noc
-    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+    BUGFIX = __saltstack_version__.bugfix
+    if BUGFIX>20:
+        BUGFIX = 20
+    noc = __saltstack_version__.noc
+    if noc == 0:
+        noc = 65535
+    return '{}.{}.{}'.format(short_year, 20*(month-1)+BUGFIX, minor, noc)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
