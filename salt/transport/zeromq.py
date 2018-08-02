@@ -864,7 +864,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                         else:
                             # TODO: constants file for "broadcast"
                             log.trace('Sending broadcasted data over publisher %s', pub_uri)
-                            pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                            pub_sock.send(b'broadcast', flags=zmq.SNDMORE)
                             pub_sock.send(payload)
                             log.trace('Broadcasted data has been sent')
                     else:
