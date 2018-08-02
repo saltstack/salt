@@ -3,9 +3,9 @@
 Package support for AIX
 
 .. important::
-    If you feel that Salt should be using this module to manage packages on a
-    minion, and it is using a different module (or gives an error similar to
-    *'pkg.install' is not available*), see :ref:`here
+    If you feel that Salt should be using this module to manage filesets or 
+    rpm packages on a minion, and it is using a different module (or gives an
+    error similar to *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
 # Import python libs
@@ -42,7 +42,6 @@ def __virtual__():
     return (False,
             'The aixpkg execution module failed to load.')
 
-### TBD DGM need to go through and remove use of 'pkg://' and replace with AIX requivalent
 
 aix_pkg_return_values = {
     0: 'Command succeeded.',
@@ -57,34 +56,45 @@ aix_pkg_return_values = {
        'modified.'
 }
 
+def _check_pkg(target):
+    '''
+    Return name, version and if rpm package for specified target
+    '''
+    ret = {}
+    cmd = ['/usr/bin/lslpp', '-Lc', target]
+    lines = __salt__['cmd.run'](
+            cmd,
+            python_shell=False).splitlines()
 
-def _aix_get_pkgname(line):
-    '''
-    Extracts package name from "pkg list -v" output.
-    Input: one line of the command output
-    Output: pkg name (e.g.: "pkg://aix/x11/library/toolkit/libxt")
-    Example use:
-    line = "pkg://aix/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
-    name = _aix_get_pkgname(line)
-    '''
-    return line.split()[0].split('@')[0].strip()
+    name = ''
+    version_num = ''
+    rpmpkg = False
+    for line in lines:
+        if line.startswith('#'):
+            continue
 
+        comps = line.split(':')
+        if len(comps) < 7:
+            raise CommandExecutionError(
+                'Error occurred finding fileset/package'
+                , info={'errors': comps[1].strip()})
 
-def _aix_get_pkgversion(line):
-    '''
-    Extracts package version from "pkg list -v" output.
-    Input: one line of the command output
-    Output: package version (e.g.: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
-    Example use:
-    line = "pkg://aix/xlsmp.aix61.rte"
-    name = _aix_get_pkgversion(line)
-    '''
-    return line.split()[0].split('@')[1].strip()
+        # handle first matching line
+        if 'R' in comps[6]:
+            name = comps[0]
+            rpmpkg = True
+        else:
+            name = comps[1]     # use fileset rather than package name
+            
+        version_num = comps[2]
+        break
+
+    return name, version_num, rpmpkg
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the filesets or rpm packages currently installed as a dict:
+    List the filesets/rpm packages currently installed as a dict:
 
     .. code-block:: python
 
@@ -113,13 +123,16 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     # cmd returns information colon delimited in a single linei, format
-    #   Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller: \
-    #       Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
+    #   Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:
+    #       Destination Dir.:Uninstaller:Message Catalog:Message Set:
+    #       Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
     # Example:
-    #   xcursor:xcursor-1.1.7-3:1.1.7-3: : :C:R:X Cursor library: :/bin/rpm -e xcursor: : : : :0: :(none):Mon May  8 15:18:35 CDT 2017
+    #   xcursor:xcursor-1.1.7-3:1.1.7-3: : :C:R:X Cursor library: :\
+    #       /bin/rpm -e xcursor: : : : :0: :(none):Mon May  8 15:18:35 CDT 2017
     #   bos:bos.rte.libcur:7.1.5.0: : :C:F:libcurses Library: : : : : : :0:0:/:1731
     #
-    # where Type codes: F -- Installp Fileset, P -- Product, C -- Component, T -- Feature, R -- RPM Package
+    # where Type codes: F -- Installp Fileset, P -- Product, C -- Component,
+    #                   T -- Feature, R -- RPM Package
 
     cmd = '/usr/bin/lslpp -Lc'
     lines = __salt__['cmd.run'](
@@ -156,9 +169,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def version(*names, **kwargs):
     '''
-    Common interface for obtaining the version of installed filesets or rpm packages.
-    Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
-    Partial FMRI is returned if the fileset or rpm package is not installed.   TBD DGM check this statement
+    Common interface for obtaining the version of installed fileset/rpm package.
 
     CLI Example:
 
@@ -172,9 +183,7 @@ def version(*names, **kwargs):
 
 def is_installed(name, **kwargs):
     '''
-    Returns True if the fileset or rpm package is installed. Otherwise returns False.
-    Name can be full or partial FMRI.
-    In case of multiple match from partial FMRI name, it returns True.
+    Returns True if the fileset/rpm package is installed. Otherwise returns False.
 
     CLI Example:
 
@@ -188,23 +197,18 @@ def is_installed(name, **kwargs):
 
 def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwargs):
     '''
-    Install the named package using the installp command.
-    Accepts full or partial FMRI.
+    Install the named fileset/rpm package
 
-    Returns a dict containing the new package names and versions::
+    Returns a dict containing the new fileset/package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
-
-    ### TBD DGM need to allow for rpm or IBM's bff or rte filesets and
-    need to distinguish between rpms and filesets when using commands
-    since some commands only work for filesets, e.g. lslpp -l bash
 
 
     Multiple Package Installation Options:
 
     pkgs
-        A list of packages to install. Must be passed as a python list.
+        A list of filesets/rpm packages to install. Must be passed as a python list.
 
 
     CLI Example:
@@ -254,9 +258,9 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 ###            pkg2inst = "{0}".format(name)
         pkg2insts = "{0} {1}".format(os.path.dirname(name), os.path.basename(name))
 
-    cmd = ['/usr/bin/installp', '-avYXg -d', '']
-###    if test:
-###        cmd.append('-n')
+    cmd = ['/usr/sbin/installp', '-avYXg -d', '']
+    if test:
+        cmd.append(' -p ')
 
     # Get a list of the packages before install so we can diff after to see
     # what got installed.
@@ -292,18 +296,18 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove specified package. Accepts full or partial FMRI.
-    In case of multiple match, the command fails and won't modify the OS.
+    Remove specified filesets and/or rpm packages. i
 
     name
-        The name of the package to be deleted.
+        The name of the fileset or rpm package to be deleted.
 
 
     Multiple Package Options:
 
     pkgs
-        A list of packages to delete. Must be passed as a python list. The
-        ``name`` parameter will be ignored if this option is passed.
+        A list of filesets and/or rpm packages to delete.
+        Must be passed as a python list. The ``name`` parameter will be
+        ignored if this option is passed.
 
 
     Returns a list containing the removed packages.
@@ -317,36 +321,45 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove /stage/middleware/AIX/Xlfv13.1/urt/xlC.rte
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pu.db
-
-### TBD DGM need to allow for rpm's - rpm -Uivh <name> if endswith('.rpm')
-
     targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
     if not targets:
         return {}
 
     if pkgs:
-        log.debug('Removing these packages instead of %s: %s', name, targets)
+        log.debug('Removing these fileset(s) and/or rpm packages {0}: {1}'
+            .format(name, targets))
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
-    # Remove the package(s)
-    cmd = ['/usr/bin/installp', '-u'] + targets
-    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    errors = []
+    # Remove the fileset or rpm package(s)
+    for target in targets:
+        try:
+            named, versionpkg, rpmpkg = _check_pkg(target)
+        except CommandExecutionError as exc:
+            if exc.info:
+                errors.append(exc.info['errors'])
+            continue
+
+        if rpmpkg:
+            cmd = ['/usr/bin/rpm', '-e', named]
+            out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+        else:
+            cmd = ['/usr/sbin/installp', '-u', named]
+            out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     # Get a list of the packages after the uninstall
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if errors:
         raise CommandExecutionError(
-            'Error occurred removing package(s)',
+            'Problems encountered removing filesets(s)/package(s)',
             info={
                 'changes': ret,
-                'retcode': aix_pkg_return_values[out['retcode']],
-                'errors': [out['stderr']]
+                'errors': errors
             }
         )
 
