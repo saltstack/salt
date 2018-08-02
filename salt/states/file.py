@@ -1123,8 +1123,7 @@ def _get_template_texts(source_list=None,
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
-                if six.PY3:
-                    tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = tmplines.decode(__salt_system_encoding__)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
@@ -4394,9 +4393,15 @@ def blockreplace(
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
     maintaining an un-managed file containing manual edits.
-    Note: this function will store two copies of the file in-memory
-    (the original version and the edited version) in order to detect changes
-    and only edit the targeted file if necessary.
+
+    .. note::
+        This function will store two copies of the file in-memory (the original
+        version and the edited version) in order to detect changes and only
+        edit the targeted file if necessary.
+
+        Additionally, you can use :py:func:`file.accumulated
+        <salt.states.file.accumulated>` and target this state. All accumulated
+        data dictionaries' content will be added in the content block.
 
     name
         Filesystem path to the file to be edited
@@ -4408,12 +4413,10 @@ def blockreplace(
         final output
 
     marker_end
-        The line content identifying a line as the end of the content block.
-        Note that the whole line containing this marker will be considered, so
-        whitespace or extra content before or after the marker is included in
-        final output. Note: you can use file.accumulated and target this state.
-        All accumulated data dictionaries content will be added as new lines in
-        the content
+        The line content identifying the end of the content block. As of
+        versions 2017.7.5 and 2018.3.1, everything up to the text matching the
+        marker will be replaced, so it's important to ensure that your marker
+        includes the beginning of the text you wish to replace.
 
     content
         The content to be used between the two lines identified by
