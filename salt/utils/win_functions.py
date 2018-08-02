@@ -177,6 +177,11 @@ def escape_argument(arg, escape=True):
     Args:
         arg (str): a single command line argument to escape for the cmd.exe shell
 
+    Kwargs:
+        escape (bool): True will call the escape_for_cmd_exe() function
+                       which escapes the characters '()%!^"<>&|'. False
+                       will not call the function and only quotes the cmd
+
     Returns:
         str: an escaped string suitable to be passed as a program argument to the cmd.exe shell
     '''
