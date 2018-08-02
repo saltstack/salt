@@ -739,9 +739,9 @@ def msi_conformant_version():
     Examples:
       Branch/Tag             Display version            Internal version
       develop (branch)       2016.11.0-742-g5ca4d20     16.200.742
-      20166.11 (branch)      2016.11.2-78-gce1f01f      16.202.78
-      v20166.11.0 (tag)      2016.11.0                  16.200.65535
-      v20166.11.2 (tag)      2016.11.2                  16.202.65535
+      2016.11 (branch)       2016.11.2-78-gce1f01f      16.202.78
+      v2016.11.0 (tag)       2016.11.0                  16.200.65535
+      v2016.11.2 (tag)       2016.11.2                  16.202.65535
 
     '''
     short_year = int(six.text_type(__saltstack_version__.major)[2:])
