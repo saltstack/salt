@@ -724,24 +724,23 @@ def msi_conformant_version():
     An msi installer uninstalls/replaces a lower "internal version" of itself.
     "internal version" is the 3-tuple ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
     Using the build nr allows continuous integration of the installer.
-    "Display version" is indipendent and free format: 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.
-    We must combine Month and Bugfix into ivMINOR to free ivBUILD for the build number
+    "Display version" is indipendent and free format: 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.    
     Calculation of the internal version fields:
         ivMAJOR = 'short year' (2 digits).
         ivMINOR = 20*(month-1) + Bugfix
-            To prevent overflow of ivMINOR, Bugfix must be <= 20.
-            If Bugifx exceeds 20, the installer will not uninstall the previous version.
-            The develop branch has bugfix 0
+            We must combine Month and Bugfix into ivMINOR to free ivBUILD for the build number
+            To prevent overflow of ivMINOR, Bugfix must be <= 20, a reasonable assumption.
+            Should Bugifx exceed 20, the installer will not uninstall the previous version.
         ivBUILD = git commit count (noc)
             noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
     Examples:
-      git checkout    Display version               Internal version
-      develop         2016.11.0-742-g5ca4d20        16.200.742
+      git checkout    Display version               Internal version    Remark
+      develop         2016.11.0-742-g5ca4d20        16.200.742          The develop branch has bugfix 0
       2016.11         2016.11.2-78-gce1f01f         16.202.78
       2016.11         2016.11.9-88-g3e844ed1df      16.209.88
       2018.8          2018.3.2-1306-g1e150923aa     18.42.1306
-      v2016.11.0      2016.11.0                     16.200.65535
+      v2016.11.0      2016.11.0                     16.200.65535        Tags have noc 0
       v2016.11.2      2016.11.2                     16.202.65535
 
     '''
