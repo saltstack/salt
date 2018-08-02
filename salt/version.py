@@ -753,7 +753,7 @@ def msi_conformant_version():
     noc = __saltstack_version__.noc
     if noc == 0:
         noc = 65535
-    return '{}.{}.{}'.format(short_year, 20*(month-1)+BUGFIX, minor, noc)
+    return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, minor, noc)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
