@@ -723,9 +723,9 @@ def msi_conformant_version():
     '''
     An msi installer uninstalls/replaces a lower "internal version" of itself.
     "internal version" is the 3-tuple ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
-    Using the build nr allows for continuous integration of the installer.
+    Using the build nr allows continuous integration of the installer.
     "Display version" is indipendent and free format: 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.
-    We must compress Month and Bugfix into the second field to free the third field for the build number
+    We must combine Month and Bugfix into ivMINOR to free ivBUILD for the build number
     Calculation of the internal version fields:
         ivMAJOR = 'short year' (2 digits).
         ivMINOR = 20*(month-1) + Bugfix
