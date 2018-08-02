@@ -46,7 +46,7 @@ You can use the count attribute to create multiple roster entries with a single 
 '''
 from __future__ import absolute_import
 import logging
-import json
+import salt.utils.json
 import os.path
 import salt.utils
 from salt.roster.flat import RosterMatcher
@@ -119,7 +119,7 @@ def _parse_state_file(state_file_path='terraform.tfstate'):
     '''
     ret = {}
     with salt.utils.files.fopen(state_file_path, 'r') as fh_:
-        tfstate = json.load(fh_)
+        tfstate = salt.utils.json.load(fh_)
 
     modules = tfstate.get('modules')
     if not modules:
