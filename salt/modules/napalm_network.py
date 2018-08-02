@@ -22,11 +22,11 @@ Dependencies
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
+import datetime
 
 log = logging.getLogger(__name__)
 
 # Import Salt libs
-import salt.utils.jid
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
@@ -174,7 +174,7 @@ def _config_logic(napalm_device,
 
     current_jid = kwargs.get('__pub_jid')
     if not current_jid:
-        current_jid = salt.utils.jid.get_jid()
+        current_jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
 
     loaded_result['already_configured'] = False
 
