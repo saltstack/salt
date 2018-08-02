@@ -724,7 +724,7 @@ def msi_conformant_version():
     An msi installer uninstalls/replaces a lower "internal version" of itself.
     "internal version" is the 3-tuple ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
     Using the build nr allows for continuous integration of the installer.
-    "Display version" is indipendent and free format, e.g. 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.
+    "Display version" is indipendent and free format: 3-tuple Year.Month.Bugfix as in Salt 2016.11.3.
     We must compress Month and Bugfix into the second field to free the third field for the build number
     Calculation of the internal version fields:
         ivMAJOR = 'short year' (2 digits).
@@ -732,8 +732,7 @@ def msi_conformant_version():
             To prevent overflow of ivMINOR, Bugfix must be <= 20.
             If Bugifx exceeds 20, the installer will not uninstall the previous version.
             The develop branch has bugfix 0
-        ivBUILD = git commit count 
-            noc on develop and a branch count independently.
+        ivBUILD = git commit count (noc)
             noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
     Examples:
@@ -748,9 +747,9 @@ def msi_conformant_version():
     '''
     short_year = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
-    BUGFIX = __saltstack_version__.bugfix
-    if BUGFIX>20:
-        BUGFIX = 20
+    bugfix = __saltstack_version__.bugfix
+    if bugfix>20:
+        bugfix = 20
     noc = __saltstack_version__.noc
     if noc == 0:
         noc = 65535
