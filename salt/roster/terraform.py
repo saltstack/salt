@@ -44,11 +44,14 @@ In the same folder as your `Saltfile`, create terraform file with resources like
 
 You can use the count attribute to create multiple roster entries with a single definition. Please refer to the `terraform salt provider <https://github.com/dmacvicar/terraform-provider-salt>`_ for more detailed examples.
 '''
+# Import Python libs
 from __future__ import absolute_import, unicode_literals
 import logging
-import salt.utils.json
 import os.path
-import salt.utils
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.json
 from salt.roster.flat import RosterMatcher
 
 log = logging.getLogger(__name__)
