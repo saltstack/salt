@@ -647,8 +647,6 @@ class GitModuleTest(ModuleCase):
 
         shutil.rmtree(new_repo)
 
-    # Test for git.is_worktree is in test_worktree_add_rm
-
     def test_list_branches(self):
         '''
         Test git.list_branches
@@ -975,6 +973,7 @@ class GitModuleTest(ModuleCase):
         worktree_path = tempfile.mkdtemp(dir=TMP)
         worktree_basename = os.path.basename(worktree_path)
         worktree_path2 = tempfile.mkdtemp(dir=TMP)
+        worktree_basename2 = os.path.basename(worktree_path2)
 
         # Even though this is Windows, git commands return a unix style path
         if salt.utils.platform.is_windows():
@@ -985,11 +984,13 @@ class GitModuleTest(ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue(worktree_add_prefix + worktree_path in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename in ret)
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue(worktree_add_prefix + worktree_path2 in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename2 in ret)
         # Check if this new path is a worktree
         self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
         # Check if the main repo is a worktree
