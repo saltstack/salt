@@ -6,6 +6,7 @@ Functions for manipulating or otherwise processing strings
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import difflib
 import errno
 import fnmatch
 import logging
@@ -513,3 +514,21 @@ def get_context(template, line, num_lines=5, marker=None):
         buf[error_line_in_context] += marker
 
     return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_diff(a, b, *args, **kwargs):
+    '''
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    '''
+    # Late import to avoid circular import
+    import salt.utils.data
+    ret = str().join(  # future lint: disable=blacklisted-function
+        difflib.unified_diff(
+            salt.utils.data.decode_list(a, to_str=True),
+            salt.utils.data.decode_list(b, to_str=True),
+            *args, **kwargs
+        )
+    )
+    return salt.utils.data.decode(ret, keep=True) if six.PY2 else ret
