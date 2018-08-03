@@ -710,6 +710,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists(name):
                 os.remove(name)
 
+    @with_tempfile(create=False)
+    def test_managed_latin1_diff(self, name):
+        '''
+        Tests that latin-1 file contents are represented properly in the diff
+        '''
+        # Lay down the initial file
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://issue-48777/old.html')
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True, ret
+
+        # Replace it with the new file and check the diff
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://issue-48777/new.html')
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True, ret
+        diff_lines = ret['changes']['diff'].split('\n')
+        assert '+räksmörgås' in diff_lines, diff_lines
+
     def test_directory(self):
         '''
         file.directory
