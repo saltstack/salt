@@ -175,7 +175,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def is_installed(name, **kwargs):
+def _is_installed(name, **kwargs):
     '''
     Returns True if the fileset/rpm package is installed. Otherwise returns False.
 
@@ -183,7 +183,7 @@ def is_installed(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.is_installed bash
+        salt '*' pkg._is_installed bash
     '''
     cmd = ['/usr/bin/lslpp', '-Lc', name]
     return __salt__['cmd.retcode'](cmd) == 0
@@ -247,7 +247,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             cmd = ['/usr/bin/rpm', cmdflags, target]
             out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
         else:
-            if is_installed(target):
+            if _is_installed(target):
                 continue
 
             cmd = '/usr/sbin/installp -acYXg'
