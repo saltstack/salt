@@ -99,7 +99,10 @@ class BaseCaller(object):
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
         try:
-            self.minion = salt.minion.SMinion(opts)
+            if self.opts.get('proxyid'):
+                self.minion = salt.minion.SProxyMinion(opts)
+            else:
+                self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
             raise SystemExit(six.text_type(exc))
 
@@ -208,8 +211,24 @@ class BaseCaller(object):
                     'Do you have permissions to '
                     'write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
+            data = {
+              'arg': args,
+              'fun': fun
+            }
+            data.update(kwargs)
+            executors = getattr(self.minion, 'module_executors', []) or \
+                        self.opts.get('module_executors', ['direct_call'])
+            if isinstance(executors, six.string_types):
+                executors = [executors]
             try:
                 ret['return'] = func(*args, **kwargs)
+                for name in executors:
+                    fname = '{0}.execute'.format(name)
+                    if fname not in self.minion.executors:
+                        raise SaltInvocationError("Executor '{0}' is not available".format(name))
+                    ret['return'] = self.minion.executors[fname](self.opts, data, func, args, kwargs)
+                    if ret['return'] is not None:
+                        break
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
                 salt.utils.stringutils.print_cli(func.__doc__)

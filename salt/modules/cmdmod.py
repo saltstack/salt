@@ -2171,6 +2171,9 @@ def retcode(cmd,
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+
     ret = _run(cmd,
                runas=runas,
                group=group,

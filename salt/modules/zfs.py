@@ -422,7 +422,7 @@ def mount(name=None, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
+            Passing '-a' as name is deprecated and will be removed in Sodium.
 
     CLI Example:
 
@@ -489,7 +489,7 @@ def unmount(name, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
+            Passing '-a' as name is deprecated and will be removed in Sodium.
 
     CLI Example:
 
@@ -507,7 +507,7 @@ def unmount(name, **kwargs):
         flags.append('-f')
     if name in [None, '-a']:
         # NOTE: still accept '-a' as name for backwards compatibility
-        #       two versions after Fluorine this should just simplify
+        #       until Salt Sodium this should just simplify
         #       this to just set '-a' if name is not set.
         flags.append('-a')
         name = None
