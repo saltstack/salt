@@ -38,6 +38,7 @@ class CMDModuleTest(ModuleCase):
     '''
     Validate the cmd module
     '''
+    @destructiveTest
     def setUp(self):
         if self._testMethodName == 'test_runas':
             # only need to manage this user for the test_runas test
@@ -47,6 +48,7 @@ class CMDModuleTest(ModuleCase):
                 if self.runas_usr not in self.run_function('user.info', [self.runas_usr]).values():
                     self.run_function('user.add', [self.runas_usr])
 
+    @destructiveTest
     def tearDown(self):
         if self._testMethodName == 'test_runas':
             if salt.utils.platform.is_darwin():
@@ -281,7 +283,6 @@ class CMDModuleTest(ModuleCase):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @skip_if_not_root
-    @destructiveTest
     def test_runas(self):
         '''
         Ensure that the env is the runas user's
