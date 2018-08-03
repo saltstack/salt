@@ -498,10 +498,11 @@ def commit_cancelled(name):
 
     .. code-block:: yaml
 
-        20180726083540640360:
+        '20180726083540640360':
           netconfig.commit_cancelled
     '''
     cancelled = {
+        'name': name,
         'result': None,
         'changes': {},
         'comment': ''
@@ -509,8 +510,8 @@ def commit_cancelled(name):
     if __opts__['test']:
         cancelled['comment'] = 'It would cancel commit #{}'.format(name)
         return cancelled
-    cancelled = __salt__['net.cancel_commit'](name)
-    cancelled['changes'] = {}
+    ret = __salt__['net.cancel_commit'](name)
+    cancelled.update(ret)
     return cancelled
 
 
@@ -529,10 +530,11 @@ def commit_confirmed(name):
 
     .. code-block:: yaml
 
-        20180726083540640360:
+        '20180726083540640360':
           netconfig.commit_confirmed
     '''
     confirmed = {
+        'name': name,
         'result': None,
         'changes': {},
         'comment': ''
@@ -540,6 +542,6 @@ def commit_confirmed(name):
     if __opts__['test']:
         confirmed['comment'] = 'It would confirm commit #{}'.format(name)
         return confirmed
-    confirmed = __salt__['net.confirm_commit'](name)
-    confirmed['changes'] = {}
+    ret = __salt__['net.confirm_commit'](name)
+    confirmed.update(ret)
     return confirmed
