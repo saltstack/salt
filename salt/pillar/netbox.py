@@ -108,11 +108,11 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if site_details:
         log.debug('Retrieving site details for "%s" - site %s (ID %d)',
                   minion_id, site_name, site_id)
-        site_url = '{api_url}/{app}/{endpoint}'.format(api_url=api_url,
-                                                       app='dcim',
-                                                       endpoint='sites')
+        site_url = '{api_url}/{app}/{endpoint}/{site_id}/'.format(api_url=api_url,
+                                                                  app='dcim',
+                                                                  endpoint='sites',
+                                                                  site_id=site_id)
         site_details_ret = salt.utils.http.query(site_url,
-                                                 params={'slug': site_name},
                                                  header_dict=headers,
                                                  decode=True)
         if 'error' in site_details_ret:
@@ -122,7 +122,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                       site_details_ret['status'],
                       site_details_ret['error'])
         else:
-            ret['netbox']['site'] = site_details_ret['dict']['results'][0]
+            ret['netbox']['site'] = site_details_ret['dict']
     if site_prefixes:
         log.debug('Retrieving site prefixes for "%s" - site %s (ID %d)',
                   minion_id, site_name, site_id)
