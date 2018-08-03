@@ -32,21 +32,28 @@ def to_bytes(s, encoding=None, errors='strict'):
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
     python 2)
     '''
+    if encoding is None:
+        # Try utf-8 first, then latin-1, and fall back to detected encoding
+        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
     if six.PY3:
         if isinstance(s, bytes):
             return s
         if isinstance(s, bytearray):
             return bytes(s)
         if isinstance(s, six.string_types):
-            if encoding:
-                return s.encode(encoding, errors)
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return s.encode('utf-8', errors)
-                except UnicodeEncodeError:
-                    # Fall back to detected encoding
-                    return s.encode(__salt_system_encoding__, errors)
+                    return s.encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    continue
+            # The only way we get this far is if a UnicodeEncodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception). So this should not result in an
+            # UnboundLocalError.
+            raise err
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -62,35 +69,43 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
         except TypeError:
             return s
 
+    if encoding is None:
+        # Try utf-8 first, then latin-1, and fall back to detected encoding
+        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            if encoding:
-                return _normalize(s.decode(encoding, errors))
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s.decode('utf-8', errors))
-                except UnicodeDecodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception). So this should not result in an
+            # UnboundLocalError.
+            raise err
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
-            if encoding:
-                return _normalize(s).encode(encoding, errors)
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s).encode('utf-8', errors)
-                except UnicodeEncodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s).encode(__salt_system_encoding__, errors)
+                    return _normalize(s).encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception). So this should not result in an
+            # UnboundLocalError.
+            raise err
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -100,6 +115,12 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
     '''
     def _normalize(s):
         return unicodedata.normalize('NFC', s) if normalize else s
+
+    if encoding is None:
+        # Try utf-8 first, then latin-1, and fall back to detected encoding
+        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
 
     if six.PY3:
         if isinstance(s, str):
@@ -114,15 +135,16 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
-            if encoding:
-                return _normalize(s.decode(encoding, errors))
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s.decode('utf-8', errors))
-                except UnicodeDecodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception). So this should not result in an
+            # UnboundLocalError.
+            raise err
         raise TypeError('expected str or bytearray')
 
 
@@ -524,11 +546,10 @@ def get_diff(a, b, *args, **kwargs):
     '''
     # Late import to avoid circular import
     import salt.utils.data
-    ret = str().join(  # future lint: disable=blacklisted-function
+    return ''.join(
         difflib.unified_diff(
-            salt.utils.data.decode_list(a, to_str=True),
-            salt.utils.data.decode_list(b, to_str=True),
+            salt.utils.data.decode_list(a),
+            salt.utils.data.decode_list(b),
             *args, **kwargs
         )
     )
-    return salt.utils.data.decode(ret, keep=True) if six.PY2 else ret
