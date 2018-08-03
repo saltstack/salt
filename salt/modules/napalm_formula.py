@@ -22,9 +22,9 @@ import salt.ext.six as six
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 try:
-    from salt.utils import traverse_dict_and_list
+    from salt.utils.data import traverse_dict_and_list as _traverse_dict_and_list
 except ImportError:
-    from salt.utils.data import traverse_dict_and_list
+    from salt.utils import traverse_dict_and_list as _traverse_dict_and_list
 
 __proxyenabled__ = ['*']
 __virtualname__ = 'napalm_formula'
@@ -150,7 +150,7 @@ def traverse(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' napalm_formula.traverse "{'foo': {'bar': {'baz': True}}}" foo:baz:bar
     '''
-    return traverse_dict_and_list(data, key, default=default, delimiter=delimiter)
+    return _traverse_dict_and_list(data, key, default=default, delimiter=delimiter)
 
 
 def dictupdate(dest, upd, recursive_update=True, merge_lists=False):
@@ -221,7 +221,7 @@ def defaults(model,
                 continue
             log.debug('%s matches %s', model_path, default_path)
             # If there's a match, it will build the dictionary from the top
-            devault_val = traverse_dict_and_list(defaults_,
+            devault_val = _traverse_dict_and_list(defaults_,
                                                  default_path,
                                                  delimiter=delim)
             merged = setval(model_path, devault_val, dict_=merged, delim=delim)
