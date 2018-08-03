@@ -251,12 +251,12 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             if is_installed(target):
                 continue
 
-            cmdflags = '-acvYXg'
+            cmd = '/usr/sbin/installp -acYXg'
             if test:
-                cmdflags = 'p'
-            cmdflags += ' -d '
+                cmd += 'p'
+            cmd += ' -d '
             dirpath = os.path.dirname(target)
-            cmd = ['/usr/sbin/installp', cmdflags, dirpath, filename]
+            cmd += dirpath +' '+ filename
             out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
         if 0 != out['retcode']:
