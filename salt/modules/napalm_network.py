@@ -267,6 +267,7 @@ def _config_logic(napalm_device,
                     'salt {min_id} net.cancel_commit {current_jid}').format(schedule_ts=commit_time,
                                                                              min_id=__opts__['id'],
                                                                              current_jid=current_jid)
+                loaded_result['commit_id'] = current_jid
                 return loaded_result
             log.debug('About to commit:')
             log.debug(loaded_result['diff'])
@@ -320,6 +321,7 @@ def _config_logic(napalm_device,
                         'salt {min_id} net.confirm_commit {current_jid}').format(schedule_ts=revert_time,
                                                                                  min_id=__opts__['id'],
                                                                                  current_jid=current_jid)
+                loaded_result['commit_id'] = current_jid
                 return loaded_result
             committed = _safe_commit_config(loaded_result, napalm_device)
             if not committed['result']:
