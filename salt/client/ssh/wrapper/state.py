@@ -80,13 +80,13 @@ def _ssh_state(chunks, st_kwargs,
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict)
+        return salt.utils.data.decode(salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict))
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
 
     # If for some reason the json load fails, return the stdout
-    return stdout
+    return salt.utils.data.decode(stdout)
 
 
 def _set_retcode(ret, highstate=None):

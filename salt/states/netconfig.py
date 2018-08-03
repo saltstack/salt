@@ -116,6 +116,8 @@ def managed(name,
             commit=True,
             debug=False,
             replace=False,
+            commit_in=None,
+            commit_at=None,
             **template_vars):
 
     '''
@@ -218,6 +220,55 @@ def managed(name,
             either of the :py:func:`state.sls <salt.modules.state.sls>` or
             :py:func:`state.apply <salt.modules.state.apply>` (see below for an
             example).
+
+    commit_in: ``None``
+        Commit the changes in a specific number of minutes / hours. Example of
+        accepted formats: ``5`` (commit in 5 minutes), ``2m`` (commit in 2
+        minutes), ``1h`` (commit the changes in 1 hour)`, ``5h30m`` (commit
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
+
+    commit_at: ``None``
+        Commit the changes at a specific time. Example of accepted formats:
+        ``1am`` (will commit the changes at the next 1AM), ``13:20`` (will
+        commit at 13:20), ``1:20am``, etc.
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -339,6 +390,8 @@ def managed(name,
     commit = __salt__['config.merge']('commit', commit)
     replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
     skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
+    commit_in = __salt__['config.merge']('commit_in', commit_in)
+    commit_at = __salt__['config.merge']('commit_at', commit_at)
 
     config_update_ret = _update_config(template_name,
                                        template_source=template_source,
@@ -354,6 +407,8 @@ def managed(name,
                                        defaults=defaults,
                                        test=test,
                                        commit=commit,
+                                       commit_in=commit_in,
+                                       commit_at=commit_at,
                                        debug=debug,
                                        replace=replace,
                                        **template_vars)

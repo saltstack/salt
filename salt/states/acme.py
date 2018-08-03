@@ -55,7 +55,9 @@ def cert(name,
          tls_sni_01_port=None,
          tls_sni_01_address=None,
          http_01_port=None,
-         http_01_address=None):
+         http_01_address=None,
+         dns_plugin=None,
+         dns_plugin_credentials=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -83,6 +85,8 @@ def cert(name,
                          the port Certbot listens on. A conforming ACME server
                          will still attempt to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
+    :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
     '''
 
     if __opts__['test']:
@@ -130,7 +134,9 @@ def cert(name,
         tls_sni_01_port=tls_sni_01_port,
         tls_sni_01_address=tls_sni_01_address,
         http_01_port=http_01_port,
-        http_01_address=http_01_address
+        http_01_address=http_01_address,
+        dns_plugin=dns_plugin,
+        dns_plugin_credentials=dns_plugin_credentials,
     )
 
     ret = {

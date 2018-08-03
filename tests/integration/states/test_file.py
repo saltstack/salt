@@ -30,6 +30,7 @@ from tests.support.helpers import (
     with_tempdir,
     with_tempfile,
     Webserver,
+    destructiveTest
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -4292,3 +4293,54 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
+
+WIN_TEST_FILE = 'c:/testfile'
+
+
+@destructiveTest
+@skipIf(not IS_WINDOWS, 'windows test only')
+class WinFileTest(ModuleCase):
+    '''
+    Test for the file state on Windows
+    '''
+    def setUp(self):
+        self.run_state('file.managed', name=WIN_TEST_FILE, makedirs=True, contents='Only a test')
+
+    def tearDown(self):
+        self.run_state('file.absent', name=WIN_TEST_FILE)
+
+    def test_file_managed(self):
+        '''
+        Test file.managed on Windows
+        '''
+        self.assertTrue(self.run_state('file.exists', name=WIN_TEST_FILE))
+
+    def test_file_copy(self):
+        '''
+        Test file.copy on Windows
+        '''
+        ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source=WIN_TEST_FILE)
+        self.assertTrue(ret)
+
+    def test_file_comment(self):
+        '''
+        Test file.comment on Windows
+        '''
+        self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#Only'))
+
+    def test_file_replace(self):
+        '''
+        Test file.replace on Windows
+        '''
+        self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertIn('testing', fp_.read())
+
+    def test_file_absent(self):
+        '''
+        Test file.absent on Windows
+        '''
+        ret = self.run_state('file.absent', name=WIN_TEST_FILE)
+        self.assertTrue(ret)
