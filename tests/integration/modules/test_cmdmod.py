@@ -39,7 +39,6 @@ class CMDModuleTest(ModuleCase):
     Validate the cmd module
     '''
     def setUp(self):
-        # only need to manage this user for the test_runas test
         self.runas_usr = 'nobody'
         if salt.utils.platform.is_darwin():
             self.runas_usr = 'macsalttest'
