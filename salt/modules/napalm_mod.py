@@ -780,6 +780,55 @@ def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
 
 
 @proxy_napalm_wrap
+def junos_commit(**kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Commit the changes loaded in the candidate configuration.
+
+    dev_timeout: ``30``
+        The NETCONF RPC timeout (in seconds).
+
+    comment
+      Provide a comment for the commit.
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    sync: ``False``
+      When ``True``, on dual control plane systems, requests that the candidate
+      configuration on one control plane be copied to the other control plane,
+      checked for correct syntax, and committed on both Routing Engines.
+
+    force_sync: ``False``
+      When ``True``, on dual control plane systems, force the candidate
+      configuration on one control plane to be copied to the other control
+      plane.
+
+    full
+      When ``True``, requires all the daemons to check and evaluate the new
+      configuration.
+
+    detail
+      When ``True``, return commit detail.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' napalm.junos_commit comment='Commitiing via Salt' detail=True
+        salt '*' napalm.junos_commit dev_timeout=60 confirm=10
+        salt '*' napalm.junos_commit sync=True dev_timeout=90
+    '''
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
+    if not prep['result']:
+        return prep
+    return __salt__['junos.commit'](**kwargs)
+
+
+@proxy_napalm_wrap
 def junos_install_os(path=None, **kwargs):
     '''
     .. versionadded:: Fluorine
