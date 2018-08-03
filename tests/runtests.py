@@ -182,6 +182,9 @@ TEST_SUITES = {
     'sdb':
         {'display_name': 'Sdb',
          'path': 'integration/sdb'},
+    'logging':
+        {'display_name': 'Logging',
+         'path': 'integration/logging'},
 }
 
 
@@ -512,6 +515,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run scheduler integration tests'
+        )
+        self.test_selection_group.add_option(
+            '--logging',
+            dest='logging',
+            action='store_true',
+            default=False,
+            help='Run logging integration tests'
         )
 
     def validate_options(self):
