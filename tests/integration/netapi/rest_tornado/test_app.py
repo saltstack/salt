@@ -260,7 +260,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
-    @flaky
+    @skipIf(True, 'This test is unreliable.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         '''
         Test a basic API of /
