@@ -248,7 +248,7 @@ def get_fqhostname():
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
             if len(info) >= 4:
-                l.append(info[3])
+                l = [info[3]]
     except socket.gaierror:
         pass
 
