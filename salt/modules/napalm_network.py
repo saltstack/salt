@@ -21,6 +21,8 @@ Dependencies
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+
+import time
 import logging
 import datetime
 
@@ -34,12 +36,6 @@ import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
-try:
-    from salt.utils import fopen
-    from salt.utils import mkstemp
-except ImportError:
-    from salt.utils.files import fopen
-    from salt.utils.files import mkstemp
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -107,6 +103,19 @@ def _filter_dict(input_dict, search_key, search_value):
     return output_dict
 
 
+def _safe_commit_config(loaded_result, napalm_device):
+    _commit = commit(inherit_napalm_device=napalm_device)  # calls the function commit, defined below
+    if not _commit.get('result', False):
+        # if unable to commit
+        loaded_result['comment'] += _commit['comment'] if _commit.get('comment') else 'Unable to commit.'
+        loaded_result['result'] = False
+        # unable to commit, something went wrong
+        discarded = _safe_dicard_config(loaded_result, napalm_device)
+        if not discarded['result']:
+            return loaded_result
+    return _commit
+
+
 def _safe_dicard_config(loaded_result, napalm_device):
     '''
     '''
@@ -153,6 +162,8 @@ def _config_logic(napalm_device,
                   loaded_config=None,
                   commit_in=None,
                   commit_at=None,
+                  revert_in=None,
+                  revert_at=None,
                   commit_jid=None,
                   **kwargs):
     '''
@@ -217,6 +228,9 @@ def _config_logic(napalm_device,
         # if not in testing mode and trying to commit
         if commit_jid:
             log.info('Committing the JID: %s', str(commit_jid))
+            removed = cancel_commit(commit_jid)
+            log.debug('Cleaned up the commit from the schedule')
+            log.debug(removed['comment'])
         if len(loaded_result.get('diff', '')) > 0:
             # if not testing mode
             # and also the user wants to commit (default)
@@ -226,10 +240,13 @@ def _config_logic(napalm_device,
                                                                 time_at=commit_in)
                 # schedule job
                 scheduled_job_name = '__napalm_commit_{}'.format(current_jid)
+                temp_file = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(temp_file, 'w') as fp_:
+                    fp_.write(loaded_config)
                 scheduled = __salt__['schedule.add'](scheduled_job_name,
                                                      function='net.load_config',
                                                      job_kwargs={
-                                                         'text': loaded_config,
+                                                         'filename': temp_file,
                                                          'commit_jid': current_jid,
                                                          'replace': replace
                                                      },
@@ -250,18 +267,65 @@ def _config_logic(napalm_device,
                     'salt {min_id} net.cancel_commit {current_jid}').format(schedule_ts=commit_time,
                                                                              min_id=__opts__['id'],
                                                                              current_jid=current_jid)
+                loaded_result['commit_id'] = current_jid
                 return loaded_result
             log.debug('About to commit:')
             log.debug(loaded_result['diff'])
-            _commit = commit(inherit_napalm_device=napalm_device)  # calls the function commit, defined below
-            if not _commit.get('result', False):
-                # if unable to commit
-                loaded_result['comment'] += _commit['comment'] if _commit.get('comment') else 'Unable to commit.'
-                loaded_result['result'] = False
-                # unable to commit, something went wrong
-                discarded = _safe_dicard_config(loaded_result, napalm_device)
-                if not discarded['result']:
-                    return loaded_result
+            if revert_in or revert_at:
+                revert_time = __utils__['timeutil.get_time_at'](time_in=revert_in,
+                                                                time_at=revert_at)
+                if __grains__['os'] == 'junos':
+                    if 'napalm.junos_rpc' not in __salt__:
+                        loaded_result['comment'] = ('This feature requires the library jxmlease to be installed.\n'
+                                'To install, please execute: ``pip install jxmlease``.')
+                        loaded_result['result'] = False
+                        return loaded_result
+                    timestamp_at = __utils__['timeutil.get_timestamp_at'](time_in=revert_in,
+                                                                          time_at=revert_at)
+                    minutes = int((timestamp_at - time.time())/60)
+                    _comm = __salt__['napalm.junos_commit'](confirm=minutes)
+                    if not _comm['out']:
+                        # If unable to commit confirm, should try to bail out
+                        loaded_result['comment'] = 'Unable to commit confirm: {}'.format(_comm['message'])
+                        loaded_result['result'] = False
+                        # But before exiting, we must gracefully discard the config
+                        discarded = _safe_dicard_config(loaded_result, napalm_device)
+                        if not discarded['result']:
+                            return loaded_result
+                else:
+                    temp_file = salt.utils.files.mkstemp()
+                    running_config = __salt__['net.config'](source='running')['out']['running']
+                    with salt.utils.files.fopen(temp_file, 'w') as fp_:
+                        fp_.write(running_config)
+                    committed = _safe_commit_config(loaded_result, napalm_device)
+                    if not committed['result']:
+                        # If unable to commit, dicard the config (which is
+                        # already done by the _safe_commit_config function), and
+                        # return with the command and other details.
+                        return loaded_result
+                    scheduled_job_name = '__napalm_commit_{}'.format(current_jid)
+                    scheduled = __salt__['schedule.add'](scheduled_job_name,
+                                                         function='net.load_config',
+                                                         job_kwargs={
+                                                             'filename': temp_file,
+                                                             'commit_jid': current_jid,
+                                                             'replace': True
+                                                         },
+                                                         once=revert_time)
+                    log.debug('Scheduling commit confirmed')
+                    log.debug(scheduled)
+                    saved = __salt__['schedule.save']()
+                loaded_result['comment'] = ('The commit ID is: {current_jid}.\n'
+                        'This commit will be reverted at: {schedule_ts}, unless confirmed.\n'
+                        'To confirm the commit and avoid reverting, you can execute:\n\n'
+                        'salt {min_id} net.confirm_commit {current_jid}').format(schedule_ts=revert_time,
+                                                                                 min_id=__opts__['id'],
+                                                                                 current_jid=current_jid)
+                loaded_result['commit_id'] = current_jid
+                return loaded_result
+            committed = _safe_commit_config(loaded_result, napalm_device)
+            if not committed['result']:
+                return loaded_result
         else:
             # would like to commit, but there's no change
             # need to call discard_config() to release the config DB
@@ -1232,6 +1296,8 @@ def load_config(filename=None,
                 replace=False,
                 commit_in=None,
                 commit_at=None,
+                revert_in=None,
+                revert_at=None,
                 commit_jid=None,
                 inherit_napalm_device=None,
                 saltenv='base',
@@ -1333,6 +1399,67 @@ def load_config(filename=None,
 
         .. versionadded: Fluorine
 
+    revert_in: ``None``
+        Commit and revert the changes in a specific number of minutes / hours.
+        Example of accepted formats: ``5`` (revert in 5 minutes), ``2m`` (revert
+        in 2 minutes), ``1h`` (revert the changes in 1 hour)`, ``5h30m`` (revert
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
+
+        .. versionadded: Fluorine
+
+    revert_at: ``None``
+        Commit and revert the changes at a specific time. Example of accepted
+        formats: ``1am`` (will commit and revert the changes at the next 1AM),
+        ``13:20`` (will commit and revert at 13:20), ``1:20am``, etc.
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
+
+        .. versionadded: Fluorine
+
     saltenv: ``base``
         Specifies the Salt environment name.
 
@@ -1392,6 +1519,11 @@ def load_config(filename=None,
             ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
             log.error(ret['comment'])
             return ret
+        if commit_jid:
+            # When the commit_jid argument is passed, it probably is a scheduled
+            # commit to be executed, and filename is a temporary file which
+            # can be removed after reading it.
+            salt.utils.files.safe_rm(filename)
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
@@ -1408,6 +1540,8 @@ def load_config(filename=None,
                          loaded_config=text,
                          commit_at=commit_at,
                          commit_in=commit_in,
+                         revert_in=revert_in,
+                         revert_at=revert_at,
                          commit_jid=commit_jid,
                          **kwargs)
 
@@ -1431,6 +1565,8 @@ def load_template(template_name,
                   replace=False,
                   commit_in=None,
                   commit_at=None,
+                  revert_in=None,
+                  revert_at=None,
                   inherit_napalm_device=None,  # pylint: disable=unused-argument
                   **template_vars):
     '''
@@ -1602,6 +1738,67 @@ def load_template(template_name,
             expect, however the diff may change in time (i.e., if an user
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
+
+    revert_in: ``None``
+        Commit and revert the changes in a specific number of minutes / hours.
+        Example of accepted formats: ``5`` (revert in 5 minutes), ``2m`` (revert
+        in 2 minutes), ``1h`` (revert the changes in 1 hour)`, ``5h30m`` (revert
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
+
+        .. versionadded: Fluorine
+
+    revert_at: ``None``
+        Commit and revert the changes at a specific time. Example of accepted
+        formats: ``1am`` (will commit and revert the changes at the next 1AM),
+        ``13:20`` (will commit and revert at 13:20), ``1:20am``, etc.
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
 
         .. versionadded: Fluorine
 
@@ -1857,6 +2054,8 @@ def load_template(template_name,
                          loaded_config=loaded_config,
                          commit_at=commit_at,
                          commit_in=commit_in,
+                         revert_in=revert_in,
+                         revert_at=revert_at,
                          **template_vars)
 
 
@@ -2040,6 +2239,35 @@ def cancel_commit(jid):
     return removed
 
 
+def confirm_commit(jid):
+    '''
+    .. versionadded:: Fluorine
+
+    Confirm a commit scheduled to be reverted via the ``revert_in`` and
+    ``revert_at``  arguments from the
+    :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit confirmed
+    is scheduled via the functions named above.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.confirm_commit 20180726083540640360
+    '''
+    if __grains__['os'] == 'junos':
+        # Confirm the commit, by committing (i.e., invoking the RPC call)
+        confirmed = __salt__['napalm.junos_commit']()
+        confirmed['result'] = confirmed.pop('out')
+        confirmed['comment'] = confirmed.pop('message')
+    else:
+        confirmed = cancel_commit(jid)
+    if confirmed['result']:
+        confirmed['comment'] = 'Commit #{jid} confirmed.'.format(jid=jid)
+    return confirmed
+
+
 def save_config(source=None,
                 path=None):
     '''
@@ -2065,12 +2293,12 @@ def save_config(source=None,
     if not source:
         source = 'running'
     if not path:
-        path = mkstemp()
+        path = salt.utils.files.mkstemp()
     running_config = __salt__['net.config'](source=source)
     if not running_config or not running_config['result']:
         log.error('Unable to retrieve the config')
         return running_config
-    with fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         fh_.write(running_config['out'][source])
     return {
         'result': True,
@@ -2213,7 +2441,7 @@ def replace_pattern(pattern,
                                                search_only=search_only,
                                                show_changes=show_changes,
                                                backslash_literal=backslash_literal)
-    with fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         updated_config = fh_.read()
     return __salt__['net.load_config'](text=updated_config,
                                        test=test,
@@ -2322,7 +2550,7 @@ def blockreplace(marker_start,
                                                     prepend_if_not_found=prepend_if_not_found,
                                                     show_changes=show_changes,
                                                     append_newline=append_newline)
-    with fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         updated_config = fh_.read()
     return __salt__['net.load_config'](text=updated_config,
                                        test=test,
@@ -2410,7 +2638,7 @@ def patch(patchfile,
     replace_pattern = __salt__['file.patch'](path,
                                              patchfile_cache,
                                              options=options)
-    with fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         updated_config = fh_.read()
     return __salt__['net.load_config'](text=updated_config,
                                        test=test,

@@ -118,6 +118,8 @@ def managed(name,
             replace=False,
             commit_in=None,
             commit_at=None,
+            revert_in=None,
+            revert_at=None,
             **template_vars):
 
     '''
@@ -145,8 +147,8 @@ def managed(name,
         .. code-block:: yaml
 
             file_roots:
-                base:
-                    - /etc/salt/states
+              base:
+                 - /etc/salt/states
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
         ``salt://templates/example.jinja``.
@@ -267,6 +269,67 @@ def managed(name,
             expect, however the diff may change in time (i.e., if an user
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
+
+    revert_in: ``None``
+        Commit and revert the changes in a specific number of minutes / hours.
+        Example of accepted formats: ``5`` (revert in 5 minutes), ``2m`` (revert
+        in 2 minutes), ``1h`` (revert the changes in 1 hour)`, ``5h30m`` (revert
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
+
+        .. versionadded: Fluorine
+
+    revert_at: ``None``
+        Commit and revert the changes at a specific time. Example of accepted
+        formats: ``1am`` (will commit and revert the changes at the next 1AM),
+        ``13:20`` (will commit and revert at 13:20), ``1:20am``, etc.
+
+        .. note::
+            To confirm the commit, and prevent reverting the changes, you will
+            have to execute the
+            :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`
+            function, using the commit ID returned by this function.
+
+        .. warning::
+            This works on any platform, regardless if they have or don't have
+            native capabilities to confirming a commit. However, please be
+            *very* cautious when using this feature: on Junos (as it is the only
+            NAPALM core platform supporting this natively) it executes a commit
+            confirmed as you would do from the command line.
+            All the other platforms don't have this capability natively,
+            therefore the revert is done via Salt. That means, your device needs
+            to be reachable at the moment when Salt will attempt to revert your
+            changes. Be cautious when pushing configuration changes that would
+            prevent you reach the device.
+
+            Similarly, if an user or a different process apply other
+            configuration changes in the meanwhile (between the moment you
+            commit and till the changes are reverted), these changes would be
+            equally reverted, as Salt cannot be aware of them.
 
         .. versionadded: Fluorine
 
@@ -392,6 +455,8 @@ def managed(name,
     skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
     commit_in = __salt__['config.merge']('commit_in', commit_in)
     commit_at = __salt__['config.merge']('commit_at', commit_at)
+    revert_in = __salt__['config.merge']('revert_in', revert_in)
+    revert_at = __salt__['config.merge']('revert_at', revert_at)
 
     config_update_ret = _update_config(template_name,
                                        template_source=template_source,
@@ -409,8 +474,74 @@ def managed(name,
                                        commit=commit,
                                        commit_in=commit_in,
                                        commit_at=commit_at,
+                                       revert_in=revert_in,
+                                       revert_at=revert_at,
                                        debug=debug,
                                        replace=replace,
                                        **template_vars)
 
     return salt.utils.napalm.loaded_ret(ret, config_update_ret, test, debug)
+
+
+def commit_cancelled(name):
+    '''
+    .. versionadded:: Fluorine
+
+    Cancel a commit scheduled to be executed via the ``commit_in`` and
+    ``commit_at`` arguments from the
+    :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit is scheduled
+    via the functions named above.
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        '20180726083540640360':
+          netconfig.commit_cancelled
+    '''
+    cancelled = {
+        'name': name,
+        'result': None,
+        'changes': {},
+        'comment': ''
+    }
+    if __opts__['test']:
+        cancelled['comment'] = 'It would cancel commit #{}'.format(name)
+        return cancelled
+    ret = __salt__['net.cancel_commit'](name)
+    cancelled.update(ret)
+    return cancelled
+
+
+def commit_confirmed(name):
+    '''
+    .. versionadded:: Fluorine
+
+    Confirm a commit scheduled to be reverted via the ``revert_in`` and
+    ``revert_at`` arguments from the
+    :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit confirmed
+    is scheduled via the functions named above.
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        '20180726083540640360':
+          netconfig.commit_confirmed
+    '''
+    confirmed = {
+        'name': name,
+        'result': None,
+        'changes': {},
+        'comment': ''
+    }
+    if __opts__['test']:
+        confirmed['comment'] = 'It would confirm commit #{}'.format(name)
+        return confirmed
+    ret = __salt__['net.confirm_commit'](name)
+    confirmed.update(ret)
+    return confirmed
