@@ -1519,6 +1519,11 @@ def load_config(filename=None,
             ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
             log.error(ret['comment'])
             return ret
+        if commit_jid:
+            # When the commit_jid argument is passed, it probably is a scheduled
+            # commit to be executed, and filename is a temporary file which
+            # can be removed after reading it.
+            salt.utils.files.safe_rm(filename)
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
