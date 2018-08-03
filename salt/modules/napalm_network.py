@@ -2253,12 +2253,14 @@ def confirm_commit(jid):
     '''
     if __grains__['os'] == 'junos':
         # Confirm the commit, by committing (i.e., invoking the RPC call)
-        return __salt__['napalm.junos_commit']
+        confirmed = __salt__['napalm.junos_commit']()
+        confirmed['result'] = confirmed.pop('out')
+        confirmed['comment'] = confirmed.pop('message')
     else:
-        cancelled = cancel_commit(jid)
-        if cancelled['result']:
-            cancelled['comment'] = 'Commit #{jid} confirmed.'.format(jid=jid)
-        return cancelled
+        confirmed = cancel_commit(jid)
+    if confirmed['result']:
+        confirmed['comment'] = 'Commit #{jid} confirmed.'.format(jid=jid)
+    return confirmed
 
 
 def save_config(source=None,
