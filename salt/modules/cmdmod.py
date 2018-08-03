@@ -965,7 +965,7 @@ def run(cmd,
         behavior is to run as the user under which Salt is running.
 
     :param str group: Group to run command as. Not currently supported
-       on Windows.
+        on Windows.
 
     :param str password: Windows only. Only required when the minion proccess
         is running under a non-privileged account. This parameter will be

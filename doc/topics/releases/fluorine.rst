@@ -874,6 +874,28 @@ and runners of a running Salt system through a REST API that returns JSON.
 See Salt-API_ documentation.
 .. _Salt-API: https://docs.saltstack.com/en/latest/topics/netapi/index.html
 
+Logging Changes
+===============
+
+Include Job ID (JID) in Minion and Master Logs
+----------------------------------------------
+
+The Job ID (JID) can now be optionally included in both the minion and master logs
+by including ``jid`` in either the ``log_fmt_console`` or ``log_fmt_logfile``
+configuration option:
+
+.. code-block:: yaml
+
+   log_fmt_console: "[%(levelname)-8s] %(jid)s %(message)s"
+
+The will cause the JID to be included in any log entries that are related to a 
+particular Salt job.  The JID will be included using the default format, 
+``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
+
+.. code-block:: yaml
+
+   log_fmt_jid: "[JID: %(jid)s]"
+
 Security
 ========
 
