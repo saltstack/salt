@@ -1051,3 +1051,52 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False,
                              test=True)
         self.assertInSaltComment("System update will be performed", ret)
+
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
+    @requires_system_grains
+    def test_pkg_015_installed_held(self, grains=None):  # pylint: disable=unused-argument
+        '''
+        Tests that a package can be held even when the package is already installed.
+        '''
+        os_family = grains.get('os_family', '')
+
+        if os_family.lower() != 'redhat' and os_family.lower() != 'debian':
+            self.skipTest('Test only runs on RedHat or Debian family')
+
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+
+        # First we ensure that the package is installed
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            refresh=False,
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Then we check that the package is now held
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            hold=True,
+            refresh=False,
+        )
+
+        try:
+            tag = 'pkg_|-{0}_|-{0}_|-installed'.format(target)
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(tag, ret)
+            self.assertIn('changes', ret[tag])
+            self.assertIn(target, ret[tag]['changes'])
+            self.assertEqual(ret[tag]['changes'][target], {'new': 'hold', 'old': 'install'})
+        finally:
+            # Clean up, unhold package and remove
+            self.run_function('pkg.unhold', name=target)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)

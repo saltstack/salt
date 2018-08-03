@@ -6216,6 +6216,16 @@ def grep(path,
     '''
     path = os.path.expanduser(path)
 
+    # Backup the path in case the glob returns nothing
+    _path = path
+    path = glob.glob(path)
+
+    # If the list is empty no files exist
+    # so we revert back to the original path
+    # so the result is an error.
+    if not path:
+        path = _path
+
     split_opts = []
     for opt in opts:
         try:
@@ -6230,7 +6240,10 @@ def grep(path,
             )
         split_opts.extend(split)
 
-    cmd = ['grep'] + split_opts + [pattern, path]
+    if isinstance(path, list):
+        cmd = ['grep'] + split_opts + [pattern] + path
+    else:
+        cmd = ['grep'] + split_opts + [pattern, path]
     try:
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:

@@ -1113,7 +1113,7 @@ def requires_salt_modules(*names):
                 )
 
             for name in names:
-                if name not in cls.run_function('sys.doc'):
+                if name not in cls.run_function('sys.doc', [name]):
                     cls.skipTest(
                         'Salt module {0!r} is not available'.format(name)
                     )
