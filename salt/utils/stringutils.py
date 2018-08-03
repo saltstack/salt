@@ -38,6 +38,10 @@ def to_bytes(s, encoding=None, errors='strict'):
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
         if isinstance(s, bytes):
             return s
@@ -48,12 +52,12 @@ def to_bytes(s, encoding=None, errors='strict'):
                 try:
                     return s.encode(enc, errors)
                 except UnicodeEncodeError as err:
+                    exc = err
                     continue
             # The only way we get this far is if a UnicodeEncodeError was
             # raised, otherwise we would have already returned (or raised some
-            # other exception). So this should not result in an
-            # UnboundLocalError.
-            raise err
+            # other exception).
+            raise exc
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -75,22 +79,27 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
+
+    exc = None
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
             for enc in encoding:
                 try:
                     return _normalize(s.decode(enc, errors))
                 except UnicodeDecodeError as err:
+                    exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
-            # other exception). So this should not result in an
-            # UnboundLocalError.
-            raise err
+            # other exception).
+            raise exc
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
@@ -100,12 +109,12 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
                 try:
                     return _normalize(s).encode(enc, errors)
                 except UnicodeEncodeError as err:
+                    exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
-            # other exception). So this should not result in an
-            # UnboundLocalError.
-            raise err
+            # other exception).
+            raise exc
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -122,6 +131,10 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
         if isinstance(s, str):
             return _normalize(s)
@@ -139,12 +152,12 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
                 try:
                     return _normalize(s.decode(enc, errors))
                 except UnicodeDecodeError as err:
+                    exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
-            # other exception). So this should not result in an
-            # UnboundLocalError.
-            raise err
+            # other exception).
+            raise exc
         raise TypeError('expected str or bytearray')
 
 
