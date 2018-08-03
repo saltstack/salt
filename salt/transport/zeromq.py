@@ -351,10 +351,13 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
-            self._socket.setsockopt(
-                zmq.SUBSCRIBE,
-                salt.utils.stringutils.to_bytes(self.hexid)
-            )
+            if self.opts.get('__role') == 'syndic':
+                self._socket.setsockopt(zmq.SUBSCRIBE, b'syndic')
+            else:
+                self._socket.setsockopt(
+                    zmq.SUBSCRIBE,
+                    salt.utils.stringutils.to_bytes(self.hexid)
+                )
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
@@ -460,7 +463,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
-            if messages[0] not in ('broadcast', self.hexid):
+            if (self.opts.get('__role') != 'syndic' and messages[0] not in ('broadcast', self.hexid)) or \
+                (self.opts.get('__role') == 'syndic' and messages[0] not in ('broadcast', 'syndic')):
                 log.debug('Publish received for not this minion: %s', messages[0])
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
@@ -836,7 +840,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
-                                # otherwise its a broadcast
+
+                            # Syndic broadcast
+                            if self.opts.get('order_masters'):
+                                log.trace('Sending filtered data to syndic')
+                                pub_sock.send(b'syndic', flags=zmq.SNDMORE)
+                                pub_sock.send(payload)
+                                log.trace('Filtered data has been sent to syndic')
+                        # otherwise its a broadcast
                         else:
                             # TODO: constants file for "broadcast"
                             log.trace('Sending broadcasted data over publisher %s', pub_uri)
