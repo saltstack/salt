@@ -214,7 +214,6 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     .. code-block:: bash
 
-        salt '*' pkg.install vim
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm refresh=True
         salt '*' pkg.install /stage/middleware/AIX/VIOS2211_update/tpc_4.1.1.85.bff
@@ -305,7 +304,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <fileset/rpm package name>
         salt '*' pkg.remove tcsh
         salt '*' pkg.remove xlC.rte
         salt '*' pkg.remove Firefox.base.adt
@@ -355,3 +354,54 @@ def remove(name=None, pkgs=None, **kwargs):
         )
 
     return ret
+
+
+def latest_version(*names, **kwargs):
+    '''
+    Return the latest version of the named fileset/rpm package available for
+    upgrade or installation. If more than one fileset/rpm package name is
+    specified, a dict of name/version pairs is returned.
+
+    If the latest version of a given fileset/rpm package is already installed,
+    an empty string will be returned for that package.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
+
+    NOTE: As package repositories are not presently supported for AIX
+    installp/rpm package, this function will always return an empty string
+    for a given package.
+    '''
+    kwargs.pop('refresh', True)
+
+    ret = {}
+    if not names:
+        return ''
+    for name in names:
+        ret[name] = ''
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+# available_version is being deprecated
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
+
+
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return latest_version(name) != ''
