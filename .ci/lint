@@ -29,13 +29,13 @@ pipeline {
             parallel {
                 stage('salt linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; tox -e pylint-salt $(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +) | tee pylint-report.xml'
+                        sh 'eval "$(pyenv init - --no-rehash)"; tox -e pylint-salt $(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +) | tee pylint-report.xml'
                         archiveArtifacts artifacts: 'pylint-report.xml'
                     }
                 }
                 stage('test linting') {
                     steps {
-                        sh 'eval "$(pyenv init -)"; tox -e pylint-tests $(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +) | tee pylint-report-tests.xml'
+                        sh 'eval "$(pyenv init - --no-rehash)"; tox -e pylint-tests $(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +) | tee pylint-report-tests.xml'
                         archiveArtifacts artifacts: 'pylint-report-tests.xml'
                     }
                 }
