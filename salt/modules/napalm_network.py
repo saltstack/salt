@@ -22,6 +22,7 @@ Dependencies
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ log = logging.getLogger(__name__)
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,7 +46,8 @@ except ImportError:
 # ----------------------------------------------------------------------------------------------------------------------
 
 __virtualname__ = 'net'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
+__virtual_aliases__ = ('napalm_net',)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -104,6 +107,24 @@ def _filter_dict(input_dict, search_key, search_value):
     return output_dict
 
 
+def _safe_dicard_config(loaded_result, napalm_device):
+    '''
+    '''
+    log.debug('Discarding the config')
+    log.debug(loaded_result)
+    _discarded = discard_config(inherit_napalm_device=napalm_device)
+    if not _discarded.get('result', False):
+        loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
+                                                          else 'Unable to discard config.'
+        loaded_result['result'] = False
+        # make sure it notifies
+        # that something went wrong
+        _explicit_close(napalm_device)
+        __context__['retcode'] = 1
+        return loaded_result
+    return _discarded
+
+
 def _explicit_close(napalm_device):
     '''
     Will explicily close the config session with the network device,
@@ -126,13 +147,17 @@ def _explicit_close(napalm_device):
 def _config_logic(napalm_device,
                   loaded_result,
                   test=False,
+                  debug=False,
+                  replace=False,
                   commit_config=True,
-                  loaded_config=None):
-
+                  loaded_config=None,
+                  commit_in=None,
+                  commit_at=None,
+                  commit_jid=None,
+                  **kwargs):
     '''
     Builds the config logic for `load_config` and `load_template` functions.
     '''
-
     # As the Salt logic is built around independent events
     # when it comes to configuration changes in the
     # candidate DB on the network devices, we need to
@@ -147,10 +172,14 @@ def _config_logic(napalm_device,
     # `napalm_device` will be overridden.
     # See `salt.utils.napalm.proxy_napalm_wrap` decorator.
 
+    current_jid = kwargs.get('__pub_jid')
+    if not current_jid:
+        current_jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+
     loaded_result['already_configured'] = False
 
     loaded_result['loaded_config'] = ''
-    if loaded_config:
+    if debug:
         loaded_result['loaded_config'] = loaded_config
 
     _compare = compare_config(inherit_napalm_device=napalm_device)
@@ -173,17 +202,9 @@ def _config_logic(napalm_device,
             loaded_result['comment'] += '\n'
         if not len(loaded_result.get('diff', '')) > 0:
             loaded_result['already_configured'] = True
-        _discarded = discard_config(inherit_napalm_device=napalm_device)
-        if not _discarded.get('result', False):
-            loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
-                                                              else 'Unable to discard config.'
-            loaded_result['result'] = False
-            # make sure it notifies
-            # that something went wrong
-            _explicit_close(napalm_device)
-            __context__['retcode'] = 1
+        discarded = _safe_dicard_config(loaded_result, napalm_device)
+        if not discarded['result']:
             return loaded_result
-
         loaded_result['comment'] += 'Configuration discarded.'
         # loaded_result['result'] = False not necessary
         # as the result can be true when test=True
@@ -194,33 +215,58 @@ def _config_logic(napalm_device,
 
     if not test and commit_config:
         # if not in testing mode and trying to commit
+        if commit_jid:
+            log.info('Committing the JID: %s', str(commit_jid))
         if len(loaded_result.get('diff', '')) > 0:
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit
+            if commit_in or commit_at:
+                commit_time = __utils__['timeutil.get_time_at'](time_in=commit_in,
+                                                                time_at=commit_in)
+                # schedule job
+                scheduled_job_name = '__napalm_commit_{}'.format(current_jid)
+                scheduled = __salt__['schedule.add'](scheduled_job_name,
+                                                     function='net.load_config',
+                                                     job_kwargs={
+                                                         'text': loaded_config,
+                                                         'commit_jid': current_jid,
+                                                         'replace': replace
+                                                     },
+                                                     once=commit_time)
+                log.debug('Scheduling job')
+                log.debug(scheduled)
+                saved = __salt__['schedule.save']()  # ensure the schedule is
+                # persistent cross Minion restart
+                discarded = _safe_dicard_config(loaded_result, napalm_device)
+                # discard the changes
+                if not discarded['result']:
+                    discarded['comment'] += ('Scheduled the job to be executed at {schedule_ts}, '
+                        'but was unable to discard the config: \n').format(schedule_ts=commit_time)
+                    return discarded
+                loaded_result['comment'] = ('Changes discarded for now, and scheduled commit at: {schedule_ts}.\n'
+                    'The commit ID is: {current_jid}.\n'
+                    'To discard this commit, you can execute: \n\n'
+                    'salt {min_id} net.cancel_commit {current_jid}').format(schedule_ts=commit_time,
+                                                                             min_id=__opts__['id'],
+                                                                             current_jid=current_jid)
+                return loaded_result
+            log.debug('About to commit:')
+            log.debug(loaded_result['diff'])
             _commit = commit(inherit_napalm_device=napalm_device)  # calls the function commit, defined below
             if not _commit.get('result', False):
                 # if unable to commit
                 loaded_result['comment'] += _commit['comment'] if _commit.get('comment') else 'Unable to commit.'
                 loaded_result['result'] = False
                 # unable to commit, something went wrong
-                _discarded = discard_config(inherit_napalm_device=napalm_device)
-                # try to discard, thus release the config DB
-                if not _discarded.get('result', False):
-                    loaded_result['comment'] += '\n'
-                    loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
-                        else 'Unable to discard config.'
+                discarded = _safe_dicard_config(loaded_result, napalm_device)
+                if not discarded['result']:
+                    return loaded_result
         else:
             # would like to commit, but there's no change
             # need to call discard_config() to release the config DB
-            _discarded = discard_config(inherit_napalm_device=napalm_device)
-            if not _discarded.get('result', False):
-                loaded_result['comment'] += _discarded['comment'] if _discarded.get('comment') \
-                                                                  else 'Unable to discard config.'
-                loaded_result['result'] = False
-                # notify if anything goes wrong
-                _explicit_close(napalm_device)
-                __context__['retcode'] = 1
+            discarded = _safe_dicard_config(loaded_result, napalm_device)
+            if not discarded['result']:
                 return loaded_result
             loaded_result['already_configured'] = True
             loaded_result['comment'] = 'Already configured.'
@@ -228,7 +274,6 @@ def _config_logic(napalm_device,
     if not loaded_result['result']:
         __context__['retcode'] = 1
     return loaded_result
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
@@ -1185,6 +1230,9 @@ def load_config(filename=None,
                 commit=True,
                 debug=False,
                 replace=False,
+                commit_in=None,
+                commit_at=None,
+                commit_jid=None,
                 inherit_napalm_device=None,
                 saltenv='base',
                 **kwargs):  # pylint: disable=unused-argument
@@ -1235,6 +1283,55 @@ def load_config(filename=None,
         Load and replace the configuration. Default: ``False``.
 
         .. versionadded:: 2016.11.2
+
+    commit_in: ``None``
+        Commit the changes in a specific number of minutes / hours. Example of
+        accepted formats: ``5`` (commit in 5 minutes), ``2m`` (commit in 2
+        minutes), ``1h`` (commit the changes in 1 hour)`, ``5h30m`` (commit
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
+
+    commit_at: ``None``
+        Commit the changes at a specific time. Example of accepted formats:
+        ``1am`` (will commit the changes at the next 1AM), ``13:20`` (will
+        commit at 13:20), ``1:20am``, etc.
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
 
     saltenv: ``base``
         Specifies the Salt environment name.
@@ -1302,18 +1399,17 @@ def load_config(filename=None,
             'config': text
         }
     )
-    loaded_config = None
-    if debug:
-        if filename:
-            with salt.utils.files.fopen(filename) as rfh:
-                loaded_config = salt.utils.stringutils.to_unicode(rfh.read())
-        else:
-            loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
+                         debug=debug,
+                         replace=replace,
                          commit_config=commit,
-                         loaded_config=loaded_config)
+                         loaded_config=text,
+                         commit_at=commit_at,
+                         commit_in=commit_in,
+                         commit_jid=commit_jid,
+                         **kwargs)
 
 
 @salt.utils.napalm.proxy_napalm_wrap
@@ -1333,6 +1429,8 @@ def load_template(template_name,
                   commit=True,
                   debug=False,
                   replace=False,
+                  commit_in=None,
+                  commit_at=None,
                   inherit_napalm_device=None,  # pylint: disable=unused-argument
                   **template_vars):
     '''
@@ -1457,6 +1555,55 @@ def load_template(template_name,
         Load and replace the configuration.
 
         .. versionadded:: 2016.11.2
+
+    commit_in: ``None``
+        Commit the changes in a specific number of minutes / hours. Example of
+        accepted formats: ``5`` (commit in 5 minutes), ``2m`` (commit in 2
+        minutes), ``1h`` (commit the changes in 1 hour)`, ``5h30m`` (commit
+        the changes in 5 hours and 30 minutes).
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
+
+    commit_at: ``None``
+        Commit the changes at a specific time. Example of accepted formats:
+        ``1am`` (will commit the changes at the next 1AM), ``13:20`` (will
+        commit at 13:20), ``1:20am``, etc.
+
+        .. note::
+            This feature works on any platforms, as it does not rely on the
+            native features of the network operating system.
+
+        .. note::
+            After the command is executed and the ``diff`` is not satisfactory,
+            or for any other reasons you have to discard the commit, you are
+            able to do so using the
+            :py:func:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`
+            execution function, using the commit ID returned by this function.
+
+        .. warning::
+            Using this feature, Salt will load the exact configuration you
+            expect, however the diff may change in time (i.e., if an user
+            applies a manual configuration change, or a different process or
+            command changes the configuration in the meanwhile).
+
+        .. versionadded: Fluorine
 
     defaults: None
         Default variables/context passed to the template.
@@ -1652,9 +1799,7 @@ def load_template(template_name,
             else:
                 return _loaded  # exit
 
-        if debug:  # all good, but debug mode required
-            # valid output and debug mode
-            loaded_config = _rendered
+        loaded_config = _rendered
         if _loaded['result']:  # all good
             fun = 'load_merge_candidate'
             if replace:  # replace requested
@@ -1706,8 +1851,13 @@ def load_template(template_name,
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
+                         debug=debug,
+                         replace=replace,
                          commit_config=commit,
-                         loaded_config=loaded_config)
+                         loaded_config=loaded_config,
+                         commit_at=commit_at,
+                         commit_in=commit_in,
+                         **template_vars)
 
 
 @salt.utils.napalm.proxy_napalm_wrap
@@ -1861,6 +2011,33 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
             )
 
     return result, comment
+
+
+def cancel_commit(jid):
+    '''
+    .. versionadded:: Fluorine
+
+    Cancel a commit scheduled to be executed via the ``commit_in`` and
+    ``commit_at`` arguments from the
+    :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit is scheduled
+    via the functions named above.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.cancel_commit 20180726083540640360
+    '''
+    job_name = '__napalm_commit_{}'.format(jid)
+    removed = __salt__['schedule.delete'](job_name)
+    if removed['result']:
+        saved = __salt__['schedule.save']()
+        removed['comment'] = 'Commit #{jid} cancelled.'.format(jid=jid)
+    else:
+        removed['comment'] = 'Unable to find commit #{jid}.'.format(jid=jid)
+    return removed
 
 
 def save_config(source=None,
@@ -2240,6 +2417,5 @@ def patch(patchfile,
                                        debug=debug,
                                        replace=replace,
                                        commit=commit)
-
 
 # <---- Configuration specific functions -------------------------------------------------------------------------------
