@@ -729,8 +729,8 @@ def msi_conformant_version():
         ivMAJOR = 'short year' (2 digits).
         ivMINOR = 20*(month-1) + Bugfix
             Combine Month and Bugfix to free ivBUILD for the build number
-            Limit Bugfix < 20 to prevent overflow of ivMINOR.
-            If Bugifx > 19, the git branch msi wont replace the previous version.
+            This limits Bugfix < 20.
+            The msi automatically replaces only 19 bugfixes of a month, one must uninstall manually.
         ivBUILD = git commit count (noc)
             noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
@@ -740,9 +740,6 @@ def msi_conformant_version():
       2016.11         2016.11.2-78         16.202.78
       2016.11         2016.11.9-88         16.209.88
       2018.8          2018.3.2-1306        18.42.1306
-      2081.1          2081.1.1-66          81.1.66
-      2081.1          2081.1.19-66         81.19.66
-      2081.1          2081.1.20-66         81.19.66            19 bugfixes on branch
       v2016.11.0      2016.11.0            16.200.65535        Tags have noc 0
       v2016.11.2      2016.11.2            16.202.65535
 
