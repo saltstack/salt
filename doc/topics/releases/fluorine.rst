@@ -882,4 +882,6 @@ Windows runas changes
 
 A password is no longer required with ``runas`` under normal circumstances.
 The password option is only needed if the minion process is run under a
-restricted (non-administrator) account. 
+restricted (non-administrator) account. In the aforementioned case, a password
+is only required when using the ``runas`` argument to run command as a
+different user.
