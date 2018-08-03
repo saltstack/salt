@@ -1943,7 +1943,7 @@ class TestFileTidied(TestCase):
              patch.dict(filestate.__opts__, {'test': False}), \
              patch.dict(filestate.__salt__, {'file.remove': remove}), \
              patch('os.path.isdir', return_value=True):
-           ret = filestate.tidied(name='/test/')
+            ret = filestate.tidied(name='/test/')
         exp = {
             'name': '/test/',
             'changes': {
@@ -1968,7 +1968,7 @@ class TestFileTidied(TestCase):
              patch.dict(filestate.__opts__, {'test': False}), \
              patch.dict(filestate.__salt__, {'file.remove': remove}), \
              patch('os.path.isdir', return_value=True):
-           ret = filestate.tidied(name='/test/', rmdirs=True)
+            ret = filestate.tidied(name='/test/', rmdirs=True)
         exp = {
             'name': '/test/',
             'changes': {
