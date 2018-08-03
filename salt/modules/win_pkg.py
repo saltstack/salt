@@ -1217,31 +1217,36 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ret[pkg_name] = 'Unable to locate package {0}'.format(pkg_name)
             continue
 
-        version_num = options.get('version', '')
+        version_num = options.get('version')
         #  Using the salt cmdline with version=5.3 might be interpreted
         #  as a float it must be converted to a string in order for
         #  string matching to work.
         if not isinstance(version_num, six.string_types) and version_num is not None:
             version_num = six.text_type(version_num)
 
+        # If the version was not passed, version_num will be None
         if not version_num:
             if pkg_name in old:
-                log.debug('A version (%s) already installed for package '
-                          '%s', version_num, pkg_name)
+                log.debug('"%s" version "%s" is already installed',
+                          pkg_name, old[pkg_name][0])
+                ret[pkg_name] = {'current': old[pkg_name][0]}
                 continue
-            # following can be version number or latest or Not Found
+            # Get the most recent version number available from winrepo.p
             version_num = _get_latest_pkg_version(pkginfo)
 
-        if version_num == 'latest' and 'latest' not in pkginfo:
+        if version_num.lower() == 'latest' and 'latest' not in pkginfo:
+            # Get the most recent version number available from winrepo.p
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
         if version_num in old.get(pkg_name, []):
             # Desired version number already installed
+            log.debug('"%s" version "%s" is already installed',
+                      pkg_name, version_num)
             ret[pkg_name] = {'current': version_num}
             continue
         # If version number not installed, is the version available?
-        elif version_num != 'latest' and version_num not in pkginfo:
+        elif version_num.lower() != 'latest' and version_num not in pkginfo:
             log.error('Version %s not found for package %s',
                       version_num, pkg_name)
             ret[pkg_name] = {'not found': version_num}
