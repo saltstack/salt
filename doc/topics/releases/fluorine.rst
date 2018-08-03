@@ -907,3 +907,12 @@ The password option is only needed if the minion process is run under a
 restricted (non-administrator) account. In the aforementioned case, a password
 is only required when using the ``runas`` argument to run command as a
 different user.
+
+=======
+New Modules
+===========
+
+Execution modules
+-----------------
+
+- :mod:`salt.modules.google_chat <salt.modules.google_chat>`

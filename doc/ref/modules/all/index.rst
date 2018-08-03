@@ -154,6 +154,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
