@@ -35,7 +35,7 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Set the virtual pkg module if the os is Solaris
+    Set the virtual pkg module if the os is AIX
     '''
     if __grains__['os_family'] == 'AIX':
         return __virtualname__
@@ -71,7 +71,7 @@ def _check_pkg(target):
             name = comps[0]
             rpmpkg = True
         else:
-            name = comps[1]     # use fileset rather than package name
+            name = comps[1]     # use fileset rather than rpm package
 
         version_num = comps[2]
         break
@@ -128,7 +128,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
     #
     # where Type codes: F -- Installp Fileset, P -- Product, C -- Component,
     #                   T -- Feature, R -- RPM Package
-
     cmd = '/usr/bin/lslpp -Lc'
     lines = __salt__['cmd.run'](
             cmd,
@@ -145,7 +144,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         if 'R' in comps[6]:
             name = comps[0]
         else:
-            name = comps[1]     # use fileset rather than package name
+            name = comps[1]     # use fileset rather than rpm package
 
         version_num = comps[2]
         __salt__['pkg_resource.add_pkg'](
@@ -220,7 +219,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm refresh=True
         salt '*' pkg.install /stage/middleware/AIX/VIOS2211_update/tpc_4.1.1.85.bff
         salt '*' pkg.install /stage/middleware/AIX/Xlc/usr/sys/inst.images/xlC.rte
-        salt '*' pkg.install /usr/sys/inst.images/ FireFox.base.adt
+        salt '*' pkg.install /stage/middleware/AIX/Firefox/ppc-AIX53/Firefox.base
         salt '*' pkg.install pkgs='["foo", "bar"]'
     '''
     targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
@@ -308,7 +307,8 @@ def remove(name=None, pkgs=None, **kwargs):
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove tcsh
-        salt '*' pkg.remove /stage/middleware/AIX/Xlfv13.1/urt/xlC.rte
+        salt '*' pkg.remove xlC.rte
+        salt '*' pkg.remove Firefox.base.adt
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
     targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
