@@ -147,8 +147,8 @@ def managed(name,
         .. code-block:: yaml
 
             file_roots:
-                base:
-                    - /etc/salt/states
+              base:
+                 - /etc/salt/states
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
         ``salt://templates/example.jinja``.
@@ -481,3 +481,65 @@ def managed(name,
                                        **template_vars)
 
     return salt.utils.napalm.loaded_ret(ret, config_update_ret, test, debug)
+
+
+def commit_cancelled(name):
+    '''
+    .. versionadded:: Fluorine
+
+    Cancel a commit scheduled to be executed via the ``commit_in`` and
+    ``commit_at`` arguments from the
+    :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit is scheduled
+    via the functions named above.
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        20180726083540640360:
+          netconfig.commit_cancelled
+    '''
+    cancelled = {
+        'result': None,
+        'changes': {},
+        'comment': ''
+    }
+    if __opts__['test']:
+        cancelled['comment'] = 'It would cancel commit #{}'.format(name)
+        return cancelled
+    cancelled = __salt__['net.cancel_commit'](name)
+    cancelled['changes'] = {}
+    return cancelled
+
+
+def commit_confirmed(name):
+    '''
+    .. versionadded:: Fluorine
+
+    Confirm a commit scheduled to be reverted via the ``revert_in`` and
+    ``revert_at`` arguments from the
+    :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
+    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    execution functions. The commit ID is displayed when the commit confirmed
+    is scheduled via the functions named above.
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        20180726083540640360:
+          netconfig.commit_confirmed
+    '''
+    confirmed = {
+        'result': None,
+        'changes': {},
+        'comment': ''
+    }
+    if __opts__['test']:
+        confirmed['comment'] = 'It would confirm commit #{}'.format(name)
+        return confirmed
+    confirmed = __salt__['net.confirm_commit'](name)
+    confirmed['changes'] = {}
+    return confirmed
