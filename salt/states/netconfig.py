@@ -99,6 +99,358 @@ def _update_config(template_name,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+def replace_pattern(name,
+                    pattern,
+                    repl,
+                    count=0,
+                    flags=8,
+                    bufsize=1,
+                    append_if_not_found=False,
+                    prepend_if_not_found=False,
+                    not_found_content=None,
+                    search_only=False,
+                    show_changes=True,
+                    backslash_literal=False,
+                    source='running',
+                    path=None,
+                    test=False,
+                    replace=True,
+                    debug=False,
+                    commit=True):
+    '''
+    .. versionadded:: Fluorine
+
+    Replace occurrences of a pattern in the configuration source. If
+    ``show_changes`` is ``True``, then a diff of what changed will be returned,
+    otherwise a ``True`` will be returned when changes are made, and ``False``
+    when no changes are made.
+    This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
+
+    pattern
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
+
+    repl
+        The replacement text.
+
+    count: ``0``
+        Maximum number of pattern occurrences to be replaced. If count is a
+        positive integer ``n``, only ``n`` occurrences will be replaced,
+        otherwise all occurrences will be replaced.
+
+    flags (list or int): ``8``
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
+        correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
+        'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
+        corresponding to the XOR (``|``) of all the desired flags. Defaults to
+        8 (which supports 'MULTILINE').
+
+    bufsize (int or str): ``1``
+        How much of the configuration to buffer into memory at once. The
+        default value ``1`` processes one line at a time. The special value
+        ``file`` may be specified which will read the entire file into memory
+        before processing.
+
+    append_if_not_found: ``False``
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
+
+    prepend_if_not_found: ``False``
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
+
+    not_found_content
+        Content to use for append/prepend if not found. If None (default), uses
+        ``repl``. Useful when ``repl`` uses references to group in pattern.
+
+    search_only: ``False``
+        If set to true, this no changes will be performed on the file, and this
+        function will simply return ``True`` if the pattern was matched, and
+        ``False`` if not.
+
+    show_changes: ``True``
+        If ``True``, return a diff of changes made. Otherwise, return ``True``
+        if changes were made, and ``False`` if not.
+
+    backslash_literal: ``False``
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``, or
+        ``startup``. Default: ``running``.
+
+    path
+        Save the temporary configuration to a specific path, then read from
+        there.
+
+    test: ``False``
+        Dry run? If set as ``True``, will apply the config, discard and return
+        the changes. Default: ``False`` and will commit the changes on the
+        device.
+
+    commit: ``True``
+        Commit the configuration changes? Default: ``True``.
+
+    debug: ``False``
+        Debug mode. Will insert a new key in the output dictionary, as
+        ``loaded_config`` containing the raw configuration loaded on the device.
+
+    replace: ``True``
+        Load and replace the configuration. Default: ``True``.
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        update_policy_name:
+          netconfig.replace_pattern:
+            - pattern: OLD-POLICY-NAME
+            - repl: new-policy-name
+            - debug: true
+    '''
+    ret = salt.utils.napalm.default_ret(name)
+    # the user can override the flags the equivalent CLI args
+    # which have higher precedence
+    test = __salt__['config.merge']('test', test)
+    debug = __salt__['config.merge']('debug', debug)
+    commit = __salt__['config.merge']('commit', commit)
+    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
+    replace_ret = __salt__['net.replace_pattern'](pattern,
+                                                  repl,
+                                                  count=count,
+                                                  flags=flags,
+                                                  bufsize=bufsize,
+                                                  append_if_not_found=append_if_not_found,
+                                                  prepend_if_not_found=prepend_if_not_found,
+                                                  not_found_content=not_found_content,
+                                                  search_only=search_only,
+                                                  show_changes=show_changes,
+                                                  backslash_literal=backslash_literal,
+                                                  source=source,
+                                                  path=path,
+                                                  test=test,
+                                                  replace=replace,
+                                                  debug=debug,
+                                                  commit=commit)
+    return salt.utils.napalm.loaded_ret(ret, replace_ret, test, debug)
+
+
+def saved(name,
+          source='running',
+          user=None,
+          group=None,
+          mode=None,
+          attrs=None,
+          makedirs=False,
+          dir_mode=None,
+          replace=True,
+          backup='',
+          show_changes=True,
+          create=True,
+          tmp_dir='',
+          tmp_ext='',
+          encoding=None,
+          encoding_errors='strict',
+          allow_empty=False,
+          follow_symlinks=True,
+          check_cmd=None,
+          win_owner=None,
+          win_perms=None,
+          win_deny_perms=None,
+          win_inheritance=True,
+          win_perms_reset=False,
+          **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Save the configuration to a file on the local file system.
+
+    name
+        Absolute path to file where to save the configuration.
+        To push the files to the Master, use
+        :mod:`cp.push <salt.modules.cp.push>` Execution function.
+
+    source: ``running``
+        The configuration source. Choose from: ``running``, ``candidate``,
+        ``startup``. Default: ``running``.
+
+    user
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
+
+    group
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion. On Windows, this is ignored
+
+    mode
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
+
+        .. note::
+            This option is **not** supported on Windows.
+    attrs
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``acdijstuADST``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+    makedirs: ``False``
+        If set to ``True``, then the parent directories will be created to
+        facilitate the creation of the named file. If ``False``, and the parent
+        directory of the destination file doesn't exist, the state will fail.
+
+    dir_mode
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
+
+    replace: ``True``
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
+
+    backup
+        Overrides the default backup mode for this specific file. See
+        :ref:`backup_mode documentation <file-state-backups>` for more details.
+
+    show_changes: ``True``
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
+
+    create: ``True``
+        If set to ``False``, then the file will only be managed if the file
+        already exists on the system.
+
+    encoding
+        If specified, then the specified encoding will be used. Otherwise, the
+        file will be encoded using the system locale (usually UTF-8). See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+    encoding_errors: ``'strict'``
+        Error encoding scheme. Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the list of available schemes.
+
+    allow_empty: ``True``
+        If set to ``False``, then the state will fail if the contents specified
+        by ``contents_pillar`` or ``contents_grains`` are empty.
+
+    follow_symlinks: ``True``
+        If the desired path is a symlink follow it and make changes to the
+        file to which the symlink points.
+
+    check_cmd
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new managed contents.  If the command
+        exits with a zero status the new managed contents will be written to
+        the managed destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+    tmp_ext
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file extension (e.g. the init-checkconf upstart
+        config checker).
+
+    win_owner: ``None``
+        The owner of the directory. If this is not passed, user will be used. If
+        user is not passed, the account under which Salt is running will be
+        used.
+
+    win_perms: ``None``
+        A dictionary containing permissions to grant and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
+        single basic perm or a list of advanced perms. ``perms`` must be
+        specified. ``applies_to`` does not apply to file objects.
+
+    win_deny_perms: ``None``
+        A dictionary containing permissions to deny and their propagation. For
+        example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
+        single basic perm or a list of advanced perms. ``perms`` must be
+        specified. ``applies_to`` does not apply to file objects.
+
+    win_inheritance: ``True``
+        True to inherit permissions from the parent directory, False not to
+        inherit permission.
+
+    win_perms_reset: ``False``
+        If ``True`` the existing DACL will be cleared and replaced with the
+        settings defined in this function. If ``False``, new entries will be
+        appended to the existing DACL. Default is ``False``.
+
+    State SLS Example:
+
+    .. code-block:: yaml
+
+        /var/backups/{{ opts.id }}/{{ salt.status.time('%s') }}.cfg:
+          netconfig.saved:
+            - source: running
+            - makedirs: true
+
+    The state SLS  above would create a backup config grouping the files by the
+    Minion ID, in chronological files. For example, if the state is executed at
+    on the 3rd of August 2018, at 5:15PM, on the Minion ``core1.lon01``, the
+    configuration would saved in the file:
+    ``/var/backups/core01.lon01/1533316558.cfg``
+    '''
+    ret = __salt__['net.config'](source=source)
+    if not ret['result']:
+        return {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ret['comment']
+        }
+    return __states__['file.managed'](name,
+                                      user=user,
+                                      group=group,
+                                      mode=mode,
+                                      attrs=attrs,
+                                      makedirs=makedirs,
+                                      dir_mode=dir_mode,
+                                      replace=replace,
+                                      backup=backup,
+                                      show_changes=show_changes,
+                                      create=create,
+                                      contents=ret['out'][source],
+                                      tmp_dir=tmp_dir,
+                                      tmp_ext=tmp_ext,
+                                      encoding=encoding,
+                                      encoding_errors=encoding_errors,
+                                      allow_empty=allow_empty,
+                                      follow_symlinks=follow_symlinks,
+                                      check_cmd=check_cmd,
+                                      win_owner=win_owner,
+                                      win_perms=win_perms,
+                                      win_deny_perms=win_deny_perms,
+                                      win_inheritance=win_inheritance,
+                                      win_perms_reset=win_perms_reset,
+                                      **kwargs)
+
+
 def managed(name,
             template_name,
             template_source=None,
