@@ -1249,12 +1249,12 @@ def rpc(command, **kwargs):
     systems supported by NAPALM, invoking the following functions for the NAPALM
     native drivers:
 
-    - :py:func:`napalm.junos_rpc <salt.modules.napalm.junos_rpc>` for ``junos``
-    - :py:func:`napalm.pyeapi_run_commands <salt.modules.napalm.pyeapi_run_commands>`
+    - :py:func:`napalm.junos_rpc <salt.modules.napalm_mod.junos_rpc>` for ``junos``
+    - :py:func:`napalm.pyeapi_run_commands <salt.modules.napalm_mod.pyeapi_run_commands>`
       for ``eos``
-    - :py:func:`napalm.nxos_api_rpc <salt.modules.napalm.nxos_api_rpc>` for
+    - :py:func:`napalm.nxos_api_rpc <salt.modules.napalm_mod.nxos_api_rpc>` for
       ``nxos``
-    - :py:func:`napalm.netmiko_commands <salt.modules.napalm.netmiko_commands>`
+    - :py:func:`napalm.netmiko_commands <salt.modules.napalm_mod.netmiko_commands>`
       for ``ios``, ``iosxr``, and ``nxos_ssh``
 
     command
