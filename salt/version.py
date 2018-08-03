@@ -747,7 +747,7 @@ def msi_conformant_version():
     short_year = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
     bugfix = __saltstack_version__.bugfix
-    if bugfix>19:
+    if bugfix > 19:
         bugfix = 19
     noc = __saltstack_version__.noc
     if noc == 0:
