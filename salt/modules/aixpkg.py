@@ -3,13 +3,14 @@
 Package support for AIX
 
 .. important::
-    If you feel that Salt should be using this module to manage filesets or 
+    If you feel that Salt should be using this module to manage filesets or
     rpm packages on a minion, and it is using a different module (or gives an
     error similar to *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import copy
 import logging
 import itertools
@@ -25,7 +26,6 @@ from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from functools import reduce
 
-import pudb
 
 log = logging.getLogger(__name__)
 
@@ -42,19 +42,6 @@ def __virtual__():
     return (False,
             'The aixpkg execution module failed to load.')
 
-
-aix_pkg_return_values = {
-    0: 'Command succeeded.',
-    1: 'An error occurred.',
-    2: 'Invalid command line options were specified.',
-    3: 'Multiple operations were requested, but only some of them succeeded.',
-    4: 'No changes were made - nothing to do.',
-    5: 'The requested operation cannot be performed on a  live image.',
-    6: 'The requested operation cannot be completed because the licenses for '
-       'the packages being installed or updated have not been accepted.',
-    7: 'The image is currently in use by another process and cannot be '
-       'modified.'
-}
 
 def _check_pkg(target):
     '''
@@ -76,8 +63,8 @@ def _check_pkg(target):
         comps = line.split(':')
         if len(comps) < 7:
             raise CommandExecutionError(
-                'Error occurred finding fileset/package'
-                , info={'errors': comps[1].strip()})
+                'Error occurred finding fileset/package',
+                info={'errors': comps[1].strip()})
 
         # handle first matching line
         if 'R' in comps[6]:
@@ -85,11 +72,19 @@ def _check_pkg(target):
             rpmpkg = True
         else:
             name = comps[1]     # use fileset rather than package name
-            
+
         version_num = comps[2]
         break
 
     return name, version_num, rpmpkg
+
+
+def _is_installed_rpm(name):
+    '''
+    Returns True if the rpm package is installed. Otherwise returns False.
+    '''
+    cmd = ['/usr/bin/rpm', '-q', name]
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -144,7 +139,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             continue
 
         comps = line.split(':')
-        if  len(comps) < 7:
+        if len(comps) < 7:
             continue
 
         if 'R' in comps[6]:
@@ -197,19 +192,24 @@ def is_installed(name, **kwargs):
 
 def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwargs):
     '''
-    Install the named fileset/rpm package
+    Install the named fileset(s)/rpm package(s).
 
-    Returns a dict containing the new fileset/package names and versions::
-
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    name
+        The name of the fileset or rpm package to be installed.
 
 
     Multiple Package Installation Options:
 
     pkgs
-        A list of filesets/rpm packages to install. Must be passed as a python list.
+        A list of filesets and/or rpm packages to install.
+        Must be passed as a python list. The ``name`` parameter will be
+        ignored if this option is passed.
 
+
+    Returns a dict containing the new fileset(s)/rpm package(s) names and versions:
+
+        {'<package>': {'old': '<old-version>',
+                       'new': '<new-version>'}}
 
     CLI Example:
 
@@ -219,71 +219,61 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm refresh=True
         salt '*' pkg.install /stage/middleware/AIX/VIOS2211_update/tpc_4.1.1.85.bff
-        salt '*' pkg.install /stage/middleware/AIX/Xlfv13.1/urt/xlC.rte
+        salt '*' pkg.install /stage/middleware/AIX/Xlc/usr/sys/inst.images/xlC.rte
+        salt '*' pkg.install /usr/sys/inst.images/ FireFox.base.adt
         salt '*' pkg.install pkgs='["foo", "bar"]'
     '''
-    pu.db
+    targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
+    if not targets:
+        return {}
 
-### TBD DGM need to allow for rpm's - rpm -Uivh <name> if endswith('.rpm')
+    if pkgs:
+        log.debug('Removing these fileset(s)/rpm package(s) {0}: {1}'
+            .format(name, targets))
 
-    if not pkgs:
-        if is_installed(name):
-            return {}
-
-###    if refresh:
-###        refresh_db(full=True)
-
-    pkg2insts = ''
-    if pkgs:    # multiple packages specified
-        for pkg in pkgs:
-            if list(pkg.items())[0][1]:   # version specified
-###                pkg2inst += '{0}@{1} '.format(list(pkg.items())[0][0],
-###                                              list(pkg.items())[0][1])
-                pkg2insts += '{0} {1} '.format(os.path.dirname(list(pkg.items())[0][0])
-                                            , os.path.basename(list(pkg.items())[0][0]))
-                pkg2insts += os.linesep
-            else:
-###                pkg2inst += '{0} '.format(list(pkg.items())[0][0])
-                pkg2insts += '{0} {1}'.format(os.path.dirname(list(pkg.items())[0][0])
-                                            , os.path.basename(list(pkg.items())[0][0]))
-                pkg2insts += os.linesep
-        log.debug('Installing these packages instead of %s: %s',
-                  name, pkg2insts)
-
-    else:   # install single package
-###        if version:
-### TBD DGM what to do about versions            pkg2inst = "{0}@{1}".format(name, version)
-###            pkg2inst = "{0}@{1}".format(name, version)
-###        else:
-###            pkg2inst = "{0}".format(name)
-        pkg2insts = "{0} {1}".format(os.path.dirname(name), os.path.basename(name))
-
-    cmd = ['/usr/sbin/installp', '-avYXg -d', '']
-    if test:
-        cmd.append(' -p ')
-
-    # Get a list of the packages before install so we can diff after to see
-    # what got installed.
+    # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
-    # Install or upgrade the package
-    # If package is already installed
-    for pkg2inst in pkg2insts:
-        cmd.append(pkg2inst)
-        out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    # Install the fileset or rpm package(s)
+    errors = []
+    for target in targets:
+        filename = os.path.basename(target)
+        if filename.endswith('.rpm'):
+            if _is_installed_rpm(filename.split('.aix')[0]):
+                continue
 
-    # Get a list of the packages again, including newly installed ones.
+            cmdflags = ' -Uivh '
+            if test:
+                cmdflags += ' --test'
+
+            cmd = ['/usr/bin/rpm', cmdflags, target]
+            out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+        else:
+            if is_installed(target):
+                continue
+
+            cmdflags = '-acvYXg'
+            if test:
+                cmdflags = 'p'
+            cmdflags += ' -d '
+            dirpath = os.path.dirname(target)
+            cmd = ['/usr/sbin/installp', cmdflags, dirpath, filename]
+            out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+        if 0 != out['retcode']:
+            errors.append(out['stderr'])
+
+    # Get a list of the packages after the uninstall
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if errors:
         raise CommandExecutionError(
-            'Error occurred installing package(s)',
+            'Problems encountered installing filesets(s)/package(s)',
             info={
                 'changes': ret,
-                'retcode': aix_pkg_return_values[out['retcode']],
-                'errors': [out['stderr']]
+                'errors': errors
             }
         )
 
@@ -296,7 +286,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove specified filesets and/or rpm packages. i
+    Remove specified fileset(s)/rpm package(s).
 
     name
         The name of the fileset or rpm package to be deleted.
@@ -326,13 +316,14 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     if pkgs:
-        log.debug('Removing these fileset(s) and/or rpm packages {0}: {1}'
+        log.debug('Removing these fileset(s)/rpm package(s) {0}: {1}'
             .format(name, targets))
+
+    errors = []
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
-    errors = []
     # Remove the fileset or rpm package(s)
     for target in targets:
         try:
