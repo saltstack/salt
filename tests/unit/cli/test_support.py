@@ -11,6 +11,7 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salt.cli.support.console import IndentOutput
 from salt.cli.support.collector import SupportDataCollector
 from salt.utils.color import get_colors
+from salt.utils.stringutils import to_bytes
 import salt.exceptions
 
 try:
@@ -132,3 +133,18 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.close()
         assert 'Archive already closed' in str(err)
 
+    def test_archive_addwrite(self):
+        '''
+        Test add to the archive a section and write to it.
+
+        :return:
+        '''
+        archive = MagicMock()
+        with patch('salt.cli.support.collector.tarfile.TarFile', archive):
+            self.collector.open()
+            self.collector.add('foo')
+            self.collector.write(title='title', data='data', output='null')
+            self.collector._flush_content()
+
+            assert archive.bz2open().addfile.call_args[1]['fileobj'].read() == \
+                   to_bytes('title\n-----\n\nraw-content: data\n\n\n\n')
