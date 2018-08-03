@@ -379,14 +379,20 @@ def __within(within=None, errmsg=None, dtype=None):
 
 def __space_delimited_list(value):
     '''validate that a value contains one or more space-delimited values'''
-    if isinstance(value, str):
-        value = value.strip().split()
-
-    if hasattr(value, '__iter__') and value != []:
-        return (True, value, 'space-delimited string')
-    else:
-        return (False, value, '{0} is not a valid space-delimited value.\n'.format(value))
-
+    valid, _value, errmsg = False, value, 'space-delimited string'
+    try:
+        if hasattr(value, '__iter__'):
+            valid = True  # TODO:
+        else:
+            _value = value.split()
+            if _value == []:
+                raise ValueError
+            valid = True
+    except AttributeError:
+        pass
+    except ValueError:
+        pass
+    return (valid, _value, errmsg)
 
 SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     'dns': 'dns-nameservers',
