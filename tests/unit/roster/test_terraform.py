@@ -2,17 +2,26 @@
 '''
 unittests for terraform roster
 '''
+# Import Python libs
 from __future__ import absolute_import
 import os.path
-from salt.roster import terraform
 
+# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import TESTS_DIR
 from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
+
+# Import Salt Libs
+import salt.config
+import salt.loader
+from salt.roster import terraform
+
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -21,7 +30,14 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.roster.terraform
     '''
     def setup_loader_modules(self):
-        return {terraform: {}}
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
+        utils = salt.loader.utils(opts, whitelist=['roster_matcher'])
+        return {
+            terraform: {
+                '__utils__': utils,
+                '__opts__': {},
+            }
+        }
 
     def test_default_output(self):
         '''
