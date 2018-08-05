@@ -136,14 +136,14 @@ def _space_delimited_list(value):
             valid = True
         else:
             _value = value.split()
-            if not _value:
+            if _value == []:
                 raise ValueError
             valid = True
     except AttributeError:
         errmsg = '{0} is not a valid list.\n'.format(value)
     except ValueError:
         errmsg = '{0} is not a valid list.\n'.format(value)
-    return valid, errmsg
+    return (valid, errmsg)
 
 
 def _validate_ipv4(value):
