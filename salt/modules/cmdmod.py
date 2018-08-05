@@ -397,10 +397,6 @@ def _run(cmd,
         log.info(log_callback(msg))
 
     if runas and salt.utils.platform.is_windows():
-        if not password:
-            msg = 'password is a required argument for runas on Windows'
-            raise CommandExecutionError(msg)
-
         if not HAS_WIN_RUNAS:
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
@@ -966,15 +962,14 @@ def run(cmd,
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
     :param str group: Group to run command as. Not currently supported
-      on Windows.
+        on Windows.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. Only required when the minion proccess
+        is running under a non-privileged account. This parameter will be
+        ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
