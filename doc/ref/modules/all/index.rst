@@ -87,6 +87,7 @@ execution modules
     chocolatey
     chronos
     cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -186,6 +187,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -271,9 +273,10 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -324,6 +327,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    peeringdb
     pf
     philips_hue
     pillar
@@ -431,7 +435,6 @@ execution modules
     system
     system_profiler
     systemd
-    template
     telegram
     telemetry
     temp
