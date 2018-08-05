@@ -10,7 +10,6 @@ import os.path
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.paths import TESTS_DIR
 from tests.support.mock import (
     patch,
     NO_MOCK,
@@ -21,7 +20,6 @@ from tests.support.mock import (
 import salt.config
 import salt.loader
 from salt.roster import terraform
-
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
