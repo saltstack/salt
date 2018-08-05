@@ -25,7 +25,6 @@ import salt.config
 from salt.ext import six
 
 
-__opts__ = salt.config.minion_config('/etc/salt/minion')
 log = logging.getLogger(__name__)
 
 
