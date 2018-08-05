@@ -1373,7 +1373,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1397,7 +1397,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1428,7 +1428,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1458,7 +1458,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     saltenv: ``base``
         Specifies the Salt environment name.
@@ -1715,7 +1715,7 @@ def load_template(template_name=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1739,7 +1739,7 @@ def load_template(template_name=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1770,7 +1770,7 @@ def load_template(template_name=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1800,7 +1800,7 @@ def load_template(template_name=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     defaults: None
         Default variables/context passed to the template.
@@ -2219,7 +2219,7 @@ def cancel_commit(jid):
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
     :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit is scheduled
     via the functions named above.
 
@@ -2246,7 +2246,7 @@ def confirm_commit(jid):
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at``  arguments from the
     :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    :mod:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit confirmed
     is scheduled via the functions named above.
 
