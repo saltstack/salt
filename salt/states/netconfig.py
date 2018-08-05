@@ -598,7 +598,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -622,7 +622,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -653,7 +653,7 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -683,7 +683,7 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -842,7 +842,7 @@ def commit_cancelled(name):
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
     :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit is scheduled
     via the functions named above.
 
@@ -874,7 +874,7 @@ def commit_confirmed(name):
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at`` arguments from the
     :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    :mod:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit confirmed
     is scheduled via the functions named above.
 
