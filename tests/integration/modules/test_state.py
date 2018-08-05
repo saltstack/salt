@@ -74,6 +74,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         reline(destpath, destpath, force=True)
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
         reline(destpath, destpath, force=True)
+        sls = self.run_function('saltutil.sync_modules')
+        assert isinstance(sls, list)
 
     def test_show_highstate(self):
         '''
@@ -299,6 +301,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         '''
         testfile = os.path.join(TMP, 'issue-1876')
+
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -1939,6 +1942,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
 
+    def test_state_sls_unicode_characters_cmd_output(self):
+        '''
+        test the output from running and echo command with non-ascii
+        characters.
+        '''
+        ret = self.run_function('state.sls', ['issue-46672-a'])
+        key = list(ret.keys())[0]
+        log.debug('== ret %s ==', type(ret))
+        _expected = 'This is Æ test!'
+        if salt.utils.platform.is_windows():
+            # Windows cmd.exe will mangle the output using cmd's codepage.
+            _expected = "'This is ’ test!'"
+        self.assertEqual(_expected, ret[key]['changes']['stdout'])
+
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
@@ -1954,3 +1971,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = os.path.join(TMP, 'testfile')
         if os.path.isfile(state_file):
             os.remove(state_file)
+
+    def test_state_sls_integer_name(self):
+        '''
+        This tests the case where the state file is named
+        only with integers
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='12345'
+        )
+
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])

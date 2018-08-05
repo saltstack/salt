@@ -6467,7 +6467,6 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        sls_opts,
         __context__['cp.fileclient'],
         chunks, refs, pillar, name)
     return trans_tar

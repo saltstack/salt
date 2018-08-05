@@ -584,6 +584,8 @@ def latest_version(*names, **kwargs):
         status = pkg_info.get('status', '').lower()
         if status.find('not installed') > -1 or status.find('out-of-date') > -1:
             ret[name] = pkg_info.get('version')
+        else:
+            ret[name] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1 and len(ret):

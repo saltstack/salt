@@ -886,6 +886,10 @@ Example:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
+
 
 Recursively encodes all string elements of the list to bytes.
 
@@ -915,6 +919,9 @@ Returns:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,Fluorine
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
 
 Recursively encodes all string items in the dictionary to bytes.
 
@@ -933,6 +940,22 @@ Returns:
 
   {'a': '\xd0\x94'}
 
+
+.. jinja_ref:: tojson
+
+``tojson``
+----------
+
+.. versionadded:: 2018.3.3,Fluorine
+
+Dumps a data structure to JSON.
+
+This filter was added to provide this functionality to hosts which have a
+Jinja release older than version 2.9 installed. If Jinja 2.9 or newer is
+installed, then the upstream version of the filter will be used. See the
+`upstream docs`__ for more information.
+
+.. __: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
 .. jinja_ref:: random_hash
 
@@ -1124,6 +1147,40 @@ Returns:
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }
+
+
+.. jinja_ref:: traverse
+
+``traverse``
+------------
+
+.. versionadded:: 2018.3.3
+
+Traverse a dict or list using a colon-delimited target string.
+The target 'foo:bar:0' will return data['foo']['bar'][0] if this value exists,
+and will otherwise return the provided default value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a1:b1', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  {'c1': 'foo'}
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a2:b2', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  'default'
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/

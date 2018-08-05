@@ -225,6 +225,7 @@ def list_users(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_users', '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -248,6 +249,7 @@ def list_vhosts(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_vhosts', '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -322,6 +324,7 @@ def add_user(name, password=None, runas=None):
 
     res = __salt__['cmd.run_all'](
         cmd,
+        reset_system_locale=False,
         output_loglevel='quiet',
         runas=runas,
         python_shell=python_shell)
@@ -354,6 +357,7 @@ def delete_user(name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_user', name],
+        reset_system_locale=False,
         python_shell=False,
         runas=runas)
     msg = 'Deleted'
@@ -389,6 +393,7 @@ def change_password(name, password, runas=None):
         cmd = [RABBITMQCTL, 'change_password', name, password]
     res = __salt__['cmd.run_all'](
         cmd,
+        reset_system_locale=False,
         runas=runas,
         output_loglevel='quiet',
         python_shell=python_shell)
@@ -411,6 +416,7 @@ def clear_password(name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_password', name],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Password Cleared'
@@ -436,7 +442,7 @@ def check_password(name, password, runas=None):
         runas = salt.utils.user.get_user()
 
     try:
-        res = __salt__['cmd.run']([RABBITMQCTL, 'status'], runas=runas, python_shell=False)
+        res = __salt__['cmd.run']([RABBITMQCTL, 'status'], reset_system_locale=False, runas=runas, python_shell=False)
         server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
 
         if server_version is None:
@@ -468,6 +474,7 @@ def check_password(name, password, runas=None):
 
         res = __salt__['cmd.run_all'](
             cmd,
+            reset_system_locale=False,
             runas=runas,
             output_loglevel='quiet',
             python_shell=python_shell)
@@ -483,6 +490,7 @@ def check_password(name, password, runas=None):
 
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'eval', cmd],
+        reset_system_locale=False,
         runas=runas,
         output_loglevel='quiet',
         python_shell=False)
@@ -511,6 +519,7 @@ def add_vhost(vhost, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'add_vhost', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -532,6 +541,7 @@ def delete_vhost(vhost, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_vhost', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Deleted'
@@ -553,6 +563,7 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'set_permissions', '-p',
          vhost, user, conf, write, read],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = 'Permissions Set'
@@ -573,6 +584,7 @@ def list_permissions(vhost, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_permissions', '-q', '-p', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -593,6 +605,7 @@ def list_user_permissions(name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_user_permissions', name, '-q'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
 
@@ -616,6 +629,7 @@ def set_user_tags(name, tags, runas=None):
 
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'set_user_tags', name] + list(tags),
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     msg = "Tag(s) set"
@@ -636,6 +650,7 @@ def status(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'status'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -656,6 +671,7 @@ def cluster_status(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'cluster_status'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -680,7 +696,7 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     stop_app(runas)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -700,6 +716,7 @@ def stop_app(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'stop_app'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -720,6 +737,7 @@ def start_app(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'start_app'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -740,6 +758,7 @@ def reset(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'reset'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -760,6 +779,7 @@ def force_reset(runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'force_reset'],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -780,7 +800,7 @@ def list_queues(runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q']
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -802,7 +822,7 @@ def list_queues_vhost(vhost, runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q', '-p', vhost]
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -825,6 +845,7 @@ def list_policies(vhost="/", runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_policies', '-q', '-p', vhost],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     _check_response(res)
@@ -902,7 +923,7 @@ def set_policy(vhost,
     if apply_to:
         cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     log.debug('Set policy: %s', res['stdout'])
     return _format_response(res, 'Set')
 
@@ -923,6 +944,7 @@ def delete_policy(vhost, name, runas=None):
         runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_policy', '-p', vhost, name],
+        reset_system_locale=False,
         runas=runas,
         python_shell=False)
     log.debug('Delete policy: %s', res['stdout'])
@@ -960,7 +982,7 @@ def list_available_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -978,7 +1000,7 @@ def list_enabled_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -1011,7 +1033,7 @@ def enable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'enable', name]
-    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Enabled')
 
 
@@ -1028,5 +1050,5 @@ def disable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'disable', name]
-    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Disabled')

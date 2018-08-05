@@ -104,13 +104,18 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(svn.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
                 with patch.dict(svn.__salt__, {'svn.export': mock}):
-                    self.assertDictEqual(svn.export("salt",
-                                                    "c://salt"),
-                                         {'changes': 'salt was Exported'
-                                          ' to c://salt', 'comment': '',
-                                          'name': 'salt', 'result': True
-                                          }
-                                         )
+                    self.assertDictEqual(
+                        svn.export("salt", "c://salt"),
+                        {
+                            'changes': {
+                                'new': 'salt',
+                                'comment': 'salt was Exported to c://salt',
+                            },
+                            'comment': '',
+                            'name': 'salt',
+                            'result': True,
+                        }
+                    )
 
     def test_dirty(self):
         '''

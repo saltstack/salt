@@ -14,3 +14,20 @@ Improves timezone detection by using the pytz module.
 
 Adds ``timezone.list`` to list supported timezones in either Windows or Unix
 format.
+
+New Jinja Filter
+================
+
+The :jinja_ref:`tojson` filter (from Jinja 2.9 and later) has been ported to
+Salt, and will be used when this filter is not available. This allows older LTS
+releases such as CentOS 7 and Ubuntu 14.04 to use this filter.
+
+You should use this filter any time you wish to dump a list or dictionary into
+an SLS file, to ensure that the result is able to be loaded by the YAML
+renderer. For example:
+
+.. code-block:: jinja
+
+    foo:
+      bar.baz:
+        - some_arg: {{ mydict|tojson }}
