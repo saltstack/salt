@@ -16,6 +16,11 @@ To use the EC2 cloud module, set up the cloud configuration at
       # EC2 metadata set both id and key to 'use-instance-role-credentials'
       id: GKTADJGHEIQSXMKKRBJ08H
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+      # If 'role_arn' is specified the above credentials are used to
+      # to assume to the role. By default, role_arn is set to None.
+      role_arn: arn:aws:iam::012345678910:role/SomeRoleName
+
       # The ssh keyname to use
       keyname: default
       # The amazon security group
@@ -47,6 +52,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Defaults to root
       # Optional
       ssh_gateway_username: root
+
+      # Default to nc -q0 %h %p
+      # Optional
+      ssh_gateway_command: "-W %h:%p"
 
       # One authentication method is required. If both
       # are specified, Private key wins.
@@ -1078,6 +1087,12 @@ def get_ssh_gateway_config(vm_):
         search_global=False
     )
 
+    # ssh_gateway_command
+    ssh_gateway_config['ssh_gateway_command'] = config.get_cloud_config_value(
+        'ssh_gateway_command', vm_, __opts__, default=None,
+        search_global=False
+    )
+
     # Check if private key exists
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
@@ -1871,7 +1886,13 @@ def request_instance(vm_=None, call=None):
     if placementgroup_ is not None:
         params[spot_prefix + 'Placement.GroupName'] = placementgroup_
 
-    ex_blockdevicemappings = block_device_mappings(vm_)
+    blockdevicemappings_holder = block_device_mappings(vm_)
+    if blockdevicemappings_holder:
+        for _bd in blockdevicemappings_holder:
+            if 'tag' in _bd:
+                _bd.pop('tag')
+
+    ex_blockdevicemappings = blockdevicemappings_holder
     if ex_blockdevicemappings:
         params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping',
                       ex_blockdevicemappings))
@@ -2043,6 +2064,8 @@ def request_instance(vm_=None, call=None):
     # to become active before we continue
     if spot_config:
         sir_id = data[0]['spotInstanceRequestId']
+
+        vm_['spotRequestId'] = sir_id
 
         def __query_spot_instance_request(sir_id, location):
             params = {'Action': 'DescribeSpotInstanceRequests',
@@ -2424,7 +2447,7 @@ def wait_for_instance(
                 )
                 pprint.pprint(console)
                 time.sleep(5)
-            output = console['output_decoded']
+            output = salt.utils.stringutils.to_unicode(console['output_decoded'])
             comps = output.split('-----BEGIN SSH HOST KEY KEYS-----')
             if len(comps) < 2:
                 # Fail; there are no host keys
@@ -2666,6 +2689,51 @@ def create(vm_=None, call=None):
         location=location
     )
 
+    # Once instance tags are set, tag the spot request if configured
+    if 'spot_config' in vm_ and 'tag' in vm_['spot_config']:
+
+        if not isinstance(vm_['spot_config']['tag'], dict):
+            raise SaltCloudConfigError(
+                '\'tag\' should be a dict.'
+            )
+
+        for value in six.itervalues(vm_['spot_config']['tag']):
+            if not isinstance(value, str):
+                raise SaltCloudConfigError(
+                    '\'tag\' values must be strings. Try quoting the values. '
+                    'e.g. "2013-09-19T20:09:46Z".'
+                )
+
+        spot_request_tags = {}
+
+        if 'spotRequestId' not in vm_:
+            raise SaltCloudConfigError('Failed to find spotRequestId')
+
+        sir_id = vm_['spotRequestId']
+
+        spot_request_tags['Name'] = vm_['name']
+
+        for k, v in six.iteritems(vm_['spot_config']['tag']):
+            spot_request_tags[k] = v
+
+        __utils__['cloud.fire_event'](
+            'event',
+            'setting tags',
+            'salt/cloud/spot_request_{0}/tagging'.format(sir_id),
+            args={'tags': spot_request_tags},
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport']
+        )
+        salt.utils.cloud.wait_for_fun(
+            set_tags,
+            timeout=30,
+            name=vm_['name'],
+            tags=spot_request_tags,
+            instance_id=sir_id,
+            call='action',
+            location=location
+        )
+
     network_interfaces = config.get_cloud_config_value(
         'network_interfaces',
         vm_,
@@ -2794,6 +2862,53 @@ def create(vm_=None, call=None):
     __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     ret.update(node)
 
+    # Add any block device tags specified
+    ex_blockdevicetags = {}
+    blockdevicemappings_holder = block_device_mappings(vm_)
+    if blockdevicemappings_holder:
+        for _bd in blockdevicemappings_holder:
+            if 'tag' in _bd:
+                ex_blockdevicetags[_bd['DeviceName']] = _bd['tag']
+
+    block_device_volume_id_map = {}
+
+    if ex_blockdevicetags:
+        for _device, _map in six.iteritems(ret['blockDeviceMapping']):
+            bd_items = []
+            if isinstance(_map, dict):
+                bd_items.append(_map)
+            else:
+                for mapitem in _map:
+                    bd_items.append(mapitem)
+
+            for blockitem in bd_items:
+                if blockitem['deviceName'] in ex_blockdevicetags and 'Name' not in ex_blockdevicetags[blockitem['deviceName']]:
+                    ex_blockdevicetags[blockitem['deviceName']]['Name'] = vm_['name']
+                if blockitem['deviceName'] in ex_blockdevicetags:
+                    block_device_volume_id_map[blockitem[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[blockitem['deviceName']]
+
+    if block_device_volume_id_map:
+
+        for volid, tags in six.iteritems(block_device_volume_id_map):
+            __utils__['cloud.fire_event'](
+                'event',
+                'setting tags',
+                'salt/cloud/block_volume_{0}/tagging'.format(str(volid)),
+                args={'tags': tags},
+                sock_dir=__opts__['sock_dir'],
+                transport=__opts__['transport']
+            )
+
+            __utils__['cloud.wait_for_fun'](
+                set_tags,
+                timeout=30,
+                name=vm_['name'],
+                tags=tags,
+                resource_id=volid,
+                call='action',
+                location=location
+            )
+
     return ret
 
 
@@ -2913,6 +3028,15 @@ def stop(name, call=None):
 
     instance_id = _get_node(name)['instanceId']
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'stopping instance',
+        'salt/cloud/{0}/stopping'.format(name),
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
     result = aws.query(params,
@@ -2936,6 +3060,15 @@ def start(name, call=None):
     log.info('Starting node %s', name)
 
     instance_id = _get_node(name)['instanceId']
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'starting instance',
+        'salt/cloud/{0}/starting'.format(name),
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -4764,7 +4897,7 @@ def get_password_data(
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
             if HAS_M2:
-                key = RSA.load_key_string(rsa_key)
+                key = RSA.load_key_string(rsa_key.encode('ascii'))
                 password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
             else:
                 dsize = Crypto.Hash.SHA.digest_size

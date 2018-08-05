@@ -415,26 +415,13 @@ Section -Prerequisites
     Var /Global CheckVcRedist
     StrCpy $CheckVcRedist "False"
 
-    # Visual C++ 2015 redist packages
-    !define PY3_VC_REDIST_NAME "VC_Redist_2015"
-    !define PY3_VC_REDIST_X64_GUID "{50A2BC33-C9CD-3BF1-A8FF-53C10A0B183C}"
-    !define PY3_VC_REDIST_X86_GUID "{BBF2AC74-720C-3CB3-8291-5E34039232FA}"
-
     # Visual C++ 2008 SP1 MFC Security Update redist packages
     !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
     !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
     !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
 
-    ${If} ${PYTHON_VERSION} == 3
-        StrCpy $VcRedistName ${PY3_VC_REDIST_NAME}
-        ${If} ${CPUARCH} == "AMD64"
-            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X64_GUID}
-        ${Else}
-            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X86_GUID}
-        ${EndIf}
-        StrCpy $CheckVcRedist "True"
-
-    ${Else}
+    # VCRedist only needs to be installed for Python 2
+    ${If} ${PYTHON_VERSION} == 2
 
         StrCpy $VcRedistName ${PY2_VC_REDIST_NAME}
         ${If} ${CPUARCH} == "AMD64"

@@ -9,7 +9,7 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 .. note::
     There are three PostgreSQL returners.  Any can function as an external
-    :ref:`master job cache <external-master-cache>`. but each has different
+    :ref:`master job cache <external-job-cache>`. but each has different
     features.  SaltStack recommends
     :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
     a version of PostgreSQL that has the appropriate native binary JSON types.
@@ -64,11 +64,11 @@ Should you wish the returner data to be cleaned out every so often, set
 Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
 
 Should you wish to archive jobs in a different table for later processing,
-set ``archive_jobs`` to True.  Salt will create 3 archive tables
+set ``archive_jobs`` to True.  Salt will create 3 archive tables;
 
 - ``jids_archive``
-- ``salt_returns_archive`
-- ``salt_events_archive`
+- ``salt_returns_archive``
+- ``salt_events_archive``
 
 and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
 more than ``keep_jobs`` hours old to these tables.
@@ -189,6 +189,8 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pgjsonb'
 
+PG_SAVE_LOAD_SQL = '''INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)'''
+
 
 def __virtual__():
     if not HAS_PG:
@@ -257,6 +259,14 @@ def _get_serv(ret=None, commit=False):
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
+    if conn.server_version is not None and conn.server_version >= 90500:
+        global PG_SAVE_LOAD_SQL
+        PG_SAVE_LOAD_SQL = '''INSERT INTO jids
+                              (jid, load)
+                              VALUES (%(jid)s, %(load)s)
+                              ON CONFLICT (jid) DO UPDATE
+                              SET load=%(load)s'''
+
     cursor = conn.cursor()
 
     try:
@@ -317,13 +327,9 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     '''
     with _get_serv(commit=True) as cur:
-
-        sql = '''INSERT INTO jids
-               (jid, load)
-                VALUES (%s, %s)'''
-
         try:
-            cur.execute(sql, (jid, psycopg2.extras.Json(load)))
+            cur.execute(PG_SAVE_LOAD_SQL,
+                        {'jid': jid, 'load': psycopg2.extras.Json(load)})
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try:except: we get tons of duplicate entry errors

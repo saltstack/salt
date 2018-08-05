@@ -80,9 +80,9 @@ Other optional functions can be included to add support for
         '''
         # Get a redis connection
         serv = redis.Redis(
-                    host='redis-serv.example.com',
-                    port=6379,
-                    db='0')
+            host='redis-serv.example.com',
+            port=6379,
+            db='0')
         serv.sadd("%(id)s:jobs" % ret, ret['jid'])
         serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret['return']))
         serv.sadd('jobs', ret['jid'])

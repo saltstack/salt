@@ -291,11 +291,12 @@ def call(method, *args, **kwargs):
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
     :return: A dictionary with three keys:
 
-        * result (True/False): if the operation succeeded
-        * out (object): returns the object as-is from the call
-        * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
-        on the `correct driver repo`_ and make sure to read the FAQ_
+    - result (True/False): if the operation succeeded
+    - out (object): returns the object as-is from the call
+    - comment (string): provides more details in case the call failed
+    - traceback (string): complete traceback in case of exception. Please
+      submit an issue including this traceback on the `correct driver repo`_
+      and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
     .. _FAQ: https://github.com/napalm-automation/napalm#faq

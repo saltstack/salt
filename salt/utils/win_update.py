@@ -239,7 +239,8 @@ class WindowsUpdateAgent(object):
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
     # https://technet.microsoft.com/en-us/library/cc720442(v=ws.10).aspx
-    fail_codes = {-2145124300: 'Download failed: 0x80240034',
+    fail_codes = {-2145107924: 'WinHTTP Send/Receive failed: 0x8024402C',
+                  -2145124300: 'Download failed: 0x80240034',
                   -2145124302: 'Invalid search criteria: 0x80240032',
                   -2145124305: 'Cancelled by policy: 0x8024002F',
                   -2145124307: 'Missing source: 0x8024002D',

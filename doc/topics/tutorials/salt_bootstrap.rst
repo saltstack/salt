@@ -268,7 +268,7 @@ Command Line Options
 
 Here's a summary of the command line options:
 
-.. code-block:: bash
+.. code-block:: text
 
     $ sh bootstrap-salt.sh -h
 

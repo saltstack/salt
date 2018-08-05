@@ -24,7 +24,7 @@ the targeting state. The following example demonstrates a direct requisite:
 .. code-block:: yaml
 
     vim:
-      pkg.installed: []
+      pkg.installed
 
     /etc/vimrc:
       file.managed:
@@ -86,7 +86,7 @@ State target matching
 ~~~~~~~~~~~~~~~~~~~~~
 
 In order to understand how state targets are matched, it is helpful to know
-:ref:`how the state compiler is working <compiler_ordering>`. Consider the following
+:ref:`how the state compiler is working <compiler-ordering>`. Consider the following
 example:
 
 .. code-block:: yaml
@@ -673,7 +673,7 @@ id declaration. This is useful when many files need to have the same defaults.
         - group: apache
         - mode: 755
 
-    /etc/bar.conf
+    /etc/bar.conf:
       file.managed:
         - source: salt://bar.conf
         - use:
@@ -869,7 +869,7 @@ See :ref:`Reloading Modules <reloading-modules>`.
        - reload_grains: true
 
     grains_read:
-      module.run: 
+      module.run:
        - name: grains.items
 
 .. _unless-requisite:
@@ -1024,10 +1024,10 @@ same privileges as the salt-minion.
     comment-repo:
       file.replace:
         - name: /etc/yum.repos.d/fedora.repo
-        - pattern: ^enabled=0
+        - pattern: '^enabled=0'
         - repl: enabled=1
         - check_cmd:
-          - ! grep 'enabled=0' /etc/yum.repos.d/fedora.repo
+          - "! grep 'enabled=0' /etc/yum.repos.d/fedora.repo"
 
 This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
 replace them with ``enabled=1``. The ``check_cmd`` is just a bash command. It

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
+    :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
     Tests for host functions in salt.utils.vmware
 '''
@@ -105,7 +105,6 @@ class GetHostsTestCase(TestCase):
                         self.mock_si, datacenter_name='fake_datacenter',
                         cluster_name='fake_cluster')
         mock_get_dc.assert_called_once_with(self.mock_si, 'fake_datacenter')
-        mock_get_cl.assert_called_once_with(mock_dc, 'fake_cluster')
         mock_get_mors.assert_called_once_with(self.mock_si,
                                               vim.HostSystem,
                                               container_ref=mock_dc,

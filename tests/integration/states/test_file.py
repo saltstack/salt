@@ -24,11 +24,13 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
+    destructiveTest,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
     with_tempfile,
     Webserver,
+    destructiveTest
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -143,6 +145,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         remove files created in previous tests
         '''
+        user = 'salt'
+        if user in str(self.run_function('user.list_users', [user])):
+            self.run_function('user.delete', [user])
+
         for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
             try:
                 os.remove(path)
@@ -655,6 +661,99 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Check that we identified a hash mismatch
             self.assertIn(
                 'does not exist', ret['comment'])
+
+    def test_managed_unicode_jinja_with_tojson_filter(self):
+        '''
+        Using {{ varname }} with a list or dictionary which contains unicode
+        types on Python 2 will result in Jinja rendering the "u" prefix on each
+        string. This tests that using the "tojson" jinja filter will dump them
+        to a format which can be successfully loaded by our YAML loader.
+
+        The two lines that should end up being rendered are meant to test two
+        issues that would trip up PyYAML if the "tojson" filter were not used:
+
+        1. A unicode string type would be loaded as a unicode literal with the
+           leading "u" as well as the quotes, rather than simply being loaded
+           as the proper unicode type which matches the content of the string
+           literal. In other wordss, u'foo' would be loaded literally as
+           u"u'foo'". This test includes actual non-ascii unicode in one of the
+           strings to confirm that this also handles these international
+           characters properly.
+
+        2. Any unicode string type (such as a URL) which contains a colon would
+           cause a ScannerError in PyYAML, as it would be assumed to delimit a
+           mapping node.
+
+        Dumping the data structure to JSON using the "tojson" jinja filter
+        should produce an inline data structure which is valid YAML and will be
+        loaded properly by our YAML loader.
+        '''
+        test_file = os.path.join(TMP, 'test-tojson.txt')
+        ret = self.run_function(
+            'state.apply',
+            mods='tojson',
+            pillar={'tojson-file': test_file})
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        with salt.utils.files.fopen(test_file) as fp_:
+            managed = salt.utils.stringutils.to_unicode(fp_.read())
+        expected = textwrap.dedent('''\
+            Die Webseite ist https://saltstack.com.
+            Der Zucker ist süß.
+
+            ''')
+        assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
+
+    def test_managed_source_hash_indifferent_case(self):
+        '''
+        Test passing a source_hash as an uppercase hash.
+
+        This is a regression test for Issue #38914 and Issue #48230 (test=true use).
+        '''
+        name = os.path.join(TMP, 'source_hash_indifferent_case')
+        state_name = 'file_|-{0}_|' \
+                     '-{0}_|-managed'.format(name)
+        local_path = os.path.join(FILES, 'file', 'base', 'hello_world.txt')
+        actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
+        uppercase_hash = actual_hash.upper()
+
+        try:
+            # Lay down tmp file to test against
+            self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=actual_hash
+            )
+
+            # Test uppercase source_hash: should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+            # Test uppercase source_hash using test=true
+            # Should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash,
+                test=True
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['pchanges'] == {}
+            assert ret[state_name]['changes'] == {}
+
+        finally:
+            # Clean Up File
+            if os.path.exists(name):
+                os.remove(name)
 
     def test_directory(self):
         '''
@@ -2211,6 +2310,30 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.exists(dest))
         self.assertTrue(filecmp.cmp(source, dest))
 
+        os.remove(source)
+        os.remove(dest)
+
+    @destructiveTest
+    @with_tempfile()
+    def test_file_copy_make_dirs(self, source):
+        '''
+        ensure make_dirs creates correct user perms
+        '''
+        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
+        dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
+
+        user = 'salt'
+        mode = '0644'
+        self.run_function('user.add', [user])
+        ret = self.run_state('file.copy', name=dest, source=source, user=user,
+                             makedirs=True, mode=mode)
+        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        for check in file_checks:
+            user_check = self.run_function('file.get_user', [check])
+            mode_check = self.run_function('file.get_mode', [check])
+            assert user_check == user
+            assert salt.utils.files.normalize_mode(mode_check) == mode
+
     def test_contents_pillar_with_pillar_list(self):
         '''
         This tests for any regressions for this issue:
@@ -2278,61 +2401,100 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    @with_tempdir()
+    def test_issue_48336_file_managed_mode_setuid(self, tempdir, user, group):
+        '''
+        Ensure that mode is correct with changing of ownership and group
+        symlinks)
+        '''
+        tempfile = os.path.join(tempdir, 'temp_file_issue_48336')
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed', name=tempfile,
+            user=user, group=group, mode='4750',
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Check that the owner and group are correct, and
+        # the mode is what we expect
+        temp_file_stats = os.stat(tempfile)
+
+        # Normalize the mode
+        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = salt.utils.files.normalize_mode(temp_file_mode)
+
+        self.assertEqual(temp_file_mode, '4750')
+        self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = textwrap.dedent('''\
-        Line 1 of block
-        Line 2 of block
-        ''')
-    without_block = textwrap.dedent('''\
-        Hello world!
-
-        # comment here
-        ''')
-    with_non_matching_block = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        No match here
-        # end
-        # comment here
-        ''')
-    with_non_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        No match here# end
-        # comment here
-        ''')
-    with_matching_block = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block
-        # end
-        # comment here
-        ''')
-    with_matching_block_and_extra_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block
-
-        # end
-        # comment here
-        ''')
-    with_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
-        Hello world!
-
-        # start
-        Line 1 of block
-        Line 2 of block# end
-        # comment here
-        ''')
+    content = os.linesep.join([
+        'Line 1 of block',
+        'Line 2 of block',
+        ''
+    ])
+    without_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# comment here',
+        ''
+    ])
+    with_non_matching_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'No match here',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_non_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'No match here# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block_and_extra_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block',
+        '',
+        '# end',
+        '# comment here',
+        ''
+    ])
+    with_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        'Hello world!',
+        '',
+        '# start',
+        'Line 1 of block',
+        'Line 2 of block# end',
+        '# comment here',
+        ''
+    ])
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'
@@ -4131,3 +4293,54 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
+
+WIN_TEST_FILE = 'c:/testfile'
+
+
+@destructiveTest
+@skipIf(not IS_WINDOWS, 'windows test only')
+class WinFileTest(ModuleCase):
+    '''
+    Test for the file state on Windows
+    '''
+    def setUp(self):
+        self.run_state('file.managed', name=WIN_TEST_FILE, makedirs=True, contents='Only a test')
+
+    def tearDown(self):
+        self.run_state('file.absent', name=WIN_TEST_FILE)
+
+    def test_file_managed(self):
+        '''
+        Test file.managed on Windows
+        '''
+        self.assertTrue(self.run_state('file.exists', name=WIN_TEST_FILE))
+
+    def test_file_copy(self):
+        '''
+        Test file.copy on Windows
+        '''
+        ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source=WIN_TEST_FILE)
+        self.assertTrue(ret)
+
+    def test_file_comment(self):
+        '''
+        Test file.comment on Windows
+        '''
+        self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#Only'))
+
+    def test_file_replace(self):
+        '''
+        Test file.replace on Windows
+        '''
+        self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertIn('testing', fp_.read())
+
+    def test_file_absent(self):
+        '''
+        Test file.absent on Windows
+        '''
+        ret = self.run_state('file.absent', name=WIN_TEST_FILE)
+        self.assertTrue(ret)

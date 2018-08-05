@@ -22,6 +22,7 @@ from zipimport import zipimporter
 # Import salt libs
 import salt.config
 import salt.syspaths
+import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -67,10 +68,10 @@ if USE_IMPORTLIB:
     SUFFIXES = []
     for suffix in importlib.machinery.EXTENSION_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_EXTENSION))
-    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
-        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     for suffix in importlib.machinery.SOURCE_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_SOURCE))
+    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
+        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     MODULE_KIND_MAP = {
         MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
         MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
@@ -460,7 +461,7 @@ def fileserver(opts, backends):
                       pack={'__utils__': utils(opts)})
 
 
-def roster(opts, runner, whitelist=None):
+def roster(opts, runner=None, utils=None, whitelist=None):
     '''
     Returns the roster modules
     '''
@@ -469,7 +470,10 @@ def roster(opts, runner, whitelist=None):
         opts,
         tag='roster',
         whitelist=whitelist,
-        pack={'__runner__': runner},
+        pack={
+            '__runner__': runner,
+            '__utils__': utils,
+        },
     )
 
 
@@ -751,10 +755,13 @@ def grains(opts, force_refresh=False, proxy=None):
             # proxymodule for retrieving information from the connected
             # device.
             log.trace('Loading %s grain', key)
-            if funcs[key].__code__.co_argcount == 1:
-                ret = funcs[key](proxy)
-            else:
-                ret = funcs[key]()
+            parameters = salt.utils.args.get_function_argspec(funcs[key]).args
+            kwargs = {}
+            if 'proxy' in parameters:
+                kwargs['proxy'] = proxy
+            if 'grains' in parameters:
+                kwargs['grains'] = grains_data
+            ret = funcs[key](**kwargs)
         except Exception:
             if salt.utils.platform.is_proxy():
                 log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
@@ -840,7 +847,7 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None, context=None):
+def runner(opts, utils=None, context=None, whitelist=None):
     '''
     Directly call a function inside a loader directory
     '''
@@ -853,6 +860,7 @@ def runner(opts, utils=None, context=None):
         opts,
         tag='runners',
         pack={'__utils__': utils, '__context__': context},
+        whitelist=whitelist,
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack['__salt__'] = ret
@@ -967,12 +975,14 @@ def executors(opts, functions=None, context=None, proxy=None):
     '''
     Returns the executor modules
     '''
-    return LazyLoader(
+    executors = LazyLoader(
         _module_dirs(opts, 'executors', 'executor'),
         opts,
         tag='executor',
         pack={'__salt__': functions, '__context__': context or {}, '__proxy__': proxy or {}},
     )
+    executors.pack['__executors__'] = executors
+    return executors
 
 
 def cache(opts, serial):

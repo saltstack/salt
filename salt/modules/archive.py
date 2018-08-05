@@ -186,12 +186,13 @@ def list_(name,
                 else {'fileobj': cached.stdout, 'mode': 'r|'}
             with contextlib.closing(tarfile.open(**open_kwargs)) as tar_archive:
                 for member in tar_archive.getmembers():
+                    _member = salt.utils.data.decode(member.name)
                     if member.issym():
-                        links.append(member.name)
+                        links.append(_member)
                     elif member.isdir():
-                        dirs.append(member.name + '/')
+                        dirs.append(_member + '/')
                     else:
-                        files.append(member.name)
+                        files.append(_member)
             return dirs, files, links
 
         except tarfile.ReadError:

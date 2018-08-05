@@ -59,8 +59,12 @@ from tests.support.paths import FILES, TMP
 import salt.utils.files
 import salt.utils.platform
 
-log = logging.getLogger(__name__)
+if salt.utils.platform.is_windows():
+    import salt.utils.win_functions
+else:
+    import pwd
 
+log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
 
@@ -614,7 +618,7 @@ def requires_network(only_local_network=False):
     return decorator
 
 
-def with_system_user(username, on_existing='delete', delete=True, password=None):
+def with_system_user(username, on_existing='delete', delete=True, password=None, groups=None):
     '''
     Create and optionally destroy a system user to be used within a test
     case. The system user is created using the ``user`` salt module.
@@ -647,7 +651,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
 
             # Let's add the user to the system.
             log.debug('Creating system user {0!r}'.format(username))
-            kwargs = {'timeout': 60}
+            kwargs = {'timeout': 60, 'groups': groups}
             if salt.utils.platform.is_windows():
                 kwargs.update({'password': password})
             create_user = cls.run_function('user.add', [username], **kwargs)
@@ -681,7 +685,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
                             username
                         )
                     )
-                    create_user = cls.run_function('user.add', [username])
+                    create_user = cls.run_function('user.add', [username], **kwargs)
                     if not create_user:
                         cls.skipTest(
                             'A user named {0!r} already existed, was deleted '
@@ -1109,7 +1113,7 @@ def requires_salt_modules(*names):
                 )
 
             for name in names:
-                if name not in cls.run_function('sys.doc'):
+                if name not in cls.run_function('sys.doc', [name]):
                     cls.skipTest(
                         'Salt module {0!r} is not available'.format(name)
                     )
@@ -1159,7 +1163,6 @@ def skip_if_not_root(func):
             func.__unittest_skip__ = True
             func.__unittest_skip_why__ = 'You must be logged in as root to run this test'
     else:
-        import salt.utils.win_functions
         current_user = salt.utils.win_functions.get_current_user()
         if current_user != 'SYSTEM':
             if not salt.utils.win_functions.is_admin(current_user):
@@ -1592,3 +1595,12 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     gone, alive = psutil.wait_procs(children, timeout=timeout,
                                     callback=on_terminate)
     return (gone, alive)
+
+
+def this_user():
+    '''
+    Get the user associated with the current process.
+    '''
+    if salt.utils.platform.is_windows():
+        return salt.utils.win_functions.get_current_user(with_domain=False)
+    return pwd.getpwuid(os.getuid())[0]

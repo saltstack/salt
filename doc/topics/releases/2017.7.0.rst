@@ -607,13 +607,14 @@ documentation for :ref:`skip_translate
 New SSH Cache Roster
 ====================
 
-The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch to increase its usefulness.
-The new roster supports all minion matchers,
-so it is now possible to target minions identically through `salt` and `salt-ssh`.
+The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch
+to increase its usefulness.  The new roster supports all minion matchers, so it
+is now possible to target minions identically through `salt` and `salt-ssh`.
 
-Using the new ``roster_order`` configuration syntax it's now possible to compose a roster out of any combination
-of grains, pillar and mine data and even Salt SDB URLs.
-The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
+Using the new ``roster_order`` configuration syntax it's now possible to
+compose a roster out of any combination of grains, pillar and mine data and
+even Salt SDB URLs.  The new release is also fully IPv4 and IPv6 enabled and
+even has support for CIDR ranges.
 
 Salt-SSH Default Options
 ========================
@@ -621,8 +622,8 @@ Salt-SSH Default Options
 Defaults for rosters can now be set, so that they don't have to be set on every
 entry in a roster or specified from the commandline.
 
-The new option is :ref:`roster_defaults<roster-defaults>` and is specified in
-the master config file.
+The new option is :conf_master:`roster_defaults` and is specified in the master
+config file:
 
 .. code-block:: yaml
 

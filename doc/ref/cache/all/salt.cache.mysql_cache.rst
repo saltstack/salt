@@ -1,5 +1,5 @@
-salt.cache.mysql_cache module
-=============================
+salt.cache.mysql_cache
+======================
 
 .. automodule:: salt.cache.mysql_cache
     :members:

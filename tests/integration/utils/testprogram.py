@@ -14,6 +14,7 @@ import logging
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -590,8 +591,24 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         'log_dir',
         'script_dir',
     ])
+
+    pub_port = 4505
+    ret_port = 4506
+    for port in [pub_port, ret_port]:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            connect = sock.bind(('localhost', port))
+        except OSError:
+            # these ports are already in use, use different ones
+            pub_port = 4606
+            ret_port = 4607
+            break
+        sock.close()
+
     config_base = {
         'root_dir': '{test_dir}',
+        'publish_port': pub_port,
+        'ret_port': ret_port,
     }
     configs = {}
     config_dir = os.path.join('etc', 'salt')

@@ -69,7 +69,7 @@ structure::
     If you deal with objects greater than 8MB, then you should use the
     following AWS CLI config to avoid mutipart upload:
 
-    .. code-block::
+    .. code-block:: text
 
         s3 =
           multipart_threshold = 1024MB

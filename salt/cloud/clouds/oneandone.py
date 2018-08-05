@@ -3,18 +3,14 @@
 1&1 Cloud Server Module
 =======================
 
-=======
-The 1&1 SaltStack cloud module allows a 1&1 server to
-be automatically deployed and bootstrapped with Salt.
-It also has functions to create block storages
-and ssh keys.
+The 1&1 SaltStack cloud module allows a 1&1 server to be automatically deployed
+and bootstrapped with Salt. It also has functions to create block storages and
+ssh keys.
 
 :depends: 1and1 >= 1.2.0
 
-The module requires the 1&1 api_token to be provided.
-The server should also be assigned a public LAN, a private LAN,
-or both along with SSH key pairs.
-...
+The module requires the 1&1 api_token to be provided.  The server should also
+be assigned a public LAN, a private LAN, or both along with SSH key pairs.
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/oneandone.conf``:

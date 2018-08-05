@@ -15,7 +15,7 @@
 # limitations under the License.
 
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 
 # Import Python Libs

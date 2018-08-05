@@ -58,10 +58,10 @@ the mine where it can be easily retrieved by other minions.
         - source: salt://signing_policies.conf
 
     /etc/pki:
-      file.directory: []
+      file.directory
 
     /etc/pki/issued_certs:
-      file.directory: []
+      file.directory
 
     /etc/pki/ca.crt:
       x509.certificate_managed:
@@ -123,10 +123,10 @@ handle properly formatting the text before writing the output.
 
 /srv/salt/cert.sls
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     /usr/local/share/ca-certificates:
-      file.directory: []
+      file.directory
 
     /usr/local/share/ca-certificates/intca.crt:
       x509.pem_managed:
@@ -286,7 +286,7 @@ def private_key_managed(name,
     The jinja templating in this example ensures a private key is generated if the file doesn't exist
     and that a new private key is generated whenever the certificate that uses it is to be renewed.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         /etc/pki/www.key:
           x509.private_key_managed:
@@ -331,7 +331,7 @@ def csr_managed(name,
         and public key. See above for valid properties.
 
     kwargs:
-        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
+        Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
 
     Example:
 
@@ -371,21 +371,27 @@ def certificate_managed(name,
     '''
     Manage a Certificate
 
-    name:
+    name
         Path to the certificate
 
-    days_remaining:
-        The minimum number of days remaining when the certificate should be recreated. Default is 90. A
-        value of 0 disables automatic renewal.
+    days_remaining : 90
+        The minimum number of days remaining when the certificate should be
+        recreated. A value of 0 disables automatic renewal.
 
-    managed_private_key:
-        Manages the private key corresponding to the certificate. All of the arguments supported by :state:`x509.private_key_managed <salt.states.x509.private_key_managed>` are supported. If `name` is not speicified or is the same as the name of the certificate, the private key and certificate will be written together in the same file.
+    managed_private_key
+        Manages the private key corresponding to the certificate. All of the
+        arguments supported by :py:func:`x509.private_key_managed
+        <salt.states.x509.private_key_managed>` are supported. If `name` is not
+        speicified or is the same as the name of the certificate, the private
+        key and certificate will be written together in the same file.
 
     append_certs:
         A list of certificates to be appended to the managed file.
 
     kwargs:
-        Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` or :state:`file.managed <salt.states.file.managed>` are supported.
+        Any arguments supported by :py:func:`x509.create_certificate
+        <salt.modules.x509.create_certificate>` or :py:func:`file.managed
+        <salt.states.file.managed>` are supported.
 
     Examples:
 
@@ -585,41 +591,42 @@ def crl_managed(name,
     '''
     Manage a Certificate Revocation List
 
-    name:
+    name
         Path to the certificate
 
-    signing_private_key:
+    signing_private_key
         The private key that will be used to sign this crl. This is
         usually your CA's private key.
 
-    signing_private_key_passphrase:
+    signing_private_key_passphrase
         Passphrase to decrypt the private key.
 
-    signing_cert:
+    signing_cert
         The certificate of the authority that will be used to sign this crl.
         This is usually your CA's certificate.
 
-    revoked:
+    revoked
         A list of certificates to revoke. Must include either a serial number or a
         the certificate itself. Can optionally include the revocation date and
         notAfter date from the certificate. See example below for details.
 
-    days_valid:
-        The number of days the certificate should be valid for. Default is 100.
+    days_valid : 100
+        The number of days the certificate should be valid for.
 
-    digest:
-        The digest to use for signing the CRL.
-        This has no effect on versions of pyOpenSSL less than 0.14
+    digest
+        The digest to use for signing the CRL. This has no effect on versions
+        of pyOpenSSL less than 0.14.
 
-    days_remaining:
-        The crl should be automatically recreated if there are less than ``days_remaining``
-        days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
+    days_remaining : 30
+        The crl should be automatically recreated if there are less than
+        ``days_remaining`` days until the crl expires. Set to 0 to disable
+        automatic renewal.
 
-    include_expired:
-        Include expired certificates in the CRL. Default is ``False``.
+    include_expired : False
+        If ``True``, include expired certificates in the CRL.
 
-    kwargs:
-        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
+    kwargs
+        Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
 
     Example:
 
@@ -704,7 +711,7 @@ def pem_managed(name,
         The PEM formatted text to write.
 
     kwargs:
-        Any arguments supported by :state:`file.managed <salt.states.file.managed>` are supported.
+        Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
     '''
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args['contents'] = __salt__['x509.get_pem_entry'](text=text)

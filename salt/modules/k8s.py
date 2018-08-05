@@ -210,6 +210,7 @@ def _set_labels(node, apiserver_url, labels):
 def get_labels(node=None, apiserver_url=None):
     '''
     .. versionadded:: 2016.3.0
+
     Get labels from the current node
 
     CLI Example:

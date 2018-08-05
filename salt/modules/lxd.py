@@ -50,12 +50,12 @@ from salt.ext.six.moves import zip
 # Import 3rd-party libs
 try:
     import pylxd
-    PYLXD_AVAILABLE = True
+    HAS_PYLXD = True
 
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
-    PYLXD_AVAILABLE = False
+    HAS_PYLXD = False
 
 # Set up logging
 import logging
@@ -87,7 +87,7 @@ _connection_pool = {}
 
 
 def __virtual__():
-    if PYLXD_AVAILABLE:
+    if HAS_PYLXD:
         if (LooseVersion(pylxd_version()) <
                 LooseVersion(_pylxd_minimal_version)):
             return (
@@ -3579,40 +3579,39 @@ def _pylxd_model_to_dict(obj):
 # Monkey patching for missing functionality in pylxd
 #
 
-import pylxd.exceptions     # NOQA
+if HAS_PYLXD:
+    import pylxd.exceptions     # NOQA
 
-if not hasattr(pylxd.exceptions, 'NotFound'):
-    # Old version of pylxd
+    if not hasattr(pylxd.exceptions, 'NotFound'):
+        # Old version of pylxd
 
-    class NotFound(pylxd.exceptions.LXDAPIException):
-        """An exception raised when an object is not found."""
+        class NotFound(pylxd.exceptions.LXDAPIException):
+            """An exception raised when an object is not found."""
 
-    pylxd.exceptions.NotFound = NotFound
+        pylxd.exceptions.NotFound = NotFound
 
-try:
-    from pylxd.container import Container
-except ImportError:
-    from pylxd.models.container import Container
+    try:
+        from pylxd.container import Container
+    except ImportError:
+        from pylxd.models.container import Container
 
+    class FilesManager(Container.FilesManager):
 
-class FilesManager(Container.FilesManager):
+        def put(self, filepath, data, mode=None, uid=None, gid=None):
+            headers = {}
+            if mode is not None:
+                if isinstance(mode, int):
+                    mode = oct(mode)
+                elif not mode.startswith('0'):
+                    mode = '0{0}'.format(mode)
+                headers['X-LXD-mode'] = mode
+            if uid is not None:
+                headers['X-LXD-uid'] = six.text_type(uid)
+            if gid is not None:
+                headers['X-LXD-gid'] = six.text_type(gid)
+            response = self._client.api.containers[
+                self._container.name].files.post(
+                params={'path': filepath}, data=data, headers=headers)
+            return response.status_code == 200
 
-    def put(self, filepath, data, mode=None, uid=None, gid=None):
-        headers = {}
-        if mode is not None:
-            if isinstance(mode, int):
-                mode = oct(mode)
-            elif not mode.startswith('0'):
-                mode = '0{0}'.format(mode)
-            headers['X-LXD-mode'] = mode
-        if uid is not None:
-            headers['X-LXD-uid'] = six.text_type(uid)
-        if gid is not None:
-            headers['X-LXD-gid'] = six.text_type(gid)
-        response = self._client.api.containers[
-            self._container.name].files.post(
-            params={'path': filepath}, data=data, headers=headers)
-        return response.status_code == 200
-
-
-Container.FilesManager = FilesManager
+    Container.FilesManager = FilesManager

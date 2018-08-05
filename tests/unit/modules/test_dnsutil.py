@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import python libs
@@ -13,7 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
-    call,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -51,24 +50,23 @@ mock_soa_zone = salt.utils.stringutils.to_str(
                 '1                       PTR     localhost.')
 
 if NO_MOCK is False:
-    mock_calls_list = [
-            call.read(),
-            call.write(salt.utils.stringutils.to_str('##\n')),
-            call.write(salt.utils.stringutils.to_str('# Host Database\n')),
-            call.write(salt.utils.stringutils.to_str('#\n')),
-            call.write(salt.utils.stringutils.to_str('# localhost is used to configure the '
-                                                     'loopback interface\n')),
-            call.write(salt.utils.stringutils.to_str('# when the system is booting.  Do not '
-                                                     'change this entry.\n')),
-            call.write(salt.utils.stringutils.to_str('##\n')),
-            call.write(salt.utils.stringutils.to_str('127.0.0.1 localhost')),
-            call.write(salt.utils.stringutils.to_str('\n')),
-            call.write(salt.utils.stringutils.to_str('255.255.255.255 broadcasthost')),
-            call.write(salt.utils.stringutils.to_str('\n')),
-            call.write(salt.utils.stringutils.to_str('::1 localhost')),
-            call.write(salt.utils.stringutils.to_str('\n')),
-            call.write(salt.utils.stringutils.to_str('fe80::1%lo0 localhost')),
-            call.write(salt.utils.stringutils.to_str('\n'))]
+    mock_writes_list = salt.utils.data.decode([
+            '##\n',
+            '# Host Database\n',
+            '#\n',
+            '# localhost is used to configure the loopback interface\n',
+            '# when the system is booting.  Do not change this entry.\n',
+            '##\n',
+            '127.0.0.1 localhost',
+            '\n',
+            '255.255.255.255 broadcasthost',
+            '\n',
+            '::1 localhost',
+            '\n',
+            'fe80::1%lo0 localhost',
+            '\n'
+    ], to_str=True
+)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -84,18 +82,21 @@ class DNSUtilTestCase(TestCase):
         with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
                 patch('salt.modules.dnsutil.parse_hosts', MagicMock(return_value=mock_hosts_file_rtn)):
             dnsutil.hosts_append('/etc/hosts', '127.0.0.1', 'ad1.yuk.co,ad2.yuk.co')
-            helper_open = m_open()
-            helper_open.write.assert_called_once_with(
-                    salt.utils.stringutils.to_str('\n127.0.0.1 ad1.yuk.co ad2.yuk.co'))
+            writes = m_open.write_calls()
+            # We should have called .write() only once, with the expected
+            # content
+            num_writes = len(writes)
+            assert num_writes == 1, num_writes
+            expected = salt.utils.stringutils.to_str('\n127.0.0.1 ad1.yuk.co ad2.yuk.co')
+            assert writes[0] == expected, writes[0]
 
     def test_hosts_remove(self):
         to_remove = 'ad1.yuk.co'
         new_mock_file = mock_hosts_file + '\n127.0.0.1 ' + to_remove + '\n'
         with patch('salt.utils.files.fopen', mock_open(read_data=new_mock_file)) as m_open:
             dnsutil.hosts_remove('/etc/hosts', to_remove)
-            helper_open = m_open()
-            calls_list = helper_open.method_calls
-            self.assertEqual(calls_list, mock_calls_list)
+            writes = m_open.write_calls()
+            assert writes == mock_writes_list, writes
 
     @skipIf(True, 'Waiting on bug report fixes')
     def test_parse_zone(self):

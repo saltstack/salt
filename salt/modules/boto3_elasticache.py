@@ -53,7 +53,6 @@ import time
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 

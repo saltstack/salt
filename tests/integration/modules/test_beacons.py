@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Justin Anderson <janderson@saltstack.com>`
+    :codeauthor: Justin Anderson <janderson@saltstack.com>
 '''
 
 # Python Libs

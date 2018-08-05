@@ -4,7 +4,7 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
 
 .. versionadded:: Fluorine
 
-:codeauthor: :email:`Jasper Lievisse Adriaanse <jasper@openbsd.org>`
+:codeauthor: ``Jasper Lievisse Adriaanse <jasper@openbsd.org>``
 
 .. note::
 
@@ -285,8 +285,8 @@ def start(name=None, id=None, bootpath=None, disk=None, disks=None, local_iface=
 
 def status(name=None, id=None):
     '''
-    List VMs running on the host, or only the VM specified by ``id''.
-    When both a name and id are provided, the id is ignored.
+    List VMs running on the host, or only the VM specified by ``id``.  When
+    both a name and id are provided, the id is ignored.
 
     name:
         Name of the defined VM.
