@@ -23,7 +23,6 @@ except ImportError:
 import salt.loader
 import salt.config
 from salt.ext import six
-from salt.template import compile_template
 
 
 __opts__ = salt.config.minion_config('/etc/salt/minion')
