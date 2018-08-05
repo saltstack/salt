@@ -461,18 +461,13 @@ def _get_reg_software():
                                                     '{0}\\{1}'.format(key, reg_key),
                                                     'DisplayVersion',
                                                     use_32bit)
-        if (not d_vers_regdata['success'] or
-            d_vers_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD'] or
-                d_vers_regdata['vdata'] in [None, False]):
-            return
-
-        if isinstance(d_vers_regdata['vdata'], int):
-            d_vers = six.text_type(d_vers_regdata['vdata'])
-        else:
-            d_vers = d_vers_regdata['vdata']
-
-        if not d_vers or d_vers == '(value not set)':
-            d_vers = 'Not Found'
+        d_vers = 'Not Found'
+        if (d_vers_regdata['success'] and
+            d_vers_regdata['vtype'] in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD']):
+            if isinstance(d_vers_regdata['vdata'], int):
+                d_vers = six.text_type(d_vers_regdata['vdata'])
+            elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
+                d_vers = d_vers_regdata['vdata']
 
         check_ok = False
         for check_reg in ['UninstallString', 'QuietUninstallString', 'ModifyPath']:
