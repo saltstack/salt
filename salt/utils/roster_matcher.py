@@ -20,8 +20,6 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import Salt libs
-import salt.loader
-import salt.config
 from salt.ext import six
 
 
