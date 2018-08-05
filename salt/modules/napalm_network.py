@@ -1547,7 +1547,7 @@ def load_config(filename=None,
 
 
 @salt.utils.napalm.proxy_napalm_wrap
-def load_template(template_name,
+def load_template(template_name=None,
                   template_source=None,
                   template_hash=None,
                   template_hash_name=None,
