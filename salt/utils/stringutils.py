@@ -33,8 +33,8 @@ def to_bytes(s, encoding=None, errors='strict'):
     python 2)
     '''
     if encoding is None:
-        # Try utf-8 first, then latin-1, and fall back to detected encoding
-        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
@@ -74,8 +74,8 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
             return s
 
     if encoding is None:
-        # Try utf-8 first, then latin-1, and fall back to detected encoding
-        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
@@ -126,8 +126,8 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         return unicodedata.normalize('NFC', s) if normalize else s
 
     if encoding is None:
-        # Try utf-8 first, then latin-1, and fall back to detected encoding
-        encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
     if not isinstance(encoding, (tuple, list)):
         encoding = (encoding,)
 
@@ -557,12 +557,13 @@ def get_diff(a, b, *args, **kwargs):
     the diff as as string. Lines are normalized to str types to avoid issues
     with unicode on PY2.
     '''
+    encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
     # Late import to avoid circular import
     import salt.utils.data
     return ''.join(
         difflib.unified_diff(
-            salt.utils.data.decode_list(a),
-            salt.utils.data.decode_list(b),
+            salt.utils.data.decode_list(a, encoding=encoding),
+            salt.utils.data.decode_list(b, encoding=encoding),
             *args, **kwargs
         )
     )
