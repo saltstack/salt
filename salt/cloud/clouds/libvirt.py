@@ -422,7 +422,7 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            clone_xml = ElementTree.tostring(domain_xml)
+            clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
             log.debug("Clone XML '%s'", clone_xml)
 
             validate_flags = libvirt.VIR_DOMAIN_DEFINE_VALIDATE if validate_xml else 0
@@ -615,7 +615,7 @@ def create_volume_xml(volume):
     log.debug("Volume: %s", dir(volume))
     volume_xml.find('capacity').text = six.text_type(volume.info()[1])
     volume_xml.find('./target/path').text = volume.path()
-    xml_string = ElementTree.tostring(volume_xml)
+    xml_string = salt.utils.stringutils.to_str(ElementTree.tostring(volume_xml))
     log.debug("Creating %s", xml_string)
     return xml_string
 
@@ -641,7 +641,7 @@ def create_volume_with_backing_store_xml(volume):
     log.debug("volume: %s", dir(volume))
     volume_xml.find('capacity').text = six.text_type(volume.info()[1])
     volume_xml.find('./backingStore/path').text = volume.path()
-    xml_string = ElementTree.tostring(volume_xml)
+    xml_string = salt.utils.stringutils.to_str(ElementTree.tostring(volume_xml))
     log.debug("Creating %s", xml_string)
     return xml_string
 
