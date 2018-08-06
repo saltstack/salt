@@ -79,8 +79,7 @@ def beacon(config):
               - tags:
                   <tag>:
                     regex: <pattern>
-    '''
-    '''
+    
     The defined tag is added to the beacon event tag.
     This is not the tag in the log.
 
