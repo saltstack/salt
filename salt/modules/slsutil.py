@@ -173,13 +173,15 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
         path_or_string = ':string:'
         kwargs['input_data'] = string
 
-    return salt.template.compile_template(
-            path_or_string,
-            renderers,
-            default_renderer,
-            __opts__['renderer_blacklist'],
-            __opts__['renderer_whitelist'],
-            **kwargs)
+    ret = salt.template.compile_template(
+        path_or_string,
+        renderers,
+        default_renderer,
+        __opts__['renderer_blacklist'],
+        __opts__['renderer_whitelist'],
+        **kwargs
+    )
+    return ret.read() if __utils__['stringio.is_readable'](ret) else ret
 
 
 def _get_serialize_fn(serializer, fn_name):
