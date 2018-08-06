@@ -236,7 +236,7 @@ class Runner(RunnerClient):
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
-                if self.opts.get('asynchronous', False):
+                if self.opts.get('async', False):
                     if self.opts.get('eauth'):
                         async_pub = self.cmd_async(low)
                     else:
