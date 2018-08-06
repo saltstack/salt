@@ -48,6 +48,12 @@ import gettext
 t = gettext.translation('salt-ssh', '/usr/share/salt/locale')
 _ = t.ugettext
 
+# this could be converted to
+# from salt.utils.gettext import gt
+# t = gt.translation('salt-ssh', '/usr/share/salt/locale')
+# _gt = t.ugettext
+# See also: https://docs.python.org/3/library/gettext.html#class-based-api to maybe avoid installing on every file
+
 ...
 
                 2: {
