@@ -615,7 +615,7 @@ class RemoteFuncs(object):
                 ret[minion] = fdata.get(functions_allowed[0])
             elif _ret_dict:
                 for fun in list(set(functions_allowed) & set(fdata.keys())):
-                    ret.setdefault(fun,{})[minion] = fdata.get(fun)
+                    ret.setdefault(fun, {})[minion] = fdata.get(fun)
 
         return ret
 
