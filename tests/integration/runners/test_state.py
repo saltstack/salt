@@ -19,8 +19,9 @@ from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.helpers import flaky
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.utils
@@ -53,7 +54,6 @@ class StateRunnerTest(ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        #ret_output = self.run_run_plus('state.orchestrate', 'orch.simple')['out']
         ret_output = self.run_run('state.orchestrate orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
@@ -64,11 +64,11 @@ class StateRunnerTest(ShellCase):
 
         # First, check that we don't have the "bad" output that was displaying in
         # Issue #31330 where only the highstate outputter was listed
-        self.assertIsNot(bad_out, ret_output)
+        assert bad_out != ret_output
 
         # Now test that some expected good sample output is present in the return.
         for item in good_out:
-            self.assertIn(item, ret_output)
+            assert item in ret_output
 
     def test_orchestrate_nested(self):
         '''
@@ -81,9 +81,10 @@ class StateRunnerTest(ShellCase):
                 'state.orchestrate nested-orch.outer',
                 with_retcode=True)
 
-        self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
-        self.assertNotEqual(code, 0)
+        assert os.path.exists('/tmp/ewu-2016-12-13') is False
+        assert code != 0
 
+    @flaky
     def test_orchestrate_target_exists(self):
         '''
         test orchestration when target exists
@@ -96,8 +97,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: True']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -107,9 +108,10 @@ class StateRunnerTest(ShellCase):
 
         for out in ret_out:
             for item in out:
-                self.assertIn(item, ret)
+                assert item in ret
 
-    def test_orchestrate_target_doesnt_exists(self):
+    @flaky
+    def test_orchestrate_target_doesnt_exist(self):
         '''
         test orchestration when target doesn't exist
         while using multiple states
@@ -122,8 +124,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: False']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -133,7 +135,7 @@ class StateRunnerTest(ShellCase):
 
         for out in ret_out:
             for item in out:
-                self.assertIn(item, ret)
+                assert item in ret
 
     def test_state_event(self):
         '''
@@ -151,7 +153,7 @@ class StateRunnerTest(ShellCase):
         while q.empty():
             self.run_salt('minion test.ping --static')
         out = q.get()
-        self.assertIn(expect, str(out))
+        assert expect in str(out)
 
         server_thread.join()
 
@@ -164,9 +166,9 @@ class StateRunnerTest(ShellCase):
         def count(thing, listobj):
             return sum([obj.strip() == thing for obj in listobj])
 
-        self.assertEqual(count('ID: test subset', ret), 1)
-        self.assertEqual(count('Succeeded: 1', ret), 1)
-        self.assertEqual(count('Failed:    0', ret), 1)
+        assert count('ID: test subset', ret) == 1
+        assert count('Succeeded: 1', ret) == 1
+        assert count('Failed:    0', ret) == 1
 
     def test_orchestrate_salt_function_return_false_failure(self):
         '''
@@ -184,10 +186,7 @@ class StateRunnerTest(ShellCase):
         # Drill down to the changes dict
         state_result = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['result']
 
-        self.assertEqual(
-            state_result,
-            False,
-        )
+        assert state_result is False
 
 
 @skipIf(salt.utils.is_windows(), '*NIX-only test')

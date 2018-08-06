@@ -11,8 +11,9 @@ import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
+from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
@@ -322,6 +323,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt('-d "*" user')
         self.assertIn('user.add:', data)
 
+    @flaky
     def test_salt_documentation_arguments_not_assumed(self):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
@@ -333,16 +335,16 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                           'see https://github.com/saltstack/salt-jenkins/issues/324.')
         data = self.run_salt('-d -t 20')
         if data:
-            self.assertIn('user.add:', data)
+            assert 'user.add:' in data
         data = self.run_salt('"*" -d -t 20')
         if data:
-            self.assertIn('user.add:', data)
+            assert 'user.add:' in data
         data = self.run_salt('"*" -d user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
         data = self.run_salt('"*" sys.doc -d user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
         data = self.run_salt('"*" sys.doc user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
 
     def test_salt_documentation_too_many_arguments(self):
         '''
