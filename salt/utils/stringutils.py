@@ -57,7 +57,7 @@ def to_bytes(s, encoding=None, errors='strict'):
             # The only way we get this far is if a UnicodeEncodeError was
             # raised, otherwise we would have already returned (or raised some
             # other exception).
-            raise exc
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -99,7 +99,7 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
             # other exception).
-            raise exc
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
@@ -114,7 +114,7 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
             # other exception).
-            raise exc
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -157,7 +157,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
             # The only way we get this far is if a UnicodeDecodeError was
             # raised, otherwise we would have already returned (or raised some
             # other exception).
-            raise exc
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str or bytearray')
 
 
