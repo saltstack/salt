@@ -511,6 +511,11 @@ def managed(name,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
+        .. versionchanged:: Fluorine
+            This argument can now support a list of templates to be rendered.
+            The resulting configuration text is loaded at once, as a single
+            configuration chunk.
+
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
@@ -679,6 +684,10 @@ def managed(name,
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
         template variable.
 
+        .. note::
+            It is more recommended to use the ``context`` argument instead, to
+            avoid any conflicts with other arguments.
+
     SLS Example (e.g.: under salt://router/config.sls) :
 
     .. code-block:: yaml
@@ -709,6 +718,26 @@ def managed(name,
             netconfig.managed:
                 - template_name: http://bit.ly/2gKOj20
                 - peers: {{ pillar.get('ntp.peers', []) }}
+
+    Multi template example:
+
+    .. code-block:: yaml
+
+        hostname_and_ntp:
+          netconfig.managed:
+            - template_name:
+                - https://bit.ly/2OhSgqP
+                - https://bit.ly/2M6C4Lx
+                - https://bit.ly/2OIWVTs
+            - debug: true
+            - context:
+                hostname: {{ opts.id }}
+                servers:
+                  - 172.17.17.1
+                  - 172.17.17.2
+                peers:
+                  - 192.168.0.1
+                  - 192.168.0.2
 
     Usage examples:
 
