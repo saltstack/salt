@@ -570,14 +570,14 @@ class RemoteFuncs(object):
                     if isinstance(self.opts['mine_get'][match], list):
                         perms.update(self.opts['mine_get'][match])
 
-            _fun = []
             for fun in functions:
                 if any(re.match(perm, fun) for perm in perms):
-                    _fun.append(fun)
-            if not len(_fun):
+                    functions_allowed.append(fun)
+
+            if not len(functions_allowed):
                 return {}
-            else:
-                functions_allowed = _fun
+        else:
+            functions_allowed = functions
 
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
@@ -612,11 +612,10 @@ class RemoteFuncs(object):
                 continue
 
             if not _ret_dict and functions_allowed and functions_allowed[0] in fdata:
-                ret[minion] = fdata.get(fun)
+                ret[minion] = fdata.get(functions_allowed[0])
             elif _ret_dict:
-                for fun in functions_allowed:
-                    if fun in fdata:
-                        ret.setdefault(fun, {})[minion] = fdata.get(fun)
+                for fun in list(set(functions_allowed) & set(fdata.keys())):
+                    ret.setdefault(fun,{})[minion] = fdata.get(fun)
 
         return ret
 
