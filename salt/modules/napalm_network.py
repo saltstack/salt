@@ -1616,6 +1616,11 @@ def load_template(template_name=None,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
+        .. versionchanged:: Fluorine
+            This argument can now support a list of templates to be rendered.
+            The resulting configuration text is loaded at once, as a single
+            configuration chunk.
+
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
@@ -1798,10 +1803,13 @@ def load_template(template_name=None,
         Dictionary with the arguments/context to be used when the template is rendered.
 
         .. note::
-
             Do not explicitly specify this argument. This represents any other
             variable that will be sent to the template rendering system.
             Please see the examples below!
+
+        .. note::
+            It is more recommended to use the ``context`` argument to avoid
+            conflicts between CLI arguments and template variables.
 
     :return: a dictionary having the following keys:
 
@@ -1838,33 +1846,31 @@ def load_template(template_name=None,
         salt '*' net.load_template set_ntp_peers peers=[192.168.0.1]  # uses NAPALM default templates
 
         # inline template:
-        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{host_name}}; }' \
+        salt -G 'os:junos' net.load_template template_source='system { host-name {{host_name}}; }' \
         host_name='MX480.lab'
 
         # inline template using grains info:
-        salt -G 'os:junos' net.load_template set_hostname \
+        salt -G 'os:junos' net.load_template \
         template_source='system { host-name {{grains.model}}.lab; }'
         # if the device is a MX480, the command above will set the hostname as: MX480.lab
 
         # inline template using pillar data:
-        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{pillar.proxy.host}}; }'
+        salt -G 'os:junos' net.load_template template_source='system { host-name {{pillar.proxy.host}}; }'
 
-        salt '*' net.load_template my_template my_param='aaa'  # will commit
-        salt '*' net.load_template my_template my_param='aaa' test=True  # dry run
+        salt '*' net.load_template https://bit.ly/2OhSgqP hostname=example  # will commit
+        salt '*' net.load_template https://bit.ly/2OhSgqP hostname=example test=True  # dry run
 
-        salt '*' net.load_template salt://templates/my_stuff.jinja debug=True  # equivalent of the next command
-        salt '*' net.load_template my_stuff.jinja debug=True
-
-        # in case the template needs to include files that are not under the same path (e.g. http://),
-        # to help the templating engine find it, you will need to specify the `saltenv` argument:
-        salt '*' net.load_template my_stuff.jinja saltenv=/path/to/includes debug=True
+        salt '*' net.load_template salt://templates/example.jinja debug=True  # Using the salt:// URI
 
         # render a mako template:
-        salt '*' net.load_template salt://templates/my_stuff.mako template_engine=mako debug=True
+        salt '*' net.load_template salt://templates/example.mako template_engine=mako debug=True
 
         # render remote template
         salt -G 'os:junos' net.load_template http://bit.ly/2fReJg7 test=True debug=True peers=['192.168.0.1']
         salt -G 'os:ios' net.load_template http://bit.ly/2gKOj20 test=True debug=True peers=['192.168.0.1']
+
+        # render multiple templates at once
+        salt '*' net.load_template "['https://bit.ly/2OhSgqP', 'salt://templates/example.jinja']" context="{'hostname': 'example'}"
 
     Example output:
 
