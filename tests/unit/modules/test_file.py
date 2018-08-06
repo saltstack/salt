@@ -63,7 +63,10 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -243,7 +246,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 '__grains__': {'kernel': 'Linux'},
                 '__utils__': {
                     'files.is_binary': MagicMock(return_value=False),
-                    'files.get_encoding': MagicMock(return_value='utf-8')
+                    'files.get_encoding': MagicMock(return_value='utf-8'),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
                 },
             }
         }
@@ -540,7 +544,10 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -641,7 +648,10 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -1020,7 +1030,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
