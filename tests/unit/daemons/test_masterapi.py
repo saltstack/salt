@@ -631,7 +631,7 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(sorted(ret), sorted(dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1'))))
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
 
     def test_mine_get_dict_list(self, tgt_type_key='tgt_type'):
         '''
@@ -653,8 +653,8 @@ class RemoteFuncsTestCase(TestCase):
                 {
                     'id': 'requester_minion',
                     'tgt': 'G@roles:web',
-                    'fun': '["ip_addr", "ip4_addr"]',
+                    'fun': ['ip_addr', 'ip4_addr'],
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(sorted(ret), sorted(dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1'))))
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
