@@ -3025,7 +3025,22 @@ at the moment a single state fails
 Include Configuration
 =====================
 
-.. conf_minion:: include
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The minion config file itself
+
+2. The files matching the glob in :conf_minion:`default_include`
+
+3. The files matching the glob in :conf_minion:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_minion:`default_include` files would override the same value in the
+minion config file, and any options defined in :conf_minion:`include` would
+override both.
+
+.. conf_minion:: default_include
 
 ``default_include``
 -------------------
@@ -3043,6 +3058,7 @@ file.
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
 
+.. conf_minion:: include
 
 ``include``
 -----------

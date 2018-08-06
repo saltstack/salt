@@ -486,6 +486,9 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     if 'diff' in loaded:
         changes['diff'] = loaded['diff']
         pchanges['diff'] = loaded['diff']
+    if 'commit_id' in loaded:
+        changes['commit_id'] = loaded['commit_id']
+        pchanges['commit_id'] = loaded['commit_id']
     if 'compliance_report' in loaded:
         if compliance_report:
             changes['compliance_report'] = loaded['compliance_report']
