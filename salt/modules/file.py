@@ -12,7 +12,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import datetime
-import difflib
 import errno
 import fnmatch
 import io
@@ -1567,7 +1566,7 @@ def comment_line(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
-    return __salt__['stringutils.get_diff'](orig_file, new_file)
+    return __utils__['stringutils.get_diff'](orig_file, new_file)
 
 
 def _get_flags(flags):
@@ -2038,7 +2037,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
                 path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = __salt__['stringutils.get_diff'](path_content, body)
+            changes_diff = __utils__['stringutils.get_diff'](path_content, body)
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -2683,7 +2682,7 @@ def blockreplace(path,
             )
 
     if block_found:
-        diff = __salt__['stringutils.get_diff'](orig_file, new_file)
+        diff = __utils__['stringutils.get_diff'](orig_file, new_file)
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
