@@ -13,7 +13,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 import logging
-import itertools
 
 
 # Import salt libs
@@ -22,9 +21,6 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
-from functools import reduce
 
 
 log = logging.getLogger(__name__)
@@ -373,9 +369,9 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
 
-    NOTE: As package repositories are not presently supported for AIX
-    installp/rpm package, this function will always return an empty string
-    for a given package.
+    NOTE: Repositories are not presently supported for AIX.
+    This function will always return an empty string for a given
+    fileset/rpm package.
     '''
     kwargs.pop('refresh', True)
 
