@@ -1236,6 +1236,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         if version_num.lower() == 'latest' and 'latest' not in pkginfo:
             # Get the most recent version number available from winrepo.p
+            # May also return `latest` or and empty string
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
