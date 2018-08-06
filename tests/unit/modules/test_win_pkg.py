@@ -5,23 +5,17 @@ Tests for the win_pkg module
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
-import os
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import TMP
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
-import salt.utils.platform
 
 
-@destructiveTest
-@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_pkg
