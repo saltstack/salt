@@ -36,7 +36,7 @@ def __virtual__():
     if __grains__['os_family'] == 'AIX':
         return __virtualname__
     return (False,
-            'The aixpkg execution module failed to load.')
+           'Did not load AIX module on non-AIX OS.')
 
 
 def _check_pkg(target):
@@ -192,6 +192,9 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     name
         The name of the fileset or rpm package to be installed.
 
+    refresh
+        Whether or not to update the yum database before executing.
+
 
     Multiple Package Installation Options:
 
@@ -200,6 +203,12 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         Must be passed as a python list. The ``name`` parameter will be
         ignored if this option is passed.
 
+    version
+        Install a specific version of a fileset/rpm package.
+        (Unused at present).
+
+    test
+        Verify that command functions correctly:
 
     Returns a dict containing the new fileset(s)/rpm package(s) names and versions:
 
