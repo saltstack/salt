@@ -1340,7 +1340,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Fix non-windows slashes
         cached_pkg = cached_pkg.replace('/', '\\')
-        cache_path, _ = os.path.split(cached_pkg)
+        cache_path = os.path.dirname(cached_pkg)
 
         # Compare the hash sums
         source_hash = pkginfo[version_num].get('source_hash', False)
