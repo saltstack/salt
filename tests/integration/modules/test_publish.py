@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
@@ -151,5 +152,43 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'publish.publish',
             ['minion', 'cmd.run', ['echo foo']],
             f_timeout=50
+        )
+        self.assertEqual(ret, {})
+
+
+@flaky
+class PublishWheelModuleTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    Validate the publish.wheel module
+    '''
+
+    def test_publish_wheel(self):
+        '''
+        test accepting key
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.accept', 'arg=minion'],
+        )
+        self.assertEqual(ret, {'minions': ['minion']})
+
+    def test_publish_wheel_not_allowed(self):
+        '''
+        test running a wheel function that is not allowed
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.list_all'],
+        )
+        self.assertEqual(ret, {})
+
+    def test_publish_wheel_rejected(self):
+        '''
+        test accepting key from a minion that isn't approved
+        '''
+        ret = self.run_function(
+            'publish.wheel',
+            ['key.accept', 'arg=minion'],
+            minion_tgt='subminion',
         )
         self.assertEqual(ret, {})

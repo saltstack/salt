@@ -1693,6 +1693,21 @@ class AESFuncs(object):
         else:
             return self.masterapi.minion_runner(clear_load)
 
+    def minion_wheel(self, clear_load):
+        '''
+        Execute a wheel from a minion, return the wheel's function data
+
+        :param dict clear_load: The minion payload
+
+        :rtype: dict
+        :return: The wheel function data
+        '''
+        load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
+        if load is False:
+            return {}
+        else:
+            return self.masterapi.minion_wheel(clear_load)
+
     def pub_ret(self, load):
         '''
         Request the return data from a specific jid, only allowed

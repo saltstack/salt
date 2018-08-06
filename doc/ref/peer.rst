@@ -68,6 +68,7 @@ allow minions ending with foo.org access to the publisher.
         - pkg.*
 
 .. note::
+
     Functions are matched using regular expressions.
 
 Peer Runner Communication
@@ -97,6 +98,46 @@ to the manage and jobs runner functions.
         - jobs.*
 
 .. note::
+
+    Functions are matched using regular expressions.
+
+.. _peer-wheel:
+
+Peer Wheel Communication
+=========================
+
+.. versionadded: Fluorine
+
+.. warning::
+
+    Any of the below configurations allow the minion to be able to control the
+    master.  Any minion that has the ability to use these functions will be
+    **fully trusted** by the master.
+
+Configuration to allow minions to execute wheel functions from the master is
+done via the ``peer_wheel`` option on the master. The ``peer_wheel``
+configuration follows the same logic as the ``peer`` option. The only
+difference is that access is granted to wheel modules.
+
+To open up access to all minions to all wheel:
+
+.. code-block:: yaml
+
+    peer_wheel:
+      .*:
+        - .*
+
+This configuration will allow minions with IDs ending in example.com access
+to the key wheel functions.
+
+.. code-block:: yaml
+
+    peer_wheel:
+      .*example.com:
+        - key.*
+
+.. note::
+
     Functions are matched using regular expressions.
 
 Using Peer Communication
@@ -113,12 +154,6 @@ To execute test.ping on all minions:
 
     # salt-call publish.publish \* test.ping
 
-To execute the manage.up runner:
-
-.. code-block:: bash
-
-    # salt-call publish.runner manage.up
-
 To match minions using other matchers, use ``tgt_type``:
 
 .. code-block:: bash
@@ -126,4 +161,17 @@ To match minions using other matchers, use ``tgt_type``:
     # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping tgt_type='compound'
 
 .. note::
+
     In pre-2017.7.0 releases, use ``expr_form`` instead of ``tgt_type``.
+
+To execute the manage.up runner:
+
+.. code-block:: bash
+
+    # salt-call publish.runner manage.up
+
+To execute the key.accept wheel module:
+
+.. code-block:: bash
+
+    # salt-call publish.wheel key.accept arg='match=<minionid>'

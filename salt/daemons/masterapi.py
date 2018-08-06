@@ -843,6 +843,46 @@ class RemoteFuncs(object):
         runner = salt.runner.Runner(opts)
         return runner.run()
 
+    def minion_wheel(self, load):
+        '''
+        Execute a wheel from a minion, return the wheel's function data
+        '''
+        if 'peer_wheel' not in self.opts:
+            return {}
+        if not isinstance(self.opts['peer_wheel'], dict):
+            return {}
+        if any(key not in load for key in ('fun', 'arg', 'id')):
+            return {}
+        perms = set()
+        for match in self.opts['peer_wheel']:
+            if re.match(match, load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer_wheel'][match], list):
+                    perms.update(self.opts['peer_wheel'][match])
+        good = False
+        for perm in perms:
+            if re.match(perm, load['fun']):
+                good = True
+        if not good:
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warning('Minion id %s does not have permission to run wheel module: %s', load['id'], load['fun'])
+            return {}
+        # Prepare the runner object
+        opts = {}
+        opts.update(self.opts)
+        client = salt.wheel.WheelClient(opts)
+        arg = kwarg = None
+        if load['arg']:
+            args = salt.utils.args.parse_input(load['arg'], no_parse=load.get('no_parse', []))
+            if isinstance(args, tuple):
+                arg, kwarg = args
+            elif isinstance(args, dict):
+                kwarg = args
+            else:
+                arg = args
+        return client.cmd(load['fun'], arg=arg, kwarg=kwarg)
+
     def pub_ret(self, load, skip_verify=False):
         '''
         Request the return data from a specific jid, only allowed
