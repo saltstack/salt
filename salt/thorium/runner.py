@@ -42,7 +42,7 @@ def cmd(
         func = name
     local_opts = {}
     local_opts.update(__opts__)
-    local_opts['asynchronous'] = True  # ensure this will be run asynchronous
+    local_opts['async'] = True  # ensure this will be run asynchronous
     local_opts.update({
         'fun': func,
         'arg': arg,
