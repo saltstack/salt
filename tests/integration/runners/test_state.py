@@ -394,6 +394,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @skipIf(True, 'This test is unreliable. It should run in a limited/long-running environment.')
     def test_parallel_orchestrations(self):
         '''
         Test to confirm that the parallel state requisite works in orch
