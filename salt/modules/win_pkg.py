@@ -1097,7 +1097,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             .. versionadded:: 2016.11.0
 
     Returns:
-        dict: Return a dict containing the new package names and versions
+        dict: Return a dict containing the new package names and versions. If
+        the package is already installed, an empty dict is returned.
 
         If the package is installed by ``pkg.install``:
 
@@ -1105,12 +1106,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
-
-        If the package is already installed:
-
-        .. code-block:: cfg
-
-            {'<package>': {'current': '<current-version>'}}
 
     The following example will refresh the winrepo and install a single
     package, 7zip.
@@ -1205,7 +1200,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     # Loop through each package
     changed = []
-    latest = []
     for pkg_name, options in six.iteritems(pkg_params):
 
         # Load package information for the package
@@ -1250,9 +1244,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                       version_num, pkg_name)
             ret[pkg_name] = {'not found': version_num}
             continue
-
-        if 'latest' in pkginfo:
-            latest.append(pkg_name)
 
         # Get the installer settings from winrepo.p
         installer = pkginfo[version_num].get('installer', '')
@@ -1467,15 +1458,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     # Take the "old" package list and convert the values to strings in
     # preparation for the comparison below.
     __salt__['pkg_resource.stringify'](old)
-
-    # For installers that have no specific version (ie: chrome)
-    # The software definition file will have a version of 'latest'
-    # In that case there's no way to know which version has been installed
-    # Just return the current installed version
-    if latest:
-        for pkg_name in latest:
-            if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
-                ret[pkg_name] = {'current': new[pkg_name]}
 
     # Check for changes in the registry
     difference = salt.utils.data.compare_dicts(old, new)
