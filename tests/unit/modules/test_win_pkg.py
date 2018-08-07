@@ -122,7 +122,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                     win_pkg.__salt__,
                     {'cmd.run_all':
                          MagicMock(return_value={'retcode': 0})}):
-            expected = {'nsis': {'current': '3.03'}}
+            expected = {}
             result = win_pkg.install(name='nsis')
             self.assertDictEqual(expected, result)
 
@@ -148,6 +148,6 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                     win_pkg.__salt__,
                     {'cmd.run_all':
                          MagicMock(return_value={'retcode': 0})}):
-            expected = {'nsis': {'current': '3.03'}}
+            expected = {}
             result = win_pkg.install(name='nsis', version='3.03')
             self.assertDictEqual(expected, result)

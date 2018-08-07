@@ -1229,7 +1229,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             if pkg_name in old:
                 log.debug('"%s" version "%s" is already installed',
                           pkg_name, old[pkg_name][0])
-                ret[pkg_name] = {'current': old[pkg_name][0]}
                 continue
             # Get the most recent version number available from winrepo.p
             version_num = _get_latest_pkg_version(pkginfo)
@@ -1244,7 +1243,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Desired version number already installed
             log.debug('"%s" version "%s" is already installed',
                       pkg_name, version_num)
-            ret[pkg_name] = {'current': version_num}
             continue
         # If version number not installed, is the version available?
         elif version_num.lower() != 'latest' and version_num not in pkginfo:
