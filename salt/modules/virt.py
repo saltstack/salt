@@ -3553,7 +3553,7 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
 
     conn = __get_conn(**kwargs)
     _get_domain(conn, domain).snapshotCreateXML(
-        salt.utils.stringutils.to_str(ElementTree.tostring(doc)
+        salt.utils.stringutils.to_str(ElementTree.tostring(doc))
     )
     conn.close()
 
