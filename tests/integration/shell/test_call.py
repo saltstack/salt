@@ -22,7 +22,7 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.integration.utils import testprogram
 
 # Import salt libs
@@ -103,12 +103,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @flaky
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
-        self.assertIn(
-            'salt \'*\' user.delete name remove=True force=True',
-            ''.join(ret)
-        )
+        assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
 
     def test_salt_documentation_too_many_arguments(self):
         '''
