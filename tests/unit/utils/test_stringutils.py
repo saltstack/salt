@@ -137,7 +137,12 @@ class StringutilsTestCase(TestCase):
             'яйца'
         )
 
-        self.assertEqual(salt.utils.stringutils.to_unicode(LATIN1_BYTES), LATIN1_UNICODE)
+        self.assertEqual(
+            salt.utils.stringutils.to_unicode(
+                LATIN1_BYTES, encoding='latin-1'
+            ),
+            LATIN1_UNICODE
+        )
 
         if six.PY3:
             self.assertEqual(salt.utils.stringutils.to_unicode('plugh'), 'plugh')
