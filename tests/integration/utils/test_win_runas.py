@@ -10,7 +10,6 @@ import io
 import sys
 import os
 import logging
-import time
 import threading
 import win32service
 import win32serviceutil
