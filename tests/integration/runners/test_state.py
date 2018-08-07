@@ -145,7 +145,6 @@ class StateRunnerTest(ShellCase):
             {'out': 'highstate', 'ret': {'minion': False}}
         )
 
-    @flaky
     def test_orchestrate_target_exists(self):
         '''
         test orchestration when target exists
@@ -171,7 +170,6 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
-    @flaky
     def test_orchestrate_retcode(self):
         '''
         Test orchestration with nonzero retcode set in __context__
@@ -201,7 +199,6 @@ class StateRunnerTest(ShellCase):
                        '      Result: False'):
             self.assertIn(result, ret)
 
-    @flaky
     def test_orchestrate_target_doesnt_exist(self):
         '''
         test orchestration when target doesn't exist
