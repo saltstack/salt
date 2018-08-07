@@ -1169,7 +1169,6 @@ def shell(cmd,
 
                 cmd.shell 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
 
-
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -1969,7 +1968,6 @@ def retcode(cmd,
             .. code-block:: bash
 
                 cmd.retcode 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
-
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -3735,7 +3733,6 @@ def run_bg(cmd,
             .. code-block:: bash
 
                 cmd.run_bg 'echo '\''h=\"baz\"'\''' runas=macuser
-
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
