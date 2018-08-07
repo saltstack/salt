@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.call
@@ -25,7 +25,7 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.integration.utils import testprogram
 
 # Import salt libs
@@ -106,12 +106,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @flaky
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
-        self.assertIn(
-            'salt \'*\' user.delete name remove=True force=True',
-            ''.join(ret)
-        )
+        assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
 
     def test_salt_documentation_too_many_arguments(self):
         '''
@@ -335,6 +333,48 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
             )
             self.assertEqual(ret[2], 2)
+        finally:
+            self.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
+
+    def test_syslog_file_not_found(self):
+        '''
+        test when log_file is set to a syslog file that does not exist
+        '''
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = yaml.load(fh_.read())
+            minion_config['log_file'] = 'file:///dev/doesnotexist'
+            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+        ret = self.run_script(
+            'salt-call',
+            '--config-dir {0} cmd.run "echo foo"'.format(
+                config_dir
+            ),
+            timeout=60,
+            catch_stderr=True,
+            with_retcode=True
+        )
+        try:
+            if sys.version_info >= (3, 5, 4):
+                self.assertIn('local:', ret[0])
+                self.assertIn('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.', ret[1])
+                self.assertEqual(ret[2], 0)
+            else:
+                self.assertIn(
+                    'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+                )
+                self.assertEqual(ret[2], 2)
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):

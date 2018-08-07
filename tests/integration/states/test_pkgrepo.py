@@ -83,7 +83,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         os_family = grains['os_family'].lower()
 
-        if os_family in ('redhat', 'suse'):
+        if os_family in ('redhat',):
             kwargs = {
                 'name': 'examplerepo',
                 'baseurl': 'http://example.com/repo',

@@ -225,10 +225,11 @@ def set_config(name='root', **kwargs):
 
         salt '*' snapper.set_config SYNC_ACL=True
 
-    Keys are case insensitive as they will be always uppercased to
-    snapper convention. The above example is equivalent to:
+    Keys are case insensitive as they will be always uppercased to snapper
+    convention. The above example is equivalent to:
 
     .. code-block:: bash
+
         salt '*' snapper.set_config sync_acl=True
     '''
     try:

@@ -36,7 +36,7 @@ _PKG_TARGETS = {
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'python-pssh'],
     'MacOS': ['libpng', 'jpeg'],
-    'Windows': ['firefox', '7zip'],
+    'Windows': ['putty', '7zip'],
 }
 
 _PKG_TARGETS_32 = {
@@ -158,7 +158,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             __testcontext__['refresh'] = True
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_001_installed(self, grains=None):
         '''
@@ -189,7 +188,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_002_installed_with_version(self, grains=None):
         '''
@@ -237,7 +235,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_003_installed_multipkg(self, grains=None):
         '''
@@ -259,17 +256,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertFalse(any(version.values()))
+        try:
+            self.assertFalse(any(version.values()))
+        except AssertionError:
+            self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=pkg_targets))
 
-        ret = self.run_state('pkg.installed',
-                             name=None,
-                             pkgs=pkg_targets,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=None,
+                                 pkgs=pkg_targets,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains=None):
         '''
@@ -310,15 +311,16 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
 
-        ret = self.run_state('pkg.installed',
-                             name=None,
-                             pkgs=pkgs,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=None,
+                                 pkgs=pkgs,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_005_installed_32bit(self, grains=None):
         '''
@@ -355,7 +357,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_006_installed_32bit_with_version(self, grains=None):
         '''
@@ -403,7 +404,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_007_with_dot_in_pkgname(self, grains=None):
         '''
@@ -434,7 +434,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_008_epoch_in_version(self, grains=None):
         '''
@@ -485,7 +484,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_010_latest_with_epoch_and_info_installed(self):
         '''
@@ -505,7 +503,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_011_latest(self, grains=None):
         '''
@@ -537,7 +534,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_012_latest_only_upgrade(self, grains=None):
         '''
@@ -740,3 +736,72 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret_comment, 'An error was encountered while installing/updating group '
                                       '\'handle_missing_pkg_group\': Group \'handle_missing_pkg_group\' '
                                       'not found.')
+
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
+    @requires_system_grains
+    def test_pkg_015_installed_held(self, grains=None):  # pylint: disable=unused-argument
+        '''
+        Tests that a package can be held even when the package is already installed.
+        '''
+        os_family = grains.get('os_family', '')
+
+        if os_family.lower() != 'redhat' and os_family.lower() != 'debian':
+            self.skipTest('Test only runs on RedHat or Debian family')
+
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        if os_family.lower() == 'redhat':
+            # If we're in the Red Hat family first we ensure that
+            # the yum-plugin-versionlock package is installed
+            ret = self.run_state(
+                'pkg.installed',
+                name='yum-plugin-versionlock',
+                refresh=False,
+            )
+            self.assertSaltTrueReturn(ret)
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+
+        # First we ensure that the package is installed
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            refresh=False,
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Then we check that the package is now held
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            hold=True,
+            refresh=False,
+        )
+
+        # changes from pkg.hold for Red Hat family are different
+        if os_family.lower() == 'redhat':
+            target_changes = {'new': 'hold', 'old': ''}
+        elif os_family.lower() == 'debian':
+            target_changes = {'new': 'hold', 'old': 'install'}
+
+        try:
+            tag = 'pkg_|-{0}_|-{0}_|-installed'.format(target)
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(tag, ret)
+            self.assertIn('changes', ret[tag])
+            self.assertIn(target, ret[tag]['changes'])
+            self.assertEqual(ret[tag]['changes'][target], target_changes)
+        finally:
+            # Clean up, unhold package and remove
+            self.run_function('pkg.unhold', name=target)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+            if os_family.lower() == 'redhat':
+                ret = self.run_state('pkg.removed',
+                                     name='yum-plugin-versionlock')
+                self.assertSaltTrueReturn(ret)

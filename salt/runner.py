@@ -229,7 +229,7 @@ class Runner(RunnerClient):
                 async_pub = self._gen_async_pub()
                 self.jid = async_pub['jid']
 
-                if low['fun'] in ('state.orchestrate', 'state.orch'):
+                if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!

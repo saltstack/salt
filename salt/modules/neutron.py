@@ -827,8 +827,8 @@ def update_floatingip(floatingip_id, port=None, profile=None):
         salt '*' neutron.update_floatingip network-name port-name
 
     :param floatingip_id: ID of floatingIP
-    :param port: ID or name of port, to associate floatingip to
-    `None` or do not specify to disassociate the floatingip (Optional)
+    :param port: ID or name of port, to associate floatingip to `None` or do
+        not specify to disassociate the floatingip (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated floating IP information
     '''
@@ -1560,6 +1560,7 @@ def list_firewalls(profile=None):
     .. code-block:: bash
 
         salt '*' neutron.list_firewalls
+
     :param profile: Profile to build on (Optional)
     :return: List of firewalls
     '''

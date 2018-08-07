@@ -9,6 +9,12 @@ import salt.utils
 import logging
 import re
 
+try:
+    import tzlocal
+    HAS_TZLOCAL = True
+except ImportError:
+    HAS_TZLOCAL = False
+
 log = logging.getLogger(__name__)
 
 # Maybe put in a different file ... ? %-0
@@ -473,6 +479,10 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
+    if HAS_TZLOCAL:
+        return tzlocal.get_localzone().zone
+
+    log.warning('tzutil not installed. get_zone might be inaccurate')
     winzone = __salt__['cmd.run'](['tzutil', '/g'], python_shell=False)
     for key in LINTOWIN:
         if LINTOWIN[key] == winzone:

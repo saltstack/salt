@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Thomas Jackson (jacksontj.89@gmail.com)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Thomas Jackson (jacksontj.89@gmail.com)
 
 
     salt.utils.context

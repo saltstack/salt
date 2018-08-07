@@ -17,13 +17,14 @@ import datetime
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
 # Import salt libs
 import salt.utils
 
 
 @skip_if_not_root
+@flaky
 @skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacTimezoneModuleTest(ModuleCase):

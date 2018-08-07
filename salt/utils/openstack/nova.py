@@ -908,7 +908,7 @@ class SaltNova(object):
             try:
                 ret[item.name] = {
                     'id': item.id,
-                    'status': 'Running'
+                    'state': 'Running'
                 }
             except TypeError:
                 pass

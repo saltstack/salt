@@ -152,7 +152,7 @@ def parse(models, **kwargs):
 
     Output Example:
 
-    .. code-block:: json
+    .. code-block:: python
 
         {
             "interfaces": {

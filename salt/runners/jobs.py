@@ -150,7 +150,7 @@ def lookup_jid(jid,
     try:
         # Check if the return data has an 'out' key. We'll use that as the
         # outputter in the absence of one being passed on the CLI.
-        outputter = data[next(iter(data))].get('out')
+        outputter = returns[next(iter(returns))].get('out')
     except (StopIteration, AttributeError):
         outputter = None
 
@@ -465,7 +465,9 @@ def exit_success(jid, ext_source=None):
         The external job cache to use. Default: `None`.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run jobs.exit_success 20160520145827701627
     '''
     ret = dict()

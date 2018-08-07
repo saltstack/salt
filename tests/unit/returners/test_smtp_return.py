@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place (mp@saltstack.com)`
+    :codeauthor: Mike Place (mp@saltstack.com)
 
 
     tests.unit.returners.smtp_return_test

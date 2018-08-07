@@ -282,12 +282,14 @@ def raw_cron(user):
         # Preserve line endings
         lines = sdecode(__salt__['cmd.run_stdout'](cmd,
                                            runas=user,
+                                           ignore_retcode=True,
                                            rstrip=False,
                                            python_shell=False)).splitlines(True)
     else:
         cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
         lines = sdecode(__salt__['cmd.run_stdout'](cmd,
+                                           ignore_retcode=True,
                                            rstrip=False,
                                            python_shell=False)).splitlines(True)
 

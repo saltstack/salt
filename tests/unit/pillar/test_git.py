@@ -2,7 +2,7 @@
 '''test for pillar git_pillar.py
 
 
-  :codeauthor: :email:`Georges Racinet (gracinet@anybox.fr)`
+  :codeauthor: Georges Racinet (gracinet@anybox.fr)
 
 Based on joint work with Paul Tonelli about hg_pillar integration.
 

@@ -125,7 +125,7 @@ Verify that Apache is now serving your custom HTML.
     you could modify our Apache example from earlier as follows:
 
     .. code-block:: yaml
-        :emphasize-lines: 1,2,3,4,11,12
+        :emphasize-lines: 1,2,3,10,11
 
         /etc/httpd/extra/httpd-vhosts.conf:
           file.managed:
