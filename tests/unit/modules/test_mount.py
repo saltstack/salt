@@ -274,9 +274,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
-            with patch.object(os.path, 'isfile', mock):
-                self.assertRaises(CommandExecutionError,
-                              mount.set_filesystems, 'A', 'B', 'C')
+            self.assertRaises(CommandExecutionError,
+                          mount.set_filesystems, 'A', 'B', 'C')
 
             mock_read = MagicMock(side_effect=OSError)
             with patch.object(os.path, 'isfile', mock):
