@@ -85,12 +85,12 @@ Network Automation
 
 Beginning with this release, Salt provides much broader support for a variety 
 of network operating systems, and features for configuration manipulation or
-operational commands execution.
+operational command execution.
 
 NetBox
 ------
 
-Added in the previous release, Oxygen, the capabilities of the
+Added in the previous release, 2018.3.0, the capabilities of the
 :mod:`netbox <salt.modules.netbox>` Execution Module have been extended, with a
 much longer list of available features:
 
@@ -193,7 +193,7 @@ be used to confirm or cancel a commit.
 
 Please note that the commit confirmed and commit cancelled functionalities are
 available for any platform whether the network devices supports the features 
-natively or not. However, be cautious and make sure you read an understood the 
+natively or not. However, be cautious and make sure you read and understand the 
 caveats before using them in production.
 
 Multiple Templates Rendered Simultaneously
@@ -231,7 +231,7 @@ Proxy Minions generally establish a connection with the remote network
 device at the time of the Minion startup and that connection is going to be
 used forever.
 
-If one would need execute a command on the device but connecting using
+If one would need to execute a command on the device but is connecting using
 different parameters (due to various causes, e.g., unable to authenticate
 the user specified in the Pillar as the authentication system - say
 TACACS+ is not available, or the DNS resolver is currently down and would
@@ -458,8 +458,8 @@ gather information about other networks you can potentially peer with, and
 automatically establish BGP sessions, e.g., given just a specific AS number, 
 the rest of the data (i.e., IP addresses, locations where the remote network is 
 available, etc.) is retrieved from PeeringDB, and the session configuration is 
-automated with minimum to no effort (typing the IP addresses manually can be 
-both tedious and error prone)
+automated with minimal to no effort (typing the IP addresses manually can be 
+both tedious and error prone).
 
 New Docker Proxy Minion
 =======================
