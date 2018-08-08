@@ -675,6 +675,11 @@ def managed(name,
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
 
+    context: None
+        Overrides default context variables passed to the template.
+
+        .. versionadded:: Fluorine
+
     defaults: None
         Default variables/context passed to the template.
 
