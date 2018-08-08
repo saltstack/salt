@@ -80,6 +80,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
+
     @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
@@ -121,6 +122,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     # local client request body test
+
     @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request(self):
         '''
