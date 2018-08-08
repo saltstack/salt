@@ -210,7 +210,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         from_port = 22
         to_port = 22
         cidr_ip = u'0.0.0.0/0'
-        rules_egress = [{'to_port': -1, 'from_port': -1, 'ip_protocol': u'-1', 'cidr_ip': u'0.0.0.0/0'}]
+        rules_egress = [{'to_port': None, 'from_port': None, 'ip_protocol': u'-1', 'cidr_ip': u'0.0.0.0/0'}]
 
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(name=group_name, description=group_name)
