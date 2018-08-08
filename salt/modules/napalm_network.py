@@ -2033,6 +2033,13 @@ def load_template(template_name=None,
                 }
             )
     else:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Native NAPALM templates support will be removed in the Sodium '
+            'release. Please consider using the Salt rendering pipeline instead.'
+            'If you are using the \'netntp\', \'netsnmp\', or \'netusers\' Salt '
+            'State modules, you can ignore this message'
+        )
         # otherwise, use NAPALM render system, injecting pillar/grains/opts vars
         load_templates_params = defaults if defaults else {}
         load_templates_params.update(template_vars)
