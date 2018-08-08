@@ -452,17 +452,14 @@ def saved(name,
 
 
 def managed(name,
-            template_name,
+            template_name=None,
             template_source=None,
             template_hash=None,
             template_hash_name=None,
-            template_user='root',
-            template_group='root',
-            template_mode='755',
-            template_attrs='--------------e----',
-            saltenv=None,
+            saltenv='base',
             template_engine='jinja',
             skip_verify=False,
+            context=None,
             defaults=None,
             test=False,
             commit=True,
@@ -473,7 +470,6 @@ def managed(name,
             revert_in=None,
             revert_at=None,
             **template_vars):
-
     '''
     Manages the configuration on network devices.
 
@@ -523,20 +519,6 @@ def managed(name,
 
     template_hash_name: None
         When ``template_hash`` refers to a remote file, this specifies the filename to look for in that file.
-
-    template_group: root
-        Owner of file.
-
-    template_user: root
-        Group owner of file.
-
-    template_mode: 755
-        Permissions of file
-
-    template_attrs: "--------------e----"
-        Attributes of file (see `man lsattr`)
-
-        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
@@ -810,17 +792,14 @@ def managed(name,
     revert_in = __salt__['config.merge']('revert_in', revert_in)
     revert_at = __salt__['config.merge']('revert_at', revert_at)
 
-    config_update_ret = _update_config(template_name,
+    config_update_ret = _update_config(template_name=template_name,
                                        template_source=template_source,
                                        template_hash=template_hash,
                                        template_hash_name=template_hash_name,
-                                       template_user=template_user,
-                                       template_group=template_group,
-                                       template_mode=template_mode,
-                                       template_attrs=template_attrs,
                                        saltenv=saltenv,
                                        template_engine=template_engine,
                                        skip_verify=skip_verify,
+                                       context=context,
                                        defaults=defaults,
                                        test=test,
                                        commit=commit,
