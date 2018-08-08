@@ -1221,13 +1221,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # If the version was not passed, version_num will be None
         if not version_num:
             if pkg_name in old:
-                log.debug('"%s" version "%s" is already installed',
+                log.debug('pkg.install: \'%s\' version \'%s\' is already installed',
                           pkg_name, old[pkg_name][0])
                 continue
             # Get the most recent version number available from winrepo.p
+            # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
 
-        if version_num.lower() == 'latest' and 'latest' not in pkginfo:
+        if version_num == 'latest' and 'latest' not in pkginfo:
             # Get the most recent version number available from winrepo.p
             # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
@@ -1235,11 +1236,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Check if the version is already installed
         if version_num in old.get(pkg_name, []):
             # Desired version number already installed
-            log.debug('"%s" version "%s" is already installed',
+            log.debug('pkg.install: \'%s\' version \'%s\' is already installed',
                       pkg_name, version_num)
             continue
         # If version number not installed, is the version available?
-        elif version_num.lower() != 'latest' and version_num not in pkginfo:
+        elif version_num != 'latest' and version_num not in pkginfo:
             log.error('Version %s not found for package %s',
                       version_num, pkg_name)
             ret[pkg_name] = {'not found': version_num}
@@ -1335,12 +1336,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         source_hash = pkginfo[version_num].get('source_hash', False)
         if source_hash:
             source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
-            log.debug('Source %s hash: %s',
+            log.debug('pkg.install: Source %s hash: %s',
                       source_sum['hash_type'], source_sum['hsum'])
 
             cached_pkg_sum = salt.utils.hashutils.get_hash(cached_pkg,
                                                            source_sum['hash_type'])
-            log.debug('Package %s hash: %s',
+            log.debug('pkg.install: Package %s hash: %s',
                       source_sum['hash_type'], cached_pkg_sum)
 
             if source_sum['hsum'] != cached_pkg_sum:
@@ -1348,7 +1349,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     ("Source hash '{0}' does not match package hash"
                      " '{1}'").format(source_sum['hsum'], cached_pkg_sum)
                 )
-            log.debug('Source hash matches package hash.')
+            log.debug('pkg.install: Source hash matches package hash.')
 
         # Get install flags
 
