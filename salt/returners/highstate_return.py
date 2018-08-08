@@ -86,6 +86,7 @@ import cgi
 from email.mime.text import MIMEText
 
 import yaml
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves import StringIO
 
@@ -185,8 +186,7 @@ def _generate_html_table(data, out, level=0, extra_style=''):
             else:
                 new_extra_style = extra_style
             if len(subdata) == 1:
-                name = list(subdata.keys())[0]
-                value = list(subdata.values())[0]
+                name, value = next(six.iteritems(subdata))
                 print('<tr style="{0}">'.format(
                     _lookup_style('tr', [row_style])
                 ), file=out)
