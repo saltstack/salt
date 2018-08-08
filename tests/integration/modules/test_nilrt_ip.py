@@ -202,13 +202,14 @@ class NilrtIpModuleTest(ModuleCase):
             result = self.run_function('ip.set_static_all', [interface.name, '192.168.10.4', '255.255.255.0',
                                                              '192.168.10.1', '8.8.4.4 8.8.8.8'])
             self.assertTrue(result)
-
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
             self.assertEqual(interface['adapter_mode'], 'tcpip')
-            self.assertIn('8.8.4.4', interface['ipv4']['dns'])
             if self.os_grain['lsb_distrib_id'] != 'nilrt':
+                self.assertIn('8.8.4.4', interface['ipv4']['dns'])
                 self.assertIn('8.8.8.8', interface['ipv4']['dns'])
+            else:
+                self.assertEqual(interface['ipv4']['dns'], ['8.8.4.4'])
             self.assertEqual(interface['ipv4']['requestmode'], 'static')
             self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
             self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
