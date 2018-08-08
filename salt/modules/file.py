@@ -2691,7 +2691,7 @@ def blockreplace(path,
             block_found = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(linesep):
                     new_file[-1] += linesep
             # add the markers and content at the end of file
