@@ -428,4 +428,3 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time2)
-
