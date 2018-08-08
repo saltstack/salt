@@ -2449,6 +2449,8 @@ def blockreplace(path,
         content='',
         append_if_not_found=False,
         prepend_if_not_found=False,
+        insert_before_match=None,
+        insert_after_match=None,
         backup='.bak',
         dry_run=False,
         show_changes=True,
@@ -2494,6 +2496,17 @@ def blockreplace(path,
         If markers are not found and set to ``True`` then, the markers and
         content will be prepended to the file.
 
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Fluorine
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Fluorine
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -2532,9 +2545,11 @@ def blockreplace(path,
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     '''
-    if append_if_not_found and prepend_if_not_found:
+    exclusive_params = [append_if_not_found, prepend_if_not_found, bool(insert_before_match), bool(insert_after_match)]
+    if sum(exclusive_params) > 1:
         raise SaltInvocationError(
-            'Only one of append and prepend_if_not_found is permitted'
+            'Only one of append_if_not_found, prepend_if_not_found,'
+            ' insert_before_match, and insert_after_match is permitted'
         )
 
     path = os.path.expanduser(path)
@@ -2682,10 +2697,27 @@ def blockreplace(path,
             # add the markers and content at the end of file
             _add_content(linesep, lines=new_file)
             block_found = True
-        else:
-            raise CommandExecutionError(
-                'Cannot edit marked block. Markers were not found in file.'
-            )
+        elif insert_before_match or insert_after_match:
+            match_regex = insert_before_match or insert_after_match
+            if not isinstance(match_regex, six.string_types):
+                raise CommandExecutionError(
+                    'RegEx expected in match parameter.'
+                )
+            match_idx = [i for i, item in enumerate(orig_file) if re.search(match_regex, item)]
+            if match_idx:
+                match_idx = match_idx[0]
+                for line in _add_content(linesep):
+                    if insert_after_match:
+                        match_idx += 1
+                    new_file.insert(match_idx, line)
+                    if insert_before_match:
+                        match_idx += 1
+                block_found = True
+
+    if not block_found:
+        raise CommandExecutionError(
+            'Cannot edit marked block. Markers were not found in file.'
+        )
 
     if block_found:
         diff = ''.join(difflib.unified_diff(orig_file, new_file))
