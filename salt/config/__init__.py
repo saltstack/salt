@@ -286,6 +286,9 @@ VALID_OPTS = {
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
+    # Order of preference for optimized .pyc files (PY3 only)
+    'optimization_order': list,
+
     # Refuse to load these modules
     'disable_modules': list,
 
@@ -1218,6 +1221,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_saltenv': [],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'hash_type': 'sha256',
+    'optimization_order': [0, 1, 2],
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -1511,6 +1515,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_verify_config': True,
     'max_open_files': 100000,
     'hash_type': 'sha256',
+    'optimization_order': [0, 1, 2],
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,

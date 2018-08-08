@@ -1195,6 +1195,25 @@ option to ``False`` to keep Salt from updating the mine with this information.
 
     docker.update_mine: False
 
+.. conf_minion:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Minion Module Management
 ========================
