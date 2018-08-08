@@ -60,6 +60,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
                     'file_roots': {},
                     'state_top': 'top.sls',
                     'extension_modules': '',
+                    'optimization_order': [0, 1, 2],
                     'renderer': 'yaml_jinja',
                     'renderer_blacklist': [],
                     'renderer_whitelist': [],
