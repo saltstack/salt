@@ -394,6 +394,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @expensiveTest
     def test_parallel_orchestrations(self):
         '''
         Test to confirm that the parallel state requisite works in orch
