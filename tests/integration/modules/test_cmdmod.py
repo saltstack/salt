@@ -9,7 +9,6 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
     skip_if_binaries_missing,
@@ -85,7 +84,7 @@ class CMDModuleTest(ModuleCase):
         '''
         self.assertEqual(self.run_function('cmd.run_stdout',
                                            ['echo "cheese"']).rstrip(),
-                         'cheese' if not salt.utils.is_windows() else '"cheese"')
+                         'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_stderr(self):
         '''
@@ -100,7 +99,7 @@ class CMDModuleTest(ModuleCase):
                                            ['echo "cheese" 1>&2',
                                             'shell={0}'.format(shell)], python_shell=True
                                            ).rstrip(),
-                         'cheese' if not salt.utils.is_windows() else '"cheese"')
+                         'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_run_all(self):
         '''
@@ -121,7 +120,7 @@ class CMDModuleTest(ModuleCase):
         self.assertTrue(isinstance(ret.get('retcode'), int))
         self.assertTrue(isinstance(ret.get('stdout'), six.string_types))
         self.assertTrue(isinstance(ret.get('stderr'), six.string_types))
-        self.assertEqual(ret.get('stderr').rstrip(), 'cheese' if not salt.utils.is_windows() else '"cheese"')
+        self.assertEqual(ret.get('stderr').rstrip(), 'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_retcode(self):
         '''
@@ -259,13 +258,13 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected_result = '\'SELECT * FROM foo WHERE bar="baz"\''
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
         self.assertEqual(result, expected_result)
 
     @skip_if_not_root
-    @skipIf(salt.utils.is_windows, 'skip windows, requires password')
+    @skipIf(salt.utils.platform.is_windows, 'skip windows, requires password')
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command
@@ -293,7 +292,7 @@ class CMDModuleTest(ModuleCase):
         out = self.run_function('cmd.run', ['env'], runas=self.runas_usr).splitlines()
         self.assertIn('USER={0}'.format(self.runas_usr), out)
 
-    @skipIf(not salt.utils.which_bin('sleep'), 'sleep cmd not installed')
+    @skipIf(not salt.utils.path.which_bin('sleep'), 'sleep cmd not installed')
     def test_timeout(self):
         '''
         cmd.run trigger timeout
@@ -304,7 +303,7 @@ class CMDModuleTest(ModuleCase):
                                 python_shell=True)
         self.assertTrue('Timed out' in out)
 
-    @skipIf(not salt.utils.which_bin('sleep'), 'sleep cmd not installed')
+    @skipIf(not salt.utils.path.which_bin('sleep'), 'sleep cmd not installed')
     def test_timeout_success(self):
         '''
         cmd.run sufficient timeout to succeed
