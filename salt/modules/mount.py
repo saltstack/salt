@@ -1646,7 +1646,7 @@ def filesystems(config='/etc/filesystems'):
 
     ret_dict = _filesystems(config)
     if ret_dict:
-        ret_key = ret_dict.keys()[0]
+        ret_key = next(iter(ret_dict.keys()))
         ret = {ret_key: dict(ret_dict[ret_key])}
 
     return ret

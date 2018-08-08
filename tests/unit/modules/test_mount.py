@@ -272,21 +272,17 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         change the mount to match the data passed, or add the mount
         if it is not present.
         '''
-        mock = MagicMock(return_value=True)
+        mock = MagicMock(return_value=False)
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
-            self.assertRaises(CommandExecutionError,
-                          mount.set_filesystems, 'A', 'B', 'C')
+            with patch.object(os.path, 'isfile', mock):
+                self.assertRaises(CommandExecutionError,
+                              mount.set_filesystems, 'A', 'B', 'C')
 
             mock_read = MagicMock(side_effect=OSError)
             with patch.object(os.path, 'isfile', mock):
                 with patch.object(salt.utils.files, 'fopen', mock_read):
                     self.assertRaises(CommandExecutionError,
                                       mount.set_filesystems, 'A', 'B', 'C')
-
-            with patch.object(os.path, 'isfile', mock):
-                with patch('salt.utils.files.fopen',
-                           mock_open(read_data=MOCK_SHELL_FILE)):
-                    self.assertEqual(mount.set_filesystems('A', 'B', 'C'), 'new')
 
     def test_mount(self):
         '''
