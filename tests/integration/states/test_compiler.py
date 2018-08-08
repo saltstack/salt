@@ -39,7 +39,7 @@ class CompileTest(ModuleCase):
         '''
         if salt.utils.is_linux() and HAS_LSB_RELEASE:
             release = lsb_release.get_distro_information()
-            if release.get('ID') == 'Debian' and int(release.get('RELEASE', 0)) < 9:
+            if release.get('ID') == 'Debian' and int(release.get('RELEASE', '0')[0]) < 9:
                 self.skipTest('This test is flaky on Debian 8. Skipping.')
 
         ret = self.run_function('state.sls', ['issue-10010'])
