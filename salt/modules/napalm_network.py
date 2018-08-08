@@ -31,8 +31,8 @@ log = logging.getLogger(__name__)
 # Import Salt libs
 import salt.utils.files
 import salt.utils.napalm
+import salt.utils.versions
 import salt.utils.templates
-import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1549,16 +1549,13 @@ def load_config(filename=None,
 @salt.utils.napalm.proxy_napalm_wrap
 def load_template(template_name=None,
                   template_source=None,
+                  context=None,
+                  defaults=None,
+                  template_engine='jinja',
+                  saltenv='base',
                   template_hash=None,
                   template_hash_name=None,
-                  template_user='root',
-                  template_group='root',
-                  template_mode='755',
-                  template_attrs='--------------e----',
-                  saltenv=None,
-                  template_engine='jinja',
                   skip_verify=False,
-                  defaults=None,
                   test=False,
                   commit=True,
                   debug=False,
@@ -1598,8 +1595,8 @@ def load_template(template_name=None,
         .. code-block:: yaml
 
             file_roots:
-                base:
-                    - /etc/salt/states
+              base:
+                - /etc/salt/states
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
@@ -1622,33 +1619,18 @@ def load_template(template_name=None,
 
         .. versionadded:: 2016.11.2
 
+    context: None
+        Overrides default context variables passed to the template.
+
+        .. versionadded:: Fluorine
+
     template_hash_name: None
         When ``template_hash`` refers to a remote file,
         this specifies the filename to look for in that file.
 
         .. versionadded:: 2016.11.2
 
-    template_group: root
-        Owner of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_user: root
-        Group owner of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_mode: 755
-        Permissions of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_attrs: "--------------e----"
-        attributes of file. (see `man lsattr`)
-
-        .. versionadded:: 2018.3.0
-
-    saltenv: base
+    saltenv: ``base``
         Specifies the template environment.
         This will influence the relative imports inside the templates.
 
@@ -1899,6 +1881,14 @@ def load_template(template_name=None,
     }
     loaded_config = None
     # prechecks
+    deprecated_args = ('template_user', 'template_attrs', 'template_group', 'template_mode')
+    for deprecated_arg in deprecated_args:
+        if template_vars.get(deprecated_arg):
+            salt.utils.versions.warn_until(
+                'Sodium',
+                ('The \'{arg}\' argument to \'net.load_template\' is deprecated '
+                 'and has been ignored').format(arg=deprecated_arg)
+            )
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
             'result': False,
@@ -1911,27 +1901,30 @@ def load_template(template_name=None,
     # to check if will be rendered by salt or NAPALM
     salt_render_prefixes = ('salt://', 'http://', 'https://', 'ftp://')
     salt_render = False
-    for salt_render_prefix in salt_render_prefixes:
-        if not salt_render:
-            salt_render = salt_render or template_name.startswith(salt_render_prefix)
-    file_exists = __salt__['file.file_exists'](template_name)
+    file_exists = False
+    if not isinstance(template_name, (tuple, list)):
+        for salt_render_prefix in salt_render_prefixes:
+            if not salt_render:
+                salt_render = salt_render or template_name.startswith(salt_render_prefix)
+        file_exists = __salt__['file.file_exists'](template_name)
 
-    if template_source or file_exists or salt_render:
+    if template_source or file_exists or salt_render or isinstance(template_name, (tuple, list)):
         # either inline template
         # either template in a custom path
         # either abs path send
         # either starts with salt:// and
         # then use Salt render system
 
+        if context is None:
+            context = {}
+        context.update(template_vars)
         # if needed to render the template send as inline arg
         if template_source:
             # render the content
-            if not saltenv:
-                saltenv = 'base'
             _rendered = __salt__['file.apply_template_on_contents'](
                 contents=template_source,
                 template=template_engine,
-                context=template_vars,
+                context=context,
                 defaults=defaults,
                 saltenv=saltenv
             )
@@ -1946,55 +1939,66 @@ def load_template(template_name=None,
                     _loaded['comment'] = 'Error while rendering the template.'
                 return _loaded
         else:
-            if not file_exists and not saltenv:
-                # no saltenv overridden
-                # use the custom template path
-                saltenv = 'base'
-            elif salt_render and not saltenv:
-                # if saltenv not overridden and path specified as salt:// or http:// etc.
-                # will use the default environment, from the base
-                saltenv = 'base'
-
-            if not saltenv:
-                # still not specified, default to `base`
-                saltenv = 'base'
             # render the file - either local, either remote
-            _rand_filename = __salt__['random.hash'](template_name, 'md5')
-            _temp_file = __salt__['file.join']('/tmp', _rand_filename)
-            _managed = __salt__['file.get_managed'](name=_temp_file,
-                                                    source=template_name,  # abs path
-                                                    source_hash=template_hash,
-                                                    source_hash_name=template_hash_name,
-                                                    user=template_user,
-                                                    group=template_group,
-                                                    mode=template_mode,
-                                                    attrs=template_attrs,
-                                                    template=template_engine,
-                                                    context=template_vars,
-                                                    defaults=defaults,
-                                                    saltenv=saltenv,
-                                                    skip_verify=skip_verify)
-            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
-                _loaded['comment'] = _managed
-                _loaded['result'] = False
-            elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
-                _loaded['result'] = False
-                _loaded['comment'] = 'Error while rendering the template.'
-            elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
-                _loaded['result'] = False
-                _loaded['comment'] = _managed[-1]  # contains the error message
-            if _loaded['result']:  # all good
-                _temp_tpl_file = _managed[0]
-                _temp_tpl_file_exists = __salt__['file.file_exists'](_temp_tpl_file)
-                if not _temp_tpl_file_exists:
+            if not isinstance(template_name, (list, tuple)):
+                template_name = [template_name]
+            if template_hash_name and not isinstance(template_hash_name, (list, tuple)):
+                template_hash_name = [template_hash_name]
+            elif not template_hash_name:
+                template_hash_name = [None] * len(template_name)
+            if template_hash and isinstance(template_hash, six.string_types) and not\
+                    (template_hash.startswith('salt://') or template_hash.startswith('file://')):
+                # If the template hash is passed as string, and it's not a file
+                # (starts with the salt:// or file:// URI), then make it a list
+                # of 1 element (for the iteration below)
+                template_hash = [template_hash]
+            elif template_hash and isinstance(template_hash, six.string_types) and\
+                    (template_hash.startswith('salt://') or template_hash.startswith('file://')):
+                # If the template hash is a file URI, then provide the same value
+                # for each of the templates in the list, as probably they all
+                # share the same hash file, otherwise the user should provide
+                # this as a list
+                template_hash = [template_hash] * len(template_name)
+            elif not template_hash:
+                template_hash = [None] * len(template_name)
+            for tpl_index, tpl_name in enumerate(template_name):
+                tpl_hash = template_hash[tpl_index]
+                tpl_hash_name = template_hash_name[tpl_index]
+                _rand_filename = __salt__['random.hash'](tpl_name, 'md5')
+                _temp_file = __salt__['file.join']('/tmp', _rand_filename)
+                _managed = __salt__['file.get_managed'](name=_temp_file,
+                                                        source=tpl_name,
+                                                        source_hash=tpl_hash,
+                                                        source_hash_name=tpl_hash_name,
+                                                        user=None,
+                                                        group=None,
+                                                        mode=None,
+                                                        attrs=None,
+                                                        template=template_engine,
+                                                        context=context,
+                                                        defaults=defaults,
+                                                        saltenv=saltenv,
+                                                        skip_verify=skip_verify)
+                if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
+                    _loaded['comment'] += _managed
                     _loaded['result'] = False
-                    _loaded['comment'] = 'Error while rendering the template.'
-                    return _loaded
-                with salt.utils.files.fopen(_temp_tpl_file) as rfh:
-                    _rendered = salt.utils.stringutils.to_unicode(rfh.read())
-                __salt__['file.remove'](_temp_tpl_file)
-            else:
-                return _loaded  # exit
+                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                    _loaded['result'] = False
+                    _loaded['comment'] += 'Error while rendering the template.'
+                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                    _loaded['result'] = False
+                    _loaded['comment'] += _managed[-1]  # contains the error message
+                if _loaded['result']:  # all good
+                    _temp_tpl_file = _managed[0]
+                    _temp_tpl_file_exists = __salt__['file.file_exists'](_temp_tpl_file)
+                    if not _temp_tpl_file_exists:
+                        _loaded['result'] = False
+                        _loaded['comment'] += 'Error while rendering the template.'
+                        return _loaded
+                    _rendered += __salt__['file.read'](_temp_tpl_file)
+                    __salt__['file.remove'](_temp_tpl_file)
+                else:
+                    return _loaded  # exit
 
         loaded_config = _rendered
         if _loaded['result']:  # all good
