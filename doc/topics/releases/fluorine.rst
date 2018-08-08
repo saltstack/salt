@@ -87,6 +87,44 @@ Beginning with this release, Salt provides much broader support for a variety
 of network operating systems, and features for configuration manipulation or
 operational commands execution.
 
+NetBox
+------
+
+Added in the previous release, Oxygen, the capabilities of the
+:mod:`netbox <salt.modules.netbox>` Execution Module have been extended, with a
+much longer list of available features:
+
+- :mod:`netbox.create_circuit <salt.modules.netbox.create_circuit>`
+- :mod:`netbox.create_circuit_provider <salt.modules.netbox.create_circuit_provider>`
+- :mod:`netbox.create_circuit_termination <salt.modules.netbox.create_circuit_termination>`
+- :mod:`netbox.create_circuit_type <salt.modules.netbox.create_circuit_type>`
+- :mod:`netbox.create_device <salt.modules.netbox.create_device>`
+- :mod:`netbox.create_device_role <salt.modules.netbox.create_device_role>`
+- :mod:`netbox.create_device_type <salt.modules.netbox.create_device_type>`
+- :mod:`netbox.create_interface <salt.modules.netbox.create_interface>`
+- :mod:`netbox.create_interface_connection <salt.modules.netbox.create_interface_connection>`
+- :mod:`netbox.create_inventory_item <salt.modules.netbox.create_inventory_item>`
+- :mod:`netbox.create_ipaddress <salt.modules.netbox.create_ipaddress>`
+- :mod:`netbox.create_manufacturer <salt.modules.netbox.create_manufacturer>`
+- :mod:`netbox.create_platform <salt.modules.netbox.create_platform>`
+- :mod:`netbox.create_site <salt.modules.netbox.create_site>`
+- :mod:`netbox.delete_interface <salt.modules.netbox.delete_interface>`
+- :mod:`netbox.delete_inventory_item <salt.modules.netbox.delete_inventory_item>`
+- :mod:`netbox.delete_ipaddress <salt.modules.netbox.delete_ipaddress>`
+- :mod:`netbox.get_circuit_provider <salt.modules.netbox.get_circuit_provider>`
+- :mod:`netbox.get_interfaces <salt.modules.netbox.get_interfaces>`
+- :mod:`netbox.get_ipaddresses <salt.modules.netbox.get_ipaddresses>`
+- :mod:`netbox.make_interface_child <salt.modules.netbox.make_interface_child>`
+- :mod:`netbox.make_interface_lag <salt.modules.netbox.make_interface_lag>`
+- :mod:`netbox.openconfig_interfaces <salt.modules.netbox.openconfig_interfaces>`
+- :mod:`netbox.openconfig_lacp <salt.modules.netbox.openconfig_lacp>`
+- :mod:`netbox.update_device <salt.modules.netbox.update_device>`
+- :mod:`netbox.update_interface <salt.modules.netbox.update_interface>`
+
+Besides this Execution Module, Salt users can load data directly from NetBox 
+into the device Pillar, via the :mod:`netbox <salt.pillar.netbox>` External
+Pillar module.
+
 Netmiko
 -------
 
@@ -289,10 +327,10 @@ Netmiko
 The features from the newly added :mod:`netmiko <salt.modules.netmiko_mod>`
 Execution Module are available as:
 
-- :mod:`napalm.netmiko_commands <salt.modules.netmiko_mod.netmiko_commands>`: 
+- :mod:`napalm.netmiko_commands <salt.modules.napalm_mod.netmiko_commands>`: 
   Execute one or more commands to be execute on the remote device, via Netmiko,
   and return the output as a text.
-- :mod:`napalm.netmiko_config <salt.modules.netmiko_mod.netmiko_config>`: Load 
+- :mod:`napalm.netmiko_config <salt.modules.napalm_mod.netmiko_config>`: Load 
   a list of configuration command on the remote device, via Netmiko. The 
   commands can equally be loaded from a local or remote path, and passed 
   through Salt's template rendering pipeline (by default using ``Jinja`` as the 
@@ -318,7 +356,7 @@ have been added to gate functionality from the
 - :mod:`napalm.pyeapi_config <salt.modules.napalm_mod.pyeapi_config>`: 
   Configure the Arista switch with the specified commands, via the ``pyeapi`` 
   Python library. Similarly to
-  :mod:`napalm.netmiko_config <salt.modules.netmiko_mod.netmiko_config>`, you
+  :mod:`napalm.netmiko_config <salt.modules.napalm_mod.netmiko_config>`, you
   can use both local and remote files, with or without templating.
 
 Usage examples:
@@ -371,7 +409,7 @@ Junos style configurations:
   have child lines matching the child regular expression.
 
 .. note::
-    These function require the ``ciscoconfparse`` Python library to be 
+    These functions require the ``ciscoconfparse`` Python library to be 
     installed.
 
 Usage example (find interfaces that are administratively shut down):
@@ -411,6 +449,17 @@ following features are now available:
   directories to remote network device.
 - :mod:`napalm.scp_get <salt.modules.napalm_mod.scp_get>`: Transfer files and 
   directories from remote network device to the localhost of the Minion.
+
+PeeringDB
+---------
+
+The :mod:`peeringdb <salt.modules.peeringdb>` Execution Module is useful to 
+gather information about other networks you can potentially peer with, and 
+automatically establish BGP sessions, e.g., given just a specific AS number, 
+the rest of the data (i.e., IP addresses, locations where the remote network is 
+available, etc.) is retrieved from PeeringDB, and the session configuration is 
+automated with minimum to no effort (typing the IP addresses manually can be 
+both tedious and error prone)
 
 New Docker Proxy Minion
 =======================
@@ -1244,7 +1293,26 @@ different user.
 New Modules
 ===========
 
-Execution modules
+Execution Modules
 -----------------
 
+- :mod:`salt.modules.ciscoconfparse_mod <salt.modules.ciscoconfparse_mod>`
+- :mod:`salt.modules.jira <salt.modules.jira_mod>`
 - :mod:`salt.modules.google_chat <salt.modules.google_chat>`
+- :mod:`salt.modules.iosconfig <salt.modules.iosconfig>`
+- :mod:`salt.modules.netmiko <salt.modules.netmiko_mod>`
+- :mod:`salt.modules.nxos_api <salt.modules.nxos_api>`
+- :mod:`salt.modules.peeringdb <salt.modules.peeringdb>`
+- :mod:`salt.modules.pyeapi <salt.modules.arista_pyeapi>`
+
+Pillar Modules
+--------------
+
+- :mod:`netbox <salt.pillar.netbox>`
+
+Proxy Modules
+-------------
+
+- :mod:`salt.proxy.netmiko <salt.proxy.netmiko_px>`
+- :mod:`salt.proxy.nxos_api <salt.proxy.nxos_api>`
+- :mod:`salt.proxy.pyeapi <salt.proxy.arista_pyeapi>`
