@@ -146,8 +146,8 @@ Cisco Nexus
 -----------
 
 While support for SSH-based operations has been added in the release codename
-Carbon (2016.11), the new :mod:`nexus_api <salt.proxy.nexus_api>` Proxy Module
-and :mod:`nexus_api <salt.modules.nexus_api>` allow management of Cisco Nexus 
+Carbon (2016.11), the new :mod:`nxos_api <salt.proxy.nxos_api>` Proxy Module
+and :mod:`nxos_api <salt.modules.nxos_api>` allow management of Cisco Nexus 
 switches via the NX-API.
 
 It is important to note that these modules don't have third party dependencies,
@@ -1289,7 +1289,6 @@ restricted (non-administrator) account. In the aforementioned case, a password
 is only required when using the ``runas`` argument to run command as a
 different user.
 
-===========
 New Modules
 ===========
 
