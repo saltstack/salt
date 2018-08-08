@@ -29,13 +29,18 @@ import datetime
 log = logging.getLogger(__name__)
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.versions
 import salt.utils.templates
 
 # Import 3rd-party libs
-from salt.ext import six
+try:
+    import jxmlease  # pylint: disable=unused-import
+    HAS_JXMLEASE = True
+except ImportError:
+    HAS_JXMLEASE = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -275,7 +280,7 @@ def _config_logic(napalm_device,
                 revert_time = __utils__['timeutil.get_time_at'](time_in=revert_in,
                                                                 time_at=revert_at)
                 if __grains__['os'] == 'junos':
-                    if 'napalm.junos_rpc' not in __salt__:
+                    if not HAS_JXMLEASE:
                         loaded_result['comment'] = ('This feature requires the library jxmlease to be installed.\n'
                                 'To install, please execute: ``pip install jxmlease``.')
                         loaded_result['result'] = False
