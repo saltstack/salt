@@ -255,6 +255,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
+    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         '''
         Test a basic API of /
