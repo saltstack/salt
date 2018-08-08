@@ -185,8 +185,8 @@ def _generate_html_table(data, out, level=0, extra_style=''):
             else:
                 new_extra_style = extra_style
             if len(subdata) == 1:
-                name = subdata.keys()[0]
-                value = subdata.values()[0]
+                name = list(subdata.keys())[0]
+                value = list(subdata.values())[0]
                 print('<tr style="{0}">'.format(
                     _lookup_style('tr', [row_style])
                 ), file=out)
