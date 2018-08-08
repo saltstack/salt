@@ -267,6 +267,9 @@ class CMDModuleTest(ModuleCase):
         cmd.run with quoted command
         '''
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
+        if salt.utils.platform.is_darwin():
+            cmd = '''echo 'SELECT * FROM foo WHERE bar=\\"baz\\"' '''
+
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
         runas = this_user()
