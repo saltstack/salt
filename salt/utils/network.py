@@ -866,6 +866,7 @@ def linux_interfaces():
         ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
 
+
 def _netbsd_interfaces_ifconfig(out):
     '''
     Uses ifconfig to return a dictionary of interfaces with various information
@@ -877,7 +878,7 @@ def _netbsd_interfaces_ifconfig(out):
     pmac = re.compile('.*?address: ([0-9a-f:]+)')
 
     pip = re.compile(r'.*?inet [^\d]*(.*?)/([\d]*)\s')
-    pip6 = re.compile('.*?inet6 ([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s')
+    pip6 = re.compile(r'.*?inet6 ([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s')
 
     pupdown = re.compile('UP')
     pbcast = re.compile(r'.*?broadcast ([\d\.]+)')
@@ -925,6 +926,7 @@ def _netbsd_interfaces_ifconfig(out):
         del data
     return ret
 
+
 def netbsd_interfaces():
     '''
     Obtain interface information for NetBSD >= 8 where the ifconfig
@@ -942,6 +944,7 @@ def netbsd_interfaces():
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT).communicate()[0]
     return _netbsd_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
+
 
 def _interfaces_ipconfig(out):
     '''
