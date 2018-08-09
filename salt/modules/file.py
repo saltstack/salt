@@ -4989,7 +4989,7 @@ def get_diff(file1,
         )
 
     args = []
-    for filename in files:
+    for filename in paths:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5007,12 +5007,12 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*files)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(files)
+                    args.extend(paths)
                 ret = __utils__['stringutils.get_diff'](*args)
         return ret
     return ''
