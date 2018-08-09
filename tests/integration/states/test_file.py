@@ -2407,9 +2407,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @with_tempdir()
     def test_issue_48557(self, tempdir):
         tempfile = os.path.join(tempdir, 'temp_file_issue_48557')
-        with open(tempfile, 'wb') as fp:
+        with salt.utils.files.fopen(tempfile, 'wb') as fp:
             fp.write(os.linesep.join([
-				'test1',
+                'test1',
                 'test2',
                 'test3',
                 '',
@@ -2420,7 +2420,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              mode='insert',
                              content='test4')
         self.assertSaltTrueReturn(ret)
-        with open(tempfile, 'rb') as fp:
+        with salt.utils.files.fopen(tempfile, 'rb') as fp:
             content = fp.read()
         self.assertEqual(content, os.linesep.join([
             'test1',
