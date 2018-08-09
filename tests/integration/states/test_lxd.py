@@ -11,7 +11,7 @@ import salt.utils.path
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.mixins import SaltReturnAssertsMixin
 
 try:
@@ -29,6 +29,7 @@ class LxdTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     run_once = False
 
+    @flaky
     def test_01__init_lxd(self):
         if LxdTestCase.run_once:
             return
