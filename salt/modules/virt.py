@@ -2010,7 +2010,7 @@ def snapshot(domain, name=None, suffix=None):
     n_name = ElementTree.SubElement(doc, 'name')
     n_name.text = name
 
-    _get_domain(domain).snapshotCreateXML(ElementTree.tostring(doc))
+    _get_domain(domain).snapshotCreateXML(salt.utils.stringutils.to_str(ElementTree.tostring(doc)))
 
     return {'name': name}
 

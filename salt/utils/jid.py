@@ -14,10 +14,17 @@ from salt.ext import six
 LAST_JID_DATETIME = None
 
 
-def gen_jid(opts):
+def gen_jid(opts=None):
     '''
     Generate a jid
     '''
+    if opts is None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'The `opts` argument was not passed into salt.utils.jid.gen_jid(). '
+            'This will be required starting in {version}.'
+        )
+        opts = {}
     global LAST_JID_DATETIME  # pylint: disable=global-statement
 
     if not opts.get('unique_jid', False):
