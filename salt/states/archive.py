@@ -15,6 +15,7 @@ import shlex
 import stat
 import string
 import tarfile
+import traceback
 from contextlib import closing
 
 # Import 3rd-party libs
@@ -32,6 +33,12 @@ import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
+
+
+def _error(ret, err_msg):
+    ret['result'] = False
+    ret['comment'] = err_msg
+    return ret
 
 
 def _path_is_abs(path):
@@ -192,6 +199,7 @@ def extracted(name,
               enforce_toplevel=True,
               enforce_ownership_on=None,
               archive_format=None,
+              skip_same_file=False,
               **kwargs):
     '''
     .. versionadded:: 2014.1.0
@@ -617,6 +625,13 @@ def extracted(name,
             of the ``source`` argument. If the minion is running a release
             older than 2016.11.0, this option is required.
 
+    skip_same_file : False
+        Useful for lossy replacement file scenes. If specified,
+        this archives will be extracted to a temporary directory,
+        then only copy the changed files to final directory.
+
+        .. versionadded:: 2018.11.0
+
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
     .. _xz: http://tukaani.org/xz/
@@ -767,6 +782,11 @@ def extracted(name,
             'The \'source_hash_update\' argument is ignored when '
             '\'source_hash\' is not also specified.'
         )
+
+    if skip_same_file and not (force or overwrite):
+        ret['comment'] = ('The \'skip_same_file\' argument is ignored when '
+            '\'force\' or \'overwrite\' set to False.')
+        return ret
 
     try:
         source_match = __salt__['file.source_list'](source,
@@ -1239,7 +1259,43 @@ def extracted(name,
             __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
-        log.debug('Extracting %s to %s', cached, name)
+        if skip_same_file:
+            origin_name = name
+            name = os.path.join(os.path.dirname(cached), salt.utils.hashutils.md5_digest(os.path.basename(cached)))
+            trim_output = False
+            if os.path.exists(name):
+                __salt__['file.remove'](name)
+            __states__['file.directory'](name)
+            log.debug('Extracting %s to temporary directory %s', cached, name)
+        else:
+            origin_name = ''
+            log.debug('Extracting %s to %s', cached, name)
+
+        def _file_lists(tmp_path, path):
+            '''
+            Return a tuple containing the file lists of given path for files, dirs, links
+            '''
+            ret = {
+                'files': set(),
+                'dirs': set(),
+                'links': set()
+            }
+            for root, dirs, files in os.walk(tmp_path, followlinks=True):
+                for fname in files:
+                    src_file = os.path.join(root, fname)
+                    dest_file = src_file.replace(tmp_path, path.rstrip(os.sep))
+                    if __salt__['file.is_link'](src_file):
+                        src_file_link = __salt__['file.readlink'](src_file, canonicalize=True)
+                        dest_file_link = src_file_link.replace(tmp_path, path.rstrip(os.sep))
+                        if not __salt__['file.is_link'](dest_file) or __salt__['file.readlink'](dest_file, canonicalize=True) != dest_file_link:
+                            ret['links'].add((dest_file, dest_file_link))
+                    else:
+                        ret['files'].add((dest_file, src_file))
+                src_dir = root
+                dest_dir = root.replace(tmp_path, path)
+                ret['dirs'].add((dest_dir, src_dir))
+            return ret['files'], ret['dirs'], ret['links']
+
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
@@ -1387,6 +1443,68 @@ def extracted(name,
             ret['comment'] = exc.strerror
             return ret
 
+    if skip_same_file:
+        extracted_files = []
+        log.debug('Extracting %s to %s', name, origin_name)
+        mng_files, mng_dirs, mng_links = _file_lists(name, origin_name)
+        for dest_dir, src_dir in mng_dirs:
+            try:
+                if not os.path.isdir(dest_dir):
+                    if os.path.exists(dest_dir):
+                        __salt__['file.remove'](dest_dir)
+                    stats = __salt__['file.stats'](src_dir)
+                    __states__['file.directory'](dest_dir, user=stats.get('user'), group=stats.get('group'), file_mode=stats.get('mode'))
+            except Exception as exc:
+                __salt__['file.remove'](name)
+                ret['changes'] = {}
+                log.debug(traceback.format_exc())
+                return _error(ret, 'Unable to manage dir: {0}'.format(exc))
+
+        for dest_file, src_file in mng_files:
+            try:
+                stats = __salt__['file.stats'](src_file)
+                ret = __salt__['file.manage_file'](
+                    name=dest_file,
+                    sfn='',
+                    ret=None,
+                    source=src_file,
+                    source_sum={},
+                    user=stats.get('user'),
+                    group=stats.get('group'),
+                    mode=stats.get('mode'),
+                    attrs=None,
+                    saltenv=__env__,
+                    backup=None,
+                    follow_symlinks=True,
+                    show_changes=True)
+            except Exception as exc:
+                __salt__['file.remove'](name)
+                ret['changes'] = {}
+                log.debug(traceback.format_exc())
+                return _error(ret, 'Unable to manage file: {0}'.format(exc))
+            else:
+                if 'comment' in ret and ret['comment']:
+                    log.debug('The results of comparing {0} with {1}: {2}'.format(src_file, dest_file, ret['comment']))
+                if 'changes' in ret and ret['changes'] != {}:
+                    extracted_files.append(src_file.replace(name.rstrip(os.sep), '.'))
+
+        for link_dest, link_src in mng_links:
+            try:
+                if os.path.exists(link_dest):
+                    __salt__['file.remove'](link_dest)
+                __salt__['file.symlink'](link_src, link_dest)
+            except Exception as exc:
+                __salt__['file.remove'](name)
+                ret['changes'] = {}
+                log.debug(traceback.format_exc())
+                return _error(ret, 'Unable to manage link: {0}'.format(exc))
+            else:
+                log.debug('create symlink from {0} to {1}'.format(link_src, link_dest))
+                extracted_files.append(link_dest.replace(origin_name.rstrip(os.sep), '.'))
+
+        __salt__['file.remove'](name)
+        name = origin_name
+
     # Recursively set user and group ownership of files
     enforce_missing = []
     enforce_failed = []
@@ -1486,7 +1604,10 @@ def extracted(name,
         if len(files) > 0:
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
-            ret['changes']['extracted_files'] = files
+            if skip_same_file:
+                files = extracted_files
+            if files:
+                ret['changes']['extracted_files'] = files
             ret['comment'] = '{0} extracted to {1}'.format(
                 salt.utils.url.redact_http_basic_auth(source_match),
                 name,
