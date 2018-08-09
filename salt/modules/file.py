@@ -5006,7 +5006,7 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*paths)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
