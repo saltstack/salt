@@ -149,17 +149,19 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 arg_str,
                 with_retcode=False,
                 catch_stderr=False,
-                async=False,
+                asynchronous=False,
                 timeout=60,
-                config_dir=None):
+                config_dir=None,
+                **kwargs):
         '''
         Execute salt-run
         '''
+        asynchronous = kwargs.get('async', asynchronous)
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(
                 config_dir or self.get_config_dir(),
                 arg_str,
                 timeout=timeout,
-                async_flag=' --async' if async else '')
+                async_flag=' --async' if asynchronous else '')
         return self.run_script('salt-run',
                                arg_str,
                                with_retcode=with_retcode,
