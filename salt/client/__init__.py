@@ -1993,3 +1993,78 @@ class Caller(object):
             salt.utils.args.parse_input(args),
             kwargs)
         return func(*args, **kwargs)
+
+
+class ProxyCaller(object):
+    '''
+    ``ProxyCaller`` is the same interface used by the :command:`salt-call`
+    with the args ``--proxyid <proxyid>`` command-line tool on the Salt Proxy
+    Minion.
+
+    Importing and using ``ProxyCaller`` must be done on the same machine as a
+    Salt Minion and it must be done using the same user that the Salt Minion is
+    running as.
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.client
+        caller = salt.client.Caller()
+        caller.cmd('test.ping')
+
+    Note, a running master or minion daemon is not required to use this class.
+    Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
+    ``'local'``. The same can be achieved at the Python level by including that
+    setting in a minion config file.
+
+    .. code-block:: python
+
+        import salt.client
+        import salt.config
+        __opts__ = salt.config.proxy_config('/etc/salt/proxy', minion_id='quirky_edison')
+        __opts__['file_client'] = 'local'
+        caller = salt.client.ProxyCaller(mopts=__opts__)
+
+    .. note::
+
+        To use this for calling proxies, the :py:func:`is_proxy functions
+        <salt.utils.platform.is_proxy>` requires that ``--proxyid`` be an
+        argument on the commandline for the script this is used in, or that the
+        string ``proxy`` is in the name of the script.
+    '''
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'proxy'), mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
+        self.opts = mopts or salt.config.proxy_config(c_path)
+        self.sminion = salt.minion.SProxyMinion(self.opts)
+
+    def cmd(self, fun, *args, **kwargs):
+        '''
+        Call an execution module with the given arguments and keyword arguments
+
+        .. code-block:: python
+
+            caller.cmd('test.arg', 'Foo', 'Bar', baz='Baz')
+
+            caller.cmd('event.send', 'myco/myevent/something',
+                data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
+        '''
+        func = self.sminion.functions[fun]
+        data = {
+          'arg': args,
+          'fun': fun
+        }
+        data.update(kwargs)
+        executors = getattr(self.sminion, 'module_executors', []) or \
+                    self.opts.get('module_executors', ['direct_call'])
+        if isinstance(executors, six.string_types):
+            executors = [executors]
+        for name in executors:
+            fname = '{0}.execute'.format(name)
+            if fname not in self.sminion.executors:
+                raise SaltInvocationError("Executor '{0}' is not available".format(name))
+            return_data = self.sminion.executors[fname](self.opts, data, func, args, kwargs)
+            if return_data is not None:
+                break
+        return return_data

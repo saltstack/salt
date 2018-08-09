@@ -115,10 +115,10 @@ def installed(name,
     '''
     if 'force' in kwargs:
         salt.utils.versions.warn_until(
-            'Fluorine',
+            'Neon',
             'Parameter \'force\' has been detected in the argument list. This'
             'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt 2018.3.0. This warning will be removed in Salt Fluorine.'
+            'as of Salt 2018.3.0. This warning will be removed in Salt Neon.'
         )
         kwargs.pop('force')
 
