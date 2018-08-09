@@ -146,7 +146,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             kwargs.update(res)
             kwargs['eauth'] = self.options.eauth
 
-        if self.config['asynchronous']:
+        if self.config['async']:
             jid = self.local_client.cmd_async(**kwargs)
             salt.utils.stringutils.print_cli('Executed command with job ID: {0}'.format(jid))
             return
