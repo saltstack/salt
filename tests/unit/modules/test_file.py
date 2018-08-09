@@ -244,7 +244,10 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
