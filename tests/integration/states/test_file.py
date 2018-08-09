@@ -54,7 +54,6 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 IS_WINDOWS = salt.utils.is_windows()
-
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
     FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
@@ -131,6 +130,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
+@skipIf(salt.utils.is_windows(), 'skipping windows')
 class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
@@ -2598,6 +2598,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
 
 
+@skipIf(salt.utils.is_windows(), 'skipping windows')
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
@@ -3799,6 +3800,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self.with_matching_block_and_marker_end_not_after_newline)
 
 
+@skipIf(salt.utils.is_windows(), 'skipping windows')
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Uses a local tornado webserver to test http(s) file.managed states with and
