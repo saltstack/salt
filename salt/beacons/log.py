@@ -79,6 +79,12 @@ def beacon(config):
               - tags:
                   <tag>:
                     regex: <pattern>
+
+    .. note::
+
+        regex matching is based on the `re`_ module
+
+    .. _re: https://docs.python.org/3.6/library/re.html#regular-expression-syntax
     '''
     _config = {}
     list(map(_config.update, config))
