@@ -843,14 +843,14 @@ class Schedule(object):
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
 
+            if job in _hidden:
+                continue
+
             # Clear out _skip_reason from previous runs
             if '_skip_reason' in data:
                 del data['_skip_reason']
 
             run = False
-
-            if job in _hidden:
-                continue
 
             if not isinstance(data, dict):
                 log.error(
