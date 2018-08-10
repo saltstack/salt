@@ -146,5 +146,22 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.write(title='title', data='data', output='null')
             self.collector._flush_content()
 
-            assert archive.bz2open().addfile.call_args[1]['fileobj'].read() == \
-                   to_bytes('title\n-----\n\nraw-content: data\n\n\n\n')
+            assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
+                    == to_bytes('title\n-----\n\nraw-content: data\n\n\n\n'))
+
+    @patch('salt.cli.support.collector.open', MagicMock(return_value='path=/dev/null'))
+    def test_archive_addlink(self):
+        '''
+        Test add to the archive a section and link an external file or directory to it.
+
+        :return:
+        '''
+        archive = MagicMock()
+        with patch('salt.cli.support.collector.tarfile.TarFile', archive):
+            self.collector.open()
+            self.collector.add('foo')
+            self.collector.link(title='Backup Path', path='/path/to/backup.config')
+            self.collector._flush_content()
+
+            assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
+                    == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
