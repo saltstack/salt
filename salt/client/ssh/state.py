@@ -167,7 +167,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure

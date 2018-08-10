@@ -16,12 +16,14 @@ import tempfile
 import threading
 import functools
 import threading
+import traceback
 import types
 from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -70,10 +72,10 @@ if USE_IMPORTLIB:
     SUFFIXES = []
     for suffix in importlib.machinery.EXTENSION_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_EXTENSION))
-    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
-        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     for suffix in importlib.machinery.SOURCE_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', MODULE_KIND_SOURCE))
+    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
+        SUFFIXES.append((suffix, 'rb', MODULE_KIND_COMPILED))
     MODULE_KIND_MAP = {
         MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
         MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
@@ -1562,6 +1564,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         except SystemExit as error:
+            try:
+                fn_, _, caller, _ = traceback.extract_tb(sys.exc_info()[2])[-1]
+            except Exception:
+                pass
+            else:
+                tgt_fn = os.path.join('salt', 'utils', 'process.py')
+                if fn_.endswith(tgt_fn) and '_handle_signals' in caller:
+                    # Race conditon, SIGTERM or SIGINT received while loader
+                    # was in process of loading a module. Call sys.exit to
+                    # ensure that the process is killed.
+                    sys.exit(salt.defaults.exitcodes.EX_OK)
             log.error(
                 'Failed to import %s %s as the module called exit()\n',
                 self.tag, name, exc_info=True

@@ -372,7 +372,8 @@ def create(vm_):
             for iface_xml in domain_xml.findall('./devices/interface'):
                 iface_xml.remove(iface_xml.find('./mac'))
                 # enable IP learning, this might be a default behaviour...
-                if iface_xml.find("./filterref/parameter[@name='CTRL_IP_LEARNING']") is None:
+                # Don't always enable since it can cause problems through libvirt-4.5
+                if ip_source == 'ip-learning' and iface_xml.find("./filterref/parameter[@name='CTRL_IP_LEARNING']") is None:
                     iface_xml.append(ElementTree.fromstring(IP_LEARNING_XML))
 
             # If a qemu agent is defined we need to fix the path to its socket
@@ -422,7 +423,7 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            clone_xml = ElementTree.tostring(domain_xml)
+            clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
             log.debug("Clone XML '%s'", clone_xml)
 
             validate_flags = libvirt.VIR_DOMAIN_DEFINE_VALIDATE if validate_xml else 0
@@ -615,7 +616,7 @@ def create_volume_xml(volume):
     log.debug("Volume: %s", dir(volume))
     volume_xml.find('capacity').text = six.text_type(volume.info()[1])
     volume_xml.find('./target/path').text = volume.path()
-    xml_string = ElementTree.tostring(volume_xml)
+    xml_string = salt.utils.stringutils.to_str(ElementTree.tostring(volume_xml))
     log.debug("Creating %s", xml_string)
     return xml_string
 
@@ -641,7 +642,7 @@ def create_volume_with_backing_store_xml(volume):
     log.debug("volume: %s", dir(volume))
     volume_xml.find('capacity').text = six.text_type(volume.info()[1])
     volume_xml.find('./backingStore/path').text = volume.path()
-    xml_string = ElementTree.tostring(volume_xml)
+    xml_string = salt.utils.stringutils.to_str(ElementTree.tostring(volume_xml))
     log.debug("Creating %s", xml_string)
     return xml_string
 

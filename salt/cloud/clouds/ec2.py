@@ -1886,7 +1886,13 @@ def request_instance(vm_=None, call=None):
     if placementgroup_ is not None:
         params[spot_prefix + 'Placement.GroupName'] = placementgroup_
 
-    ex_blockdevicemappings = block_device_mappings(vm_)
+    blockdevicemappings_holder = block_device_mappings(vm_)
+    if blockdevicemappings_holder:
+        for _bd in blockdevicemappings_holder:
+            if 'tag' in _bd:
+                _bd.pop('tag')
+
+    ex_blockdevicemappings = blockdevicemappings_holder
     if ex_blockdevicemappings:
         params.update(_param_from_config(spot_prefix + 'BlockDeviceMapping',
                       ex_blockdevicemappings))
@@ -2855,6 +2861,53 @@ def create(vm_=None, call=None):
     node = _get_node(instance_id=vm_['instance_id'])
     __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     ret.update(node)
+
+    # Add any block device tags specified
+    ex_blockdevicetags = {}
+    blockdevicemappings_holder = block_device_mappings(vm_)
+    if blockdevicemappings_holder:
+        for _bd in blockdevicemappings_holder:
+            if 'tag' in _bd:
+                ex_blockdevicetags[_bd['DeviceName']] = _bd['tag']
+
+    block_device_volume_id_map = {}
+
+    if ex_blockdevicetags:
+        for _device, _map in six.iteritems(ret['blockDeviceMapping']):
+            bd_items = []
+            if isinstance(_map, dict):
+                bd_items.append(_map)
+            else:
+                for mapitem in _map:
+                    bd_items.append(mapitem)
+
+            for blockitem in bd_items:
+                if blockitem['deviceName'] in ex_blockdevicetags and 'Name' not in ex_blockdevicetags[blockitem['deviceName']]:
+                    ex_blockdevicetags[blockitem['deviceName']]['Name'] = vm_['name']
+                if blockitem['deviceName'] in ex_blockdevicetags:
+                    block_device_volume_id_map[blockitem[ret['rootDeviceType']]['volumeId']] = ex_blockdevicetags[blockitem['deviceName']]
+
+    if block_device_volume_id_map:
+
+        for volid, tags in six.iteritems(block_device_volume_id_map):
+            __utils__['cloud.fire_event'](
+                'event',
+                'setting tags',
+                'salt/cloud/block_volume_{0}/tagging'.format(str(volid)),
+                args={'tags': tags},
+                sock_dir=__opts__['sock_dir'],
+                transport=__opts__['transport']
+            )
+
+            __utils__['cloud.wait_for_fun'](
+                set_tags,
+                timeout=30,
+                name=vm_['name'],
+                tags=tags,
+                resource_id=volid,
+                call='action',
+                location=location
+            )
 
     return ret
 
