@@ -93,6 +93,15 @@ class StateRunnerTest(ShellCase):
         assert os.path.exists('/tmp/ewu-2016-12-13') is False
         assert code != 0
 
+    def test_orchestrate_with_mine(self):
+        '''
+        test salt-run state.orchestrate with mine.get call in sls
+        '''
+        test = self.run_run('mine.update "*"')
+        ret = self.run_run('state.orchestrate orch.mine')
+
+        assert 'Succeeded: 1 (changed=1)' in ret
+
     def test_orchestrate_state_and_function_failure(self):
         '''
         Ensure that returns from failed minions are in the changes dict where
