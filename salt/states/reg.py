@@ -246,7 +246,7 @@ def present(name,
 
 
 def absent(name, vname=None, use_32bit_registry=False):
-    '''
+    r'''
     Ensure a registry value is removed. To remove a key use key_absent.
 
     Args:

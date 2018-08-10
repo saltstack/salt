@@ -167,7 +167,7 @@ class Registry(object):  # pylint: disable=R0903
 
 
 def key_exists(hive, key, use_32bit_registry=False):
-    '''
+    r'''
     Check that the key is found in the registry. This refers to keys and not
     value/data pairs.
 
@@ -614,7 +614,7 @@ def set_value(hive,
 
 
 def delete_key_recursive(hive, key, use_32bit_registry=False):
-    '''
+    r'''
     .. versionadded:: 2015.5.4
 
     Delete a registry key to include all subkeys.
@@ -718,7 +718,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
 
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
-    '''
+    r'''
     Delete a registry value entry or the default value for a key.
 
     Args:
