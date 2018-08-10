@@ -283,7 +283,7 @@ def auth(username, password):
         log.error('LDAP authentication requires python-ldap module')
         return False
 
-    # If bind credentials are configured, verify that we can a valid bind
+    # If bind credentials are configured, verify that we receive a valid bind
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
         bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
 
