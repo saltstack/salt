@@ -598,7 +598,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             connect = sock.bind(('localhost', port))
-        except OSError:
+        except (socket.error, OSError):
             # these ports are already in use, use different ones
             pub_port = 4606
             ret_port = 4607

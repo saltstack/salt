@@ -10,7 +10,6 @@ import io
 import sys
 import os
 import logging
-import time
 import threading
 import win32service
 import win32serviceutil
@@ -26,6 +25,7 @@ from tests.support.paths import CODE_DIR
 from tests.support.helpers import (
     with_system_user,
 )
+import salt.utils.files
 import salt.utils.win_runas
 import salt.ext.six
 
@@ -339,7 +339,7 @@ class RunAsTest(ModuleCase):
         password = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -354,7 +354,7 @@ class RunAsTest(ModuleCase):
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -370,7 +370,7 @@ class RunAsTest(ModuleCase):
         password = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -385,7 +385,7 @@ class RunAsTest(ModuleCase):
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -397,7 +397,7 @@ class RunAsTest(ModuleCase):
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'SYSTEM')['retcode'])
         ''')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -409,7 +409,7 @@ class RunAsTest(ModuleCase):
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'NETWORK SERVICE')['retcode'])
         ''')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -421,7 +421,7 @@ class RunAsTest(ModuleCase):
         import salt.utils.win_runas
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'LOCAL SERVICE')['retcode'])
         ''')
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
@@ -440,7 +440,7 @@ class RunAsTest(ModuleCase):
         password = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)['retcode'])
         '''.format(username, PASSWORD))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -461,7 +461,7 @@ class RunAsTest(ModuleCase):
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -484,7 +484,7 @@ class RunAsTest(ModuleCase):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, password)
         sys.exit(ret['retcode'])
         '''.format(username, PASSWORD))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}; exit $LASTEXITCODE'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -505,7 +505,7 @@ class RunAsTest(ModuleCase):
         username = '{}'
         sys.exit(salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)['retcode'])
         '''.format(username))
-        with salt.utils.fopen(RUNAS_PATH, 'w') as fp:
+        with salt.utils.files.fopen(RUNAS_PATH, 'w') as fp:
             fp.write(runaspy)
         cmd = 'python.exe {}; exit $LASTEXITCODE'.format(RUNAS_PATH)
         ret = subprocess.call(
@@ -531,7 +531,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with salt.utils.fopen(RUNAS_OUT, 'r') as fp:
+        with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 1, ret
 
@@ -552,7 +552,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with salt.utils.fopen(RUNAS_OUT, 'r') as fp:
+        with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 1, ret
 
@@ -573,7 +573,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with salt.utils.fopen(RUNAS_OUT, 'r') as fp:
+        with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret
 
@@ -594,7 +594,7 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with salt.utils.fopen(RUNAS_OUT, 'r') as fp:
+        with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret
 
@@ -613,6 +613,6 @@ class RunAsTest(ModuleCase):
         self.assertEqual(ret, 0)
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
-        with salt.utils.fopen(RUNAS_OUT, 'r') as fp:
+        with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
             ret = yaml.load(fp)
         assert ret['retcode'] == 0, ret

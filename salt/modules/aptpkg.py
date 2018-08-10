@@ -2552,7 +2552,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
             )
 
         if clear:
-            cmd = 'dpkg --clear-selections'
+            cmd = ['dpkg', '--clear-selections']
             if not __opts__['test']:
                 result = _call_apt(cmd, scope=False)
                 if result['retcode'] != 0:
@@ -2569,7 +2569,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
             for _pkg in _pkgs:
                 if _state == sel_revmap.get(_pkg):
                     continue
-                cmd = 'dpkg --set-selections'
+                cmd = ['dpkg', '--set-selections']
                 cmd_in = '{0} {1}'.format(_pkg, _state)
                 if not __opts__['test']:
                     result = _call_apt(cmd, scope=False, stdin=cmd_in)
