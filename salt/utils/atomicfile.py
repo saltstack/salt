@@ -163,7 +163,7 @@ def atomic_open(filename, mode='w'):
         'dir': os.path.dirname(filename),
         'delete': False,
     }
-    if six.PY3:
+    if six.PY3 and 'b' not in mode:
         kwargs['newline'] = ''
     ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)
