@@ -1043,6 +1043,37 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
+    def test_directory_broken_symlink(self):
+        '''
+        Ensure that file.directory works even if a directory
+        contains broken symbolic link
+        '''
+        try:
+            tmp_dir = os.path.join(TMP, 'foo')
+            null_file = '{0}/null'.format(tmp_dir)
+            broken_link = '{0}/broken'.format(tmp_dir)
+
+            if IS_WINDOWS:
+                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
+            else:
+                os.mkdir(tmp_dir, 0o700)
+
+            self.run_function('file.symlink', [null_file, broken_link])
+
+            if IS_WINDOWS:
+                ret = self.run_state(
+                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    follow_symlinks=True, win_owner='Administrators')
+            else:
+                ret = self.run_state(
+                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    file_mode=644, dir_mode=755)
+
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isdir(tmp_dir):
+                self.run_function('file.remove', [tmp_dir])
+
     @with_tempdir(create=False)
     def test_recurse(self, name):
         '''
@@ -2541,8 +2572,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Test blockreplace when prepend_if_not_found=True and block doesn't
         exist in file.
         '''
-        expected = self.marker_start + os.linesep + self.content + \
-            self.marker_end + os.linesep + self.without_block
+        expected = self.marker_start + '\n' + self.content + \
+            self.marker_end + '\n' + self.without_block
 
         # Pass 1: content ends in newline
         self._write(name, self.without_block)
@@ -2595,8 +2626,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to True.
         '''
         # Pass 1: content ends in newline
-        expected = self.marker_start + os.linesep + self.content + \
-            os.linesep + self.marker_end + os.linesep + self.without_block
+        expected = self.marker_start + '\n' + self.content + \
+            '\n' + self.marker_end + '\n' + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2621,8 +2652,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.marker_start + os.linesep + self.content + \
-            self.marker_end + os.linesep + self.without_block
+        expected = self.marker_start + '\n' + self.content + \
+            self.marker_end + '\n' + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2653,8 +2684,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to False.
         '''
         # Pass 1: content ends in newline
-        expected = self.marker_start + os.linesep + self.content + \
-            self.marker_end + os.linesep + self.without_block
+        expected = self.marker_start + '\n' + self.content + \
+            self.marker_end + '\n' + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2679,8 +2710,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.marker_start + os.linesep + \
-            self.content.rstrip('\r\n') + self.marker_end + os.linesep + \
+        expected = self.marker_start + '\n' + \
+            self.content.rstrip('\r\n') + self.marker_end + '\n' + \
             self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
@@ -2711,8 +2742,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Test blockreplace when append_if_not_found=True and block doesn't
         exist in file.
         '''
-        expected = self.without_block + self.marker_start + os.linesep + \
-            self.content + self.marker_end + os.linesep
+        expected = self.without_block + self.marker_start + '\n' + \
+            self.content + self.marker_end + '\n'
 
         # Pass 1: content ends in newline
         self._write(name, self.without_block)
@@ -2765,8 +2796,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to True.
         '''
         # Pass 1: content ends in newline
-        expected = self.without_block + self.marker_start + os.linesep + \
-            self.content + os.linesep + self.marker_end + os.linesep
+        expected = self.without_block + self.marker_start + '\n' + \
+            self.content + '\n' + self.marker_end + '\n'
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2791,8 +2822,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.without_block + self.marker_start + os.linesep + \
-            self.content + self.marker_end + os.linesep
+        expected = self.without_block + self.marker_start + '\n' + \
+            self.content + self.marker_end + '\n'
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2823,8 +2854,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to False.
         '''
         # Pass 1: content ends in newline
-        expected = self.without_block + self.marker_start + os.linesep + \
-            self.content + self.marker_end + os.linesep
+        expected = self.without_block + self.marker_start + '\n' + \
+            self.content + self.marker_end + '\n'
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2849,8 +2880,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.without_block + self.marker_start + os.linesep + \
-            self.content.rstrip('\r\n') + self.marker_end + os.linesep
+        expected = self.without_block + self.marker_start + '\n' + \
+            self.content.rstrip('\r\n') + self.marker_end + '\n'
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,

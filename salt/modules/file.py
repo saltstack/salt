@@ -4454,7 +4454,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    is_link = os.path.islink(name)
+    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file

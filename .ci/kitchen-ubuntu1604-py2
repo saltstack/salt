@@ -46,6 +46,8 @@ pipeline {
                         }
                     }}
                     archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
+                    archiveArtifacts artifacts: 'artifacts/logs/minion'
+                    archiveArtifacts artifacts: 'artifacts/logs/salt-runtests.log'
                 }
             }
         }
