@@ -1015,7 +1015,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             return 'lazyloadertest.pyc'
 
     def _write_module_file(self):
-        with salt.utils.fopen(self.module_file, 'w') as fh:
+        with salt.utils.files.fopen(self.module_file, 'w') as fh:
             fh.write(self.module_content)
             fh.flush()
             os.fsync(fh.fileno())
