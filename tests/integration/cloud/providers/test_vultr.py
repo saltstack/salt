@@ -34,6 +34,7 @@ def __random_name(size=6):
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'vultr'
+TIMEOUT = 500
 
 
 class VultrTest(ShellCase):
@@ -157,20 +158,20 @@ class VultrTest(ShellCase):
         '''
         # check if instance with salt installed returned
         try:
-            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)
+            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=800)
             self.assertIn(
                 INSTANCE_NAME,
                 [i.strip() for i in create_vm]
             )
             self.assertNotIn('Failed to start', str(create_vm))
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(420)
         # delete the instance
-        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
         try:
             self.assertIn(
                 'True',
@@ -186,6 +187,6 @@ class VultrTest(ShellCase):
         # If we exceed 6 minutes and the instance is still there, quit
         ct = 0
         while ct < 12 and INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             time.sleep(30)
             ct = ct + 1
