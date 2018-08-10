@@ -196,16 +196,17 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
         # figure out if updates needed
         properties_update = []
-        for prop in properties:
-            if prop not in properties_current:
-                continue
+        if properties:
+            for prop in properties:
+                if prop not in properties_current:
+                    continue
 
-            value = properties[prop]
-            if isinstance(value, bool):
-                value = 'on' if value else 'off'
+                value = properties[prop]
+                if isinstance(value, bool):
+                    value = 'on' if value else 'off'
 
-            if properties_current[prop] != value:
-                properties_update.append(prop)
+                if properties_current[prop] != value:
+                    properties_update.append(prop)
 
         # update properties
         for prop in properties_update:

@@ -581,6 +581,8 @@ def latest_version(*names, **kwargs):
         status = pkg_info.get('status', '').lower()
         if status.find('not installed') > -1 or status.find('out-of-date') > -1:
             ret[name] = pkg_info.get('version')
+        else:
+            ret[name] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1 and len(ret):
@@ -829,7 +831,7 @@ def _get_configured_repos():
     '''
 
     repos_cfg = configparser.ConfigParser()
-    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS)])
+    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS) if fname.endswith(".repo")])
 
     return repos_cfg
 

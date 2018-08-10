@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`{{full_name}} <{{email}}>`
+    :codeauthor: {{full_name}} <{{email}}>
 '''
 
 # Import Python Libs

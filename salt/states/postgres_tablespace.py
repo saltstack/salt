@@ -47,8 +47,8 @@ def present(name,
             db_user=None):
     '''
     Ensure that the named tablespace is present with the specified properties.
-    For more information about all of these options see man
-    ``create_tablespace``(7).
+    For more information about all of these options run ``man 7
+    create_tablespace``.
 
     name
         The name of the tablespace to create/manage.

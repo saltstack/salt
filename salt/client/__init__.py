@@ -47,11 +47,6 @@ from salt.exceptions import (
 # Import third party libs
 import salt.ext.six as six
 # pylint: disable=import-error
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -226,7 +221,7 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
+    def gather_job_info(self, jid, tgt, tgt_type, listen=True, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -238,6 +233,7 @@ class LocalClient(object):
                                 arg=[jid],
                                 tgt_type=tgt_type,
                                 timeout=timeout,
+                                listen=listen,
                                 **kwargs
                                )
 

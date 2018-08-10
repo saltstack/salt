@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Manage cygwin packages.
 
 Module file to accompany the cyg state.
-"""
+'''
 from __future__ import absolute_import
 
 # Import python libs
@@ -30,7 +30,9 @@ __virtualname__ = 'cyg'
 
 
 def __virtual__():
-    """Only works on Windows systems."""
+    '''
+    Only works on Windows systems.
+    '''
     if salt.utils.is_windows():
         return __virtualname__
     return (False, 'Module cyg: module only works on Windows systems.')
@@ -42,7 +44,9 @@ __func_alias__ = {
 
 
 def _get_cyg_dir(cyg_arch='x86_64'):
-    """Return the cygwin install directory based on the architecture."""
+    '''
+    Return the cygwin install directory based on the architecture.
+    '''
     if cyg_arch == 'x86_64':
         return 'cygwin64'
     elif cyg_arch == 'x86':
@@ -53,12 +57,12 @@ def _get_cyg_dir(cyg_arch='x86_64'):
 
 
 def _check_cygwin_installed(cyg_arch='x86_64'):
-    """
+    '''
     Return True or False if cygwin is installed.
 
     Use the cygcheck executable to check install. It is installed as part of
     the base package, and we use it to check packages
-    """
+    '''
     path_to_cygcheck = os.sep.join(['C:',
                                     _get_cyg_dir(cyg_arch),
                                     'bin', 'cygcheck.exe'])
@@ -71,7 +75,9 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
 
 def _get_all_packages(mirror=DEFAULT_MIRROR,
                       cyg_arch='x86_64'):
-    """Return the list of packages based on the mirror provided."""
+    '''
+    Return the list of packages based on the mirror provided.
+    '''
     if 'cyg.all_packages' not in __context__:
         __context__['cyg.all_packages'] = {}
     if mirror not in __context__['cyg.all_packages']:
@@ -126,12 +132,12 @@ def check_valid_package(package,
 def _run_silent_cygwin(cyg_arch='x86_64',
                        args=None,
                        mirrors=None):
-    """
+    '''
     Retrieve the correct setup.exe.
 
     Run it with the correct arguments to get the bare minimum cygwin
     installation up and running.
-    """
+    '''
     cyg_cache_dir = os.sep.join(['c:', 'cygcache'])
     cyg_setup = 'setup-{0}.exe'.format(cyg_arch)
     cyg_setup_path = os.sep.join([cyg_cache_dir, cyg_setup])
@@ -181,7 +187,9 @@ def _run_silent_cygwin(cyg_arch='x86_64',
 
 
 def _cygcheck(args, cyg_arch='x86_64'):
-    """Run the cygcheck executable."""
+    '''
+    Run the cygcheck executable.
+    '''
     cmd = ' '.join([
         os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck']),
         '-c', args])
@@ -197,7 +205,7 @@ def _cygcheck(args, cyg_arch='x86_64'):
 def install(packages=None,
             cyg_arch='x86_64',
             mirrors=None):
-    """
+    '''
     Install one or several packages.
 
     packages : None
@@ -212,8 +220,8 @@ def install(packages=None,
     .. code-block:: bash
 
         salt '*' cyg.install dos2unix
-        salt '*' cyg.install dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
-    """
+        salt '*' cyg.install dos2unix mirrors="[{'http://mirror': 'http://url/to/public/key}]'
+    '''
     args = []
     # If we want to install packages
     if packages is not None:
@@ -229,7 +237,7 @@ def install(packages=None,
 def uninstall(packages,
               cyg_arch='x86_64',
               mirrors=None):
-    """
+    '''
     Uninstall one or several packages.
 
     packages
@@ -244,8 +252,8 @@ def uninstall(packages,
     .. code-block:: bash
 
         salt '*' cyg.uninstall dos2unix
-        salt '*' cyg.uninstall dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
-    """
+        salt '*' cyg.uninstall dos2unix mirrors="[{'http://mirror': 'http://url/to/public/key}]"
+    '''
     args = []
     if packages is not None:
         args.append('--remove-packages {pkgs}'.format(pkgs=packages))
@@ -258,7 +266,7 @@ def uninstall(packages,
 
 
 def update(cyg_arch='x86_64', mirrors=None):
-    """
+    '''
     Update all packages.
 
     cyg_arch : x86_64
@@ -270,8 +278,8 @@ def update(cyg_arch='x86_64', mirrors=None):
     .. code-block:: bash
 
         salt '*' cyg.update
-        salt '*' cyg.update dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
-    """
+        salt '*' cyg.update dos2unix mirrors="[{'http://mirror': 'http://url/to/public/key}]"
+    '''
     args = []
     args.append('--upgrade-also')
 
@@ -285,7 +293,7 @@ def update(cyg_arch='x86_64', mirrors=None):
 
 
 def list_(package='', cyg_arch='x86_64'):
-    """
+    '''
     List locally installed packages.
 
     package : ''
@@ -300,7 +308,7 @@ def list_(package='', cyg_arch='x86_64'):
     .. code-block:: bash
 
         salt '*' cyg.list
-    """
+    '''
     pkgs = {}
     args = ' '.join(['-c', '-d', package])
     stdout = _cygcheck(args, cyg_arch=cyg_arch)

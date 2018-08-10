@@ -87,7 +87,7 @@ def _get_username(member):
         str: The username converted to domain\\username format
     '''
     return member.ADSPath.replace('WinNT://', '').replace(
-        '/', '\\').encode('ascii', 'backslashreplace')
+        '/', '\\')
 
 
 def add(name, **kwargs):

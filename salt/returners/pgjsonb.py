@@ -9,7 +9,7 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 .. note::
     There are three PostgreSQL returners.  Any can function as an external
-    :ref:`master job cache <external-master-cache>`. but each has different
+    :ref:`master job cache <external-job-cache>`. but each has different
     features.  SaltStack recommends
     :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
     a version of PostgreSQL that has the appropriate native binary JSON types.

@@ -212,8 +212,9 @@ on GitHub.
     repository in your own account on GitHub and notify a SaltStack employee
     when it is ready. We will add you to the contributors team on the
     `saltstack-formulas`_ organization and help you transfer the repository
-    over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an
-    email to the `salt-users`_ mailing list.
+    over. Ping a SaltStack employee on IRC (``#salt`` on Freenode), join the
+    ``#formulas`` channel on the `salt-slack`_ or send an email to the
+    `salt-users`_ mailing list.
 
     There are a lot of repositories in that organization! Team members can
     manage which repositories they are subscribed to on GitHub's watching page:
@@ -225,7 +226,7 @@ Style
 Maintainability, readability, and reusability are all marks of a good Salt sls
 file. This section contains several suggestions and examples.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # Deploy the stable master branch unless version overridden by passing
     # Pillar at the CLI or via the Reactor.
@@ -447,7 +448,7 @@ lookups.
 
 Below is a simple example of a readable loop:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for user in salt.pillar.get('list_of_users', []) %}
 
@@ -464,7 +465,7 @@ Readability suffers and the correct YAML indentation is difficult to see in the
 surrounding visual noise. Parametrization (discussed below) and variables are
 both useful techniques to avoid this. For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# ---- Bad example ---- #}
 
@@ -505,7 +506,7 @@ easily combined and merged. And they can be directly serialized into YAML which
 is often easier than trying to create valid YAML through templating. For
 example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# ---- Bad example ---- #}
 
@@ -599,7 +600,10 @@ example is a state tree of two sls files, one simple and one complicated.
 
     common_users:
       user.present:
-        - names: [larry, curly, moe]
+        - names:
+          - larry
+          - curly
+          - moe
 
 ``/srv/salt/roles_configuration``:
 
@@ -651,7 +655,7 @@ above).
 
 Macros are useful for creating reusable, parameterized states. For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% macro user_state(state_id, user_name, shell='/bin/bash', groups=[]) %}
     {{ state_id }}:
@@ -671,7 +675,7 @@ example, the following macro could be used to write a php.ini config file:
 
 ``/srv/salt/php.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     php_ini:
       file.managed:
@@ -768,7 +772,7 @@ syntax for referencing a value is a normal dictionary lookup in Jinja, such as
 Values defined in the map file can be fetched for the current platform in any
 state file using the following syntax:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "mysql/map.jinja" import mysql with context %}
 
@@ -962,7 +966,7 @@ XML.)
 
 ``/srv/salt/tomcat/server_xml.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
@@ -997,7 +1001,7 @@ example:
 
 ``/srv/salt/app/deploy.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# Load the map file. #}
     {% import_yaml 'app/defaults.yaml' as app_defaults %}
@@ -1056,7 +1060,7 @@ The following is a best-practice example for a reusable Apache formula. (This
 skips platform-specific options for brevity. See the full
 :formula_url:`apache-formula` for more.)
 
-.. code-block:: yaml
+.. code-block:: text
 
     # apache/init.sls
     apache:

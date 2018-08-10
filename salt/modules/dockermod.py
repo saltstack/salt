@@ -436,9 +436,18 @@ def _refresh_mine_cache(wrapped):
         refresh salt mine on exit.
         '''
         returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
-        __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
+        if _check_update_mine():
+            __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
+
+
+def _check_update_mine():
+    try:
+        ret = __context__['docker.update_mine']
+    except KeyError:
+        ret = __context__['docker.update_mine'] = __salt__['config.get']('docker.update_mine', default=True)
+    return ret
 
 
 # Helper functions
@@ -2308,9 +2317,9 @@ def create(image,
 
         Example:
 
-        - ``log_opt="syslog-address=tcp://192.168.0.42,syslog-facility=daemon"
-        - ``log_opt="['syslog-address=tcp://192.168.0.42', 'syslog-facility=daemon']"
-        - ``log_opt="{'syslog-address': 'tcp://192.168.0.42', 'syslog-facility: daemon
+        - ``log_opt="syslog-address=tcp://192.168.0.42,syslog-facility=daemon"``
+        - ``log_opt="['syslog-address=tcp://192.168.0.42', 'syslog-facility=daemon']"``
+        - ``log_opt="{'syslog-address': 'tcp://192.168.0.42', 'syslog-facility': 'daemon'}"``
 
     lxc_conf
         Additional LXC configuration parameters to set before starting the
@@ -5226,7 +5235,6 @@ def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        __opts__,
         __context__['cp.fileclient'],
         chunks, refs, pillar, name)
     return trans_tar

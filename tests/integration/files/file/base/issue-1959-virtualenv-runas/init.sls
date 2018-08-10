@@ -6,3 +6,5 @@
     {#- wheels are disabled because the pip cache dir will not be owned by the above issue-1959 user. Need to check this ASAP #}
     - no_binary: ':all:'
     {%- endif %}
+    - env:
+        XDG_CACHE_HOME: /tmp

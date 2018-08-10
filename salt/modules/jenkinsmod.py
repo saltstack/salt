@@ -106,13 +106,13 @@ def run(script):
     '''
     .. versionadded:: 2017.7.0
 
-    Execute a groovy script on the jenkins master
+    Execute a script on the jenkins master
 
-    :param script: The groovy script
+    :param script: The script
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' jenkins.run 'Jenkins.instance.doSafeRestart()'
 

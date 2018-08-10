@@ -3679,7 +3679,7 @@ def _checkAllAdmxPolicies(policy_class,
             if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
                 # some policies have a disabled list but not an enabled list
                 # added this to address those issues
-                if DISABLED_LIST_XPATH(admx_policy):
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
                     element_only_enabled_disabled = False
                     explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
@@ -3689,14 +3689,14 @@ def _checkAllAdmxPolicies(policy_class,
                                          ENABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
                 # some policies have a disabled list but not an enabled list
                 # added this to address those issues
-                if ENABLED_LIST_XPATH(admx_policy):
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
                     element_only_enabled_disabled = False
                     explicit_enable_disable_value_setting = True
                 if _checkValueItemParent(admx_policy,
@@ -3706,25 +3706,27 @@ def _checkAllAdmxPolicies(policy_class,
                                          DISABLED_VALUE_XPATH,
                                          policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_VALUE_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if ENABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, ENABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by detected ENABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
             if DISABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
-                element_only_enabled_disabled = False
-                explicit_enable_disable_value_setting = True
+                if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+                    element_only_enabled_disabled = False
+                    explicit_enable_disable_value_setting = True
                 if _checkListItem(admx_policy, this_policyname, this_key, DISABLED_LIST_XPATH, policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by detected DISABLED_LIST_XPATH'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3739,7 +3741,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                 '1')),
                                           policy_filedata):
                     this_policy_setting = 'Enabled'
-                    log.debug('{0} is enabled'.format(this_policyname))
+                    log.debug('{0} is enabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting
@@ -3750,7 +3752,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                   check_deleted=True)),
                                             policy_filedata):
                     this_policy_setting = 'Disabled'
-                    log.debug('{0} is disabled'.format(this_policyname))
+                    log.debug('{0} is disabled by no explicit enable/disable list or value'.format(this_policyname))
                     if this_policynamespace not in policy_vals:
                         policy_vals[this_policynamespace] = {}
                     policy_vals[this_policynamespace][this_policyname] = this_policy_setting

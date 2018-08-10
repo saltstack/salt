@@ -2,7 +2,7 @@
 '''test for pillar git_pillar.py
 
 
-  :codeauthor: :email:`Georges Racinet (gracinet@anybox.fr)`
+  :codeauthor: Georges Racinet (gracinet@anybox.fr)
 
 Based on joint work with Paul Tonelli about hg_pillar integration.
 
@@ -60,6 +60,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
                     'file_roots': {},
                     'state_top': 'top.sls',
                     'extension_modules': '',
+                    'optimization_order': [0, 1, 2],
                     'renderer': 'yaml_jinja',
                     'renderer_blacklist': [],
                     'renderer_whitelist': [],

@@ -48,6 +48,10 @@ def __virtual__():
     Only work on select distros which still use Red Hat's /usr/bin/service for
     management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
+    # Disable when booted with systemd
+    if __utils__['systemd.booted'](__context__):
+        return (False, 'The rh_service execution module failed to load: this system was booted with systemd.')
+
     # Enable on these platforms only.
     enable = set((
         'XenServer',
@@ -95,15 +99,6 @@ def __virtual__():
                 return (
                     False,
                     'RedHat-based distros >= version 7 use systemd, will not '
-                    'load rh_service.py as virtual \'service\''
-                )
-        if __grains__['os'] == 'Amazon':
-            if int(osrelease_major) in (2016, 2017):
-                return __virtualname__
-            else:
-                return (
-                    False,
-                    'Amazon Linux >= version 2 uses systemd. Will not '
                     'load rh_service.py as virtual \'service\''
                 )
         return __virtualname__
