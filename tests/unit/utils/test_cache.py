@@ -161,3 +161,40 @@ class ContextCacheTest(TestCase):
         global __context__
         __context__ = {}
         _test_refill_cache({'a': 'b'})  # Compare to the context before it was emptied
+
+
+class CacheDiskTestCase(TestCase):
+
+    def test_everything(self):
+        '''
+        Make sure you can instantiate, add, update, remove, expire
+        '''
+        try:
+            tmpdir = tempfile.mkdtemp()
+            path = os.path.join(tmpdir, 'CacheDisk_test')
+
+            # test instantiation
+            cd = cache.CacheDisk(0.1, path)
+            self.assertIsInstance(cd, cache.CacheDisk)
+
+            # test to make sure it looks like a dict
+            self.assertNotIn('foo', cd)
+            cd['foo'] = 'bar'
+            self.assertIn('foo', cd)
+            self.assertEqual(cd['foo'], 'bar')
+            del cd['foo']
+            self.assertNotIn('foo', cd)
+
+            # test persistence
+            cd['foo'] = 'bar'
+            cd2 = cache.CacheDisk(0.1, path)
+            self.assertIn('foo', cd2)
+            self.assertEqual(cd2['foo'], 'bar')
+
+            # test ttl
+            time.sleep(0.2)
+            self.assertNotIn('foo', cd)
+            self.assertNotIn('foo', cd2)
+
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
