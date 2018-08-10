@@ -35,7 +35,7 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
+        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
         low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
@@ -45,7 +45,6 @@ class NetapiClientTest(TestCase):
         rets = []
         for _ret in ret:
             rets.append(_ret)
-        self.assertIn({'localhost': True}, rets)
         self.assertIn({'sub_minion': True}, rets)
         self.assertIn({'minion': True}, rets)
 
@@ -59,7 +58,7 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion', 'localhost'])})
+        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
