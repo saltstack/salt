@@ -283,7 +283,7 @@ class LocalClient(object):
                       'No command was sent, no jid was assigned.')
                 return {}
 
-        # don't install event subscription listeners when the request is async
+        # don't install event subscription listeners when the request is asynchronous
         # and doesn't care. this is important as it will create event leaks otherwise
         if not listen:
             return pub_data
